@@ -1,8 +1,8 @@
 namespace Eunomia.Drivers.Abstractions;
 
 /// <summary>
-/// Valor de uma célula para gravar ou comparar: texto (<c>null</c> = NULL) ou, no modo função (Ctrl+F2), uma expressão
-/// SQL que vai tal como está.
+/// Value of a cell to save or compare: text (<c>null</c> = NULL) or, in function mode (Ctrl+F2), an SQL expression
+/// that goes as is.
 /// </summary>
 public readonly record struct CellLiteral(string? Text, bool IsFunction = false)
 {
@@ -11,36 +11,36 @@ public readonly record struct CellLiteral(string? Text, bool IsFunction = false)
     public bool IsNull => Text is null && !IsFunction;
 }
 
-/// <summary>Uma coluna e o valor dela num INSERT, num SET ou no WHERE.</summary>
+/// <summary>A column and its value in an INSERT, a SET or the WHERE.</summary>
 public sealed record ColumnValue(ColumnDefinition Column, CellLiteral Value);
 
 /// <summary>
-/// DML da edição no grid (secção 14.1; anexo D B15), tipado por motor: literais por tipo, INSERT, UPDATE e DELETE de uma
-/// linha, com o WHERE pela chave da linha e o limite de uma linha (sempre, para que uma chave desatualizada na cache nunca
-/// mude várias linhas).
+/// Grid editing DML (section 14.1; appendix D B15), typed per engine: literals by type, INSERT, UPDATE and DELETE of one
+/// row, with the WHERE by the row's key and a one-row limit (always, so that a stale key in the cache never
+/// changes several rows).
 /// </summary>
 public interface IDmlComposer
 {
-    /// <summary>Literal do valor para a coluna: NULL, expressão (função), número, BIT, binário em hex, data ou texto.</summary>
+    /// <summary>Literal of the value for the column: NULL, expression (function), number, BIT, binary as hex, date or text.</summary>
     string Literal(ColumnDefinition column, CellLiteral value);
 
     string Insert(DbObjectRef table, IReadOnlyList<ColumnValue> values);
 
     /// <param name="withoutKey">
-    /// O WHERE tem todas as colunas (tabela sem chave primária nem UNIQUE NOT NULL): o texto compara-se de forma exata
-    /// (sem as equivalências da collation da coluna), para não mudar outra linha que só difira em maiúsculas ou acentos.
+    /// The WHERE has every column (a table without a primary key or UNIQUE NOT NULL): text is compared exactly
+    /// (without the column collation's equivalences), so no other row that only differs in case or accents is changed.
     /// </param>
     string Update(DbObjectRef table, IReadOnlyList<ColumnValue> set, IReadOnlyList<ColumnValue> where, bool withoutKey);
 
-    /// <param name="withoutKey">Como em <see cref="Update"/>.</param>
+    /// <param name="withoutKey">As in <see cref="Update"/>.</param>
     string Delete(DbObjectRef table, IReadOnlyList<ColumnValue> where, bool withoutKey);
 
-    /// <summary>A linha pelo WHERE, com as colunas completas (releitura depois de gravar, <c>EnsureFullRow</c>).</summary>
+    /// <summary>The row by the WHERE, with full columns (read back after saving, <c>EnsureFullRow</c>).</summary>
     string SelectRow(DbObjectRef table, IReadOnlyList<ColumnDefinition> columns, IReadOnlyList<ColumnValue> where);
 
-    /// <summary>Quantas linhas correspondem ao WHERE (confirma um UPDATE que não mudou valores).</summary>
+    /// <summary>How many rows match the WHERE (confirms an UPDATE that changed no values).</summary>
     string Count(DbObjectRef table, IReadOnlyList<ColumnValue> where);
 
-    /// <summary>Último valor de auto incremento da ligação, ou <c>null</c> se o motor não tiver.</summary>
+    /// <summary>The connection's last auto-increment value, or <c>null</c> if the engine does not have one.</summary>
     string? LastInsertId { get; }
 }

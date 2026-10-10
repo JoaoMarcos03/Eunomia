@@ -2,7 +2,7 @@ using Eunomia.App.Sessions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Regras do Session Manager do HeidiSQL (FAM-S03; anexo A §1.3–1.5).</summary>
+/// <summary>Rules of HeidiSQL's Session Manager (FAM-S03; appendix A §1.3–1.5).</summary>
 public sealed class SessionCatalogTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 5, 12, 0, 0, TimeSpan.Zero);
@@ -19,7 +19,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void NovosNomesUnnamedSequenciais()
+    public void NewSequentialUnnamedNames()
     {
         var c = new SessionCatalog();
 
@@ -31,7 +31,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void FoldersImplicitosEExplicitos()
+    public void ImplicitAndExplicitFolders()
     {
         var folders = Sample().AllFolders().Select(f => string.Join('\\', f)).ToList();
 
@@ -39,7 +39,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void ArvoreComFoldersNoTopoEOrdenada()
+    public void TreeWithFoldersOnTopAndSorted()
     {
         var tree = Sample().BuildTree();
 
@@ -53,7 +53,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void RenameTrocaBarraPorHifenERecusaRepetidosEMaiusculas()
+    public void RenameReplacesBackslashWithHyphenAndRefusesDuplicatesAndCaseOnlyChanges()
     {
         var c = Sample();
         var staging = c.FindByPath("Amberline\\StagingAmberline")!;
@@ -66,7 +66,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void RenameDeFolderMudaOCaminhoDasSessoes()
+    public void FolderRenameChangesTheSessionPaths()
     {
         var c = Sample();
 
@@ -78,7 +78,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void DragAndDropComAsRegrasDoHeidiSql()
+    public void DragAndDropWithHeidiSqlRules()
     {
         var c = Sample();
         var local = c.FindByPath("localhost")!;
@@ -97,7 +97,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void ApagarFolderApagaAsSessoesLaDentro()
+    public void DeletingAFolderDeletesTheSessionsInside()
     {
         var c = Sample();
 
@@ -109,7 +109,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void DuplicateCriaOutroIdNoMesmoFolder()
+    public void DuplicateCreatesAnotherIdInTheSameFolder()
     {
         var c = Sample();
         var prod = c.FindByPath("Amberline\\PROD_Amberline")!;
@@ -132,7 +132,7 @@ public sealed class SessionCatalogTests
     [InlineData("^loc", new[] { "localhost" })]
     [InlineData("3306", new[] { "localhost", "StagingAmberline", "PROD_Amberline", "deep" })]
     [InlineData("[invalid", new[] { "localhost", "StagingAmberline", "PROD_Amberline", "deep" })]
-    public void FiltroRegexEmTodasAsColunas(string filter, string[] expected)
+    public void RegexFilterOnEveryColumn(string filter, string[] expected)
     {
         var c = Sample();
         var match = SessionCatalog.CreateFilter(filter);
@@ -141,7 +141,7 @@ public sealed class SessionCatalogTests
     }
 
     [Fact]
-    public void MudarTipoDeRedeRepoeDefaultsNaoMexidos()
+    public void ChangingTheNetworkTypeRestoresUntouchedDefaults()
     {
         var s = new SessionDefinition();
         s.ChangeNetType(NetType.MySqlSshTunnel);

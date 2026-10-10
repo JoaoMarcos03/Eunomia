@@ -4,7 +4,7 @@ using Avalonia.Layout;
 
 namespace Eunomia.UI.Controls.Grid;
 
-/// <summary>Grid com scrollbars vertical e horizontal. A scrollbar vertical trabalha em linhas.</summary>
+/// <summary>Grid with vertical and horizontal scrollbars. The vertical scrollbar works in rows.</summary>
 public sealed class DataGridView : Avalonia.Controls.Grid
 {
     private readonly ScrollBar _vertical;

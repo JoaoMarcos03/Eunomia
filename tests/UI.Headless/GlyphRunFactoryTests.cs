@@ -4,7 +4,7 @@ using Eunomia.UI.Controls.Grid;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Caminho rápido de texto do grid: só texto simples; o resto tem de ir para o shaping completo.</summary>
+/// <summary>The grid's fast text path: plain text only; the rest has to go through full shaping.</summary>
 public sealed class GlyphRunFactoryTests
 {
     private static GlyphRunFactory Tahoma() => new(new Typeface("Tahoma"), 8 * 96.0 / 72.0);
@@ -13,7 +13,7 @@ public sealed class GlyphRunFactoryTests
     [InlineData("abc 123")]
     [InlineData("Größe ação café")]
     [InlineData("1,234,567.89")]
-    public void TextoSimplesViraGlyphRun(string text)
+    public void PlainTextBecomesAGlyphRun(string text)
     {
         Assert.True(Tahoma().TryCreate(text, 300, alignRight: false, out var run, out var offset));
         Assert.Equal(text.Length, run!.GlyphInfos.Count);
@@ -22,17 +22,17 @@ public sealed class GlyphRunFactoryTests
 
     [AvaloniaTheory]
     [InlineData("مرحبا")]           // RTL
-    [InlineData("e\u0301")]         // marca combinada
+    [InlineData("e\u0301")]         // combining mark
     [InlineData("😀")]               // surrogate
-    [InlineData("a\tb")]            // controlo
+    [InlineData("a\tb")]            // control character
     [InlineData("")]
-    public void TextoComplexoUsaShapingCompleto(string text)
+    public void ComplexTextUsesFullShaping(string text)
     {
         Assert.False(Tahoma().TryCreate(text, 300, alignRight: false, out _, out _));
     }
 
     [AvaloniaFact]
-    public void TextoQueNaoCabeLevaReticencias()
+    public void TextThatDoesNotFitGetsAnEllipsis()
     {
         var factory = Tahoma();
         var text = new string('x', 200);
@@ -44,7 +44,7 @@ public sealed class GlyphRunFactoryTests
     }
 
     [AvaloniaFact]
-    public void AlinhamentoADireitaDesloca()
+    public void RightAlignmentShifts()
     {
         Assert.True(Tahoma().TryCreate("42", 100, alignRight: true, out var run, out var offset));
         Assert.Equal(100 - run!.Metrics.WidthIncludingTrailingWhitespace, offset, 1);

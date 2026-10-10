@@ -29,10 +29,10 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Janela principal (secção 5.1, FAM-L01): menu e toolbar gerados do registo de comandos, árvore com filtros à
-/// esquerda, tabs à direita com o filter panel em baixo, SQL log e status bar de 7 painéis. Dimensões dos painéis
-/// persistidas (FAM-L07). Os atalhos passam primeiro pelo keymap (como as actions do HeidiSQL, que são vistas antes
-/// do controlo focado) e resolvem-se pelo contexto de foco.
+/// Main window (section 5.1, FAM-L01): menu and toolbar generated from the command registry, tree with filters on the
+/// left, tabs on the right with the filter panel below, SQL log and a 7-panel status bar. Panel dimensions are
+/// persisted (FAM-L07). Shortcuts go through the keymap first (like HeidiSQL's actions, which are seen before
+/// the focused control) and resolve by focus context.
 /// </summary>
 public sealed partial class MainWindow : Window
 {
@@ -70,7 +70,7 @@ public sealed partial class MainWindow : Window
         FontFamily = UiFonts.Ui;
         FontSize = 12;
         Themed.Bind(this, BackgroundProperty, "surface.panel");
-        // Ícones no tema da janela principal (os testes mudam o tema por janela).
+        // Icons in the main window's theme (tests change the theme per window).
         ActualThemeVariantChanged += (_, _) => Controls.Common.Icons.IconFactory.SetDark(ActualThemeVariant == ThemeVariant.Dark);
         AddShellStyles();
         ShellTrace.At("shell-styles");
@@ -89,8 +89,8 @@ public sealed partial class MainWindow : Window
         };
         _ui.CommandFailed += (_, ex) => ShowError(ex);
 
-        // Árvore (dados sintéticos até à Fase 3/4).
-        // Sessões reais quando o composition root as dá; sem elas (medições, testes), a árvore sintética do spike.
+        // Tree (synthetic data until phase 3/4).
+        // Real sessions when the composition root provides them; without them (measurements, tests), the spike's synthetic tree.
         _sessionTree = context.Sessions is { } sessions ? new SessionTreeProvider(sessions.Connector, CurrentTreeLayout) : null;
         _model = _sessionTree is not null
             ? new TreeModel([], _sessionTree)
@@ -103,7 +103,7 @@ public sealed partial class MainWindow : Window
         _tree.Tree.NodeDoubleClicked += OnTreeDoubleClicked;
         ShellTrace.At("shell-tree");
 
-        // Data tab (secção 4.4): label, Next, Show all, Sorting, Columns, Filter e o grid.
+        // Data tab (section 4.4): label, Next, Show all, Sorting, Columns, Filter and the grid.
         _dataView = new UI.Features.DataTab.DataTabView();
         _dataView.SetPaging(false);
         _dataLabel = _dataView.Label;
@@ -124,7 +124,7 @@ public sealed partial class MainWindow : Window
         _tabs.SelectionChanged += (_, _) => OnActiveTabChanged();
         ShellTrace.At("shell-tabs");
 
-        // Filter panel (Ctrl+Alt+F): regex local sobre a lista ativa (FAM-G14, ligado na Fase 5).
+        // Filter panel (Ctrl+Alt+F): local regex over the active list (FAM-G14, wired in phase 5).
         _filterBox = new TextBox { PlaceholderText = "Regular expression", Width = 260, VerticalAlignment = VerticalAlignment.Center, MinHeight = 22, Padding = new Thickness(4, 1) }.Named("Filter");
         var filterClose = new Button { Content = Controls.Common.Icons.IconFactory.CreateImage("close-tab"), Padding = new Thickness(1), Focusable = false, Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
         filterClose.Click += (_, _) => SetFilterPanel(false);
@@ -242,7 +242,7 @@ public sealed partial class MainWindow : Window
         }
         if (context.PreviousCrashReport is { } crash)
         {
-            // Crash recovery (secção 21.5): as query tabs voltam pelo journal; o relatório fica no disco, sem SQL nem valores.
+            // Crash recovery (section 21.5): query tabs come back through the journal; the report stays on disk, without SQL or values.
             context.Log.Append(LogCategory.Error, $"Eunomia closed unexpectedly the last time. Query tabs were restored. Crash report: {crash}");
         }
         context.Diagnostics.Write(Eunomia.App.Diagnostics.DiagnosticLevel.Info, "app", $"Eunomia {ShellContext.Version} started");
@@ -251,7 +251,7 @@ public sealed partial class MainWindow : Window
             _stalls = new UiStallMonitor(context.Diagnostics);
             Closed += (_, _) => _stalls.Dispose();
         }
-        // A tab ativa antes de fechar (restauro das query tabs), senão o Data tab.
+        // The tab that was active before closing (query tab restore), otherwise the Data tab.
         _tabs.SelectedItem = _restoredFocus?.Item ?? _tabs.DataTab;
         _log.IsVisible &= !ShellTrace.Skip("log");
         _toolbar.IsVisible = !ShellTrace.Skip("toolbar");
@@ -267,12 +267,12 @@ public sealed partial class MainWindow : Window
 
     public DataGridControl DataGrid => _dataGrid.Control;
 
-    /// <summary>Caixa e label do filter panel inferior (testes).</summary>
+    /// <summary>Box and label of the bottom filter panel (tests).</summary>
     internal TextBox LocalFilterBox => _filterBox;
 
     internal TextBlock LocalFilterInfo => _filterInfo;
 
-    /// <summary>Data tab (testes).</summary>
+    /// <summary>Data tab (tests).</summary>
     internal UI.Features.DataTab.DataTabView DataView => _dataView;
 
     public DatabaseTreeView Tree => _tree;
@@ -285,23 +285,23 @@ public sealed partial class MainWindow : Window
 
     public Border FilterPanel => _filterPanel;
 
-    /// <summary>Editor da query tab ativa (ou da primeira).</summary>
+    /// <summary>Editor of the active query tab (or of the first one).</summary>
     public SqlEditorControl SqlEditor => QueryEditorOf(_tabs.ActiveQueryTab ?? _tabs.QueryTabs[0]);
 
-    /// <summary>Marcadores para o benchmark de scroll (um por baixo e outro por cima do conteúdo do Data tab).</summary>
+    /// <summary>Markers for the scroll benchmark (one below and one above the Data tab content).</summary>
     public Border RenderStartMarker { get; }
 
     public Border RenderEndMarker { get; }
 
-    /// <summary>Largura atual da árvore e altura do log, em pixels lógicos.</summary>
+    /// <summary>Current width of the tree and height of the log, in logical pixels.</summary>
     public (double TreeWidth, double LogHeight) PanelSizes => (_body.ColumnDefinitions[0].ActualWidth, _root.RowDefinitions[4].ActualHeight);
 
-    /// <summary>Seleciona o Data tab (benchmarks).</summary>
+    /// <summary>Selects the Data tab (benchmarks).</summary>
     public void ShowDataTab() => _tabs.SelectedItem = _tabs.DataTab;
 
     /// <summary>
-    /// <c>--scale</c> dos benchmarks: aproximação de uma escala de ecrã maior (mesmo número de pixels por célula),
-    /// sem mudar a escala do Windows.
+    /// The benchmarks' <c>--scale</c>: an approximation of a larger screen scale (the same number of pixels per cell),
+    /// without changing the Windows scale.
     /// </summary>
     public void ApplyContentScale(double scale)
     {
@@ -348,7 +348,7 @@ public sealed partial class MainWindow : Window
         {
             if (_keepTableEditor)
             {
-                // Cancel na pergunta do table editor: a árvore volta à tabela sem a recarregar.
+                // Cancel on the table editor question: the tree goes back to the table without reloading it.
                 return;
             }
             if (!_restoringTreeNode && HasUnsavedObjectEditor && !IsEditedObject(node))
@@ -379,7 +379,7 @@ public sealed partial class MainWindow : Window
         return string.Join("\\", parts);
     }
 
-    /// <summary>Duplo clique num objeto com uma query tab ativa insere o nome no editor (FAM-T07); Shift qualifica.</summary>
+    /// <summary>Double click on an object with a query tab active inserts the name in the editor (FAM-T07); Shift qualifies it.</summary>
     private void OnTreeDoubleClicked(object? sender, TreeNodeDoubleClickEventArgs e)
     {
         if (!DoubleClickInsertsNodeText || _tabs.ActiveQueryTab is not { } tab)
@@ -401,7 +401,7 @@ public sealed partial class MainWindow : Window
 
     private static ulong StableHash(string text)
     {
-        // FNV-1a: string.GetHashCode muda entre processos.
+        // FNV-1a: string.GetHashCode changes between processes.
         var h = 14695981039346656037UL;
         foreach (var c in text)
         {
@@ -412,7 +412,7 @@ public sealed partial class MainWindow : Window
 
     private void OnLogChanged(object? sender, LogChange change)
     {
-        // O motor pode escrever de qualquer thread; a vista só muda na UI thread.
+        // The engine may write from any thread; the view only changes on the UI thread.
         if (Dispatcher.UIThread.CheckAccess())
         {
             ApplyLogChange(change);
@@ -480,7 +480,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>Display › Reset panel dimensions (anexo C §1.3).</summary>
+    /// <summary>Display › Reset panel dimensions (appendix C §1.3).</summary>
     public void ResetPanelDimensions()
     {
         var panels = _context.Settings.Panels;
@@ -525,7 +525,7 @@ public sealed partial class MainWindow : Window
 
     private void AddShellStyles()
     {
-        // Botões da toolbar como no HeidiSQL: só ícone, 22 px, sem fundo até ao hover.
+        // Toolbar buttons as in HeidiSQL: icon only, 22 px, no background until hover.
         Styles.Add(new Style(x => x.OfType<Button>().Class("toolbar"))
         {
             Setters =
@@ -548,12 +548,12 @@ public sealed partial class MainWindow : Window
                 new Setter(BorderThicknessProperty, new Thickness(0)),
             },
         });
-        // Desativado: só o ícone esbatido, sem o fundo cinzento do Fluent (como no HeidiSQL).
+        // Disabled: just the dimmed icon, without Fluent's grey background (as in HeidiSQL).
         Styles.Add(new Style(x => x.OfType<Button>().Class("toolbar").Class(":disabled").Template().OfType<Avalonia.Controls.Presenters.ContentPresenter>())
         {
             Setters = { new Setter(BackgroundProperty, Brushes.Transparent) },
         });
-        // Toggle ligado: botão "afundado".
+        // Toggle on: a "pressed" button.
         Styles.Add(new Style(x => x.OfType<Button>().Class("toolbar").Class("checked"))
         {
             Setters =

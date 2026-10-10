@@ -13,7 +13,7 @@
     <InternalsVisibleTo Include="UI.Headless.Tests" />
   </ItemGroup>
 
-  <!-- Janela principal, menus, toolbar, status bar, SQL log e keymap (secção 21.1). -->
+  <!-- Main window, menus, toolbar, status bar, SQL log and keymap (section 21.1). -->
   <ItemGroup>
     <ProjectReference Include="..\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />

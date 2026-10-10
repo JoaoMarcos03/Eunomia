@@ -13,7 +13,7 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Controls.SqlEditor;
 
-/// <summary>Cor de fundo de uma linha do SQL log (anexo C §1.10).</summary>
+/// <summary>Background colour of an SQL log line (appendix C §1.10).</summary>
 public enum LogLineStyle
 {
     Normal,
@@ -24,9 +24,9 @@ public enum LogLineStyle
 }
 
 /// <summary>
-/// SQL log (secção 5.3, anexo C §1.10): só de leitura, uma linha por entrada, gutter com números contínuos (a
-/// numeração não recomeça quando as linhas antigas saem), highlight SQL, fundo por tipo (erro #FFB7D2, Warning
-/// #FFCDB7, Note #FFF7D3, Info #ECFFC6) e scroll para o fim a cada linha nova. Scrollbar horizontal opcional.
+/// SQL log (section 5.3, appendix C §1.10): read-only, one line per entry, gutter with running numbers (the
+/// numbering does not restart when old lines go), SQL highlighting, background by kind (error #FFB7D2, Warning
+/// #FFCDB7, Note #FFF7D3, Info #ECFFC6) and scroll to the end on every new line. Optional horizontal scrollbar.
 /// </summary>
 public sealed class SqlLogView : Decorator, IEditTarget
 {
@@ -61,7 +61,7 @@ public sealed class SqlLogView : Decorator, IEditTarget
 
     public long FirstLineNumber => _firstNumber;
 
-    // IEditTarget: o log é só de leitura (Copy e Select all).
+    // IEditTarget: the log is read-only (Copy and Select all).
     bool IEditTarget.CanCopy => Editor.CanCopy;
 
     bool IEditTarget.CanCut => false;
@@ -100,7 +100,7 @@ public sealed class SqlLogView : Decorator, IEditTarget
             : Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden;
     }
 
-    /// <summary>Substitui o conteúdo inteiro (arranque, Clear, preferências mudadas).</summary>
+    /// <summary>Replaces the whole content (startup, Clear, preferences changed).</summary>
     public void Reset(long firstLineNumber, IReadOnlyList<(string Text, LogLineStyle Style)> lines)
     {
         ArgumentNullException.ThrowIfNull(lines);
@@ -113,7 +113,7 @@ public sealed class SqlLogView : Decorator, IEditTarget
         Editor.ScrollToEnd();
     }
 
-    /// <summary>Acrescenta linhas no fim e corta <paramref name="trimFromStart"/> linhas do início.</summary>
+    /// <summary>Appends lines at the end and cuts <paramref name="trimFromStart"/> lines from the start.</summary>
     public void Append(IReadOnlyList<(string Text, LogLineStyle Style)> lines, int trimFromStart)
     {
         ArgumentNullException.ThrowIfNull(lines);
@@ -146,7 +146,7 @@ public sealed class SqlLogView : Decorator, IEditTarget
         Editor.ScrollToEnd();
     }
 
-    /// <summary>Texto da linha do documento (1-based), para "Copy line to new query tab".</summary>
+    /// <summary>Text of the (1-based) document line, for "Copy line to new query tab".</summary>
     public string LineText(int documentLine)
     {
         var line = Editor.Document.GetLineByNumber(documentLine);
@@ -179,7 +179,7 @@ public sealed class SqlLogView : Decorator, IEditTarget
         };
     }
 
-    /// <summary>Fundo das linhas por tipo, por baixo do texto e da seleção.</summary>
+    /// <summary>Line backgrounds by kind, below the text and the selection.</summary>
     private sealed class LineBackgroundRenderer(SqlLogView owner) : IBackgroundRenderer
     {
         public KnownLayer Layer => KnownLayer.Background;
@@ -201,7 +201,7 @@ public sealed class SqlLogView : Decorator, IEditTarget
         }
     }
 
-    /// <summary>Gutter com a numeração contínua do log (primeira linha = <see cref="FirstLineNumber"/>).</summary>
+    /// <summary>Gutter with the log's running numbering (first line = <see cref="FirstLineNumber"/>).</summary>
     private sealed class LogNumberMargin(SqlLogView owner) : AbstractMargin
     {
         private const double Padding = 6;

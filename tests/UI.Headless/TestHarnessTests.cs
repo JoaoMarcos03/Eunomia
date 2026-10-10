@@ -6,11 +6,11 @@ using Xunit.v3;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Proteções da corrida headless (roadmap 2.4): diálogos modais inesperados e timeout por teste.</summary>
+/// <summary>Safeguards of the headless run (roadmap 2.4): unexpected modal dialogs and a per-test timeout.</summary>
 public sealed class TestHarnessTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DialogoModalInesperadoEhFechadoERegistado()
+    public async Task UnexpectedModalDialogIsClosedAndRecorded()
     {
         var owner = new Window();
         owner.Show();
@@ -24,13 +24,13 @@ public sealed class TestHarnessTests
             owner.Close();
         }
 
-        // Sem o guarda, este await nunca acabava. O registo é consumido aqui: neste teste o diálogo era o esperado.
+        // Without the guard, this await never finished. The record is consumed here: in this test the dialog was the expected one.
         Assert.Equal(MessageDialogResult.None, result);
         Assert.Equal(["MessageDialog \"Error\": Something broke"], UnexpectedDialogGuardAttribute.TakeOpened());
     }
 
     [AvaloniaFact]
-    public void JanelaNaoModalNaoEhFechada()
+    public void NonModalWindowIsNotClosed()
     {
         var window = new Window { Title = "Tool" };
         window.Show();
@@ -41,9 +41,9 @@ public sealed class TestHarnessTests
     }
 
     [Fact]
-    public void TestesAssincronosTemTimeout()
+    public void AsyncTestsHaveATimeout()
     {
-        // Código de teste: corre sem trimming.
+        // Test code: runs without trimming.
 #pragma warning disable IL2026, IL2070
         var missing = typeof(TestHarnessTests).Assembly.GetTypes()
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
@@ -53,6 +53,6 @@ public sealed class TestHarnessTests
             .ToList();
 #pragma warning restore IL2026, IL2070
 
-        Assert.True(missing.Count == 0, "Sem Timeout = UiTimeouts.Default: " + string.Join(", ", missing));
+        Assert.True(missing.Count == 0, "Missing Timeout = UiTimeouts.Default: " + string.Join(", ", missing));
     }
 }

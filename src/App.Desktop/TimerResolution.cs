@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 namespace Eunomia.App.Desktop;
 
 /// <summary>
-/// Resolução do timer do Windows para este processo (<c>timeBeginPeriod</c>, winmm). Por omissão o tick é
-/// de 15,625 ms, o que arredonda as esperas de ~16 ms do render loop para 15,6 ou 31,2 ms. Desde o
-/// Windows 10 2004 o pedido só afeta o próprio processo.
+/// Windows timer resolution for this process (<c>timeBeginPeriod</c>, winmm). By default the tick is
+/// 15.625 ms, which rounds the render loop's ~16 ms waits to 15.6 or 31.2 ms. Since
+/// Windows 10 2004 the request only affects the calling process.
 /// </summary>
 internal static partial class TimerResolution
 {

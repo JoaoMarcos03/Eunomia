@@ -15,9 +15,9 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Controls.SqlEditor;
 
 /// <summary>
-/// Editor SQL (secção 16): AvaloniaEdit com o colorizer do lexer MySQL e popup de completion com o
-/// <see cref="CompletionProvider"/> (autocomplete A) ou a lista estática do <see cref="CompletionCatalog"/>. Consolas 9 pt (fallback Courier New), números de linha,
-/// tab width 3 (secção 4.7). Completion com Ctrl+Space, ou 500 ms depois de <c>.</c>.
+/// SQL editor (section 16): AvaloniaEdit with the MySQL lexer colorizer and a completion popup with the
+/// <see cref="CompletionProvider"/> (autocomplete A) or the static list of the <see cref="CompletionCatalog"/>. Consolas 9 pt (Courier New fallback), line numbers,
+/// tab width 3 (section 4.7). Completion with Ctrl+Space, or 500 ms after <c>.</c>.
 /// </summary>
 public sealed partial class SqlEditorControl : Decorator, IEditTarget
 {
@@ -69,8 +69,8 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
     private SqlEditorPalette _palette = SqlEditorPalette.Light;
 
     /// <summary>
-    /// Números de linha (gutter) e o traço a seguir. Os margens são do editor e não do <c>TextEditor.ShowLineNumbers</c>,
-    /// para o gutter poder ter a cor da sessão.
+    /// Line numbers (gutter) and the line after them. The margins belong to the editor and not to <c>TextEditor.ShowLineNumbers</c>,
+    /// so the gutter can take the session colour.
     /// </summary>
     public bool ShowLineNumbers
     {
@@ -92,8 +92,8 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
     }
 
     /// <summary>
-    /// Cor da sessão onde a query corre (0xAARRGGBB, 0 = nenhuma): tinta no fundo do gutter e uma barra com a cor
-    /// inteira à esquerda (secção 5; FAM-S02).
+    /// Colour of the session the query runs on (0xAARRGGBB, 0 = none): a tint on the gutter background and a bar with the full
+    /// colour on the left (section 5; FAM-S02).
     /// </summary>
     public uint SessionColor
     {
@@ -118,7 +118,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         _lineNumbers.InvalidateVisual();
     }
 
-    /// <summary>Números de linha com o fundo na tinta da cor da sessão e a barra da cor à esquerda.</summary>
+    /// <summary>Line numbers with the background in the session colour tint and the colour bar on the left.</summary>
     private sealed class SessionLineNumberMargin : LineNumberMargin
     {
         public IBrush? Fill { get; set; }
@@ -140,8 +140,8 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
     }
 
     /// <summary>
-    /// Linha (base 1) do último erro, a rosa (<c>#FFB7D2</c>) até à próxima edição (secção 4.7; FAM-Q11). Pôr a linha
-    /// também leva o cursor ao início dela.
+    /// (1-based) line of the last error, in pink (<c>#FFB7D2</c>) until the next edit (section 4.7; FAM-Q11). Setting the line
+    /// also moves the cursor to its start.
     /// </summary>
     public int? ErrorLine
     {
@@ -189,8 +189,8 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
     }
 
     /// <summary>
-    /// Texto a inserir quando algo é largado no editor (nós da árvore, FAM-T07), ou <c>null</c> se não aceita. Recebe
-    /// os modificadores do momento do drop (Shift qualifica o nome).
+    /// Text to insert when something is dropped on the editor (tree nodes, FAM-T07), or <c>null</c> if it does not accept it.
+    /// Receives the modifiers at the time of the drop (Shift qualifies the name).
     /// </summary>
     public Func<IDataTransfer, KeyModifiers, string?>? DropText { get; set; }
 
@@ -203,7 +203,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         }
     }
 
-    /// <summary>Insere o texto na posição do rato (ou no cursor, fora do texto).</summary>
+    /// <summary>Inserts the text at the mouse position (or at the cursor, outside the text).</summary>
     private void OnDrop(object? sender, DragEventArgs e)
     {
         if (DropText?.Invoke(e.DataTransfer, e.KeyModifiers) is not { } text)
@@ -223,17 +223,17 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
     public CompletionCatalog Catalog { get; set; } = CompletionCatalog.CreateMySql([], []);
 
     /// <summary>
-    /// Autocomplete com contexto (texto, cursor): quando existe, substitui o <see cref="Catalog"/>. É chamado na UI
-    /// thread (o trabalho pesado vai para background); se o texto ou o cursor mudarem entretanto, a resposta é ignorada.
+    /// Context-aware autocomplete (text, cursor): when present, it replaces the <see cref="Catalog"/>. Called on the UI
+    /// thread (the heavy work goes to the background); if the text or the cursor change in the meantime, the answer is ignored.
     /// </summary>
     public Func<string, int, CancellationToken, Task<CompletionProposal?>>? CompletionProvider { get; set; }
 
     private CancellationTokenSource? _proposal;
 
-    /// <summary>Janela de completion aberta (para testes).</summary>
+    /// <summary>Open completion window (for tests).</summary>
     public CompletionWindow? CompletionWindow => _completion;
 
-    // IEditTarget: as actions do menu Edit (Copy, Cut, Paste, Select all, Undo) atuam no editor focado.
+    // IEditTarget: the Edit menu actions (Copy, Cut, Paste, Select all, Undo) act on the focused editor.
     public bool CanCopy => Editor.CanCopy;
 
     public bool CanCut => Editor.CanCut;
@@ -273,8 +273,8 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
     }
 
     /// <summary>
-    /// Un/comment (secção 4.7): <c>-- </c> no início das linhas da seleção (ou da linha do cursor); se todas as linhas
-    /// com texto já começam por <c>--</c>, tira-o. Uma só alteração no undo.
+    /// Un/comment (section 4.7): <c>-- </c> at the start of the selected lines (or of the cursor line); if every line
+    /// with text already starts with <c>--</c>, removes it. A single undo step.
     /// </summary>
     public void ToggleComment()
     {
@@ -306,7 +306,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         }
     }
 
-    /// <summary>Ctrl+U / Ctrl+L: maiúsculas ou minúsculas na seleção, ou na palavra do cursor.</summary>
+    /// <summary>Ctrl+U / Ctrl+L: upper or lower case on the selection, or on the word at the cursor.</summary>
     public void ChangeCase(bool upper)
     {
         var (start, length) = Editor.SelectionLength > 0 ? (Editor.SelectionStart, Editor.SelectionLength) : WordAtCaret();
@@ -327,7 +327,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         }
     }
 
-    /// <summary>Alt+↑ / Alt+↓: move as linhas da seleção (ou a do cursor) uma linha para cima ou para baixo.</summary>
+    /// <summary>Alt+↑ / Alt+↓: moves the selected lines (or the cursor line) one line up or down.</summary>
     public void MoveLines(int direction)
     {
         var document = Editor.Document;
@@ -369,7 +369,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         }
     }
 
-    /// <summary>Linhas da seleção (sem a última se a seleção acaba no início dela), ou a linha do cursor.</summary>
+    /// <summary>Lines of the selection (without the last one if the selection ends at its start), or the cursor line.</summary>
     private (int First, int Last) SelectedLines()
     {
         var document = Editor.Document;
@@ -403,8 +403,8 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
     }
 
     /// <summary>
-    /// Insere texto na posição do cursor (substituindo a seleção, se houver), põe o cursor a seguir e
-    /// devolve o foco ao editor. Usado pelo duplo clique na árvore (FAM-T07).
+    /// Inserts text at the cursor position (replacing the selection, if any), puts the cursor after it and
+    /// gives the focus back to the editor. Used by double click in the tree (FAM-T07).
     /// </summary>
     public void InsertAtCaret(string text)
     {
@@ -415,7 +415,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         Editor.TextArea.Focus();
     }
 
-    /// <summary>Abre o popup com as sugestões para a palavra antes do cursor.</summary>
+    /// <summary>Opens the popup with the suggestions for the word before the cursor.</summary>
     public void ShowCompletion()
     {
         _completion?.Close();
@@ -428,7 +428,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         Open(start, word, Catalog.Find(word));
     }
 
-    /// <summary>Tarefa do último pedido ao <see cref="CompletionProvider"/> (testes).</summary>
+    /// <summary>Task of the last request to the <see cref="CompletionProvider"/> (tests).</summary>
     public Task PendingCompletion { get; private set; } = Task.CompletedTask;
 
     private Task ShowProposalAsync(Func<string, int, CancellationToken, Task<CompletionProposal?>> provider)
@@ -493,8 +493,8 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         window.Show();
         if (word.Length > 0)
         {
-            // SelectItem do AvaloniaEdit 12.0.0 dá NullReferenceException antes de o template da lista estar
-            // aplicado (ListBox ainda null); filtra-se depois do layout do popup.
+            // AvaloniaEdit 12.0.0's SelectItem throws a NullReferenceException before the list template is
+            // applied (ListBox still null); the filter is applied after the popup's layout.
             Dispatcher.UIThread.Post(() =>
             {
                 if (ReferenceEquals(_completion, window) && window.CompletionList.ListBox is not null)
@@ -514,17 +514,17 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         }
     }
 
-    /// <summary>Auto completion proposal depois de <c>.</c> (Preferences › SQL).</summary>
+    /// <summary>Auto completion proposal after <c>.</c> (Preferences › SQL).</summary>
     public bool CompletionEnabled { get; set; } = true;
 
-    /// <summary>Atraso do popup depois de <c>.</c> (500 ms por omissão).</summary>
+    /// <summary>Popup delay after <c>.</c> (500 ms by default).</summary>
     public TimeSpan CompletionDelay
     {
         get => _dotTimer.Interval;
         set => _dotTimer.Interval = value < TimeSpan.FromMilliseconds(1) ? TimeSpan.FromMilliseconds(1) : value;
     }
 
-    /// <summary>"Auto uppercase reserved words and functions" (ligado por omissão, como no HeidiSQL).</summary>
+    /// <summary>"Auto uppercase reserved words and functions" (on by default, as in HeidiSQL).</summary>
     public bool AutoUppercase { get; set; } = true;
 
     private void OnTextEntered(object? sender, TextInputEventArgs e)
@@ -544,7 +544,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         }
     }
 
-    /// <summary>Keyword, tipo ou função acabada de escrever (fora de strings e comentários) passa a maiúsculas.</summary>
+    /// <summary>A keyword, type or function just typed (outside strings and comments) becomes upper case.</summary>
     private void UppercaseWordBefore(int end)
     {
         var document = Editor.Document;
@@ -562,11 +562,11 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
 
     private void OnDocumentChanged(object? sender, DocumentChangeEventArgs e)
     {
-        // A linha de erro fica marcada até à próxima edição (secção 4.7).
+        // The error line stays marked until the next edit (section 4.7).
         ErrorLine = null;
         var line = Editor.Document.GetLineByOffset(Math.Min(e.Offset, Editor.Document.TextLength)).LineNumber;
         _colorizer.InvalidateFrom(line);
-        // Uma string ou comentário aberto muda as linhas seguintes: redesenha o visível.
+        // An open string or comment changes the following lines: redraws the visible area.
         Editor.TextArea.TextView.Redraw();
         ScheduleFoldings();
     }
@@ -602,7 +602,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         return (start, document.GetText(start, offset - start));
     }
 
-    /// <summary>Linha do popup: nome e, à direita e a cinzento, o tipo, o valor ou a assinatura (anexo C §4.2).</summary>
+    /// <summary>Popup row: the name and, on the right in grey, the type, the value or the signature (appendix C §4.2).</summary>
     private sealed class SqlCompletionData(CompletionItem item) : ICompletionData
     {
         public CompletionItem Item => item;
@@ -631,7 +631,7 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
             textArea.Document.Replace(completionSegment, item.InsertText ?? item.Text);
     }
 
-    /// <summary>Sugestões do popup aberto, pela ordem (testes).</summary>
+    /// <summary>Suggestions of the open popup, in order (tests).</summary>
     public IReadOnlyList<CompletionItem> CompletionItems =>
         _completion?.CompletionList.CompletionData.OfType<SqlCompletionData>().Select(d => d.Item).ToList() ?? [];
 }

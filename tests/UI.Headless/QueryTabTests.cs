@@ -12,16 +12,16 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Query tabs contra o servidor real (Fase 6; anexo C §4.4; anexo D B18; FAM-Q01–Q04, Q11; D2).</summary>
+/// <summary>Query tabs against the real server (phase 6; appendix C §4.4; appendix D B18; FAM-Q01–Q04, Q11; D2).</summary>
 public sealed class QueryTabTests
 {
     private static string Header(TabItem item) => (string)item.Header!;
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ResultTabsOrdenacaoErroEUnsafe()
+    public async Task ResultTabsSortingErrorAndUnsafe()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_qt_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); INSERT INTO `{db}`.people VALUES (1, 'rui'), (2, 'Ana'), (3, NULL);");
@@ -45,10 +45,10 @@ public sealed class QueryTabTests
             window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
             var view = Assert.IsType<QueryTabView>(window.Tabs.QueryTabs[0].Content);
 
-            // Dois result sets com nomes por comentário, captions "(Nr × Mc)" e resumo no log.
-            window.SqlEditor.Text = $"-- names: um, dois\nSELECT 1 AS a;\nSELECT * FROM `{db}`.people;";
+            // Two result sets named by comments, "(Nr × Mc)" captions and the summary in the log.
+            window.SqlEditor.Text = $"-- names: one, two\nSELECT 1 AS a;\nSELECT * FROM `{db}`.people;";
             Assert.True(await context.Commands.ExecuteAsync("query.run"));
-            Assert.Equal(["um (1r × 1c)", "dois (3r × 2c)"], view.Results.Items.OfType<TabItem>().Select(Header));
+            Assert.Equal(["one (1r × 1c)", "two (3r × 2c)"], view.Results.Items.OfType<TabItem>().Select(Header));
             Assert.Contains(log.Snapshot(), l => l.Text.Contains("Affected rows: 0  Found rows: 4  Warnings: 0  Duration for 2 queries:", StringComparison.Ordinal));
             Assert.Equal(0xFF006400u, view.ResultGrids[0].Control.SessionColor);
             Assert.True(view.ResultGrids[0].Control.IsReadOnly);
@@ -61,7 +61,7 @@ public sealed class QueryTabTests
             Assert.Equal(1, view.Results.SelectedIndex);
             Dispatcher.UIThread.RunJobs();
 
-            // Clique no header "name": ordenação local ascendente com NULL primeiro; segundo clique inverte.
+            // Click on the "name" header: local ascending sort with NULL first; a second click reverses it.
             var grid = view.ActiveGrid!;
             await grid.PendingAutoSize;
             var header = grid.TranslatePoint(new Point(grid.CellBounds(0, 1).Center.X, grid.HeaderHeight / 2), window)!.Value;
@@ -75,7 +75,7 @@ public sealed class QueryTabTests
             await WaitAsync(() => grid.GetDisplayText(0, 1) == "rui" ? "ok" : null);
             Assert.Equal(new GridSortIndicator(true, 1), grid.SortIndicators[1]);
 
-            // Erro na terceira linha da segunda instrução: diálogo, log e linha a rosa com o cursor nela.
+            // Error on the third line of the second statement: dialog, log and the line in pink with the cursor on it.
             window.SqlEditor.Text = "SELECT 1;\nSELECT\n  1 FORM x;\nSELECT 2;";
             Assert.True(await context.Commands.ExecuteAsync("query.run"));
             var error = Assert.Single(errors);
@@ -86,7 +86,7 @@ public sealed class QueryTabTests
             Assert.Single(view.Results.Items);
             Assert.Single(appDb.GetHistory("it"));
 
-            // UPDATE sem WHERE pergunta; "não" não corre nada.
+            // UPDATE without WHERE asks; "no" runs nothing.
             window.SqlEditor.Text = $"UPDATE `{db}`.people SET name = 'x'";
             Assert.True(await context.Commands.ExecuteAsync("query.run"));
             Assert.Equal("Run unsafe queries without a WHERE clause?", Assert.Single(questions));
@@ -102,10 +102,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task AutocompleteComAliasNaSessaoAtiva()
+    public async Task AutocompleteWithAliasOnTheActiveSession()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_qa_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, `full name` VARCHAR(20));");
         try
@@ -123,7 +123,7 @@ public sealed class QueryTabTests
             Assert.Equal("`full name`", editor.CompletionItems[1].InsertText);
             editor.CompletionWindow!.Close();
 
-            // Dentro de uma string não abre.
+            // Inside a string it does not open.
             editor.Text = "SELECT 'p.";
             editor.Editor.CaretOffset = editor.Text.Length;
             Assert.True(await context.Commands.ExecuteAsync("editor.completion"));
@@ -138,10 +138,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ResultadosEditaveisSoComTabelaEChave()
+    public async Task EditableResultsOnlyWithTableAndKey()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_qe_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); INSERT INTO `{db}`.people VALUES (1, 'Ana'), (2, 'Rui');");
         try
@@ -160,7 +160,7 @@ public sealed class QueryTabTests
             Assert.True(grids[1].IsReadOnly);
             Assert.True(grids[2].IsReadOnly);
 
-            // O resultado com a tabela e a chave grava como o Data tab.
+            // The result with the table and the key saves like the Data tab.
             Assert.True(await editable.SetCellValueAsync(1, 1, new CellValue("Zé")));
             Assert.True(await editable.PostAsync());
             Assert.Equal("Zé", editable.GetDisplayText(1, 1));
@@ -171,7 +171,7 @@ public sealed class QueryTabTests
                 Assert.Equal("Zé", await cmd.ExecuteScalarAsync());
             }
 
-            // Sem chave (ou com uma expressão), só leitura e a mensagem do HeidiSQL.
+            // Without a key (or with an expression), read-only and HeidiSQL's message.
             await grids[1].BeginEditAsync();
             Assert.Equal(Eunomia.UI.Shell.MainWindow.NoKeyMessage, Assert.Single(errors));
             window.Close();
@@ -183,10 +183,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SessaoAlvoEFixarTab()
+    public async Task TargetSessionAndPinningTheTab()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var (window, context, session, connector, log) = CreateShell(cs, string.Empty, color: 0xC00000);
         var questions = new List<string>();
         var answer = false;
@@ -203,12 +203,12 @@ public sealed class QueryTabTests
         var view = Assert.IsType<QueryTabView>(tab.Content);
         Dispatcher.UIThread.RunJobs();
 
-        // Indicador da sessão alvo: barra do editor, gutter e tooltip da tab.
+        // Target session indicator: editor bar, gutter and the tab tooltip.
         Assert.Equal("Session: it", view.TargetText);
         Assert.Equal(0xFFC00000u, view.Editor.SessionColor);
         Assert.Equal("Session: it", ToolTip.GetTip(tab.Item));
 
-        // Fixar à sessão; desligada, o Run pergunta se liga e não corre noutra sessão.
+        // Pinning to the session; disconnected, Run asks whether to connect and does not run on another session.
         Assert.True(await context.Commands.ExecuteAsync("query.pinToSession"));
         Assert.Equal("Pinned to session: it", view.TargetText);
         Assert.True(context.Commands.StateOf("query.pinToSession").IsChecked);
@@ -227,7 +227,7 @@ public sealed class QueryTabTests
         Assert.Equal(["Result #1 (1r × 1c)"], view.Results.Items.OfType<TabItem>().Select(Header));
         Assert.Single(connector.Open);
 
-        // Sem fixar e sem sessão ativa, não corre.
+        // Not pinned and without an active session, it does not run.
         Dispatcher.UIThread.RunJobs();
         Assert.Same(tab.Item, window.Tabs.SelectedItem);
         Assert.True(context.Commands.StateOf("query.pinToSession").IsChecked);
@@ -240,10 +240,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CancelSoAtuaNaPropriaTab()
+    public async Task CancelOnlyActsOnItsOwnTab()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var (window, context, session, _, log) = CreateShell(cs, string.Empty);
         Assert.True(await window.ConnectAsync(window, session, null));
         await WaitAsync(() => window.Tree.Tree.Model!.Roots.FirstOrDefault());
@@ -253,11 +253,11 @@ public sealed class QueryTabTests
         await WaitAsync(() => window.ActiveSession!.Host.IsPrimaryBusy ? "ok" : null);
         Assert.False(context.Commands.StateOf("query.run").CanExecute);
 
-        // A tab ocupada não fecha.
+        // The busy tab does not close.
         window.Tabs.CloseQueryTab(first);
         Assert.Contains(first, window.Tabs.QueryTabs);
 
-        // Noutra query tab (ou no Data tab), o Cancel não mexe na execução da primeira.
+        // In another query tab (or in the Data tab), Cancel does not touch the first one's run.
         window.Tabs.AddQueryTab();
         Assert.False(context.Commands.StateOf("operation.cancel").CanExecute);
         window.ShowDataTab();

@@ -13,15 +13,15 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// <c>popupDB</c> na árvore (Fase 4; anexo C §3.3; anexo B §6): Drop, Empty table(s), Select top N rows, Create
-/// database, Edit, Clear data tab filter, e o texto inserido no editor por duplo clique e por drag (FAM-T07).
+/// <c>popupDB</c> in the tree (phase 4; appendix C §3.3; appendix B §6): Drop, Empty table(s), Select top N rows, Create
+/// database, Edit, Clear data tab filter, and the text inserted in the editor by double click and drag (FAM-T07).
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Substitui os diálogos de confirmação (testes): recebe título, mensagem e caixa de verificação.</summary>
+    /// <summary>Replaces the confirmation dialogs (tests): receives the title, the message and the check box.</summary>
     internal Func<string, string, string?, Task<(bool Ok, bool Verified)>>? ConfirmOverride { get; set; }
 
-    /// <summary>Substitui o diálogo Create database (testes): recebe as collations e a pré-selecionada.</summary>
+    /// <summary>Replaces the Create database dialog (tests): receives the collations and the preselected one.</summary>
     internal Func<IReadOnlyList<string>, string?, Task<CreateDatabaseRequest?>>? CreateDatabaseOverride { get; set; }
 
     private void InitObjectCommands()
@@ -37,7 +37,7 @@ public sealed partial class MainWindow
         c.SetHandler("object.clearDataTabFilter", ClearDataTabFilter, () => ObjectsTarget() is { } t && t.Objects.Any(IsTableOrView));
     }
 
-    /// <summary>Edit (Alt+Enter): abre o objeto focado no Table tab (o editor da tabela, view ou rotina).</summary>
+    /// <summary>Edit (Alt+Enter): opens the focused object in the Table tab (the table, view or routine editor).</summary>
     private async Task EditObjectAsync()
     {
         if (FocusedObject() is not ({ } open, { } obj))
@@ -51,7 +51,7 @@ public sealed partial class MainWindow
         _tabs.SelectedItem = _tabs.TableTab;
     }
 
-    /// <summary>Clear data tab filter and sort order: apaga o filtro e a ordenação gravados das tabelas escolhidas.</summary>
+    /// <summary>Clear data tab filter and sort order: deletes the saved filter and sort order of the chosen tables.</summary>
     private void ClearDataTabFilter()
     {
         if (ObjectsTarget() is not ({ } open, _, { } objects))
@@ -73,7 +73,7 @@ public sealed partial class MainWindow
 
     private static bool IsTableOrView(DbObjectRef obj) => obj.Kind is DbObjectKind.Table or DbObjectKind.View;
 
-    /// <summary>Nó focado na árvore com a sessão aberta a que pertence.</summary>
+    /// <summary>Node focused in the tree with the open session it belongs to.</summary>
     private (OpenSession Session, TreeNode Node, TreeObjectTag? Tag)? TreeTarget()
     {
         if (_tree.Tree.FocusedNode is not { Session.Tag: Guid id } node || Sessions?.Connector.Find(id) is not { } open || open.Host.ServerServices is null)
@@ -84,8 +84,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Linha com a sessão e o servidor nas perguntas de ações destrutivas (Fase 14): quem tem várias sessões abertas vê em
-    /// que servidor vai apagar antes de confirmar.
+    /// Line with the session and the server in the questions of destructive actions (phase 14): someone with several sessions
+    /// open sees which server they are about to delete on before confirming.
     /// </summary>
     private static string SessionLine(OpenSession session) =>
         $"\n\nSession: {session.Name} ({session.Definition.Host}:{session.Definition.Port})";
@@ -104,7 +104,7 @@ public sealed partial class MainWindow
         return (result == MessageDialogResult.Ok, verified);
     }
 
-    /// <summary>Objetos alvo: a seleção da lista do Database tab, se tiver o foco; senão o objeto focado na árvore.</summary>
+    /// <summary>Target objects: the Database tab list selection, if it has the focus; otherwise the object focused in the tree.</summary>
     private (OpenSession Session, string Database, IReadOnlyList<DbObjectRef> Objects)? ObjectsTarget()
     {
         if (ListTarget() is { } list)
@@ -114,7 +114,7 @@ public sealed partial class MainWindow
         return TreeTarget() is ({ } open, _, { Object: { } obj } tag) ? (open, tag.Database, [obj]) : null;
     }
 
-    /// <summary>Objeto focado (lista do Database tab com foco, ou árvore).</summary>
+    /// <summary>Focused object (Database tab list with focus, or the tree).</summary>
     private (OpenSession Session, DbObjectRef Object)? FocusedObject()
     {
         if (_databaseView is { } view && view.List.IsKeyboardFocusWithin)
@@ -165,9 +165,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Antes de um Drop: a navegação pendente para o objeto focado (à espera do <c>USE</c>), a carga da definição no Table
-    /// tab e a do Data tab de um objeto que vai deixar de existir acabavam num erro "doesn't exist" em diálogo depois do
-    /// Drop (num servidor lento, ou com o Drop logo a seguir a escolher o objeto).
+    /// Before a Drop: the pending navigation to the focused object (waiting for the <c>USE</c>), the definition load in the Table
+    /// tab and the Data tab load of an object about to disappear used to end in a "doesn't exist" error dialog after the
+    /// Drop (on a slow server, or with the Drop right after choosing the object).
     /// </summary>
     private void CancelLoadsOf(OpenSession session, Func<DbObjectRef, bool> dropped)
     {
@@ -204,12 +204,12 @@ public sealed partial class MainWindow
         }
         finally
         {
-            // Os tamanhos mudaram: relê a base (nomes e estatísticas).
+            // The sizes changed: reads the database again (names and statistics).
             await ReloadDatabaseObjectsAsync(open, database);
         }
     }
 
-    /// <summary>"Select top N rows": query tab nova com o SELECT e corre-o (anexo C §3.3).</summary>
+    /// <summary>"Select top N rows": a new query tab with the SELECT, and runs it (appendix C §3.3).</summary>
     private async Task SelectTopRowsAsync()
     {
         if (FocusedObject() is not ({ } open, { } table))
@@ -267,8 +267,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Texto que um nó insere no editor (duplo clique ou drag, anexo D A12): base, objeto ou coluna com quoting mínimo;
-    /// com Shift, qualificado com a base (e, numa coluna, também com a tabela).
+    /// Text a node inserts in the editor (double click or drag, appendix D A12): database, object or column with minimal quoting;
+    /// with Shift, qualified with the database (and, for a column, with the table too).
     /// </summary>
     private string? NodeInsertText(TreeNode node, bool qualified)
     {
@@ -291,11 +291,11 @@ public sealed partial class MainWindow
         return null;
     }
 
-    /// <summary>Linguagem da sessão de um nó da árvore (a de omissão se a sessão já fechou).</summary>
+    /// <summary>Language of a tree node's session (the default one if the session already closed).</summary>
     private ISqlLanguage LanguageOf(TreeNode node) =>
         node.Session?.Tag is Guid id && Sessions?.Connector.Find(id) is { } open ? open.Language : SqlLanguages.Default;
 
-    /// <summary>Drop no editor: só aceita nós da árvore.</summary>
+    /// <summary>Drop on the editor: only accepts tree nodes.</summary>
     private string? TreeDropText(IDataTransfer data, KeyModifiers modifiers) =>
         data.TryGetValue(DatabaseTreeControl.NodeFormat) is { } node ? NodeInsertText(node, modifiers.HasFlag(KeyModifiers.Shift)) : null;
 }

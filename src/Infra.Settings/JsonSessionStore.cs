@@ -7,13 +7,13 @@ using Eunomia.App.Sessions;
 namespace Eunomia.Infra.Settings;
 
 /// <summary>
-/// Sessões em <c>sessions.json</c> (secção 21.4), escrita atómica com a versão anterior em <c>sessions.json.bak</c>. Um
-/// ficheiro corrompido fica de lado com o sufixo <c>.corrupt-&lt;data&gt;</c> e as sessões voltam do <c>.bak</c> (a lista
-/// só arranca vazia se este também não servir). Sem passwords: estão no cofre de segredos.
+/// Sessions in <c>sessions.json</c> (section 21.4), atomic write with the previous version in <c>sessions.json.bak</c>. A
+/// corrupted file is set aside with the <c>.corrupt-&lt;date&gt;</c> suffix and the sessions come back from the <c>.bak</c>
+/// (the list only starts empty if that one is no good either). No passwords: they are in the secret vault.
 /// <para>
-/// Várias instâncias da aplicação (Fase 14): ao gravar, se o ficheiro mudou desde a última leitura ou escrita desta
-/// instância, junta-se a versão do disco com a desta por propriedade de cada sessão (fusão a três: o que esta instância
-/// não mudou vem do disco), em vez de a última instância a gravar apagar o trabalho da outra.
+/// Several application instances (phase 14): when saving, if the file changed since this instance's last read or write,
+/// the disk version is merged with this one per property of each session (three-way merge: what this instance did not
+/// change comes from the disk), instead of the last instance to save wiping out the other's work.
 /// </para>
 /// </summary>
 public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : ISessionStore
@@ -28,7 +28,7 @@ public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : 
 
     public string? LastCorruptBackup { get; private set; }
 
-    /// <summary>As sessões vieram do <c>.bak</c> porque o ficheiro principal estava corrompido.</summary>
+    /// <summary>The sessions came from the <c>.bak</c> because the main file was corrupted.</summary>
     public bool RestoredFromBackup { get; private set; }
 
     public SessionCatalog Load()
@@ -72,7 +72,7 @@ public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : 
                 var disk = File.ReadAllBytes(Path);
                 if (_diskHash is null || !SHA256.HashData(disk).AsSpan().SequenceEqual(_diskHash))
                 {
-                    // Outra instância gravou entretanto: fusão a três com o que esta instância viu da última vez.
+                    // Another instance saved in the meantime: three-way merge with what this instance saw last time.
                     if (TryParse(disk) is { } theirs)
                     {
                         Merge(catalog, theirs);
@@ -125,9 +125,9 @@ public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : 
     private static string FolderKey(List<string> folder) => string.Join('\u0001', folder);
 
     /// <summary>
-    /// Junta em <paramref name="ours"/> as alterações de <paramref name="theirs"/>: por sessão (pelo id) e por propriedade,
-    /// o que esta instância não mudou desde a última leitura vem do disco; sessões novas do disco juntam-se; uma sessão
-    /// apagada de um lado sai, salvo se o outro lado a mudou entretanto (assim nunca se perde trabalho por engano).
+    /// Merges the changes of <paramref name="theirs"/> into <paramref name="ours"/>: per session (by id) and per property,
+    /// what this instance did not change since its last read comes from the disk; new sessions on disk are added; a session
+    /// deleted on one side goes, unless the other side changed it in the meantime (so work is never lost by mistake).
     /// </summary>
     private void Merge(SessionCatalog ours, SessionCatalog theirs)
     {
@@ -139,7 +139,7 @@ public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : 
             _baseSessions.TryGetValue(session.Id, out var original);
             if (!theirNodes.TryGetValue(session.Id, out var other))
             {
-                // Apagada no disco: fica só se esta instância a criou ou mudou.
+                // Deleted on disk: it stays only if this instance created or changed it.
                 if (original is null || !JsonNode.DeepEquals(original, mine))
                 {
                     merged.Add(session);
@@ -156,7 +156,7 @@ public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : 
         var known = ours.Sessions.Select(s => s.Id).ToHashSet();
         foreach (var other in theirs.Sessions.Where(s => !known.Contains(s.Id)))
         {
-            // Nova no disco, ou apagada aqui: apagada aqui sai, salvo se a outra instância a mudou.
+            // New on disk, or deleted here: deleted here goes, unless the other instance changed it.
             if (!_baseSessions.TryGetValue(other.Id, out var original) || !JsonNode.DeepEquals(original, ToNode(other)))
             {
                 merged.Add(other);
@@ -178,7 +178,7 @@ public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : 
         return session;
     }
 
-    /// <summary>Fusão a três por propriedade (recursiva nos objetos): o que não mudou em <paramref name="mine"/> vem de <paramref name="theirs"/>.</summary>
+    /// <summary>Three-way merge per property (recursive into objects): what did not change in <paramref name="mine"/> comes from <paramref name="theirs"/>.</summary>
     private static JsonObject MergeObject(JsonObject original, JsonObject mine, JsonObject theirs)
     {
         var result = new JsonObject();

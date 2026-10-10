@@ -6,7 +6,7 @@ using Eunomia.App.Settings;
 
 namespace Eunomia.Infra.Settings.HeidiImport;
 
-/// <summary>Resultado do import (mostrado ao utilizador e no SQL log).</summary>
+/// <summary>Result of the import (shown to the user and in the SQL log).</summary>
 public sealed record HeidiImportResult(
     IReadOnlyList<SessionDefinition> ImportedSessions,
     IReadOnlyList<string> SkippedSessions,
@@ -20,15 +20,15 @@ public sealed record HeidiImportResult(
     int ImportedHistory = 0);
 
 /// <summary>
-/// Import das settings do HeidiSQL (FAM-S05, REQ-SES-02, TR-02): sessões com folders, cores, SSH e SSL, estatísticas,
-/// favoritos e atalhos <c>Shortcut1_*</c>; e (Fase 13) as preferências com equivalente, o estado por tabela e o histórico
-/// de queries das sessões importadas. Add-only, como no HeidiSQL: sessões que já existem (mesmo caminho) e atalhos já
-/// redefinidos não são substituídos; as preferências do HeidiSQL substituem as do Eunomia. Passwords desofuscadas vão direto para o cofre de segredos
-/// (secção 23.2); nunca ficam no JSON.
+/// Import of HeidiSQL's settings (FAM-S05, REQ-SES-02, TR-02): sessions with folders, colours, SSH and SSL, statistics,
+/// favourites and <c>Shortcut1_*</c> shortcuts; and (phase 13) the preferences that have an equivalent, the per-table state
+/// and the query history of the imported sessions. Add-only, as in HeidiSQL: sessions that already exist (same path) and
+/// shortcuts already redefined are not replaced; HeidiSQL's preferences replace Eunomia's. De-obfuscated passwords go
+/// straight to the secret vault (section 23.2); they never stay in the JSON.
 /// </summary>
 public sealed partial class HeidiSettingsImporter(SessionCatalog catalog, AppSettings settings, CommandRegistry commands, ISecretStore secrets, IAppDatabase? appDatabase)
 {
-    /// <summary><c>clNone</c> e <c>clDefault</c> do Delphi: sem cor de sessão.</summary>
+    /// <summary>Delphi's <c>clNone</c> and <c>clDefault</c>: no session colour.</summary>
     private const int ClNone = 0x1FFFFFFF;
     private const int ClDefault = 0x20000000;
 
@@ -41,7 +41,7 @@ public sealed partial class HeidiSettingsImporter(SessionCatalog catalog, AppSet
             warnings.Add($"{file.InvalidLines} invalid line(s) ignored.");
         }
 
-        // Árvore de chaves debaixo de Servers.
+        // Key tree under Servers.
         var keys = new Dictionary<string, Dictionary<string, HeidiValue>>(StringComparer.OrdinalIgnoreCase);
         foreach (var value in file.Values.Where(v => v.KeyPath.Count > 0 && v.KeyPath[0].Equals("Servers", StringComparison.OrdinalIgnoreCase)))
         {
@@ -110,7 +110,7 @@ public sealed partial class HeidiSettingsImporter(SessionCatalog catalog, AppSet
                 }
                 else if (!session.LoginPrompt)
                 {
-                    // No HeidiSQL, password ausente é password vazia (não pede credenciais).
+                    // In HeidiSQL, a missing password is an empty password (it does not ask for credentials).
                     secrets.Set(SecretKeys.Password(session.Id), string.Empty);
                     session.PasswordSaved = true;
                 }
@@ -229,7 +229,7 @@ public sealed partial class HeidiSettingsImporter(SessionCatalog catalog, AppSet
 
     private static string CatalogName(string name) => SessionCatalog.NormalizeName(name).Length == 0 ? "Unnamed" : SessionCatalog.NormalizeName(name);
 
-    /// <summary>TColor do Delphi (<c>$00BBGGRR</c>) para 0xRRGGBB; <c>clNone</c>, <c>clDefault</c> e cores de sistema = sem cor.</summary>
+    /// <summary>Delphi TColor (<c>$00BBGGRR</c>) to 0xRRGGBB; <c>clNone</c>, <c>clDefault</c> and system colours = no colour.</summary>
     public static uint? ToColor(int tcolor)
     {
         if (tcolor is ClNone or ClDefault || tcolor < 0 || (tcolor & unchecked((int)0xFF000000)) != 0)
@@ -242,13 +242,13 @@ public sealed partial class HeidiSettingsImporter(SessionCatalog catalog, AppSet
         return (r << 16) | (g << 8) | b;
     }
 
-    /// <summary>Datas gravadas como texto <c>yyyy-mm-dd hh:nn:ss</c> (formato forçado pelo HeidiSQL), em hora local.</summary>
+    /// <summary>Dates saved as <c>yyyy-mm-dd hh:nn:ss</c> text (the format HeidiSQL forces), in local time.</summary>
     private static DateTimeOffset? ParseDate(string text) =>
         DateTime.TryParseExact(text, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var d)
             ? new DateTimeOffset(d)
             : null;
 
-    /// <summary>Atalhos <c>Shortcut1_&lt;action&gt;</c> (TShortCut: Ctrl = $4000, Shift = $2000, Alt = $8000 + tecla virtual).</summary>
+    /// <summary><c>Shortcut1_&lt;action&gt;</c> shortcuts (TShortCut: Ctrl = $4000, Shift = $2000, Alt = $8000 + virtual key).</summary>
     private int ImportShortcuts(HeidiSettingsFile file, List<string> warnings)
     {
         var count = 0;

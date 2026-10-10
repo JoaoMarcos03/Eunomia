@@ -1,9 +1,9 @@
 namespace Eunomia.App.Commands;
 
-/// <summary>Entrada de um menu gerado a partir do registo de comandos (secção 21.2).</summary>
+/// <summary>Entry of a menu generated from the command registry (section 21.2).</summary>
 public abstract record MenuEntry;
 
-/// <summary>Item ligado a um comando do registo (caption, atalho, ícone e estado vêm do comando).</summary>
+/// <summary>Item bound to a registry command (caption, shortcut, icon and state come from the command).</summary>
 public sealed record CommandEntry(string CommandId) : MenuEntry;
 
 public sealed record SeparatorEntry : MenuEntry
@@ -13,12 +13,12 @@ public sealed record SeparatorEntry : MenuEntry
 
 public sealed record SubmenuEntry(string Caption, IReadOnlyList<MenuEntry> Items, string? Icon = null) : MenuEntry;
 
-/// <summary>Submenu construído em runtime pela UI ("Connect to ▸", "Editor commands ▸").</summary>
+/// <summary>Submenu built at runtime by the UI ("Connect to ▸", "Editor commands ▸").</summary>
 public sealed record DynamicEntry(string Kind, string Caption) : MenuEntry;
 
 public sealed record MenuDefinition(string Caption, IReadOnlyList<MenuEntry> Items);
 
-/// <summary>Botão da toolbar principal; <see cref="Dropdown"/> é o menu do botão (split button).</summary>
+/// <summary>Main toolbar button; <see cref="Dropdown"/> is the button's menu (split button).</summary>
 public sealed record ToolbarEntry(string? CommandId, string? Dropdown = null)
 {
     public bool IsSeparator => CommandId is null;
@@ -26,7 +26,7 @@ public sealed record ToolbarEntry(string? CommandId, string? Dropdown = null)
     public static readonly ToolbarEntry Separator = new((string?)null);
 }
 
-/// <summary>Tipos de <see cref="DynamicEntry"/> e de dropdowns da toolbar.</summary>
+/// <summary>Kinds of <see cref="DynamicEntry"/> and of toolbar drop-downs.</summary>
 public static class DynamicMenus
 {
     public const string ConnectTo = "connectTo";
@@ -38,8 +38,8 @@ public static class DynamicMenus
 }
 
 /// <summary>
-/// Geografia do menu principal do HeidiSQL (anexo C §1.4; FAM-L02), com os mesmos itens e a mesma ordem, e a
-/// toolbar reduzida da Fase 13. Itens sem handler (fora do MVP) ficam escondidos pela UI.
+/// Geography of HeidiSQL's main menu (appendix C §1.4; FAM-L02), with the same items in the same order, and the
+/// reduced toolbar of phase 13. Items without a handler (outside the MVP) are hidden by the UI.
 /// </summary>
 public static class MainMenuLayout
 {
@@ -115,9 +115,9 @@ public static class MainMenuLayout
     ];
 
     /// <summary>
-    /// Toolbar principal (Fase 13): os botões do HeidiSQL que se usam no dia a dia, pela ordem do HeidiSQL (sessões,
-    /// refresh, navegação e edição de dados, execução, ficheiros, pesquisa, import/export), mais "New query tab" e
-    /// Preferences. O Cancel fica ao lado do Run. Os outros comandos continuam nos menus e com os mesmos atalhos.
+    /// Main toolbar (phase 13): the HeidiSQL buttons used every day, in HeidiSQL's order (sessions, refresh, data
+    /// navigation and editing, execution, files, search, import/export), plus "New query tab" and Preferences.
+    /// Cancel sits next to Run. The other commands stay in the menus, with the same shortcuts.
     /// </summary>
     public static IReadOnlyList<ToolbarEntry> Toolbar { get; } =
     [
@@ -131,7 +131,7 @@ public static class MainMenuLayout
         new("tools.preferences"),
     ];
 
-    /// <summary>Context menu da árvore e da lista do Database tab (<c>popupDB</c>, anexo C §3.3).</summary>
+    /// <summary>Context menu of the tree and of the Database tab list (<c>popupDB</c>, appendix C §3.3).</summary>
     public static IReadOnlyList<MenuEntry> DatabaseMenu { get; } =
     [
         I("object.edit"), I("object.drop"), I("object.attachDatabase"), I("object.detachDatabase"), I("object.emptyTables"),
@@ -152,7 +152,7 @@ public static class MainMenuLayout
         S, I("list.print"), I("view.refresh"), I("session.properties"), I("session.disconnect"),
     ];
 
-    /// <summary>Submenu "More values" do Quick Filter (os 50 valores mais frequentes da coluna).</summary>
+    /// <summary>Quick Filter "More values" submenu (the column's 50 most frequent values).</summary>
     public const string QuickFilterValues = "quickFilterValues";
 
     private static IReadOnlyList<MenuEntry> InsertValueMenu() =>
@@ -163,7 +163,7 @@ public static class MainMenuLayout
         I("insertValue.guid"), I("insertValue.guidNoBraces"), I("insertValue.guidLower"), I("insertValue.guidLowerNoBraces"),
     ];
 
-    /// <summary>Quick Filter (anexo D B10): valores focados, More values, valor pedido, clipboard e Remove filter.</summary>
+    /// <summary>Quick Filter (appendix D B10): focused values, More values, a typed value, clipboard and Remove filter.</summary>
     private static IReadOnlyList<MenuEntry> QuickFilterMenu() =>
     [
         I("quickFilter.focused1"), I("quickFilter.focused2"), I("quickFilter.focused3"), I("quickFilter.focused4"), I("quickFilter.focused5"),
@@ -175,7 +175,7 @@ public static class MainMenuLayout
         I("filter.remove"),
     ];
 
-    /// <summary>Context menu do painel de helpers (<c>popupQueryHelpers</c>, anexo C §3.9).</summary>
+    /// <summary>Context menu of the helpers panel (<c>popupQueryHelpers</c>, appendix C §3.9).</summary>
     public static IReadOnlyList<MenuEntry> HelpersMenu { get; } =
     [
         I("helpers.insert"), S,
@@ -184,7 +184,7 @@ public static class MainMenuLayout
         I("helpers.generateSelect"), I("helpers.generateInsert"), I("helpers.generateUpdate"), I("helpers.generateDelete"),
     ];
 
-    /// <summary>Context menu do Data grid (<c>popupDataGrid</c>, anexo C §3.5).</summary>
+    /// <summary>Context menu of the Data grid (<c>popupDataGrid</c>, appendix C §3.5).</summary>
     public static IReadOnlyList<MenuEntry> DataGridMenu { get; } =
     [
         I("edit.copy"),
@@ -201,26 +201,26 @@ public static class MainMenuLayout
         I("export.gridRows"), I("help.sql"), I("view.refresh"),
     ];
 
-    /// <summary>Context menu das listas do Host tab (<c>popupHost</c>, anexo C §3.4).</summary>
+    /// <summary>Context menu of the Host tab lists (<c>popupHost</c>, appendix C §3.4).</summary>
     public static IReadOnlyList<MenuEntry> HostMenu { get; } =
     [
         I("edit.copy"), S, I("host.fetchDatabaseItems"), I("host.killProcess"), I("host.editVariable"), I("host.explainProcess"), S,
         I("list.print"), I("view.refresh"),
     ];
 
-    /// <summary>Dropdown do botão Run (<c>popupExecuteQuery</c>, anexo C §3.14).</summary>
+    /// <summary>Run button drop-down (<c>popupExecuteQuery</c>, appendix C §3.14).</summary>
     public static IReadOnlyList<MenuEntry> RunDropdown { get; } =
     [
         I("query.run"), I("query.runSelection"), I("query.runCurrent"), S, I("query.batchInOneGo"), I("query.singleQueries"),
     ];
 
-    /// <summary>Dropdown do botão Refresh (<c>popupRefresh</c>, anexo C §3.12).</summary>
+    /// <summary>Refresh button drop-down (<c>popupRefresh</c>, appendix C §3.12).</summary>
     public static IReadOnlyList<MenuEntry> RefreshDropdown { get; } =
     [
         I("view.fullRefresh"), I("view.autoRefresh"), I("view.autoRefreshInterval"),
     ];
 
-    /// <summary>Todos os ids referidos pelo menu, toolbar e dropdowns (para validar contra o registo).</summary>
+    /// <summary>Every id referenced by the menu, toolbar and drop-downs (to validate against the registry).</summary>
     public static IEnumerable<string> ReferencedCommandIds()
     {
         IEnumerable<string> Walk(IEnumerable<MenuEntry> entries)

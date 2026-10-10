@@ -1,11 +1,11 @@
 namespace Eunomia.Engine.Sql;
 
-/// <summary>Linguagens SQL conhecidas (<see cref="ISqlLanguage"/>).</summary>
+/// <summary>Known SQL languages (<see cref="ISqlLanguage"/>).</summary>
 public static class SqlLanguages
 {
-    /// <summary>MySQL e MariaDB.</summary>
+    /// <summary>MySQL and MariaDB.</summary>
     public static ISqlLanguage MySql { get; } = new MySqlLanguage();
 
-    /// <summary>Linguagem sem sessão ligada (SQL log, editor sem sessão): a do MySQL, a única família suportada.</summary>
+    /// <summary>Language without a connected session (SQL log, editor without a session): MySQL's, the only supported family.</summary>
     public static ISqlLanguage Default => MySql;
 }

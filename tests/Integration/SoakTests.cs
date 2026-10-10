@@ -14,12 +14,12 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// Soak (Fase 12; critério 27.3 #4) e stress B14 ao nível do motor. Soak: com <c>EUNOMIA_SOAK_MINUTES=N</c>, um ciclo
-/// de queries com resultados, metadata (refresh), SQL export, Run SQL file e CSV import numa sessão durante N minutos,
-/// com a memória gerida e o working set medidos a cada 30 s; a memória do fim não pode passar a do início em mais de
-/// 20% + 20 MB. B14 (com <c>EUNOMIA_PERF=1</c>): 10 sessões, 5 queries longas, 2 exports e 1 import ao mesmo tempo, e
-/// pedidos curtos nas ligações de metadata a medir a latência (o "utilizador a navegar"). Resultados em
-/// <c>%TEMP%\eunomia-it\soak.txt</c>. As 24 h e a latência de input na UI real ficam para a máquina de referência.
+/// Soak (phase 12; criterion 27.3 #4) and B14 stress at engine level. Soak: with <c>EUNOMIA_SOAK_MINUTES=N</c>, a cycle
+/// of queries with results, metadata (refresh), SQL export, Run SQL file and CSV import on one session for N minutes,
+/// with managed memory and the working set measured every 30 s; the final memory may not exceed the initial one by more than
+/// 20% + 20 MB. B14 (with <c>EUNOMIA_PERF=1</c>): 10 sessions, 5 long queries, 2 exports and 1 import at the same time, and
+/// short requests on the metadata connections measuring the latency (the "user browsing"). Results in
+/// <c>%TEMP%\eunomia-it\soak.txt</c>. The 24 h run and the input latency in the real UI are left for the reference machine.
 /// </summary>
 public sealed class SoakTests : IAsyncLifetime
 {
@@ -50,7 +50,7 @@ public sealed class SoakTests : IAsyncLifetime
             await h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.t (id INT PRIMARY KEY, a INT, b VARCHAR(100), c DATETIME) ENGINE=InnoDB", ct);
             const string digits = "(SELECT 0 d UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)";
             await h.ExecuteNonQueryAsync(
-                $"INSERT INTO `{_database}`.t SELECT n, n % 97, CONCAT('linha ', n), '2026-01-01' + INTERVAL n MINUTE FROM " +
+                $"INSERT INTO `{_database}`.t SELECT n, n % 97, CONCAT('row ', n), '2026-01-01' + INTERVAL n MINUTE FROM " +
                 $"(SELECT 1 + a.d + 10 * b.d + 100 * c.d + 1000 * e.d + 10000 * f.d AS n FROM {digits} a, {digits} b, {digits} c, {digits} e, {digits} f) s WHERE n <= 50000", ct);
             await h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.imported (id INT PRIMARY KEY, name VARCHAR(50), price DECIMAL(10,2), note TEXT)", ct);
             return true;
@@ -91,10 +91,10 @@ public sealed class SoakTests : IAsyncLifetime
         File.AppendAllText(Path.Combine(Path.GetTempPath(), "eunomia-it", "soak.txt"), DateTime.Now.ToString("s", CultureInfo.InvariantCulture) + " " + line + Environment.NewLine);
     }
 
-    /// <summary>Uma volta do ciclo do soak.</summary>
+    /// <summary>One round of the soak cycle.</summary>
     private async Task CycleAsync(SessionHost host, MetadataCache cache, int round)
     {
-        // Query tab: resultados materializados e libertados, como ao fechar a tab.
+        // Query tab: results materialised and released, as when closing the tab.
         var runner = new QueryRunner(host);
         var results = new List<QueryResult>();
         runner.ResultCompleted += (_, r) => results.Add(r);
@@ -105,12 +105,12 @@ public sealed class SoakTests : IAsyncLifetime
             r.Source.Dispose();
         }
 
-        // Árvore e Database tab: refresh da base e das tabelas.
+        // Tree and Database tab: refresh of the database and the tables.
         cache.Invalidate(_database);
         await cache.GetObjectsAsync(_database, Ct);
         await cache.GetTableAsync(new DbObjectRef(_database, _database, "t", DbObjectKind.Table), Ct);
 
-        // Export para o clipboard, Run SQL file e CSV import (cliente e servidor alternados).
+        // Export to the clipboard, Run SQL file and CSV import (client and server alternating).
         var objects = (await cache.GetObjectsAsync(_database, Ct)).Objects.Where(o => o.Ref.Name == "t").ToList();
         await new SqlExportJob(host, new SqlExportRequest
         {
@@ -128,7 +128,7 @@ public sealed class SoakTests : IAsyncLifetime
             var sb = new StringBuilder("id;name;price;note\r\n");
             for (var i = 1; i <= 2000; i++)
             {
-                sb.Append(CultureInfo.InvariantCulture, $"{i};nome {i};{i}.5;\"nota \"\"{i}\"\"\"\r\n");
+                sb.Append(CultureInfo.InvariantCulture, $"{i};name {i};{i}.5;\"note \"\"{i}\"\"\"\r\n");
             }
             File.WriteAllText(csv, sb.ToString(), new UTF8Encoding(false));
         }
@@ -143,9 +143,9 @@ public sealed class SoakTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SoakSemFugasDeMemoria()
+    public async Task SoakWithoutMemoryLeaks()
     {
-        Assert.SkipUnless(TestServer.ConnectionString is not null && SoakMinutes > 0, "Soak: EUNOMIA_SOAK_MINUTES=N e servidor de teste.");
+        Assert.SkipUnless(TestServer.ConnectionString is not null && SoakMinutes > 0, "Soak: needs EUNOMIA_SOAK_MINUTES=N and the test server.");
         await _hosts[0].RunPrimaryAsync((h, ct) => h.ExecuteNonQueryAsync("SET GLOBAL local_infile = 1", ct), Ct);
         var host = _hosts[0];
         var cache = new MetadataCache(host, new MetadataOptions());
@@ -168,7 +168,7 @@ public sealed class SoakTests : IAsyncLifetime
             }
         }
         var third = Math.Max(1, samples.Count / 3);
-        // A primeira amostra (aquecimento: JIT, pools) não conta.
+        // The first sample (warm-up: JIT, pools) does not count.
         var start = samples.Skip(1).Take(third).ToList();
         var end = samples.TakeLast(third).ToList();
         var startManaged = start.Count == 0 ? samples[0].Managed : start.Average(s => s.Managed);
@@ -176,13 +176,13 @@ public sealed class SoakTests : IAsyncLifetime
         var timeline = string.Join(" ", samples.Select(s => string.Create(CultureInfo.InvariantCulture, $"[{s.At.TotalMinutes:F1}m {s.Managed / 1048576}MB]")));
         Report(string.Create(CultureInfo.InvariantCulture,
             $"Soak {SoakMinutes} min, {rounds} voltas: gerida {startManaged / 1048576:F1} → {endManaged / 1048576:F1} MB; working set {samples[0].WorkingSet / 1048576} → {samples[^1].WorkingSet / 1048576} MB; {timeline}"));
-        Assert.True(endManaged <= (startManaged * 1.2) + (20 * 1048576), $"Memória gerida a crescer: {startManaged / 1048576:F1} → {endManaged / 1048576:F1} MB");
+        Assert.True(endManaged <= (startManaged * 1.2) + (20 * 1048576), $"Managed memory growing: {startManaged / 1048576:F1} → {endManaged / 1048576:F1} MB");
     }
 
     [Fact]
     public async Task StressB14()
     {
-        Assert.SkipUnless(TestServer.ConnectionString is not null && Stress, "Stress B14: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(TestServer.ConnectionString is not null && Stress, "Stress B14: needs EUNOMIA_PERF=1 and the test server.");
         await _hosts[0].RunPrimaryAsync((h, ct) => h.ExecuteNonQueryAsync("SET GLOBAL local_infile = 1", ct), Ct);
         for (var i = _hosts.Count; i < 10; i++)
         {
@@ -231,7 +231,7 @@ public sealed class SoakTests : IAsyncLifetime
         File.WriteAllText(script, sb.ToString());
         heavy.Add(Guard(() => new SqlFileJob(_hosts[7], new SqlFileRequest { Path = script, Database = _database }).RunAsync(null, Ct)));
 
-        // O "utilizador a navegar": pedidos curtos nas ligações de metadata de todas as sessões enquanto o resto corre.
+        // The "user browsing": short requests on the metadata connections of every session while the rest runs.
         var latencies = new List<double>();
         var all = Task.WhenAll(heavy);
         var round = 0;
@@ -247,7 +247,7 @@ public sealed class SoakTests : IAsyncLifetime
         latencies.Sort();
         double P(double q) => latencies[(int)Math.Min(latencies.Count - 1, Math.Ceiling(q * latencies.Count) - 1)];
         Report(string.Create(CultureInfo.InvariantCulture,
-            $"B14 (motor): 10 sessões, 5 SLEEP(4), 2 exports, 1 import de 3.001 instruções; {latencies.Count} pedidos curtos: p50 {P(0.5):F1} ms, p95 {P(0.95):F1} ms, p99 {P(0.99):F1} ms, máx {latencies[^1]:F1} ms; erros {errors.Count}"));
+            $"B14 (engine): 10 sessions, 5 SLEEP(4), 2 exports, 1 import of 3,001 statements; {latencies.Count} short requests: p50 {P(0.5):F1} ms, p95 {P(0.95):F1} ms, p99 {P(0.99):F1} ms, max {latencies[^1]:F1} ms; errors {errors.Count}"));
         Assert.Empty(errors);
         Assert.True(P(0.99) < 1000, $"p99 {P(0.99):F0} ms");
     }

@@ -7,10 +7,10 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Shell.Views;
 
-/// <summary>Help › About (e "About" no Session Manager): logo, nome, versão e o ambiente de execução.</summary>
+/// <summary>Help › About (and "About" in the Session Manager): logo, name, version and the runtime environment.</summary>
 public sealed class AboutDialog : Window
 {
-    /// <param name="runtime">Linha do ambiente; por omissão a versão do .NET em execução (os snapshots fixam-na).</param>
+    /// <param name="runtime">Environment line; by default the running .NET version (the snapshots pin it).</param>
     public AboutDialog(string version, string? runtime = null)
     {
         Icon = BrandAssets.WindowIcon;

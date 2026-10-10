@@ -1,78 +1,78 @@
 # ADR-02: UI framework
 
-- **Estado:** Aceite (1 out 2026)
-- **Data:** proposta e aceite a 1 out 2026
-- **Decidido por:** utilizador (dono do produto). Aceitou com os dados do spike, sem fazer as verificações manuais de texto e menus, acessibilidade e IME (ver "Riscos aceites")
-- **Requisitos afetados:** PR-01, PR-02, PR-04, PR-05, PR-16; FAM-G01 a FAM-G16, FAM-T01 a FAM-T09, FAM-Q01 a FAM-Q11; secções 15, 16, 19, 20.2 e 25 da spec
-- **Relacionadas:** ADR-01 (C#/.NET 10), ADR-03 (grid próprio), ADR-12 (AvaloniaEdit), ADR-20 (Windows 10 22H2 e 11)
+- **Status:** Accepted (1 Oct 2026)
+- **Date:** proposed and accepted on 1 Oct 2026
+- **Decided by:** the user (product owner). Accepted with the spike data, without doing the manual checks of text and menus, accessibility and IME (see "Accepted risks")
+- **Affected requirements:** PR-01, PR-02, PR-04, PR-05, PR-16; FAM-G01 to FAM-G16, FAM-T01 to FAM-T09, FAM-Q01 to FAM-Q11; sections 15, 16, 19, 20.2 and 25 of the spec
+- **Related:** ADR-01 (C#/.NET 10), ADR-03 (our own grid), ADR-12 (AvaloniaEdit), ADR-20 (Windows 10 22H2 and 11)
 
-## Contexto
+## Context
 
-A secção 19 recomendou Avalonia 12 com grid e árvore próprios e WinForms como plano B, condicionado ao spike da Fase 1 (secção 20.2). O spike implementou a parte A: árvore lazy com 10.000 nós e os filtros da 4.3, grid próprio com 1M × 60, editor AvaloniaEdit e a janela com o layout do HeidiSQL. Mediu os critérios automáticos com scripts repetíveis. Os detalhes estão em `docs/spike/relatorio-fase-1.md` e os dados em `bench/results/20261001-0204-DESKTOP-CQRRFMG/`.
+Section 19 recommended Avalonia 12 with our own grid and tree, and WinForms as plan B, subject to the phase 1 spike (section 20.2). The spike implemented part A: a lazy tree with 10,000 nodes and the 4.3 filters, our own grid with 1M × 60, the AvaloniaEdit editor and the window with HeidiSQL's layout. It measured the automatic criteria with repeatable scripts. The details are in `docs/spike/phase-1-report.md` and the data in `bench/results/20261001-0204-DESKTOP-CQRRFMG/`.
 
-A máquina de medição não é a de referência: Windows 10 22H2, i7-6700 com 4 núcleos e 8 lógicos, 16 GB, duas GPUs (Intel HD 530 e GTX 750 Ti) e dois ecrãs (59 Hz e 60 Hz). Os números são indicativos.
+The measuring machine is not the reference one: Windows 10 22H2, an i7-6700 with 4 cores and 8 logical processors, 16 GB, two GPUs (Intel HD 530 and GTX 750 Ti) and two screens (59 Hz and 60 Hz). The numbers are indicative.
 
-## Opções
+## Options
 
-1. **Avalonia 12.1** com grid, árvore e editor próprios sobre AvaloniaEdit.
-2. **WinForms (.NET 10)** com grid próprio sobre controlos Win32 (plano B, só Windows, sem NativeAOT oficial).
-3. Outras opções da secção 19 (Qt, WPF, WinUI, web) estão fora deste spike.
+1. **Avalonia 12.1** with our own grid, tree and editor on top of AvaloniaEdit.
+2. **WinForms (.NET 10)** with our own grid on top of Win32 controls (plan B, Windows only, no official NativeAOT).
+3. The other options in section 19 (Qt, WPF, WinUI, web) are outside this spike.
 
-## Dados do spike (parte A)
+## Spike data (part A)
 
-| Critério da 20.2 | Resultado |
+| 20.2 criterion | Result |
 | --- | --- |
-| Scroll (PR-04) | Numa segunda corrida (utilizador), a omissão **passou** (pacing p95 17,2–17,4 ms, ~59,5 fps). Na primeira, com a configuração por omissão do Avalonia, **falhou**: pacing p95 59–73 ms, ~33 fps, também numa fase de controlo sem scroll. Com `Win32RenderingMode.Wgl` ou `Software` + `timeBeginPeriod(1)`, **cumpre** a 100%, a 1,5 (aproximação a 150%) e com 2 núcleos: pacing p95 16,8–17,0 ms, 0–1 frames perdidos em 10 s. O custo do nosso grid fica em ≤ 2,8 ms p95 em todos os casos |
-| Arranque (PR-01, NativeAOT) | **Cumpre**: mediana 499 ms (2 núcleos: 512 ms). A 1.ª execução depois de publicar demorou 3,0 s; a frio não foi medido |
-| Memória (PR-16) | **Cumpre**: 97 MB de working set após 60 s (com WGL: 125 MB) |
-| AvaloniaEdit sem fork | **Cumpre**: AvaloniaEdit 12.0.0 com Avalonia 12.1.3, com uma aresta contornada (`SelectItem` antes do template) |
-| Texto e menus | Por avaliar (manual) |
-| Acessibilidade | Por avaliar (manual). Risco: o Avalonia 12.1.3 não tem padrões UIA Grid/Table |
-| IME | Por avaliar (manual) |
+| Scroll (PR-04) | On a second run (by the user), the default **passed** (pacing p95 17.2–17.4 ms, ~59.5 fps). On the first, with Avalonia's default configuration, it **failed**: pacing p95 59–73 ms, ~33 fps, also in a control phase without scrolling. With `Win32RenderingMode.Wgl` or `Software` + `timeBeginPeriod(1)` it **passes** at 100%, at 1.5 (an approximation of 150%) and with 2 cores: pacing p95 16.8–17.0 ms, 0–1 dropped frames in 10 s. Our grid's cost stays at ≤ 2.8 ms p95 in every case |
+| Startup (PR-01, NativeAOT) | **Passes**: median 499 ms (2 cores: 512 ms). The first run after publishing took 3.0 s; cold start was not measured |
+| Memory (PR-16) | **Passes**: 97 MB working set after 60 s (with WGL: 125 MB) |
+| AvaloniaEdit without a fork | **Passes**: AvaloniaEdit 12.0.0 with Avalonia 12.1.3, with one edge case worked around (`SelectItem` before the template) |
+| Text and menus | To be assessed (manual) |
+| Accessibility | To be assessed (manual). Risk: Avalonia 12.1.3 has no UIA Grid/Table patterns |
+| IME | To be assessed (manual) |
 
-A parte B (WinForms) não foi feita. Pela regra da 20.2, falhas no grid ou no scroll obrigam primeiro a rever o nosso grid, e isso foi feito: com o caminho por `GlyphRun`, a UI thread passou de 12,5 para ~1,6 ms p95. A causa restante está no render loop da plataforma e resolve-se por configuração. Só uma falha em texto, menus ou AvaloniaEdit levaria à parte B.
+Part B (WinForms) was not done. Under the 20.2 rule, failures in the grid or in scrolling first require reviewing our grid, and that was done: with the `GlyphRun` path, the UI thread went from 12.5 to ~1.6 ms p95. The remaining cause lies in the platform's render loop and is solved by configuration. Only a failure in text, menus or AvaloniaEdit would lead to part B.
 
-## Recomendação
+## Recommendation
 
-**Avalonia 12**, sem fork, com WinForms como plano B. Razões:
+**Avalonia 12**, without a fork, with WinForms as plan B. Reasons:
 
-- O grid próprio sobre Avalonia tem margem de ~6× no orçamento de frame. Isto confirma o desenho da secção 15.
-- O NativeAOT funciona com os analyzers de AOT e trimming ligados e dá ~0,5 s de arranque. O WinForms não tem NativeAOT oficial (secção 19).
-- A memória fica dentro do PR-16 com folga.
-- Os snapshots headless com Skia funcionam (secção 25.1); no WinForms só haveria E2E.
-- A falha de pacing tem solução dentro do Avalonia por opções públicas (`Win32PlatformOptions.RenderingMode`) e `timeBeginPeriod`.
+- Our own grid on Avalonia has a ~6× margin on the frame budget. This confirms the design in section 15.
+- NativeAOT works with the AOT and trimming analyzers enabled and gives ~0.5 s startup. WinForms has no official NativeAOT (section 19).
+- Memory stays well within PR-16.
+- Headless snapshots with Skia work (section 25.1); with WinForms there would only be E2E tests.
+- The pacing failure has a solution inside Avalonia through public options (`Win32PlatformOptions.RenderingMode`) and `timeBeginPeriod`.
 
-Proposta provisória de configuração de rendering, a confirmar no ponto 2 de "Seguimento": `RenderingMode = [Wgl, Software]` e `timeBeginPeriod(1)` enquanto houver animação ou scroll. Se na máquina de referência e num portátil híbrido a omissão (ANGLE) cumprir o PR-04, fica a omissão.
+Provisional rendering configuration proposal, to be confirmed in item 2 of "Follow-up": `RenderingMode = [Wgl, Software]` and `timeBeginPeriod(1)` while there is animation or scrolling. If on the reference machine and on a hybrid-graphics laptop the default (ANGLE) meets PR-04, the default stays.
 
-## Consequências
+## Consequences
 
-- **Positivas:** um só código de UI, com caminho para Linux e macOS (secção 21.8); temas por tokens; testes visuais headless em CI; NativeAOT.
-- **Negativas e riscos:**
-  - pacing dependente do hardware e da configuração de rendering no Windows 10;
-  - WGL depende da qualidade dos drivers OpenGL;
-  - Software custa CPU em 4K ou a 200% (não medido);
-  - acessibilidade do grid sem padrões UIA Grid/Table: pode exigir um provider UIA próprio via interop Win32 (camada `Infra.Shell.Windows`) ou contribuição upstream;
-  - texto Skia em escala de cinzentos, contra o ClearType do HeidiSQL, ainda por avaliar.
-- **Se texto e menus falharem:** WinForms agora e Avalonia quando houver cross-platform (20.2). Fazer a parte B com as mesmas medições. Os `Engine.*` servem os dois, como o teste de arquitetura garante.
+- **Positive:** a single UI code base, with a path to Linux and macOS (section 21.8); themes through tokens; headless visual tests in CI; NativeAOT.
+- **Negative and risks:**
+  - pacing depends on the hardware and on the rendering configuration on Windows 10;
+  - WGL depends on the quality of the OpenGL drivers;
+  - Software rendering costs CPU at 4K or at 200% (not measured);
+  - grid accessibility without UIA Grid/Table patterns: it may need our own UIA provider through Win32 interop (the `Infra.Shell.Windows` layer) or an upstream contribution;
+  - Skia text in greyscale, against HeidiSQL's ClearType, still to be assessed.
+- **If text and menus fail:** WinForms now and Avalonia once there is cross-platform work (20.2). Do part B with the same measurements. The `Engine.*` projects serve both, as the architecture test guarantees.
 
-## Decisão
+## Decision
 
-**Avalonia 12.1, sem fork, com WinForms como plano B.** Fica a configuração de rendering por omissão do Avalonia: passou na segunda corrida, e a falha da primeira não se reproduziu. A configuração de rendering no Windows (manter a omissão ANGLE ou passar a `[Wgl, Software]` + `timeBeginPeriod(1)`) não faz parte desta decisão. Decide-se quando houver medições na máquina de referência e num portátil híbrido (ponto 2 abaixo), sem reabrir a escolha do framework.
+**Avalonia 12.1, without a fork, with WinForms as plan B.** Avalonia's default rendering configuration stays: it passed on the second run, and the first run's failure did not reproduce. The rendering configuration on Windows (keep the ANGLE default or move to `[Wgl, Software]` + `timeBeginPeriod(1)`) is not part of this decision. It is decided once there are measurements on the reference machine and on a hybrid-graphics laptop (item 2 below), without reopening the framework choice.
 
-## Riscos aceites
+## Accepted risks
 
-As verificações manuais da 20.2 não foram feitas. O utilizador aceitou a decisão sem elas, por isso ficam como riscos com seguimento, não como condição:
+The manual checks in 20.2 were not done. The user accepted the decision without them, so they remain as risks with follow-up, not as a condition:
 
-- Texto e menus em Skia (tons de cinzento) contra o ClearType do HeidiSQL: sem comparação cega.
-- Narrator e NVDA no grid, sem os padrões UIA Grid/Table no Avalonia 12.1.3: sem verificação.
-- IME japonês no editor in-place do grid e no AvaloniaEdit: sem verificação.
+- Skia text and menus (greyscale) against HeidiSQL's ClearType: no blind comparison.
+- Narrator and NVDA on the grid, without the UIA Grid/Table patterns in Avalonia 12.1.3: not checked.
+- Japanese IME in the grid's in-place editor and in AvaloniaEdit: not checked.
 
-Se algum destes falhar mais tarde e não se resolver dentro do Avalonia (provider UIA próprio, ajustes de texto), a 20.2 continua a valer: WinForms com o mesmo `Engine.*`.
+If any of these fails later and cannot be solved inside Avalonia (our own UIA provider, text adjustments), 20.2 still applies: WinForms with the same `Engine.*`.
 
-## Seguimento (não bloqueia a decisão)
+## Follow-up (does not block the decision)
 
-1. Verificações manuais do relatório (secção 8): comparação cega de texto e menus com 3 utilizadores de HeidiSQL a 100/150/200%; Narrator e NVDA a ler célula e header; IME japonês na célula e no editor.
-2. Correr `bench\Scenarios\Run-All.ps1` na máquina de referência (Windows 11, 8 núcleos, uma GPU) e num portátil com gráficos híbridos, com Windows 10 e 11, mais o PR-04 a 150% real. Decidir a configuração de rendering. Confirmar o pacing com o PresentMon.
-3. PR-01 a frio (após reinício ou limpeza da standby list).
-4. Se a acessibilidade falhar: estimar o custo de um provider UIA próprio para o grid e a árvore antes de aceitar.
-5. Responder às perguntas 2 e 3 da secção 20.3 (experiência da equipa; orçamento para code signing), que também pesam nesta decisão.
+1. The report's manual checks (section 8): blind comparison of text and menus with 3 HeidiSQL users at 100/150/200%; Narrator and NVDA reading a cell and a header; Japanese IME in a cell and in the editor.
+2. Run `bench\Scenarios\Run-All.ps1` on the reference machine (Windows 11, 8 cores, one GPU) and on a laptop with hybrid graphics, with Windows 10 and 11, plus PR-04 at a real 150%. Decide the rendering configuration. Confirm the pacing with PresentMon.
+3. PR-01 cold (after a restart or clearing the standby list).
+4. If accessibility fails: estimate the cost of our own UIA provider for the grid and the tree before accepting.
+5. Answer questions 2 and 3 of section 20.3 (team experience; budget for code signing), which also weigh on this decision.

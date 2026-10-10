@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Execution.Tests;
 
-/// <summary>Ligações que não saem do computador (sem aviso de "not encrypted" quando não há TLS; secção 23.2).</summary>
+/// <summary>Connections that do not leave the computer (no "not encrypted" warning without TLS; section 23.2).</summary>
 public sealed class LocalHostTests
 {
     [Theory]

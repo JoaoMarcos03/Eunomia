@@ -3,28 +3,28 @@ using Eunomia.UI.Controls.Common.Formatting;
 
 namespace Eunomia.UI.Controls.Common.TreeList;
 
-/// <summary>Como uma célula é mostrada nas listas do Host e do Database tab.</summary>
+/// <summary>How a cell is shown in the Host and Database tab lists.</summary>
 public enum CellFormat
 {
     Text,
 
-    /// <summary>Número com separador de milhares (<c>FormatNumber</c>).</summary>
+    /// <summary>Number with a thousands separator (<c>FormatNumber</c>).</summary>
     Number,
 
-    /// <summary>Bytes como na árvore ("192,0 KiB").</summary>
+    /// <summary>Bytes as in the tree ("192.0 KiB").</summary>
     Size,
 
     /// <summary><c>yyyy-MM-dd HH:mm:ss</c>.</summary>
     DateTime,
 
-    /// <summary>Número com uma casa decimal (médias do Host tab).</summary>
+    /// <summary>Number with one decimal place (Host tab averages).</summary>
     Decimal,
 
-    /// <summary>Percentagem com uma casa decimal ("12.5 %").</summary>
+    /// <summary>Percentage with one decimal place ("12.5 %").</summary>
     Percent,
 }
 
-/// <summary>Linhas de listas a partir de valores brutos: texto formatado, chave de ordenação e barras proporcionais.</summary>
+/// <summary>List rows from raw values: formatted text, sort key and proportional bars.</summary>
 public static class TreeListRows
 {
     public static string Format(object? value, CellFormat format, CultureInfo? culture = null)
@@ -45,7 +45,7 @@ public static class TreeListRows
         };
     }
 
-    /// <summary>Nó com as células formatadas e os valores numéricos e datas como chaves de ordenação.</summary>
+    /// <summary>Node with the formatted cells and the numeric values and dates as sort keys.</summary>
     public static TreeListNode Create(IReadOnlyList<object?> values, IReadOnlyList<CellFormat> formats, object? tag = null, CultureInfo? culture = null)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -65,7 +65,7 @@ public static class TreeListRows
         return new TreeListNode(cells) { Tag = tag, SortKeys = keys };
     }
 
-    /// <summary>Barras proporcionais ao maior valor da coluna (as listas do Host tab e a coluna Size).</summary>
+    /// <summary>Bars proportional to the column's largest value (the Host tab lists and the Size column).</summary>
     public static void ApplyBars(IReadOnlyList<TreeListNode> nodes, IEnumerable<int> columns)
     {
         ArgumentNullException.ThrowIfNull(nodes);

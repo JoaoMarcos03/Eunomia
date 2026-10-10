@@ -14,24 +14,24 @@ public sealed record SqlFileRequest
 {
     public required string Path { get; init; }
 
-    /// <summary>Nome de <see cref="SqlFile.LoadEncodings"/>; com BOM, o BOM manda.</summary>
+    /// <summary>Name from <see cref="SqlFile.LoadEncodings"/>; with a BOM, the BOM rules.</summary>
     public string Encoding { get; init; } = SqlFile.AutoDetect;
 
-    /// <summary>Base atual da sessão (o ficheiro corre nela, como no HeidiSQL), ou <c>null</c>.</summary>
+    /// <summary>The session's current database (the file runs in it, as in HeidiSQL), or <c>null</c>.</summary>
     public string? Database { get; init; }
 
     public bool StopOnErrors { get; init; } = true;
 
-    /// <summary>"Send batch in one go": instruções em pacotes multi-statement até ao <c>max_allowed_packet</c>.</summary>
+    /// <summary>"Send batch in one go": statements in multi-statement packets up to <c>max_allowed_packet</c>.</summary>
     public bool BatchInOneGo { get; init; }
 
     public string Delimiter { get; init; } = ";";
 
-    /// <summary>Nome da sessão gravada (no journal, para retomar).</summary>
+    /// <summary>Name of the saved session (in the journal, to resume).</summary>
     public string Session { get; init; } = string.Empty;
 }
 
-/// <summary>Erro de uma instrução do ficheiro (secção 13.1: localização por nº de instrução e linha).</summary>
+/// <summary>Error of a statement in the file (section 13.1: located by statement number and line).</summary>
 public sealed record SqlFileError(long Statement, long Line, string Message, string Sql);
 
 public sealed record SqlFileProgress(long BytesRead, long TotalBytes, long Statements, long Errors, long AffectedRows, TimeSpan Elapsed);
@@ -48,21 +48,21 @@ public sealed record SqlFileResult(
     TimeSpan Elapsed,
     IReadOnlyList<SqlFileError> ErrorList)
 {
-    /// <summary>Acabou o ficheiro (o journal foi apagado).</summary>
+    /// <summary>The file finished (the journal was deleted).</summary>
     public bool Completed => !Cancelled && !StoppedOnError;
 }
 
-/// <summary>O ficheiro mudou desde que o job parou (tamanho ou impressão digital diferentes).</summary>
+/// <summary>The file changed since the job stopped (different size or fingerprint).</summary>
 public sealed class SqlFileChangedException(string path)
     : Exception($"The file has changed since the import stopped and cannot be resumed: {path}");
 
 /// <summary>
-/// Run SQL file em streaming (27.1 #21; PR-14; secções 13.1–13.3; anexo B §4.2): o ficheiro é lido em blocos de
-/// 1 MB e separado pelo <see cref="StreamingSqlSplitter"/> (o <c>DELIMITER</c> não se perde entre blocos), e as
-/// instruções correm numa ligação de job, uma a uma ou em pacotes multi-statement ("Send batch in one go"), sem ir
-/// para o SQL log (só o resumo e os erros). Stop on errors pára no primeiro erro; sem ele, os erros contam-se e o job
-/// continua. O journal guarda a posição a seguir à última instrução executada (bytes, caracteres, linha e delimitador),
-/// o tamanho e a impressão digital do ficheiro: um job parado (cancel, erro, crash) retoma nesse ponto.
+/// Streaming Run SQL file (27.1 #21; PR-14; sections 13.1–13.3; appendix B §4.2): the file is read in 1 MB blocks
+/// and split by the <see cref="StreamingSqlSplitter"/> (<c>DELIMITER</c> is not lost between blocks), and the
+/// statements run on a job connection, one by one or in multi-statement packets ("Send batch in one go"), without going
+/// to the SQL log (only the summary and the errors). Stop on errors stops at the first error; without it, errors are
+/// counted and the job continues. The journal keeps the position after the last statement run (bytes, characters, line
+/// and delimiter), and the file's size and fingerprint: a stopped job (cancel, error, crash) resumes from that point.
 /// </summary>
 public sealed class SqlFileJob
 {
@@ -81,7 +81,7 @@ public sealed class SqlFileJob
     private TimeSpan _lastJournal;
     private TransferJournalEntry? _entry;
 
-    // Estado do job (só a thread do job escreve).
+    // Job state (only the job thread writes it).
     private long _statements;
     private long _errorCount;
     private long _affected;
@@ -98,7 +98,7 @@ public sealed class SqlFileJob
         Id = Guid.NewGuid();
     }
 
-    /// <summary>Retoma um job parado a partir do journal.</summary>
+    /// <summary>Resumes a stopped job from the journal.</summary>
     public SqlFileJob(SessionHost host, TransferJournalEntry resume, TransferJournal journal)
         : this(host, RequestOf(resume), journal)
     {
@@ -108,7 +108,7 @@ public sealed class SqlFileJob
 
     public Guid Id { get; }
 
-    /// <summary>Tamanho dos blocos lidos do ficheiro (os testes usam blocos pequenos para cair nas fronteiras).</summary>
+    /// <summary>Size of the blocks read from the file (tests use small blocks to land on the boundaries).</summary>
     internal int ChunkSize { get; init; } = ChunkBytes;
 
     public static SqlFileRequest RequestOf(TransferJournalEntry entry)
@@ -156,7 +156,7 @@ public sealed class SqlFileJob
         return new SqlFileResult(Id, cancelled, stopped, _statements, _errorCount, _affected, _bytesRead, _totalBytes, _clock.Elapsed, [.. _errors]);
     }
 
-    /// <summary>Corre o ficheiro; devolve <c>true</c> se parou num erro (Stop on errors).</summary>
+    /// <summary>Runs the file; returns <c>true</c> if it stopped on an error (Stop on errors).</summary>
     private async Task<bool> RunOnConnectionAsync(IDbConnectionHandle handle, IProgress<SqlFileProgress>? progress, CancellationToken cancellationToken)
     {
         var dialect = (_host.ServerServices ?? throw new InvalidOperationException("The session is not connected.")).Dialect;
@@ -231,7 +231,7 @@ public sealed class SqlFileJob
         var emitted = new List<StreamedStatement>();
         var packet = new List<(StreamedStatement Statement, long NextByte)>();
         long packetBytes = 0;
-        // Limite da instrução por acabar: maior do que o servidor aceita não serve para nada (e a memória fica constante).
+        // Limit of the unfinished statement: larger than the server accepts is useless (and memory stays constant).
         var maxPending = Math.Max(16L * 1024 * 1024, maxPacket + (1024 * 1024));
         var eof = false;
         while (!eof)
@@ -242,7 +242,7 @@ public sealed class SqlFileJob
             var count = decoder.GetChars(bytes, 0, read, chars, 0, flush: eof);
             _bytesRead = stream.Position;
 
-            // Posições em bytes dos pontos de retoma: contadas aos poucos dentro do bloco (cada carácter uma vez).
+            // Byte positions of the resume points: counted gradually within the block (each character once).
             var chunkStart = charOffset;
             var countedChars = 0;
             var countedBytes = byteOffset;
@@ -304,7 +304,7 @@ public sealed class SqlFileJob
         return false;
     }
 
-    /// <summary>Uma instrução, ou um pacote multi-statement; devolve <c>true</c> se o job deve parar (Stop on errors).</summary>
+    /// <summary>One statement, or a multi-statement packet; returns <c>true</c> if the job must stop (Stop on errors).</summary>
     private async Task<bool> ExecuteAsync(IDbConnectionHandle handle, IReadOnlyList<(StreamedStatement Statement, long NextByte)> statements, CancellationToken cancellationToken)
     {
         var sql = statements.Count == 1 ? statements[0].Statement.Text : string.Join(";\n", statements.Select(s => s.Statement.Text));
@@ -323,7 +323,7 @@ public sealed class SqlFileJob
             }
             if (_request.StopOnErrors)
             {
-                // A retoma começa na instrução que falhou.
+                // Resuming starts at the statement that failed.
                 return true;
             }
         }
@@ -368,7 +368,7 @@ public sealed class SqlFileJob
         }
         catch (IOException)
         {
-            // Sem journal não há retoma, mas o import continua.
+            // Without a journal there is no resume, but the import continues.
         }
         catch (UnauthorizedAccessException)
         {

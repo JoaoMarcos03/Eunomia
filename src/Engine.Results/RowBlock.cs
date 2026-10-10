@@ -3,9 +3,9 @@ using System.Text;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Bloco imutável de linhas guardado por coluna (secção 11.1): arrays tipados, bitmap de NULL,
-/// bitmap de "truncado" e, para texto, uma arena UTF-8 com offsets. Sem objetos por célula.
-/// Construído com <see cref="RowBlockBuilder"/>; depois de construído pode ser partilhado entre threads.
+/// Immutable block of rows stored by column (section 11.1): typed arrays, a NULL bitmap,
+/// a "truncated" bitmap and, for text, a UTF-8 arena with offsets. No per-cell objects.
+/// Built with <see cref="RowBlockBuilder"/>; once built it can be shared between threads.
 /// </summary>
 public sealed class RowBlock
 {
@@ -29,24 +29,24 @@ public sealed class RowBlock
 
     public int BlockIndex { get; }
 
-    /// <summary>Índice global da primeira linha do bloco.</summary>
+    /// <summary>Global index of the block's first row.</summary>
     public long FirstRow { get; }
 
     public int RowCount { get; }
 
     public ResultSchema Schema { get; }
 
-    /// <summary>Bytes ocupados pelos arrays do bloco; usado para o orçamento de memória.</summary>
+    /// <summary>Bytes taken by the block's arrays; used for the memory budget.</summary>
     public long ByteSize { get; }
 
     public bool IsNull(int row, int column) => _columns[column].IsNull(row);
 
-    /// <summary>O valor foi cortado (texto longo, como <c>LEFT(..., 256)</c> no Data tab).</summary>
+    /// <summary>The value was cut (long text, like <c>LEFT(..., 256)</c> in the Data tab).</summary>
     public bool IsTruncated(int row, int column) => _columns[column].IsTruncated(row);
 
     public long GetInt64(int row, int column) => _columns[column].Longs![row];
 
-    /// <summary>Valor não escalado de um DECIMAL; dividir por 10^Scale.</summary>
+    /// <summary>Unscaled value of a DECIMAL; divide by 10^Scale.</summary>
     public long GetDecimalUnscaled(int row, int column) => _columns[column].Longs![row];
 
     public double GetDouble(int row, int column) => _columns[column].Doubles![row];
@@ -63,38 +63,38 @@ public sealed class RowBlock
     public string GetString(int row, int column) => Encoding.UTF8.GetString(GetUtf8(row, column));
 
     /// <summary>
-    /// O mesmo bloco noutra posição e com outro schema (mesmos tipos): as páginas seguintes do Data tab continuam a
-    /// numeração e as colunas <c>LEFT(…)</c> ficam com o nome de origem. Partilha os dados (são imutáveis).
+    /// The same block at another position and with another schema (same types): the next Data tab pages continue the
+    /// numbering and <c>LEFT(…)</c> columns keep their source name. Shares the data (it is immutable).
     /// </summary>
     public RowBlock WithPosition(int blockIndex, long firstRow, ResultSchema? schema = null)
     {
         if (schema is not null && schema.Count != Schema.Count)
         {
-            throw new ArgumentException("O schema tem de ter as mesmas colunas.", nameof(schema));
+            throw new ArgumentException("The schema must have the same columns.", nameof(schema));
         }
         return new RowBlock(blockIndex, firstRow, RowCount, schema ?? Schema, _columns);
     }
 
-    /// <summary>Vista do bloco só com algumas colunas, pela ordem dada (colunas ocultas do Data tab). Partilha os dados.</summary>
+    /// <summary>View of the block with only some columns, in the given order (Data tab hidden columns). Shares the data.</summary>
     public RowBlock Project(IReadOnlyList<int> columns, ResultSchema schema)
     {
         ArgumentNullException.ThrowIfNull(columns);
         ArgumentNullException.ThrowIfNull(schema);
         if (schema.Count != columns.Count)
         {
-            throw new ArgumentException("O schema tem de ter as colunas projetadas.", nameof(schema));
+            throw new ArgumentException("The schema must have the projected columns.", nameof(schema));
         }
         return new RowBlock(BlockIndex, FirstRow, RowCount, schema, columns.Select(c => _columns[c]).ToArray());
     }
 
-    /// <summary>Colunas do bloco (spill).</summary>
+    /// <summary>Columns of the block (spill).</summary>
     internal ColumnVector[] Columns => _columns;
 
-    /// <summary>Bytes de uma coluna <see cref="StorageKind.Binary"/>.</summary>
+    /// <summary>Bytes of a <see cref="StorageKind.Binary"/> column.</summary>
     public ReadOnlySpan<byte> GetBytes(int row, int column) => GetUtf8(row, column);
 }
 
-/// <summary>Dados de uma coluna dentro de um bloco. Só um dos arrays de valores está preenchido.</summary>
+/// <summary>Data of a column within a block. Only one of the value arrays is filled.</summary>
 internal sealed class ColumnVector
 {
     public long[]? Longs;

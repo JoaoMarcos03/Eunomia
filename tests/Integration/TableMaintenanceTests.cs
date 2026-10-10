@@ -8,7 +8,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Maintenance (anexo B §2.2) contra o servidor: resultados por tabela e dados iguais depois de OPTIMIZE e REPAIR.</summary>
+/// <summary>Maintenance (appendix B §2.2) against the server: results per table and identical data after OPTIMIZE and REPAIR.</summary>
 public sealed class TableMaintenanceTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -76,7 +76,7 @@ public sealed class TableMaintenanceTests : IAsyncLifetime
         TableMaintenance.RunAsync(_host, operation, Table(table, kind), options, Ct);
 
     [Fact]
-    public async Task CheckEAnalyzeDizemOkPorTabelaEView()
+    public async Task CheckAndAnalyzeReportOkPerTableAndView()
     {
         TestServer.RequireServer();
 
@@ -91,7 +91,7 @@ public sealed class TableMaintenanceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ChecksumIgualEmTabelasComOsMesmosDados()
+    public async Task SameChecksumForTablesWithTheSameData()
     {
         TestServer.RequireServer();
 
@@ -107,7 +107,7 @@ public sealed class TableMaintenanceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OptimizeERepairNaoMudamOsDados()
+    public async Task OptimizeAndRepairDoNotChangeTheData()
     {
         TestServer.RequireServer();
         var before = (await ScalarAsync($"CHECKSUM TABLE `{_database}`.t EXTENDED"), await ScalarAsync($"SELECT GROUP_CONCAT(v ORDER BY id) FROM `{_database}`.m"));
@@ -116,7 +116,7 @@ public sealed class TableMaintenanceTests : IAsyncLifetime
         var myisam = await RunAsync(MaintenanceOperation.Repair, "m", MaintenanceOptions.Extended);
         var optimizeMyIsam = await RunAsync(MaintenanceOperation.Optimize, "m");
 
-        // InnoDB: OPTIMIZE recria a tabela (nota + OK); REPAIR não existe (nota do servidor, sem erro).
+        // InnoDB: OPTIMIZE recreates the table (note + OK); REPAIR does not exist (a server note, no error).
         Assert.Contains(innodb, m => m.Type == "status" && m.Text == "OK");
         Assert.Contains(repairInnoDb, m => m.Operation == "repair");
         Assert.Contains(myisam, m => m.Type == "status" && m.Text == "OK");
@@ -127,7 +127,7 @@ public sealed class TableMaintenanceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OutrosObjetosSaoSaltadosETabelaQueNaoExisteDaErro()
+    public async Task OtherObjectsAreSkippedAndAMissingTableGivesAnError()
     {
         TestServer.RequireServer();
 
@@ -139,7 +139,7 @@ public sealed class TableMaintenanceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SessaoReadOnlyDeixaOChecksumMasRecusaOOptimize()
+    public async Task ReadOnlySessionAllowsChecksumButRefusesOptimize()
     {
         TestServer.RequireServer();
         await using var readOnly = await ConnectAsync(readOnly: true);

@@ -3,9 +3,9 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.App.Sessions;
 
 /// <summary>
-/// Identidade de um objeto nos favoritos e nos objetos já selecionados: <c>db|schema|nome</c>, como o
-/// <c>TDBObject.Path</c> do HeidiSQL (anexo D A5), para os favoritos importados continuarem a bater certo. Em MySQL e
-/// MariaDB o schema é vazio (<c>db||nome</c>).
+/// Identity of an object in the favourites and in the already selected objects: <c>db|schema|name</c>, like HeidiSQL's
+/// <c>TDBObject.Path</c> (appendix D A5), so imported favourites keep matching. On MySQL and
+/// MariaDB the schema is empty (<c>db||name</c>).
 /// </summary>
 public static class ObjectPath
 {

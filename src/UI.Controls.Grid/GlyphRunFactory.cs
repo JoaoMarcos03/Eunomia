@@ -5,10 +5,10 @@ using Avalonia.Media;
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Caminho rápido de texto do grid (secção 15.2: "cache de glyph runs", "zero alocações no paint"):
-/// para texto simples (só caracteres que a fonte tem, sem marcas combinadas, sem RTL, sem controlo),
-/// cria o <see cref="GlyphRun"/> diretamente a partir do cmap e dos avanços da fonte, sem passar pelo
-/// shaping do HarfBuzz. Corta com reticências quando não cabe. O resto vai pelo <c>TextLayout</c>.
+/// Fast text path of the grid (section 15.2: "glyph run cache", "zero allocations in paint"):
+/// for plain text (only characters the font has, no combining marks, no RTL, no control characters),
+/// creates the <see cref="GlyphRun"/> straight from the font's cmap and advances, without going through
+/// HarfBuzz shaping. Cuts with an ellipsis when it does not fit. The rest goes through <c>TextLayout</c>.
 /// </summary>
 internal sealed class GlyphRunFactory
 {
@@ -35,14 +35,14 @@ internal sealed class GlyphRunFactory
         }
     }
 
-    /// <summary>Distância do topo da linha à baseline.</summary>
+    /// <summary>Distance from the top of the row to the baseline.</summary>
     public double Ascent { get; }
 
     public double LineHeight { get; }
 
     /// <summary>
-    /// Cria o glyph run se o texto for simples. <paramref name="offsetX"/> é o deslocamento horizontal
-    /// dentro da célula (alinhamento à direita).
+    /// Creates the glyph run if the text is plain. <paramref name="offsetX"/> is the horizontal offset
+    /// within the cell (right alignment).
     /// </summary>
     public bool TryCreate(string text, double maxWidth, bool alignRight, out GlyphRun? run, out double offsetX)
     {
@@ -53,7 +53,7 @@ internal sealed class GlyphRunFactory
             return false;
         }
 
-        // Só mede até ao que pode caber (mais uma margem), para não percorrer 256 caracteres.
+        // Only measures up to what can fit (plus a margin), so it does not go through 256 characters.
         var glyphs = new ushort[Math.Min(text.Length, (int)(maxWidth / 1.5) + 2)];
         double width = 0;
         var count = 0;
@@ -86,7 +86,7 @@ internal sealed class GlyphRunFactory
         ushort[] indices;
         if (truncated)
         {
-            // Confirma que o resto do texto também é simples não faz falta: só se desenha o início.
+            // Checking that the rest of the text is also plain is not needed: only the start is drawn.
             indices = new ushort[fitsWithEllipsis + 1];
             Array.Copy(glyphs, indices, fitsWithEllipsis);
             indices[fitsWithEllipsis] = _ellipsisGlyph;

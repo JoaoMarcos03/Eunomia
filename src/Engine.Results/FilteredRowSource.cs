@@ -5,10 +5,10 @@ using System.Text.RegularExpressions;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Vista local por índices sobre outro source: as linhas que passam uma regex (filter panel, secção 11.5; anexo D B11) ou
-/// todas, ordenadas por uma coluna (<see cref="SortAsync"/>). O varrimento corre fora da UI thread sobre as linhas
-/// carregadas (incluindo as que estão em spill) e guarda os índices; os blocos da vista são montados a pedido, copiando
-/// só essas linhas. A regex compara o texto de todas as colunas e o número da linha.
+/// Local view by indexes over another source: the rows that match a regex (filter panel, section 11.5; appendix D B11) or
+/// all of them, sorted by a column (<see cref="SortAsync"/>). The scan runs off the UI thread over the loaded rows
+/// (including spilled ones) and keeps the indexes; the view's blocks are built on demand, copying
+/// only those rows. The regex compares the text of every column and the row number.
 /// </summary>
 public sealed class FilteredRowSource : IRowSource, IFullValueSource
 {
@@ -26,7 +26,7 @@ public sealed class FilteredRowSource : IRowSource, IFullValueSource
         BlockSize = inner.BlockSize;
     }
 
-    /// <summary>Linhas do source de baixo.</summary>
+    /// <summary>Rows of the underlying source.</summary>
     public long TotalRows { get; }
 
     public long MatchCount => _rows.LongLength;
@@ -39,17 +39,17 @@ public sealed class FilteredRowSource : IRowSource, IFullValueSource
 
     public event EventHandler<BlocksAvailableEventArgs>? BlocksAvailable;
 
-    /// <summary>Linha do source de baixo.</summary>
+    /// <summary>Row of the underlying source.</summary>
     public long InnerRow(long row) => _rows[row];
 
-    /// <summary>Varre o source (fora da UI thread) e devolve a vista com as linhas que passam.</summary>
+    /// <summary>Scans the source (off the UI thread) and returns the view with the matching rows.</summary>
     public static Task<FilteredRowSource> CreateAsync(IRowSource inner, Regex regex, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(inner);
         ArgumentNullException.ThrowIfNull(regex);
         return Task.Run(async () =>
         {
-            // Formatação local desligada (anexo D B11): sem separadores de milhares.
+            // Local formatting off (appendix D B11): no thousands separators.
             var formatter = new DisplayFormatter(CultureInfo.InvariantCulture, thousandsSeparator: false);
             var rows = new List<long>();
             var total = inner.RowCount.Count;
@@ -71,9 +71,9 @@ public sealed class FilteredRowSource : IRowSource, IFullValueSource
     }
 
     /// <summary>
-    /// Ordenação local numa coluna (result tabs das query tabs; anexo D B18, P20): ordena os índices fora da UI thread,
-    /// pelo valor tipado (números, datas) ou, no texto, como o <c>CompareAnyNode</c> do HeidiSQL (numérico quando os dois
-    /// textos são números, senão sem maiúsculas na cultura atual). NULL fica primeiro em ascendente. Cancelável.
+    /// Local sort on a column (query tab result tabs; appendix D B18, P20): sorts the indexes off the UI thread,
+    /// by the typed value (numbers, dates) or, for text, like HeidiSQL's <c>CompareAnyNode</c> (numeric when both
+    /// texts are numbers, otherwise case-insensitive in the current culture). NULL comes first when ascending. Cancellable.
     /// </summary>
     public static Task<FilteredRowSource> SortAsync(IRowSource inner, int column, bool descending, CancellationToken cancellationToken)
     {
@@ -132,7 +132,7 @@ public sealed class FilteredRowSource : IRowSource, IFullValueSource
             }
             catch (InvalidOperationException e) when (e.InnerException is OperationCanceledException canceled)
             {
-                // O Array.Sort embrulha as exceções do comparador.
+                // Array.Sort wraps the comparer's exceptions.
                 throw canceled;
             }
             return new FilteredRowSource(inner, rows, total);
@@ -160,13 +160,13 @@ public sealed class FilteredRowSource : IRowSource, IFullValueSource
                 {
                     result = CompareText(texts![a], texts[b]);
                 }
-                // Estável: empates mantêm a ordem do servidor.
+                // Stable: ties keep the server's order.
                 return result != 0 ? result * direction : a.CompareTo(b);
             });
         }, cancellationToken);
     }
 
-    /// <summary><c>CompareAnyNode</c>: numérico quando os dois textos são números, senão sem maiúsculas na cultura atual.</summary>
+    /// <summary><c>CompareAnyNode</c>: numeric when both texts are numbers, otherwise case-insensitive in the current culture.</summary>
     public static int CompareText(string a, string b)
     {
         ArgumentNullException.ThrowIfNull(a);
@@ -209,7 +209,7 @@ public sealed class FilteredRowSource : IRowSource, IFullValueSource
                 return true;
             }
         }
-        // Monta já se as linhas de baixo estiverem todas em memória; senão fica para o GetBlockAsync.
+        // Builds right away if the underlying rows are all in memory; otherwise it is left to GetBlockAsync.
         block = Build(blockIndex, b => _inner.TryGetBlock(b, out var resident) ? resident : null);
         return block is not null;
     }

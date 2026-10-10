@@ -8,15 +8,15 @@ using Microsoft.Win32;
 
 namespace Eunomia.Infra.Settings.Tests;
 
-/// <summary>Settings do HeidiSQL lidas do registo (Fase 13): a mesma árvore que o ficheiro exportado.</summary>
+/// <summary>HeidiSQL settings read from the registry (phase 13): the same tree as the exported file.</summary>
 public sealed class HeidiRegistryTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public void LeAsSettingsDoRegistoComoOFicheiro()
+    public void ReadsTheRegistrySettingsLikeTheFile()
     {
-        Assert.SkipUnless(OperatingSystem.IsWindows(), "Registo só no Windows.");
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Registry only on Windows.");
         if (!OperatingSystem.IsWindows())
         {
             return;
@@ -27,7 +27,7 @@ public sealed class HeidiRegistryTests
         var key = @"Software\EunomiaTests\" + Guid.NewGuid().ToString("N");
         try
         {
-            // A mesma árvore que o HeidiSQL escreve: subchaves pelo caminho, texto como REG_SZ e inteiros como DWORD.
+            // The same tree HeidiSQL writes: subkeys by path, text as REG_SZ and integers as DWORD.
             foreach (var value in HeidiSettingsFile.Parse(text).Values)
             {
                 using var target = Registry.CurrentUser.CreateSubKey(string.Join('\\', [key, .. value.KeyPath]));
@@ -49,7 +49,7 @@ public sealed class HeidiRegistryTests
 
             var local = catalog.FindByPath("localhost")!;
             Assert.Equal(0x006400u, local.Color);
-            Assert.Equal("Linha 1\r\nLinha 2", local.Comment);
+            Assert.Equal("Line 1\r\nLine 2", local.Comment);
             Assert.Equal("root-pw", secrets.Get(SecretKeys.Password(local.Id)));
             Assert.Equal(3307, catalog.FindByPath(@"Amberline\StagingAmberline")!.Port);
             Assert.False(HeidiRegistry.HasSessions(key + @"\Nothing"));

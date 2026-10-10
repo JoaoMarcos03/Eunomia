@@ -2,13 +2,13 @@ using Eunomia.App.Data;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Save BLOB to file e Image preview: bytes da célula, formato pelos magic bytes e nome sugerido.</summary>
+/// <summary>Save BLOB to file and Image preview: the cell's bytes, the format by its magic bytes and the suggested name.</summary>
 public sealed class BlobContentTests
 {
     private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00];
 
     [Fact]
-    public void BinarioVemDoHexETextoEmUtf8()
+    public void BinaryComesFromHexAndTextInUtf8()
     {
         Assert.Equal(new byte[] { 0xCA, 0xFE, 0x00 }, BlobContent.ToBytes("0xCAFE00", binary: true));
         Assert.Equal(new byte[] { 0xCA, 0xFE }, BlobContent.ToBytes("0xcafe", binary: true));
@@ -21,13 +21,13 @@ public sealed class BlobContentTests
     [InlineData("CAFE")]
     [InlineData("0xCAF")]
     [InlineData("0xZZ")]
-    public void BinarioSemHexValidoEhRecusado(string raw)
+    public void BinaryWithoutValidHexIsRefused(string raw)
     {
         Assert.Throws<FormatException>(() => BlobContent.ToBytes(raw, binary: true));
     }
 
     [Fact]
-    public void FormatoPelosPrimeirosBytes()
+    public void FormatFromTheFirstBytes()
     {
         var bmp = new byte[30];
         bmp[0] = (byte)'B';
@@ -49,13 +49,13 @@ public sealed class BlobContentTests
     [InlineData("notes", false, "notes.txt")]
     [InlineData("a/b:c*?", false, "a_b_c__.txt")]
     [InlineData("  ", false, "blob.txt")]
-    public void NomeSugeridoPelaColuna(string column, bool binary, string expected)
+    public void NameSuggestedFromTheColumn(string column, bool binary, string expected)
     {
         Assert.Equal(expected, BlobContent.SuggestedFileName(column, binary, Png));
     }
 
     [Fact]
-    public void BinarioDesconhecidoFicaComBin()
+    public void UnknownBinaryGetsBin()
     {
         Assert.Equal("data.bin", BlobContent.SuggestedFileName("data", binary: true, [0x01, 0x02]));
     }

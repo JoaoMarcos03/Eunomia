@@ -16,7 +16,7 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Shell da Fase 2: layout (FAM-L01), menus e toolbar (L02, L03), keymap (K01), painéis (L07), log e status bar.</summary>
+/// <summary>Phase 2 shell: layout (FAM-L01), menus and toolbar (L02, L03), keymap (K01), panels (L07), log and status bar.</summary>
 public sealed class ShellTests
 {
     private static MainWindow Open(AppSettings? settings = null, ThemeVariant? theme = null)
@@ -36,7 +36,7 @@ public sealed class ShellTests
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("shell-light", "light")]
     [InlineData("shell-dark", "dark")]
-    public async Task JanelaPorOmissao(string name, string theme)
+    public async Task DefaultWindow(string name, string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var window = Open(theme: theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light);
@@ -58,7 +58,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void MenusPrincipaisPelaOrdemDoHeidiSql()
+    public void MainMenusInHeidiSqlOrder()
     {
         var window = Open();
         var menu = window.GetLogicalDescendants().OfType<Menu>().First();
@@ -68,7 +68,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void ToolbarEMenusSoMostramComandosComHandler()
+    public void ToolbarAndMenusOnlyShowCommandsWithAHandler()
     {
         var window = Open();
         window.CommandUi.Refresh();
@@ -78,7 +78,7 @@ public sealed class ShellTests
         Assert.Equal(MainMenuLayout.Toolbar.Count(t => !t.IsSeparator), buttons.Count);
         Assert.All(buttons, b => Assert.Equal(registry.StateOf(b.Name!["tb_".Length..]).IsImplemented, b.IsVisible));
 
-        // Menus: cada item visível tem handler; nenhum separador visível no início, no fim ou repetido.
+        // Menus: every visible item has a handler; no visible separator at the start, at the end or repeated.
         var menu = window.GetLogicalDescendants().OfType<Menu>().First();
         foreach (var top in menu.Items.OfType<MenuItem>())
         {
@@ -111,7 +111,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void CtrlTAbreECtrlF4FechaQueryTabs()
+    public void CtrlTOpensAndCtrlF4ClosesQueryTabs()
     {
         var window = Open();
         var before = window.Tabs.QueryTabs.Count;
@@ -127,7 +127,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void PrimeiraQueryTabNaoFecha()
+    public void FirstQueryTabDoesNotClose()
     {
         var window = Open();
         window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
@@ -137,7 +137,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void CtrlNumeroEscolheATabVisivel()
+    public void CtrlNumberChoosesTheVisibleTab()
     {
         var window = Open();
 
@@ -151,7 +151,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void CtrlEFocaOTableFilterECtrlDAArvore()
+    public void CtrlEFocusesTheTableFilterAndCtrlDTheTree()
     {
         var window = Open();
 
@@ -165,7 +165,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void CtrlAltFAlternaOFilterPanelEPersiste()
+    public void CtrlAltFTogglesTheFilterPanelAndPersists()
     {
         var window = Open();
         Assert.True(window.FilterPanel.IsVisible);
@@ -179,9 +179,9 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void AtalhoDeComandoSemHandlerSegueParaOControlo()
+    public void ShortcutOfACommandWithoutHandlerGoesToTheControl()
     {
-        // Ins (Insert row) ainda não está implementado: o grid recebe a tecla e o keymap não a consome.
+        // Ins (Insert row) is not implemented yet: the grid gets the key and the keymap does not consume it.
         var window = Open();
         window.ShowDataTab();
         window.DataGrid.Focus();
@@ -192,11 +192,11 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void AtalhoRedefinidoNasSettingsEhUsado()
+    public void ShortcutRedefinedInTheSettingsIsUsed()
     {
         var settings = new AppSettings();
         settings.Shortcuts["query.newTab"] = "Ctrl+Shift+T";
-        settings.Shortcuts["nao.existe"] = "F2";
+        settings.Shortcuts["does.not.exist"] = "F2";
         var window = Open(settings);
         var before = window.Tabs.QueryTabs.Count;
 
@@ -204,12 +204,12 @@ public sealed class ShellTests
         Assert.Equal(before, window.Tabs.QueryTabs.Count);
         window.KeyPress(Key.T, RawInputModifiers.Control | RawInputModifiers.Shift, PhysicalKey.T, "T");
         Assert.Equal(before + 1, window.Tabs.QueryTabs.Count);
-        Assert.Equal(["nao.existe"], window.Context.IgnoredShortcuts);
+        Assert.Equal(["does.not.exist"], window.Context.IgnoredShortcuts);
         window.Close();
     }
 
     [AvaloniaFact]
-    public void ResetPanelDimensionsEDimensoesPersistidas()
+    public void ResetPanelDimensionsAndPersistedDimensions()
     {
         var settings = new AppSettings();
         settings.Panels.TreeWidth = 565;
@@ -232,7 +232,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void LogPanelEscondidoNaoOcupaEspaco()
+    public void HiddenLogPanelTakesNoSpace()
     {
         var settings = new AppSettings();
         settings.Display.LogPanel = false;
@@ -248,7 +248,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void SqlLogMostraAsUltimasLinhasComNumeracaoContinua()
+    public void SqlLogShowsTheLastLinesWithRunningNumbers()
     {
         var settings = new AppSettings();
         settings.Log.MaxLines = 5;
@@ -271,12 +271,12 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PreferencesShortcutsComConflito()
+    public async Task PreferencesShortcutsWithConflict()
     {
         var window = Open();
         var prefs = new PreferencesWindow(window.Context, PreferencesWindow.ShortcutsPage);
 
-        // Ctrl+D é do "Database tree": "No" mantém tudo; "Yes" tira-o de lá.
+        // Ctrl+D belongs to "Database tree": "No" keeps everything; "Yes" takes it from there.
         await prefs.AssignAsync("query.newTab", KeyChord.Parse("Ctrl+D"), _ => Task.FromResult(MessageDialogResult.No));
         Assert.Equal(KeyChord.Parse("Ctrl+T"), prefs.PendingShortcuts.ShortcutOf("query.newTab"));
 
@@ -293,7 +293,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void BarraDeTabsFechaAsDaDireitaETemOpcoesPersistidas()
+    public void TabBarClosesTabsToTheRightAndPersistsItsOptions()
     {
         var window = Open();
         var first = window.Tabs.QueryTabs[0];
@@ -314,7 +314,7 @@ public sealed class ShellTests
     }
 
     [AvaloniaFact]
-    public void StatusBarTemSetePaineis()
+    public void StatusBarHasSevenPanels()
     {
         var window = Open();
         var status = window.GetLogicalDescendants().OfType<StatusBarView>().Single();

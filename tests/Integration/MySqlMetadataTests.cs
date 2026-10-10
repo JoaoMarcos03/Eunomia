@@ -3,7 +3,7 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Metadata do MySQL/MariaDB contra um servidor real (base da árvore, Fase 4, e do table editor, Fase 7).</summary>
+/// <summary>MySQL/MariaDB metadata against a real server (basis of the tree, phase 4, and of the table editor, phase 7).</summary>
 public sealed class MySqlMetadataTests : IAsyncLifetime
 {
     private IDbConnectionHandle _db = null!;
@@ -22,7 +22,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
         await h.ExecuteNonQueryAsync($"USE `{_database}`", Ct);
         string[] ddl =
         [
-            "CREATE TABLE parent (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(10) NOT NULL, UNIQUE KEY uq_code (code)) COMMENT='pais'",
+            "CREATE TABLE parent (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(10) NOT NULL, UNIQUE KEY uq_code (code)) COMMENT='parents'",
             """
             CREATE TABLE child (
               id INT NOT NULL, seq SMALLINT UNSIGNED NOT NULL, parent_id INT NULL, price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'preço',
@@ -54,18 +54,18 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SchemaInteiroParaODiagrama()
+    public async Task WholeSchemaForTheDiagram()
     {
         TestServer.RequireServer();
         var tables = await _db.Metadata.GetSchemaAsync(_database, _database, Ct);
 
-        // Só tabelas (a view fica de fora), pela ordem do nome, com as colunas pela ordem da tabela.
+        // Only tables (the view is left out), in name order, with the columns in table order.
         Assert.Equal(["child", "parent"], tables.Select(t => t.Ref.Name));
         var child = tables[0];
         Assert.Equal(["id", "seq", "parent_id", "price", "note"], child.Columns.Select(c => c.Name));
         Assert.True(child.Columns.Single(c => c.Name == "parent_id").IsNullable);
         Assert.Equal(["id", "seq"], child.Indexes.Single(i => i.Kind == IndexKind.Primary).Columns);
-        // Só as chaves únicas (os índices normais e o FULLTEXT não interessam ao diagrama).
+        // Only unique keys (normal indexes and FULLTEXT do not matter to the diagram).
         Assert.Single(child.Indexes);
         var fk = Assert.Single(child.ForeignKeys);
         Assert.Equal(("fk_parent", "parent"), (fk.Name, fk.ReferencedTable.Name));
@@ -77,7 +77,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ListaAsBases()
+    public async Task ListsTheDatabases()
     {
         TestServer.RequireServer();
 
@@ -91,7 +91,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     [InlineData(ObjectDetail.Statistics)]
     [InlineData(ObjectDetail.Details)]
     [InlineData(ObjectDetail.Names)]
-    public async Task TodosOsObjetosNumaSoIda(ObjectDetail detail)
+    public async Task AllObjectsInASingleRoundTrip(ObjectDetail detail)
     {
         TestServer.RequireServer();
 
@@ -108,12 +108,12 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
         Assert.Equal("olá", byName["p_hello"].Comment);
         if (detail == ObjectDetail.Names)
         {
-            // Só nomes e tipos: nada que obrigue o servidor a abrir as tabelas.
+            // Only names and kinds: nothing that forces the server to open the tables.
             Assert.Null(byName["parent"].Engine);
             Assert.Null(byName["parent"].Status);
             return;
         }
-        Assert.Equal("pais", byName["parent"].Comment);
+        Assert.Equal("parents", byName["parent"].Comment);
         Assert.Equal("InnoDB", byName["child"].Engine);
         Assert.NotNull(byName["parent"].Status);
         if (detail == ObjectDetail.Statistics)
@@ -128,7 +128,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task EstruturaDaTabelaComChavesFkECheck()
+    public async Task TableStructureWithKeysFksAndChecks()
     {
         TestServer.RequireServer();
 
@@ -185,7 +185,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessosEVariaveis()
+    public async Task ProcessesAndVariables()
     {
         TestServer.RequireServer();
 
@@ -197,12 +197,12 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DdlCreateReproduzATabela()
+    public async Task DdlCreateReproducesTheTable()
     {
         TestServer.RequireServer();
         var services = new MySqlProvider().ForServer(_db.Server);
         var child = await _db.Metadata.GetTableAsync(new DbObjectRef(_database, _database, "child", DbObjectKind.Table), Ct);
-        // No MySQL 8 os nomes de CHECK são únicos por base: a cópia leva-os com outro nome.
+        // On MySQL 8, CHECK names are unique per database: the copy gets them under another name.
         var copy = child with { Ref = child.Ref with { Name = "child_copy" }, ForeignKeys = [], Checks = [.. child.Checks.Select(c => c with { Name = c.Name + "_copy" })] };
 
         await ((MySqlConnectionHandle)_db).ExecuteNonQueryAsync(services.Ddl.Create(copy)[0], Ct);

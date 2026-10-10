@@ -8,7 +8,7 @@
     <InternalsVisibleTo Include="Engine.Transfer.Tests" />
   </ItemGroup>
 
-  <!-- Secção 21.1: Engine.Transfer -> Engine.Results, Engine.Sql (pipelines, writers, readers e journal). -->
+  <!-- Section 21.1: Engine.Transfer -> Engine.Results, Engine.Sql (pipelines, writers, readers and journal). -->
   <ItemGroup>
     <ProjectReference Include="..\Engine.Results\Engine.Results.csproj" />
     <ProjectReference Include="..\Engine.Sql\Engine.Sql.csproj" />

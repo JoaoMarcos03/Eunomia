@@ -7,7 +7,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>SessionHost contra um servidor real (secção 12; REQ-CON-03/04/05; FAM-S07).</summary>
+/// <summary>SessionHost against a real server (section 12; REQ-CON-03/04/05; FAM-S07).</summary>
 public sealed class SessionHostTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -39,7 +39,7 @@ public sealed class SessionHostTests
         host.RunPrimaryAsync(async (h, ct) => Convert.ToInt64(await h.ExecuteScalarAsync(sql, ct), System.Globalization.CultureInfo.InvariantCulture), Ct);
 
     [Fact]
-    public async Task LigaComPrimariaEMetadataSeparadas()
+    public async Task ConnectsWithSeparatePrimaryAndMetadata()
     {
         TestServer.RequireServer();
         var (host, log) = Create();
@@ -54,7 +54,7 @@ public sealed class SessionHostTests
         Assert.NotEqual(primaryId, metadataId);
         Assert.Equal(primaryId, host.PrimaryConnectionId);
         Assert.NotNull(host.Server);
-        // A cifra TLS vem na mesma ida ao servidor da versão; no loopback, sem TLS, não há aviso.
+        // The TLS cipher comes in the same round trip as the version; on loopback, without TLS, there is no warning.
         Assert.NotNull(host.Encryption);
         Assert.DoesNotContain(log.Lines, l => l.Message.Contains("not encrypted", StringComparison.Ordinal));
         Assert.Contains(SessionState.Connecting, states);
@@ -65,7 +65,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task MetadataNaoEsperaPorUmaQueryLongaNaPrimaria()
+    public async Task MetadataDoesNotWaitForALongQueryOnThePrimary()
     {
         TestServer.RequireServer();
         var (host, _) = Create();
@@ -85,7 +85,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task ReconnectVisivelDepoisDeAPrimariaSerMorta()
+    public async Task VisibleReconnectAfterThePrimaryIsKilled()
     {
         TestServer.RequireServer();
         var (host, log) = Create();
@@ -100,7 +100,7 @@ public sealed class SessionHostTests
             await other.ExecuteNonQueryAsync($"KILL {killed}", Ct);
         }
 
-        // Uma query do utilizador nunca é repetida sozinha: falha com "connection lost" e a sessão religa.
+        // A user query is never retried on its own: it fails with "connection lost" and the session reconnects.
         await Assert.ThrowsAsync<SessionConnectionLostException>(() => ScalarAsync(host, "SELECT 1"));
         var deadline = Stopwatch.StartNew();
         while (host.State != SessionState.Ready && deadline.Elapsed < TimeSpan.FromSeconds(10))
@@ -118,7 +118,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task MetadataRepeteDepoisDeReligar()
+    public async Task MetadataRetriesAfterReconnecting()
     {
         TestServer.RequireServer();
         var (host, _) = Create();
@@ -136,7 +136,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task TimeoutDeClienteCancelaAQuery()
+    public async Task ClientTimeoutCancelsTheQuery()
     {
         TestServer.RequireServer();
         var (host, _) = Create(s => s with { QueryTimeout = TimeSpan.FromMilliseconds(500) });
@@ -152,11 +152,11 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task StartupScriptETimeZoneEmCadaLigacao()
+    public async Task StartupScriptAndTimeZoneOnEveryConnection()
     {
         TestServer.RequireServer();
         var script = Path.Combine(Path.GetTempPath(), "eunomia-startup-" + Guid.NewGuid().ToString("N") + ".sql");
-        await File.WriteAllTextAsync(script, "SET @startup = 42; SELEC erro; SET @other = 'ok'", Ct);
+        await File.WriteAllTextAsync(script, "SET @startup = 42; SELEC error; SET @other = 'ok'", Ct);
         var (host, log) = Create(s => s with { StartupScriptPath = script, TimeZone = "+03:00" });
         await host.ConnectAsync(Ct);
 
@@ -169,7 +169,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task JobsEmLigacoesProprias()
+    public async Task JobsOnTheirOwnConnections()
     {
         TestServer.RequireServer();
         var (host, _) = Create(s => s with { MaxJobConnections = 2 });
@@ -189,7 +189,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task PasswordErradaFalhaEFicaEmFailed()
+    public async Task WrongPasswordFailsAndStaysFailed()
     {
         TestServer.RequireServer();
         var settings = new SessionConnectionSettings("bad", TestServer.Options() with { User = "nao_existe_" + Guid.NewGuid().ToString("N")[..6] });

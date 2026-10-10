@@ -6,33 +6,33 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// SQL do MySQL/MariaDB (secção 14.1). Identificadores com backticks; literais de texto que o servidor lê da mesma
-/// forma com e sem <c>NO_BACKSLASH_ESCAPES</c> (ver <see cref="StringLiteral"/>).
+/// MySQL/MariaDB SQL (section 14.1). Identifiers with backticks; text literals that the server reads the same way
+/// with and without <c>NO_BACKSLASH_ESCAPES</c> (see <see cref="StringLiteral"/>).
 /// </summary>
 public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes = false, bool isRds = false) : IDialect
 {
-    /// <summary>Caracteres cujo escaping depende do <c>NO_BACKSLASH_ESCAPES</c> (a barra) ou que não vão em claro (NUL, Ctrl+Z).</summary>
+    /// <summary>Characters whose escaping depends on <c>NO_BACKSLASH_ESCAPES</c> (the backslash) or that do not go in plain text (NUL, Ctrl+Z).</summary>
     private static readonly SearchValues<char> ModeDependent = SearchValues.Create("\\\0\u001A");
 
     public ServerIdentity Server { get; } = server;
 
-    /// <summary>A ligação de onde o dialeto veio tinha <c>NO_BACKSLASH_ESCAPES</c> (só conta para <see cref="PlainStringLiteral"/>).</summary>
+    /// <summary>The connection the dialect came from had <c>NO_BACKSLASH_ESCAPES</c> (only matters for <see cref="PlainStringLiteral"/>).</summary>
     public bool NoBackslashEscapes { get; } = noBackslashEscapes;
 
-    /// <summary>A ligação é a um Amazon RDS (KILL pelas rotinas <c>mysql.rds_*</c>).</summary>
+    /// <summary>The connection is to Amazon RDS (KILL through the <c>mysql.rds_*</c> routines).</summary>
     public bool IsRds { get; } = isRds;
 
     public LikeOperator CaseInsensitiveLike => LikeOperator.Like;
 
-    /// <summary>Tipos cortados no Data tab (<c>LoadPart</c>): não CHAR, TINYTEXT nem TINYBLOB.</summary>
+    /// <summary>Types cut in the Data tab (<c>LoadPart</c>): not CHAR, TINYTEXT or TINYBLOB.</summary>
     private static readonly HashSet<string> LoadPartTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "VARCHAR", "TEXT", "MEDIUMTEXT", "LONGTEXT", "JSON", "VARBINARY", "BLOB", "MEDIUMBLOB", "LONGBLOB",
     };
 
     /// <summary>
-    /// <c>LEFT(col, n)</c> para os tipos <c>LoadPart</c> com comprimento &gt; n ou sem comprimento; o JSON passa por
-    /// <c>CAST(… AS CHAR)</c> como no <c>CastAsText</c> do HeidiSQL.
+    /// <c>LEFT(col, n)</c> for the <c>LoadPart</c> types with a length &gt; n or without a length; JSON goes through
+    /// <c>CAST(… AS CHAR)</c> as in HeidiSQL's <c>CastAsText</c>.
     /// </summary>
     public string? LoadPartExpression(ColumnDefinition column, int maxLength)
     {
@@ -57,7 +57,7 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
         return string.Create(CultureInfo.InvariantCulture, $"LEFT({inner}, {maxLength})");
     }
 
-    /// <summary>Tipos que o <c>CastAsText</c> do HeidiSQL passa por <c>CAST(… AS CHAR)</c> em MySQL.</summary>
+    /// <summary>Types that HeidiSQL's <c>CastAsText</c> passes through <c>CAST(… AS CHAR)</c> on MySQL.</summary>
     private static readonly HashSet<string> CastTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "DATE", "DATETIME", "TIME", "TIMESTAMP", "JSON",
@@ -86,18 +86,18 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
 
     public string? SessionModeQuery => "SELECT @@SESSION.sql_mode";
 
-    /// <summary><c>SET SESSION TRANSACTION READ ONLY</c> (MySQL 5.6.5+, MariaDB 10.0+): o servidor recusa DML e DDL.</summary>
+    /// <summary><c>SET SESSION TRANSACTION READ ONLY</c> (MySQL 5.6.5+, MariaDB 10.0+): the server refuses DML and DDL.</summary>
     public string? ReadOnlySession =>
         (Server.Engine == DbEngine.MariaDb ? Server.Version >= new Version(10, 0) : Server.Version >= new Version(5, 6, 5))
             ? "SET SESSION TRANSACTION READ ONLY"
             : null;
 
     /// <summary>
-    /// <c>lock_wait_timeout</c> curto (o valor da sessão fica em <c>@EUNOMIA_LWT</c> e volta no fim) e, com
-    /// <paramref name="strictFrom"/>, o modo atual com <c>STRICT_ALL_TABLES</c> e <c>STRICT_TRANS_TABLES</c> e sem
-    /// <c>NO_ZERO_DATE</c> nem <c>NO_ZERO_IN_DATE</c>: sem modo estrito o MySQL corta valores num ALTER que estreita uma
-    /// coluna (VARCHAR(255) → VARCHAR(10), INT → TINYINT, utf8mb4 → latin1) e só deixa um warning; as zero dates que a
-    /// tabela já tenha não podem fazer falhar a cópia.
+    /// A short <c>lock_wait_timeout</c> (the session value is kept in <c>@EUNOMIA_LWT</c> and restored at the end) and, with
+    /// <paramref name="strictFrom"/>, the current mode with <c>STRICT_ALL_TABLES</c> and <c>STRICT_TRANS_TABLES</c> and without
+    /// <c>NO_ZERO_DATE</c> or <c>NO_ZERO_IN_DATE</c>: without strict mode MySQL truncates values in an ALTER that narrows a
+    /// column (VARCHAR(255) → VARCHAR(10), INT → TINYINT, utf8mb4 → latin1) and only leaves a warning; zero dates the
+    /// table already has must not make the copy fail.
     /// </summary>
     public (string Enter, string Restore)? DdlSession(string? strictFrom, int lockWaitSeconds)
     {
@@ -133,11 +133,11 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
     }
 
     /// <summary>
-    /// Literal de texto para uma expressão, igual com e sem <c>NO_BACKSLASH_ESCAPES</c> (o modo pode mudar na sessão, por
-    /// um <c>SET</c> do utilizador ou do startup script, sem o cliente saber): aspas duplicadas (<c>''</c>), que os dois
-    /// modos leem igual; texto com barra invertida, NUL ou Ctrl+Z vai em hex com introdutor (<c>_utf8mb4 X'…'</c>), que
-    /// não tem escapes. Com o escaping antigo, <c>C:\dir</c> ou uma quebra de linha num servidor com
-    /// <c>NO_BACKSLASH_ESCAPES</c> ficavam gravados com barras a mais.
+    /// Text literal for an expression, the same with and without <c>NO_BACKSLASH_ESCAPES</c> (the mode may change during the
+    /// session, through a <c>SET</c> by the user or the startup script, without the client knowing): doubled quotes
+    /// (<c>''</c>), which both modes read the same way; text with a backslash, NUL or Ctrl+Z goes as hex with an introducer
+    /// (<c>_utf8mb4 X'…'</c>), which has no escapes. With the old escaping, <c>C:\dir</c> or a line break on a server with
+    /// <c>NO_BACKSLASH_ESCAPES</c> was saved with extra backslashes.
     /// </summary>
     public string StringLiteral(string value)
     {
@@ -146,9 +146,9 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
     }
 
     /// <summary>
-    /// Texto entre plicas para a gramática que só aceita uma string simples (<c>COMMENT</c>, <c>LIKE</c> do <c>SHOW</c>,
-    /// <c>HELP</c>, opções do <c>LOAD DATA</c>): igual ao <see cref="StringLiteral"/> sem barras; com barras, o escaping
-    /// do modo da ligação de onde o dialeto veio.
+    /// Single-quoted text for the grammar that only accepts a simple string (<c>COMMENT</c>, <c>SHOW</c>'s <c>LIKE</c>,
+    /// <c>HELP</c>, <c>LOAD DATA</c> options): the same as <see cref="StringLiteral"/> without backslashes; with backslashes,
+    /// the escaping of the mode of the connection the dialect came from.
     /// </summary>
     public string PlainStringLiteral(string value)
     {
@@ -185,7 +185,7 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
 
     private static string QuoteDoubled(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
 
-    /// <summary><c>_utf8mb4 X'…'</c> (<c>_utf8</c> nos servidores sem utf8mb4): o texto em UTF-8, sem escapes.</summary>
+    /// <summary><c>_utf8mb4 X'…'</c> (<c>_utf8</c> on servers without utf8mb4): the text in UTF-8, without escapes.</summary>
     private string HexStringLiteral(string value)
     {
         var v = Server.Version;
@@ -204,7 +204,7 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
         ArgumentNullException.ThrowIfNull(literalValues);
         if (columns.Count != literalValues.Count || columns.Count == 0)
         {
-            throw new ArgumentException("Colunas e valores do keyset têm de ter o mesmo tamanho.", nameof(literalValues));
+            throw new ArgumentException("Keyset columns and values must have the same length.", nameof(literalValues));
         }
         var op = descending ? "<" : ">";
         return columns.Count == 1
@@ -212,13 +212,13 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
             : $"({string.Join(", ", columns.Select(QuoteIdentifier))}) {op} ({string.Join(", ", literalValues)})";
     }
 
-    /// <summary><c>KILL QUERY</c> (≥ 5.0); no RDS, <c>CALL mysql.rds_kill_query</c> (anexo A §10.5).</summary>
+    /// <summary><c>KILL QUERY</c> (≥ 5.0); on RDS, <c>CALL mysql.rds_kill_query</c> (appendix A §10.5).</summary>
     public string KillQuery(long serverConnectionId) =>
         IsRds
             ? string.Create(CultureInfo.InvariantCulture, $"CALL mysql.rds_kill_query({serverConnectionId})")
             : string.Create(CultureInfo.InvariantCulture, $"KILL QUERY {serverConnectionId}");
 
-    /// <summary><c>KILL</c> (<c>qKillProcess</c>); no RDS, <c>CALL mysql.rds_kill</c>.</summary>
+    /// <summary><c>KILL</c> (<c>qKillProcess</c>); on RDS, <c>CALL mysql.rds_kill</c>.</summary>
     public string KillConnection(long serverConnectionId) =>
         IsRds
             ? string.Create(CultureInfo.InvariantCulture, $"CALL mysql.rds_kill({serverConnectionId})")
@@ -233,16 +233,16 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
         return obj.Kind switch
         {
             DbObjectKind.Table or DbObjectKind.View => $"RENAME TABLE {QualifiedName(obj)} TO {target}",
-            _ => throw new NotSupportedException($"Rename de {obj.Kind} não é suportado em MySQL/MariaDB."),
+            _ => throw new NotSupportedException($"Renaming a {obj.Kind} is not supported on MySQL/MariaDB."),
         };
     }
 
     public string Truncate(DbObjectRef table) => "TRUNCATE " + QualifiedName(table);
 
     /// <summary>
-    /// <c>&lt;OP&gt; TABLE `db`.`tbl` [QUICK] [FAST] [MEDIUM] [EXTENDED] [CHANGED] [USE_FRM] [FOR UPGRADE]</c> com as opções que
-    /// a operação aceita (anexo B §2.2): CHECK todas menos USE_FRM; CHECKSUM só QUICK ou EXTENDED (uma delas); REPAIR
-    /// QUICK, EXTENDED e USE_FRM; ANALYZE e OPTIMIZE nenhuma.
+    /// <c>&lt;OP&gt; TABLE `db`.`tbl` [QUICK] [FAST] [MEDIUM] [EXTENDED] [CHANGED] [USE_FRM] [FOR UPGRADE]</c> with the options
+    /// the operation accepts (appendix B §2.2): CHECK all but USE_FRM; CHECKSUM only QUICK or EXTENDED (one of them); REPAIR
+    /// QUICK, EXTENDED and USE_FRM; ANALYZE and OPTIMIZE none.
     /// </summary>
     public string? Maintenance(MaintenanceOperation operation, DbObjectRef table, MaintenanceOptions options)
     {
@@ -250,7 +250,7 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
         options &= MaintenanceOptionsOf(operation);
         if (operation == MaintenanceOperation.Checksum && options == (MaintenanceOptions.Quick | MaintenanceOptions.Extended))
         {
-            // QUICK e EXTENDED excluem-se no CHECKSUM: fica o EXTENDED, que lê a tabela toda e nunca dá um resultado errado.
+            // QUICK and EXTENDED exclude each other in CHECKSUM: EXTENDED wins, as it reads the whole table and never gives a wrong result.
             options = MaintenanceOptions.Extended;
         }
         var keyword = operation switch
@@ -303,8 +303,8 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
             : $"EXPLAIN FORMAT={format} {statement}";
 
     /// <summary>
-    /// <c>SHOW TABLE STATUS … LIKE</c> como o HeidiSQL; com <c>NO_BACKSLASH_ESCAPES</c> o LIKE não tem carácter de escape
-    /// (o <c>_</c> dos nomes seria um curinga), por isso compara-se o nome com <c>WHERE Name =</c>.
+    /// <c>SHOW TABLE STATUS … LIKE</c> like HeidiSQL; with <c>NO_BACKSLASH_ESCAPES</c> the LIKE has no escape character
+    /// (the <c>_</c> in names would be a wildcard), so the name is compared with <c>WHERE Name =</c>.
     /// </summary>
     public string EstimatedCount(DbObjectRef table)
     {
@@ -314,12 +314,12 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
             : $"SHOW TABLE STATUS FROM {QuoteIdentifier(table.Schema)} LIKE {PlainStringLiteral(EscapeLike(table.Name))}";
     }
 
-    /// <summary>Escapa <c>%</c>, <c>_</c> e <c>\</c> para um padrão LIKE literal.</summary>
+    /// <summary>Escapes <c>%</c>, <c>_</c> and <c>\</c> for a literal LIKE pattern.</summary>
     public static string EscapeLike(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
 }
 
-/// <summary>Capabilities por versão (secção 14.3; anexo A §12, flags <c>fr*</c> do HeidiSQL).</summary>
+/// <summary>Capabilities per version (section 14.3; appendix A §12, HeidiSQL's <c>fr*</c> flags).</summary>
 public sealed class MySqlCapabilities(ServerIdentity server) : ICapabilities
 {
     public char IdentifierQuote => '`';
@@ -351,14 +351,21 @@ public sealed class MySqlCapabilities(ServerIdentity server) : ICapabilities
         };
     }
 
-    /// <summary>Frações de segundo em tipos temporais (MariaDB ≥ 5.3, MySQL ≥ 5.6.4).</summary>
+    /// <summary>Fractional seconds in temporal types (MariaDB ≥ 5.3, MySQL ≥ 5.6.4).</summary>
     public bool TemporalFractions => IsMariaDb ? server.Version >= new Version(5, 3) : server.Version >= new Version(5, 6, 4);
 
-    /// <summary><c>information_schema.CHECK_CONSTRAINTS</c> existe.</summary>
+    /// <summary><c>information_schema.CHECK_CONSTRAINTS</c> exists.</summary>
     public bool HasCheckConstraintsTable => IsMariaDb ? server.Version >= new Version(10, 2, 22) : server.Version >= new Version(8, 0, 16);
+
+    /// <summary>
+    /// MySQL 8's <c>information_schema</c> (data dictionary) shows expressions escaped by <c>String::print</c>:
+    /// <c>GENERATION_EXPRESSION</c>, the <c>COLUMN_DEFAULT</c> of expression defaults and <c>CHECK_CLAUSE</c>
+    /// (MySQL bug #100607; <c>SHOW CREATE TABLE</c> has them right). MySQL 5.7 and MariaDB return them as they are.
+    /// </summary>
+    public bool EscapesDictionaryExpressions => server.Engine == DbEngine.MySql && server.Version >= new Version(8, 0);
 }
 
-/// <summary>Classificação de erros do MySQL/MariaDB (secção 12.5): decide reconnect, retry e mensagens.</summary>
+/// <summary>MySQL/MariaDB error classification (section 12.5): decides reconnect, retry and messages.</summary>
 public sealed class MySqlErrorClassifier : IErrorClassifier
 {
     public ClassifiedError Classify(DbError error)

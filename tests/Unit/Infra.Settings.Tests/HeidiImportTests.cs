@@ -7,8 +7,8 @@ using Eunomia.Infra.Settings.HeidiImport;
 namespace Eunomia.Infra.Settings.Tests;
 
 /// <summary>
-/// Import do ficheiro de settings do HeidiSQL (FAM-S05). O ficheiro de exemplo segue o formato do anexo A §1.8;
-/// a comparação com um export real do HeidiSQL 12.21 fica pendente (golden file da Fase 0, "Precisa do Marcos").
+/// Import of the HeidiSQL settings file (FAM-S05). The sample file follows the format of appendix A §1.8;
+/// the comparison with a real HeidiSQL 12.21 export is still pending (phase 0 golden file, a manual check).
 /// </summary>
 public sealed class HeidiImportTests
 {
@@ -19,7 +19,7 @@ public sealed class HeidiImportTests
     [InlineData("049", "ú")]
     [InlineData("20AE20", "€")]
     [InlineData("", "")]
-    public void DesofuscaPasswordsComoOHeidiSql(string encoded, string expected)
+    public void DeobfuscatesPasswordsLikeHeidiSql(string encoded, string expected)
     {
         Assert.Equal(expected, HeidiPassword.Decrypt(encoded));
     }
@@ -28,7 +28,7 @@ public sealed class HeidiImportTests
     [InlineData("s3cr3t!", 1)]
     [InlineData("çãõ éúÿ", 9)]
     [InlineData("пароль€", 5)]
-    public void EncryptEDecryptSaoInversos(string password, int salt)
+    public void EncryptAndDecryptAreInverses(string password, int salt)
     {
         Assert.Equal(password, HeidiPassword.Decrypt(HeidiPassword.Encrypt(password, salt)));
     }
@@ -36,7 +36,7 @@ public sealed class HeidiImportTests
     [Theory]
     [InlineData("12Z")]
     [InlineData("1G5")]
-    public void PasswordInvalidaDaErro(string encoded)
+    public void InvalidPasswordGivesAnError(string encoded)
     {
         Assert.Throws<FormatException>(() => HeidiPassword.Decrypt(encoded));
     }
@@ -48,7 +48,7 @@ public sealed class HeidiImportTests
     [InlineData(49186, "Ctrl+Alt+PgDn")]
     [InlineData(32776, "Alt+Backspace")]
     [InlineData(16433, "Ctrl+1")]
-    public void DescodificaTShortCut(int code, string expected)
+    public void DecodesTShortCut(int code, string expected)
     {
         Assert.Equal(KeyChord.Parse(expected), HeidiSettingsImporter.DecodeShortcut(code));
     }
@@ -57,7 +57,7 @@ public sealed class HeidiImportTests
     [InlineData(25600, 0x006400u)]
     [InlineData(6063222, 0x76845Cu)]
     [InlineData(0x003C14DC, 0xDC143Cu)]
-    public void CoresTColorParaRgb(int tcolor, uint rgb)
+    public void TColorToRgb(int tcolor, uint rgb)
     {
         Assert.Equal(rgb, HeidiSettingsImporter.ToColor(tcolor));
     }
@@ -66,7 +66,7 @@ public sealed class HeidiImportTests
     [InlineData(536870911)]
     [InlineData(0x20000000)]
     [InlineData(-16777201)]
-    public void SemCor(int tcolor)
+    public void NoColour(int tcolor)
     {
         Assert.Null(HeidiSettingsImporter.ToColor(tcolor));
     }
@@ -84,7 +84,7 @@ public sealed class HeidiImportTests
     }
 
     [Fact]
-    public void ImportaSessoesFoldersCoresSshESsl()
+    public void ImportsSessionsFoldersColoursSshAndSsl()
     {
         var (result, catalog, _, secrets) = ImportSample();
 
@@ -96,7 +96,7 @@ public sealed class HeidiImportTests
         Assert.Equal(0x006400u, local.Color);
         Assert.Equal(63, local.Statistics.ConnectCount);
         Assert.Equal(new DateTimeOffset(new DateTime(2026, 9, 30, 18, 22, 5, DateTimeKind.Local)), local.Statistics.LastConnect);
-        Assert.Equal("Linha 1\r\nLinha 2", local.Comment);
+        Assert.Equal("Line 1\r\nLine 2", local.Comment);
         Assert.True(local.PasswordSaved);
         Assert.Equal("root-pw", secrets.Get(SecretKeys.Password(local.Id)));
 
@@ -126,7 +126,7 @@ public sealed class HeidiImportTests
     }
 
     [Fact]
-    public void SubchavesDeEstadoPorTabelaNaoSaoSessoes()
+    public void PerTableStateSubkeysAreNotSessions()
     {
         var (_, catalog, _, _) = ImportSample();
 
@@ -134,7 +134,7 @@ public sealed class HeidiImportTests
     }
 
     [Fact]
-    public void ImportaAtalhosDiferentesDoPorOmissao()
+    public void ImportsShortcutsThatDifferFromTheDefault()
     {
         var (result, _, settings, _) = ImportSample();
 
@@ -146,7 +146,7 @@ public sealed class HeidiImportTests
     }
 
     [Fact]
-    public void ImportNaoSubstituiSessoesExistentes()
+    public void ImportDoesNotReplaceExistingSessions()
     {
         var existing = new SessionCatalog();
         existing.Sessions.Add(new SessionDefinition { Name = "localhost", Host = "meu-host" });

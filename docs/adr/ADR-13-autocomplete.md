@@ -1,29 +1,29 @@
 # ADR-13: Autocomplete
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/especificacao-fase-0.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Fase 11
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** Phase 11
 
-## Opções
+## Options
 
-Heurística, ANTLR + c3, LSP
+Heuristic, ANTLR + c3, LSP
 
-## Decisão
+## Decision
 
-Heurística (paridade) no MVP; ANTLR + c3 depois
+Heuristic (parity) in the MVP; ANTLR + c3 later
 
-## Razão
+## Reason
 
-Paridade primeiro, precisão depois
+Parity first, precision later
 
 ## Trade-offs
 
-Sugestões menos contextuais no MVP
+Less contextual suggestions in the MVP
 
-## Risco
+## Risk
 
-Gramática ambígua (\~3.000 ambiguidades)
+Ambiguous grammar (\~3,000 ambiguities)
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

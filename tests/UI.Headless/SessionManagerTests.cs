@@ -14,7 +14,7 @@ using Eunomia.UI.Features.Sessions;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Session Manager (FAM-S01, S03): snapshot com folders e cores, edição com Save, New e filtro.</summary>
+/// <summary>Session Manager (FAM-S01, S03): snapshot with folders and colours, editing with Save, New and filter.</summary>
 public sealed class SessionManagerTests
 {
     private sealed class MemoryStore : ISessionStore
@@ -58,11 +58,11 @@ public sealed class SessionManagerTests
     private static TreeListNode Node(SessionManagerWindow window, string name) =>
         window.SessionList.AllNodes().First(n => n[0].StartsWith(name, StringComparison.Ordinal));
 
-    /// <summary>Start tab (nenhuma sessão selecionada): logo e versão por cima do texto e dos botões de import.</summary>
+    /// <summary>Start tab (no session selected): logo and version above the text and the import buttons.</summary>
     [AvaloniaTheory]
     [InlineData("session-manager-start-light", "light")]
     [InlineData("session-manager-start-dark", "dark")]
-    public void AspetoDoStart(string name, string theme)
+    public void StartTabLook(string name, string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var (window, _, _) = Open(theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light);
@@ -78,7 +78,7 @@ public sealed class SessionManagerTests
     [AvaloniaTheory]
     [InlineData("session-manager-light", "light")]
     [InlineData("session-manager-dark", "dark")]
-    public void Aspeto(string name, string theme)
+    public void Look(string name, string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var (window, _, _) = Open(theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light);
@@ -92,7 +92,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void FoldersNoTopoEOrdenados()
+    public void FoldersOnTopAndSorted()
     {
         var (window, _, _) = Open();
 
@@ -102,7 +102,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void EditarAtivaOSaveECtrlSGrava()
+    public void EditingEnablesSaveAndCtrlSSaves()
     {
         var (window, model, store) = Open();
         window.SessionList.FocusedNode = Node(window, "localhost");
@@ -123,7 +123,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void FiltroMantemOsFoldersPais()
+    public void FilterKeepsTheParentFolders()
     {
         var (window, _, _) = Open();
 
@@ -136,7 +136,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void FolderSelecionadoMostraSoOStart()
+    public void SelectedFolderShowsOnlyStart()
     {
         var (window, _, _) = Open();
 

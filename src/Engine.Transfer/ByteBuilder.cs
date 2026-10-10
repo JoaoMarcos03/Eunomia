@@ -2,7 +2,7 @@ using System.Text;
 
 namespace Eunomia.Engine.Transfer;
 
-/// <summary>Bytes UTF-8 num array que cresce (o tuplo de uma linha antes de decidir em que INSERT entra).</summary>
+/// <summary>UTF-8 bytes in a growing array (a row's tuple before deciding which INSERT it goes into).</summary>
 internal sealed class ByteBuilder
 {
     private byte[] _data;
@@ -34,7 +34,7 @@ internal sealed class ByteBuilder
         Length += Encoding.UTF8.GetBytes(text, _data.AsSpan(Length));
     }
 
-    /// <summary>Espaço para pelo menos <paramref name="size"/> bytes; depois chama-se <see cref="Advance"/>.</summary>
+    /// <summary>Room for at least <paramref name="size"/> bytes; then call <see cref="Advance"/>.</summary>
     public Span<byte> GetSpan(int size)
     {
         Ensure(size);

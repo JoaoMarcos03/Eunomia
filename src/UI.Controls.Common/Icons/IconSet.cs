@@ -3,12 +3,12 @@ using System.Text;
 
 namespace Eunomia.UI.Controls.Common.Icons;
 
-/// <summary>Uma camada de um ícone: geometria (path data 16×16), preenchimento e traço (0xRRGGBB).</summary>
+/// <summary>A layer of an icon: geometry (16×16 path data), fill and stroke (0xRRGGBB).</summary>
 public sealed record IconPart(string Path, uint? Fill, uint? Stroke = null, double StrokeWidth = 1);
 
 /// <summary>
-/// Icon set próprio (D12: mesma semântica, tamanho 16×16 e cor dominante do HeidiSQL, sem Icons8). Glifos
-/// vetoriais simples desenhados para este projeto. Chave desconhecida = sem ícone.
+/// Eunomia's own icon set (D12: the same meaning, 16×16 size and dominant colour as HeidiSQL's, without Icons8). Simple
+/// vector glyphs drawn for this project. Unknown key = no icon.
 /// </summary>
 public static class IconSet
 {
@@ -170,7 +170,7 @@ public static class IconSet
         };
     }
 
-    /// <summary>Roda dentada com <paramref name="teeth"/> dentes (contorno fechado).</summary>
+    /// <summary>Cog with <paramref name="teeth"/> teeth (closed outline).</summary>
     private static string Gear(double cx, double cy, double outer, double inner, int teeth)
     {
         var sb = new StringBuilder();

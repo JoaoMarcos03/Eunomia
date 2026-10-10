@@ -6,23 +6,23 @@ using Eunomia.Engine.Sql.Completion;
 namespace Eunomia.App.Query;
 
 /// <summary>
-/// Autocomplete A (secção 16.1; anexo C §4.2; FAM-Q05) sobre a cache de metadata da sessão: <c>@@SESSION.</c> /
-/// <c>@@GLOBAL.</c> lista as variáveis com o valor; <c>alias.</c> e <c>db.tbl.</c> as colunas (chave, tipo em
-/// minúsculas, comentário); <c>db.</c> os objetos da base; sem qualificador, as colunas da tabela selecionada na árvore,
-/// as bases, as tabelas, views e rotinas da base atual, as funções e as keywords. Os identificadores entram entre crases
-/// quando é preciso, ou sempre que a palavra começa por uma crase. Os erros de metadata dão uma lista mais curta. Sem
-/// sessão ligada, só funções e keywords.
+/// Autocomplete A (section 16.1; appendix C §4.2; FAM-Q05) on top of the session's metadata cache: <c>@@SESSION.</c> /
+/// <c>@@GLOBAL.</c> lists the variables with their values; <c>alias.</c> and <c>db.tbl.</c> the columns (key, type in
+/// lower case, comment); <c>db.</c> the objects of the database; without a qualifier, the columns of the table selected
+/// in the tree, the databases, the tables, views and routines of the current database, the functions and the keywords.
+/// Identifiers are inserted in backticks when needed, or whenever the word starts with a backtick. Metadata errors
+/// give a shorter list. Without a connected session, only functions and keywords.
 /// </summary>
 public sealed class QueryCompletion(OpenSession? session)
 {
-    /// <summary>Sessão ligada (os passos com metadata só correm com ela).</summary>
+    /// <summary>Connected session (the steps that need metadata only run with it).</summary>
     private OpenSession Session => session ?? throw new InvalidOperationException("No session.");
 
-    /// <summary>Linguagem da sessão (nomes, funções e palavras); sem sessão, a de omissão.</summary>
+    /// <summary>The session's language (names, functions and keywords); without a session, the default one.</summary>
     private ISqlLanguage Language => session?.Language ?? SqlLanguages.Default;
 
-    /// <summary>Sugestões para o cursor em <paramref name="caret"/>; <c>null</c> dentro de strings e comentários.</summary>
-    /// <param name="selectedTable">Tabela ou view selecionada na árvore (colunas sem qualificador).</param>
+    /// <summary>Suggestions for the caret at <paramref name="caret"/>; <c>null</c> inside strings and comments.</summary>
+    /// <param name="selectedTable">Table or view selected in the tree (columns without a qualifier).</param>
     public async Task<CompletionProposal?> ProposeAsync(string text, int caret, string delimiter, DbObjectRef? selectedTable, CancellationToken cancellationToken)
     {
         var context = CompletionContext.Analyze(text, caret, delimiter);
@@ -72,7 +72,7 @@ public sealed class QueryCompletion(OpenSession? session)
         items.AddRange(language.DataTypes.Order(StringComparer.OrdinalIgnoreCase).Select(t => new CompletionItem(t, CompletionKind.DataType)));
     }
 
-    /// <summary><c>alias.</c>, <c>tbl.</c> (da instrução ou da base atual), <c>db.</c> e <c>db.tbl.</c>.</summary>
+    /// <summary><c>alias.</c>, <c>tbl.</c> (from the statement or the current database), <c>db.</c> and <c>db.tbl.</c>.</summary>
     private async Task AddQualifiedAsync(CompletionContext context, List<CompletionItem> items, CancellationToken cancellationToken)
     {
         var current = Session.Host.CurrentDatabase;
@@ -113,7 +113,7 @@ public sealed class QueryCompletion(OpenSession? session)
             .FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Tabelas, views e rotinas de uma base (triggers e eventos não entram).</summary>
+    /// <summary>Tables, views and routines of a database (triggers and events are left out).</summary>
     private async Task AddObjectsAsync(string database, CompletionContext context, List<CompletionItem> items, CancellationToken cancellationToken)
     {
         var objects = await TryAsync(() => Session.Metadata.GetObjectsAsync(database, cancellationToken)).ConfigureAwait(false);
@@ -158,7 +158,7 @@ public sealed class QueryCompletion(OpenSession? session)
         return new CompletionItem(name, kind) { InsertText = string.Equals(insert, name, StringComparison.Ordinal) ? null : insert };
     }
 
-    /// <summary>Erros de metadata não interrompem o autocomplete (o cancelamento sim).</summary>
+    /// <summary>Metadata errors do not interrupt the autocomplete (cancellation does).</summary>
     private static async Task<T?> TryAsync<T>(Func<Task<T>> load)
         where T : class
     {

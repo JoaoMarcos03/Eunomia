@@ -6,9 +6,9 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.App.Export;
 
 /// <summary>
-/// Escreve as linhas do grid num dos 16 formatos (anexo B §1.3), com as mesmas estruturas, escaping e defaults do
-/// HeidiSQL. Divergências deliberadas (D6): JSON válido com 0 linhas e com caracteres de controlo, fins de linha CRLF
-/// consistentes no JSON, charset <c>utf-8</c> no HTML, barra invertida e aspa escapadas no PHP.
+/// Writes the grid rows in one of the 16 formats (appendix B §1.3), with HeidiSQL's structures, escaping and
+/// defaults. Deliberate divergences (D6): valid JSON with 0 rows and with control characters, consistent CRLF line
+/// endings in JSON, <c>utf-8</c> charset in HTML, backslash and quote escaped in PHP.
 /// </summary>
 public static partial class GridExporter
 {
@@ -66,7 +66,7 @@ public static partial class GridExporter
         return sb.ToString();
     }
 
-    /// <summary>Extensão do ficheiro de cada formato.</summary>
+    /// <summary>File extension of each format.</summary>
     public static string Extension(GridExportFormat format) => format switch
     {
         GridExportFormat.ExcelCsv or GridExportFormat.DelimitedText => "csv",
@@ -84,7 +84,7 @@ public static partial class GridExporter
 
     private static string Ind(string indent, int count) => string.Concat(Enumerable.Repeat(indent, count));
 
-    /// <summary>"Remove linebreaks from contents": CRLF, CR e LF passam a espaço.</summary>
+    /// <summary>"Remove linebreaks from contents": CRLF, CR and LF become a space.</summary>
     private static string? Clean(string? value, GridExportOptions options) =>
         value is null || !options.RemoveLinebreaks ? value : value.Replace("\r\n", " ", StringComparison.Ordinal).Replace('\r', ' ').Replace('\n', ' ');
 
@@ -120,11 +120,11 @@ public static partial class GridExporter
         return sb.ToString();
     }
 
-    /// <summary><c>FormatNumber(Data, False)</c>: separador decimal do locale, sem separador de milhares.</summary>
+    /// <summary><c>FormatNumber(Data, False)</c>: locale decimal separator, no thousands separator.</summary>
     private static string LocalNumber(string value, GridExportOptions options) =>
         value.Replace(".", options.Culture.NumberFormat.NumberDecimalSeparator, StringComparison.Ordinal);
 
-    // ---------- Excel CSV e Delimited text ----------
+    // ---------- Excel CSV and Delimited text ----------
 
     [GeneratedRegex(@"\.(\d+)$")]
     private static partial Regex FractionalSeconds();
@@ -134,7 +134,7 @@ public static partial class GridExporter
         var separator = options.ToClipboard ? "\t" : options.Culture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ",";
         if (options.IncludeColumnNames)
         {
-            // Nomes entre aspas, sem duplicar aspas; colunas binárias como HEX(nome).
+            // Names quoted, without doubling quotes; binary columns as HEX(name).
             sb.Append(string.Join(separator, data.Columns.Select(c => "\"" + (c.IsBinary ? $"HEX({c.Name})" : c.Name) + "\""))).Append(Crlf);
         }
         foreach (var row in data.Rows)
@@ -180,14 +180,14 @@ public static partial class GridExporter
         }
     }
 
-    // ---------- HTML e XML ----------
+    // ---------- HTML and XML ----------
 
     private static string HtmlSpecialChars(string value) =>
         value.Replace("&", "&amp;", StringComparison.Ordinal).Replace("<", "&lt;", StringComparison.Ordinal).Replace(">", "&gt;", StringComparison.Ordinal);
 
     /// <summary>
-    /// Valor de um atributo entre aspas: também a aspa, senão um nome de tabela ou de coluna vindo do servidor (com
-    /// <c>"</c>) saía do atributo e podia acrescentar outros (<c>onmouseover</c> num HTML aberto no browser).
+    /// Value of a quoted attribute: the quote too, otherwise a table or column name coming from the server (with
+    /// <c>"</c>) left the attribute and could add others (<c>onmouseover</c> in an HTML file opened in the browser).
     /// </summary>
     private static string HtmlAttribute(string value) => HtmlSpecialChars(value).Replace("\"", "&quot;", StringComparison.Ordinal);
 
@@ -217,8 +217,8 @@ public static partial class GridExporter
         sb.Append(t).Append("<body>").Append(Crlf);
         if (options.Query is { } query)
         {
-            // Com escaping (o HeidiSQL punha a query tal como está: um "a < b" estragava a página e um texto com HTML
-            // entrava nela).
+            // With escaping (HeidiSQL inserted the query as is: an "a < b" broke the page and text containing HTML
+            // went into it).
             sb.Append(Ind(t, 2)).Append("<p style=\"font-family:monospace; white-space:pre;\">").Append(HtmlSpecialChars(query)).Append("</p>").Append(Crlf);
         }
         sb.Append(Ind(t, 2)).Append(CultureInfo.InvariantCulture, $"<table caption=\"{HtmlAttribute(data.TableName)} ({data.Rows.Count} rows)\">").Append(Crlf);
@@ -286,7 +286,7 @@ public static partial class GridExporter
 
     // ---------- SQL ----------
 
-    /// <summary>Literal SQL de um valor exportado: NULL, BIT como <c>b'…'</c>, binário em hex, números sem aspas, texto escapado.</summary>
+    /// <summary>SQL literal of an exported value: NULL, BIT as <c>b'…'</c>, binary as hex, numbers unquoted, text escaped.</summary>
     private static string SqlValue(GridExportColumn column, string? value, IDialect dialect)
     {
         if (value is null)
@@ -295,12 +295,12 @@ public static partial class GridExporter
         }
         if (column.IsBit)
         {
-            // O texto bruto de um BIT já vem em dígitos binários (DisplayFormatter.FormatRaw).
+            // The raw text of a BIT already comes as binary digits (DisplayFormatter.FormatRaw).
             return value.Length > 0 && value.All(c => c is '0' or '1') ? "b'" + value + "'"
                 : "b'" + (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var bits) ? Convert.ToString(bits, 2) : value) + "'";
         }
-        // Só hex e números vão sem aspas; o resto (binário mostrado como texto, por exemplo) é sempre um literal citado,
-        // para um valor nunca poder sair do INSERT/UPDATE/DELETE gerado.
+        // Only hex and numbers go unquoted; everything else (binary shown as text, for example) is always a quoted literal,
+        // so a value can never escape the generated INSERT/UPDATE/DELETE.
         if (column.IsBinary && HexValue().IsMatch(value))
         {
             return value.Length == 2 ? "''" : value;
@@ -325,7 +325,7 @@ public static partial class GridExporter
     private static void WriteSql(StringBuilder sb, GridExportFormat format, GridExportData data, GridExportOptions options, IDialect dialect)
     {
         var table = dialect.QuoteIdentifier(data.TableName);
-        // Colunas geradas ficam de fora da lista e dos valores.
+        // Generated columns are left out of the list and the values.
         var exported = Enumerable.Range(0, data.Columns.Count).Where(i => !data.Columns[i].IsGenerated).ToList();
         var columnList = options.IncludeColumnNames
             ? " (" + string.Join(", ", exported.Select(i => dialect.QuoteIdentifier(data.Columns[i].Name))) + ")"
@@ -350,7 +350,7 @@ public static partial class GridExporter
                     sb.Append("INSERT INTO ").Append(table).Append(columnList).Append(" VALUES (").Append(values).Append(");").Append(Crlf);
                     break;
                 default:
-                    // O SET leva todas as colunas exportadas, chave incluída.
+                    // The SET takes every exported column, key included.
                     var set = string.Join(", ", exported.Select(i => dialect.QuoteIdentifier(data.Columns[i].Name) + "=" + SqlValue(data.Columns[i], row[i], dialect)));
                     sb.Append("UPDATE ").Append(table).Append(" SET ").Append(set).Append(" WHERE ").Append(Where(data, row, keys, dialect)).Append(';').Append(Crlf);
                     break;
@@ -359,8 +359,8 @@ public static partial class GridExporter
     }
 
     /// <summary>
-    /// WHERE das linhas (anexo B §1.3): chave primária, UNIQUE sem NULLs ou todas as colunas; as colunas de data, hora e
-    /// JSON passam por <c>CastAsText</c>; NULL dá <c>IS NULL</c>; número vazio passa a 0.
+    /// Row WHERE (appendix B §1.3): primary key, UNIQUE without NULLs, or every column; date, time and JSON columns
+    /// go through <c>CastAsText</c>; NULL gives <c>IS NULL</c>; an empty number becomes 0.
     /// </summary>
     private static string Where(GridExportData data, IReadOnlyList<string?> row, IReadOnlyList<string> keys, IDialect dialect)
     {
@@ -392,8 +392,8 @@ public static partial class GridExporter
     // ---------- LaTeX, Textile, Jira ----------
 
     /// <summary>
-    /// Texto literal em LaTeX: os dez caracteres especiais. O HeidiSQL só tratava <c>_ $ % &amp;</c>; com a barra
-    /// invertida e as chavetas livres, um valor como <c>\input{…}</c> ou <c>\write18{…}</c> corria ao compilar.
+    /// Literal text in LaTeX: the ten special characters. HeidiSQL only handled <c>_ $ % &amp;</c>; with the backslash
+    /// and the braces left free, a value such as <c>\input{…}</c> or <c>\write18{…}</c> ran at compile time.
     /// </summary>
     private static string LatexEscape(string value)
     {
@@ -449,7 +449,7 @@ public static partial class GridExporter
 
     // ---------- PHP, Markdown ----------
 
-    /// <summary>Números sem zeros à esquerda (o PHP leria octal).</summary>
+    /// <summary>Numbers without leading zeros (PHP would read octal).</summary>
     private static string PhpNumber(string value)
     {
         var negative = value.StartsWith('-');
@@ -463,8 +463,8 @@ public static partial class GridExporter
     }
 
     /// <summary>
-    /// <c>FormatPhp</c>: aspas duplas com escapes quando há caracteres de controlo; senão aspas simples (D6: com
-    /// <c>\\</c> e <c>\'</c> escapados, que o HeidiSQL perdia).
+    /// <c>FormatPhp</c>: double quotes with escapes when there are control characters; otherwise single quotes (D6: with
+    /// <c>\\</c> and <c>\'</c> escaped, which HeidiSQL lost).
     /// </summary>
     private static string PhpString(string value)
     {
@@ -493,8 +493,8 @@ public static partial class GridExporter
     }
 
     /// <summary>
-    /// Nome de variável PHP a partir do nome da tabela: letras, dígitos, <c>_</c> e caracteres não ASCII; o resto passa a
-    /// <c>_</c>. Um nome de tabela vindo do servidor (<c>x = system('…'); $y</c>) não pode virar código no ficheiro.
+    /// PHP variable name from the table name: letters, digits, <c>_</c> and non-ASCII characters; the rest becomes
+    /// <c>_</c>. A table name coming from the server (<c>x = system('…'); $y</c>) cannot turn into code in the file.
     /// </summary>
     private static string PhpVariable(string name)
     {
@@ -544,7 +544,7 @@ public static partial class GridExporter
         {
             sb.Append("```sql").Append(Crlf).Append(query).Append(Crlf).Append("```").Append(Crlf);
         }
-        // A linha de cabeçalho vai sempre, com células vazias sem nomes.
+        // The header row is always written, with empty cells and no names.
         sb.Append("| ").Append(string.Join(" | ", data.Columns.Select(c => options.IncludeColumnNames ? MarkdownCell(c.Name) : string.Empty))).Append(" | ").Append(Crlf);
         sb.Append("| ").Append(string.Join(" | ", data.Columns.Select(c => c.IsNumeric ? "---:" : "---"))).Append(" | ").Append(Crlf);
         foreach (var row in data.Rows)
@@ -554,14 +554,14 @@ public static partial class GridExporter
         }
     }
 
-    /// <summary>Célula de uma tabela Markdown: <c>|</c> escapado e quebras de linha como <c>&lt;br&gt;</c> (senão partiam a tabela).</summary>
+    /// <summary>Markdown table cell: <c>|</c> escaped and line breaks as <c>&lt;br&gt;</c> (otherwise they broke the table).</summary>
     private static string MarkdownCell(string value) =>
         value.Replace("|", "\\|", StringComparison.Ordinal).Replace("\r\n", "<br>", StringComparison.Ordinal)
             .Replace("\n", "<br>", StringComparison.Ordinal).Replace("\r", "<br>", StringComparison.Ordinal);
 
     // ---------- JSON ----------
 
-    /// <summary><c>FormatJson</c> com <c>\ CR LF TAB "</c>; D6: os outros caracteres de controlo como <c>\u00XX</c>.</summary>
+    /// <summary><c>FormatJson</c> with <c>\ CR LF TAB "</c>; D6: other control characters as <c>\u00XX</c>.</summary>
     private static string JsonString(string value)
     {
         var sb = new StringBuilder("\"");

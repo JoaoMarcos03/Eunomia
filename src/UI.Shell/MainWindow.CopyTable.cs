@@ -5,13 +5,14 @@ using Eunomia.UI.Features.Transfer;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Create new ▸ Table copy (popupDB; anexo B §5.1): o diálogo com a tabela ou view focada; depois do OK, a pergunta das
-/// sessões que a pedem (e a recusa das read-only), o aviso do commit implícito e o CREATE e o INSERT … SELECT na ligação
-/// primária (<see cref="ObjectActions.RunAsync"/>, que pára no primeiro erro). No fim, a árvore mostra a tabela nova.
+/// Create new ▸ Table copy (popupDB; appendix B §5.1): the dialog with the focused table or view; after OK, the question for
+/// sessions that ask for it (and the refusal in read-only ones), the implicit commit warning and the CREATE and the
+/// INSERT … SELECT on the primary connection (<see cref="ObjectActions.RunAsync"/>, which stops at the first error). At the
+/// end, the tree shows the new table.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Diálogo aberto (testes).</summary>
+    /// <summary>Open dialog (tests).</summary>
     internal CopyTableDialog? CopyTableWindow { get; private set; }
 
     private void InitCopyTable()
@@ -68,7 +69,7 @@ public sealed partial class MainWindow
         }
         finally
         {
-            // O CREATE pode ter corrido antes de o INSERT falhar: a árvore mostra o que ficou.
+            // The CREATE may have run before the INSERT failed: the tree shows what is left.
             await ReloadDatabaseObjectsAsync(open, request.TargetDatabase);
         }
         if (created)

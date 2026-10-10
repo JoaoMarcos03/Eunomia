@@ -17,7 +17,7 @@ public sealed class SettingsStoreTests : IDisposable
     private string SettingsPath => Path.Combine(_dir, "settings.json");
 
     [Fact]
-    public void SemFicheiroDevolveDefaultsDoHeidiSql()
+    public void WithoutAFileReturnsHeidiSqlDefaults()
     {
         var s = new JsonSettingsStore(SettingsPath).Load();
 
@@ -34,7 +34,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void GravaELeSemPerdas()
+    public void SavesAndReadsWithoutLoss()
     {
         var store = new JsonSettingsStore(SettingsPath);
         var s = new AppSettings();
@@ -60,7 +60,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void ResetPanelDimensionsRepoeOsDefaults()
+    public void ResetPanelDimensionsRestoresTheDefaults()
     {
         var p = new PanelLayout { TreeWidth = 600, LogHeight = 300, QueryEditorHeight = 400, QueryHelpersWidth = 50, PreviewHeight = 10 };
 
@@ -74,7 +74,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void FicheiroCorrompidoFicaDeLadoEArrancaComDefaults()
+    public void CorruptedFileIsSetAsideAndStartsWithDefaults()
     {
         Directory.CreateDirectory(_dir);
         File.WriteAllText(SettingsPath, "{ \"panels\": { \"treeWidth\": 4");
@@ -89,10 +89,10 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void CamposDesconhecidosEFaltaDeSeccoesSaoTolerados()
+    public void UnknownFieldsAndMissingSectionsAreTolerated()
     {
         Directory.CreateDirectory(_dir);
-        File.WriteAllText(SettingsPath, "{ \"version\": 1, \"futureThing\": [1,2], \"panels\": null, // comentário\n \"theme\": \"dark\", }");
+        File.WriteAllText(SettingsPath, "{ \"version\": 1, \"futureThing\": [1,2], \"panels\": null, // comment\n \"theme\": \"dark\", }");
 
         var s = new JsonSettingsStore(SettingsPath).Load();
 
@@ -101,7 +101,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void EscritaAtomicaSubstituiOFicheiroInteiro()
+    public void AtomicWriteReplacesTheWholeFile()
     {
         Directory.CreateDirectory(_dir);
         var path = Path.Combine(_dir, "x.txt");
@@ -114,7 +114,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void ModoPortableComOMarcadorAoLadoDoExecutavel()
+    public void PortableModeWithTheMarkerNextToTheExecutable()
     {
         Directory.CreateDirectory(_dir);
         Assert.False(AppDataPaths.Resolve(_dir).IsPortable);

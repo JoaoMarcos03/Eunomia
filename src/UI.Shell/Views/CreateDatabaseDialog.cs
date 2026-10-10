@@ -9,12 +9,12 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Shell.Views;
 
-/// <summary>Resultado do diálogo Create database.</summary>
+/// <summary>Result of the Create database dialog.</summary>
 public sealed record CreateDatabaseRequest(string Name, string? Collation);
 
 /// <summary>
-/// Create database (anexo B §5.3): Name, Collation com "Servers default: …" e o CREATE code ao vivo. Só o modo de
-/// criação; alterar e renomear bases fica para o editor de bases.
+/// Create database (appendix B §5.3): Name, Collation with "Servers default: …" and the live CREATE code. Creation
+/// mode only; altering and renaming databases is for the database editor.
 /// </summary>
 public sealed class CreateDatabaseDialog : Window
 {

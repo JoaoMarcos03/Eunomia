@@ -3,8 +3,8 @@ using System.Text;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Constrói um <see cref="RowBlock"/>. Valores de texto têm de ser escritos por ordem crescente de linha
-/// dentro de cada coluna (é a ordem em que um reader de driver os entrega); linhas saltadas ficam vazias.
+/// Builds a <see cref="RowBlock"/>. Text values must be written in increasing row order
+/// within each column (the order in which a driver reader delivers them); skipped rows stay empty.
 /// </summary>
 public sealed class RowBlockBuilder
 {
@@ -88,7 +88,7 @@ public sealed class RowBlockBuilder
         }
     }
 
-    /// <summary>Bytes de uma coluna <see cref="StorageKind.Binary"/> (pela ordem das linhas, como o texto).</summary>
+    /// <summary>Bytes of a <see cref="StorageKind.Binary"/> column (in row order, like text).</summary>
     public void SetBytes(int row, int column, ReadOnlySpan<byte> value, bool truncated = false)
     {
         AdvanceStringRow(column, row);
@@ -105,7 +105,7 @@ public sealed class RowBlockBuilder
 
     private static bool IsArena(StorageKind storage) => storage is StorageKind.String or StorageKind.Binary;
 
-    /// <summary>Copia uma linha de outro bloco com o mesmo schema (vistas filtradas). As linhas vão por ordem.</summary>
+    /// <summary>Copies a row from another block with the same schema (filtered views). Rows go in order.</summary>
     public void CopyRow(RowBlock source, int sourceRow, int row)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -135,14 +135,14 @@ public sealed class RowBlockBuilder
 
     public RowBlock Build() => Build(_rowCount);
 
-    /// <summary>Constrói só com as primeiras <paramref name="rowCount"/> linhas (último bloco de um resultado em streaming).</summary>
+    /// <summary>Builds with only the first <paramref name="rowCount"/> rows (last block of a streaming result).</summary>
     public RowBlock Build(int rowCount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(rowCount);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(rowCount, _rowCount);
         if (_built)
         {
-            throw new InvalidOperationException("O bloco já foi construído.");
+            throw new InvalidOperationException("The block was already built.");
         }
         _built = true;
 
@@ -159,12 +159,12 @@ public sealed class RowBlockBuilder
         return new RowBlock(_blockIndex, _firstRow, rowCount, _schema, _columns);
     }
 
-    /// <summary>Preenche offsets das linhas saltadas (texto vazio) até <paramref name="row"/>.</summary>
+    /// <summary>Fills in the offsets of skipped rows (empty text) up to <paramref name="row"/>.</summary>
     private void AdvanceStringRow(int column, int row)
     {
         if (row < _nextRow[column])
         {
-            throw new InvalidOperationException($"Texto da coluna {column} escrito fora de ordem (linha {row}).");
+            throw new InvalidOperationException($"Text of column {column} written out of order (row {row}).");
         }
         var offsets = _columns[column].Offsets!;
         for (var r = _nextRow[column]; r < row; r++)

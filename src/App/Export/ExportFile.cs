@@ -3,17 +3,17 @@ using System.Text;
 
 namespace Eunomia.App.Export;
 
-/// <summary>Ficheiro de saída do Export grid rows (anexo B §1.4): placeholders do nome e codificações.</summary>
+/// <summary>Output file of Export grid rows (appendix B §1.4): name placeholders and encodings.</summary>
 public static class ExportFile
 {
-    /// <summary>Codificações do diálogo, pela ordem do HeidiSQL (sem UTF-7, obsoleto no .NET); a de omissão é "UTF-8".</summary>
+    /// <summary>Encodings of the dialog, in HeidiSQL's order (no UTF-7, obsolete in .NET); the default is "UTF-8".</summary>
     public static readonly IReadOnlyList<string> Encodings = ["ANSI", "ASCII", "Unicode", "Unicode Big Endian", "UTF-8", "UTF-8-BOM"];
 
     public const string DefaultEncoding = "UTF-8";
 
     /// <summary>
-    /// <c>%session %host %u %db %date %d %m %y %h %i %s</c> (sessão, host, utilizador, base, data, dia, mês, ano, hora,
-    /// minuto, segundo). Caracteres inválidos num nome de ficheiro viram <c>_</c> nos valores.
+    /// <c>%session %host %u %db %date %d %m %y %h %i %s</c> (session, host, user, database, date, day, month, year, hour,
+    /// minute, second). Characters that are invalid in a file name become <c>_</c> in the values.
     /// </summary>
     public static string ExpandPlaceholders(string template, string session, string host, string user, string database, DateTime now)
     {
@@ -38,7 +38,7 @@ public static class ExportFile
             .Replace("%s", now.ToString("ss", c), StringComparison.Ordinal);
     }
 
-    /// <summary>Bytes do ficheiro na codificação escolhida (BOM só em UTF-8-BOM e nos Unicode).</summary>
+    /// <summary>File bytes in the chosen encoding (BOM only for UTF-8-BOM and the Unicode ones).</summary>
     public static byte[] Encode(string text, string encoding)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -48,7 +48,7 @@ public static class ExportFile
         return [.. preamble, .. body];
     }
 
-    /// <summary>A codificação pelo nome da lista (ANSI = página de código da cultura atual).</summary>
+    /// <summary>The encoding by its name in the list (ANSI = code page of the current culture).</summary>
     public static Encoding EncodingOf(string encoding) =>
         encoding switch
         {
@@ -75,14 +75,14 @@ public static class ExportFile
         }
     }
 
-    /// <summary>Extensão do formato no nome (a extensão muda quando o formato muda).</summary>
+    /// <summary>Format extension in the name (the extension changes when the format changes).</summary>
     public static string WithExtension(string fileName, GridExportFormat format)
     {
         ArgumentNullException.ThrowIfNull(fileName);
         return string.IsNullOrWhiteSpace(fileName) ? fileName : Path.ChangeExtension(fileName, GridExporter.Extension(format));
     }
 
-    /// <summary>Formato a partir da extensão do nome (o inverso; <c>null</c> se não se souber).</summary>
+    /// <summary>Format from the name's extension (the inverse; <c>null</c> if unknown).</summary>
     public static GridExportFormat? FormatOf(string fileName)
     {
         var extension = Path.GetExtension(fileName).TrimStart('.');
@@ -96,7 +96,7 @@ public static class ExportFile
         return null;
     }
 
-    /// <summary>Lista dos 10 ficheiros recentes, o último primeiro.</summary>
+    /// <summary>List of the 10 recent files, the latest first.</summary>
     public static List<string> AddRecent(IEnumerable<string> recent, string fileName)
     {
         ArgumentNullException.ThrowIfNull(recent);

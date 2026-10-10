@@ -15,7 +15,7 @@ public sealed class MySqlLexerTests
     }
 
     [Fact]
-    public void KeywordsTiposFuncoesEIdentificadores()
+    public void KeywordsTypesFunctionsAndIdentifiers()
     {
         var tokens = Lex("select COUNT(id) from prd_products where x is not null");
 
@@ -41,7 +41,7 @@ public sealed class MySqlLexerTests
     }
 
     [Fact]
-    public void BackticksComBacktickDuplicado()
+    public void BackticksWithADoubledBacktick()
     {
         Assert.Equal([("`my``table`", SqlTokenKind.QuotedIdentifier), (".", SqlTokenKind.Operator), ("`c`", SqlTokenKind.QuotedIdentifier)], Lex("`my``table`.`c`"));
     }
@@ -53,36 +53,36 @@ public sealed class MySqlLexerTests
     [InlineData("1e10")]
     [InlineData("2.5E-3")]
     [InlineData("0x1F")]
-    public void Numeros(string sql)
+    public void Numbers(string sql)
     {
         Assert.Equal([(sql, SqlTokenKind.Number)], Lex(sql));
     }
 
     [Fact]
-    public void NumeroColadoALetrasEhIdentificador()
+    public void NumberGluedToLettersIsAnIdentifier()
     {
         Assert.Equal([("1abc", SqlTokenKind.Identifier)], Lex("1abc"));
     }
 
     [Fact]
-    public void ComentariosDeLinha()
+    public void LineComments()
     {
-        Assert.Equal([("SELECT", SqlTokenKind.Keyword), ("-- nota", SqlTokenKind.Comment)], Lex("SELECT -- nota"));
-        Assert.Equal([("# outra", SqlTokenKind.Comment)], Lex("# outra"));
+        Assert.Equal([("SELECT", SqlTokenKind.Keyword), ("-- note", SqlTokenKind.Comment)], Lex("SELECT -- note"));
+        Assert.Equal([("# other", SqlTokenKind.Comment)], Lex("# other"));
         Assert.Equal([("--", SqlTokenKind.Comment)], Lex("--"));
     }
 
     [Fact]
-    public void TracoTracoSemEspacoNaoEhComentario()
+    public void DashDashWithoutSpaceIsNotAComment()
     {
-        // Em MySQL "--" só abre comentário seguido de espaço: 1--1 é 1 - (-1).
+        // In MySQL "--" only starts a comment when followed by a space: 1--1 is 1 - (-1).
         Assert.Equal(
             [("1", SqlTokenKind.Number), ("-", SqlTokenKind.Operator), ("-", SqlTokenKind.Operator), ("1", SqlTokenKind.Number)],
             Lex("1--1"));
     }
 
     [Fact]
-    public void ComentarioDeBlocoEmVariasLinhas()
+    public void BlockCommentOverSeveralLines()
     {
         var tokens = Lex("SELECT /* a\nb */ 1\n/*! 40101 x */");
 
@@ -94,7 +94,7 @@ public sealed class MySqlLexerTests
     }
 
     [Fact]
-    public void EstadoPassaDeLinhaParaLinha()
+    public void StateCarriesFromLineToLine()
     {
         var tokens = new List<SqlToken>();
 
@@ -110,7 +110,7 @@ public sealed class MySqlLexerTests
     }
 
     [Fact]
-    public void VariaveisEDelimitador()
+    public void VariablesAndDelimiter()
     {
         Assert.Equal(
             [("@@SESSION.sql_mode", SqlTokenKind.Variable), (";", SqlTokenKind.Delimiter), ("@x", SqlTokenKind.Variable)],
@@ -118,9 +118,9 @@ public sealed class MySqlLexerTests
     }
 
     [Fact]
-    public void TokensCobremALinhaToda()
+    public void TokensCoverTheWholeLine()
     {
-        const string line = "SELECT `a`, 'b' /* c */ FROM t WHERE x>=1.5 -- fim";
+        const string line = "SELECT `a`, 'b' /* c */ FROM t WHERE x>=1.5 -- end";
         var tokens = new List<SqlToken>();
         MySqlLexer.TokenizeLine(line, LexerState.Normal, tokens);
 
@@ -134,7 +134,7 @@ public sealed class MySqlLexerTests
     }
 
     [Fact]
-    public void CompletionComecaPeloPrefixoEDepoisPeloMeio()
+    public void CompletionMatchesThePrefixThenTheMiddle()
     {
         var catalog = CompletionCatalog.CreateMySql(["prd_products", "ecm_products_discount"], ["product_id"]);
 

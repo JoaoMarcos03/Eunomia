@@ -10,7 +10,7 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Fase 13: snapshots dos diálogos (claro e escuro), para rever o aspeto de todos os ecrãs.</summary>
+/// <summary>Phase 13: dialog snapshots (light and dark), to review the look of every screen.</summary>
 public sealed class DialogSnapshotTests
 {
     public static TheoryData<string, string> Cases()
@@ -44,7 +44,7 @@ public sealed class DialogSnapshotTests
 
     [AvaloniaTheory]
     [MemberData(nameof(Cases))]
-    public void Dialogo(string name, string theme)
+    public void Dialog(string name, string theme)
     {
         var window = Create(name);
         window.RequestedThemeVariant = theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light;

@@ -1,11 +1,11 @@
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Valor completo de uma célula, sem truncagem nem formatação de display (secções 4.4 e 4.6):
-/// usado ao copiar, editar ou exportar. No produto busca a linha por chave; corre fora da UI thread.
+/// Full value of a cell, without truncation or display formatting (sections 4.4 and 4.6):
+/// used when copying, editing or exporting. In the product it fetches the row by key; runs off the UI thread.
 /// </summary>
 public interface IFullValueSource
 {
-    /// <summary>Texto completo do valor, ou <c>null</c> se for NULL. Inteiros sem separador de milhares.</summary>
+    /// <summary>Full text of the value, or <c>null</c> if it is NULL. Integers without a thousands separator.</summary>
     ValueTask<string?> GetFullTextAsync(long row, int column, CancellationToken cancellationToken = default);
 }

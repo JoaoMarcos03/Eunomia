@@ -6,9 +6,9 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Cores do grid, lidas dos tokens do tema (<c>assets/themes</c>). Cores de dados por categoria: secção 5.6
-/// (<c>preferences.pas</c>). NULL: cor da categoria clareada (+70 por canal) no claro; no escuro, misturada 45% com o
-/// fundo (clarear cores já claras deixava o NULL igual ao texto normal; escurecer 70 tirava o contraste).
+/// Grid colours, read from the theme tokens (<c>assets/themes</c>). Data colours per category: section 5.6
+/// (<c>preferences.pas</c>). NULL: the category colour lightened (+70 per channel) in light; in dark, blended 45% with the
+/// background (lightening already light colours made NULL look like normal text; darkening by 70 removed the contrast).
 /// </summary>
 public sealed class GridPalette
 {
@@ -62,12 +62,12 @@ public sealed class GridPalette
 
     public IImmutableBrush FocusedText { get; }
 
-    /// <summary>Célula focada com o grid sem foco: a cor de seleção suave, com o texto na cor do tipo.</summary>
+    /// <summary>Focused cell with the grid unfocused: the soft selection colour, with the text in the type colour.</summary>
     public IImmutableBrush InactiveCell { get; }
 
     public IImmutableBrush RowNumberBackground { get; }
 
-    /// <summary>Fundo das células e da coluna <c>#</c> em ARGB (para a tinta da cor da sessão).</summary>
+    /// <summary>Background of the cells and of the <c>#</c> column in ARGB (for the session colour tint).</summary>
     public uint BackgroundArgb { get; }
 
     public uint RowNumberArgb { get; }
@@ -76,7 +76,7 @@ public sealed class GridPalette
 
     public IImmutableBrush KeyIcon { get; }
 
-    /// <summary>Cor do texto por categoria de tipo (ordem de <see cref="TypeCategory"/>).</summary>
+    /// <summary>Text colour per type category (<see cref="TypeCategory"/> order).</summary>
     public IImmutableBrush TextFor(TypeCategory category) => _category[(int)category];
 
     public IImmutableBrush NullFor(TypeCategory category) => _null[(int)category];

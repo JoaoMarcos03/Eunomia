@@ -8,17 +8,17 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.App.Diagram;
 
-/// <summary>Coluna no diagrama (SV-01).</summary>
+/// <summary>Column in the diagram (SV-01).</summary>
 public sealed record DiagramColumn(string Name, string Type, bool PrimaryKey, bool Unique, bool ForeignKey, bool Nullable, TypeCategory Category);
 
 public sealed record DiagramTable(string Name, IReadOnlyList<DiagramColumn> Columns);
 
-/// <summary>Relação por FK: da tabela com a FK para a referenciada; 1:1 quando as colunas da FK são uma chave (SV-03).</summary>
+/// <summary>FK relation: from the table with the FK to the referenced one; 1:1 when the FK columns are a key (SV-03).</summary>
 public sealed record DiagramRelation(string Name, string Table, IReadOnlyList<string> Columns, string ReferencedTable, IReadOnlyList<string> ReferencedColumns, bool OneToOne);
 
 /// <summary>
-/// Modelo do Schema Visualizer de uma base (secção 17): tabelas, colunas com PK/UNIQUE/FK/NULL e a categoria do tipo,
-/// relações por FK dentro da base, e um hash do schema (nomes, tipos, chaves e relações) para a persistência do layout.
+/// Schema Visualizer model of a database (section 17): tables, columns with PK/UNIQUE/FK/NULL and the type category,
+/// FK relations within the database, and a schema hash (names, types, keys and relations) for layout persistence.
 /// </summary>
 public sealed record SchemaDiagram(string Database, IReadOnlyList<DiagramTable> Tables, IReadOnlyList<DiagramRelation> Relations, string Hash)
 {
@@ -45,7 +45,7 @@ public sealed record SchemaDiagram(string Database, IReadOnlyList<DiagramTable> 
                 c.Type.Category))]));
             foreach (var fk in table.ForeignKeys)
             {
-                // Só as relações dentro da base: as outras não têm nó.
+                // Only the relations within the database: the others have no node.
                 if (!string.Equals(fk.ReferencedTable.Schema, database, StringComparison.Ordinal) || !names.Contains(fk.ReferencedTable.Name))
                 {
                     continue;
@@ -77,12 +77,12 @@ public sealed record SchemaDiagram(string Database, IReadOnlyList<DiagramTable> 
     }
 }
 
-/// <summary>Posição e visibilidade de uma tabela no diagrama; sem <see cref="Placed"/>, a posição ainda não existe.</summary>
+/// <summary>Position and visibility of a table in the diagram; without <see cref="Placed"/>, there is no position yet.</summary>
 public readonly record struct DiagramNodeState(double X, double Y, bool Hidden, bool Placed = true);
 
 /// <summary>
-/// Layout guardado de um diagrama (SV-12): por sessão e base, com o hash do schema em que foi feito, as posições, as
-/// tabelas escondidas e a vista. Fica no <c>app.db</c> (estado da "tabela" vazia da base).
+/// Saved layout of a diagram (SV-12): per session and database, with the hash of the schema it was made for, the
+/// positions, the hidden tables and the view. Stored in <c>app.db</c> (state of the database's empty "table").
 /// </summary>
 public sealed record DiagramLayoutState(string Hash, IReadOnlyDictionary<string, DiagramNodeState> Nodes, double Zoom, double OffsetX, double OffsetY)
 {
@@ -111,7 +111,7 @@ public sealed record DiagramLayoutState(string Hash, IReadOnlyDictionary<string,
         }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException)
         {
-            // Layout ilegível: faz-se de novo.
+            // Unreadable layout: it is made again.
             return null;
         }
     }

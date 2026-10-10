@@ -5,11 +5,11 @@ using Eunomia.Engine.Execution;
 namespace Eunomia.App.Objects;
 
 /// <summary>
-/// DDL da aplicação (table editor, views e rotinas, Drop, Empty; Fase 14) na ligação primária: sem o timeout das queries
-/// (um ALTER numa tabela grande demora mais de 30 s e um cancel a meio só faz o servidor desfazer o trabalho), mas com
-/// <c>lock_wait_timeout</c> de <see cref="LockWaitSeconds"/> s: um ALTER ou DROP à espera do lock de metadata de outra
-/// transação bloqueia todas as queries seguintes a essa tabela (uma paragem de produção). Assim falha depressa, com
-/// uma mensagem que diz porquê, e os valores da sessão voltam sempre ao que eram.
+/// Application DDL (table editor, views and routines, Drop, Empty; phase 14) on the primary connection: without the query
+/// timeout (an ALTER on a large table takes more than 30 s and a cancel halfway only makes the server undo the work), but
+/// with a <c>lock_wait_timeout</c> of <see cref="LockWaitSeconds"/> s: an ALTER or DROP waiting for another transaction's
+/// metadata lock blocks every later query on that table (a production outage). This way it fails fast, with a
+/// message that says why, and the session values always go back to what they were.
 /// </summary>
 public static class SafeDdl
 {

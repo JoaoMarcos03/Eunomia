@@ -3,10 +3,10 @@ using System.Text.RegularExpressions;
 namespace Eunomia.Engine.Sql;
 
 /// <summary>
-/// Máscara dos segredos em SQL que vai para logs (secção 23.2): os literais depois de <c>IDENTIFIED BY</c> /
+/// Masks secrets in SQL that goes to logs (section 23.2): the literals after <c>IDENTIFIED BY</c> /
 /// <c>IDENTIFIED WITH … BY|AS</c>, <c>SET PASSWORD … =</c>, <c>PASSWORD('…')</c> / <c>OLD_PASSWORD('…')</c>,
-/// <c>MASTER_PASSWORD =</c> e <c>PASSWORD '…'</c> (opções de <c>CREATE SERVER</c>) passam a <c>'***'</c>. O resto do
-/// SQL fica como está.
+/// <c>MASTER_PASSWORD =</c> and <c>PASSWORD '…'</c> (<c>CREATE SERVER</c> options) become <c>'***'</c>. The rest of the
+/// SQL stays as it is.
 /// </summary>
 public static partial class SecretMasking
 {
@@ -23,8 +23,8 @@ public static partial class SecretMasking
     }
 
     /// <summary>
-    /// O SQL tem um segredo que <see cref="MaskSql"/> mascararia. Serve para não o guardar em disco (histórico de
-    /// queries): mascarado não servia para correr de novo (a password passava a ser <c>***</c>).
+    /// The SQL holds a secret that <see cref="MaskSql"/> would mask. Used to keep it off disk (query
+    /// history): masked it would be useless to run again (the password would become <c>***</c>).
     /// </summary>
     public static bool ContainsSecret(string sql)
     {
@@ -33,7 +33,7 @@ public static partial class SecretMasking
             && Secret().IsMatch(sql);
     }
 
-    // Um literal de texto com escapes por barra invertida ou aspas duplicadas.
+    // A text literal with backslash escapes or doubled quotes.
     private const string Literal = @"(?:'(?:[^'\\]|\\.|'')*'|""(?:[^""\\]|\\.|"""")*"")";
 
     [GeneratedRegex(

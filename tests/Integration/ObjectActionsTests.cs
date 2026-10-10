@@ -6,7 +6,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Operações do popupDB contra o servidor (Fase 4; anexo B §6): Drop, Empty, Create e Drop database.</summary>
+/// <summary>popupDB operations against the server (phase 4; appendix B §6): Drop, Empty, Create and Drop database.</summary>
 public sealed class ObjectActionsTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -62,7 +62,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     private Task<object?> Scalar(string sql) => _host.RunPrimaryAsync((h, ct) => h.ExecuteScalarAsync(sql, ct), Ct);
 
     [Fact]
-    public void DropOrdenaTriggersViewsEDepoisORestoSemVerificacaoDeChaves()
+    public void DropOrdersTriggersViewsThenTheRestWithoutKeyChecks()
     {
         TestServer.RequireServer();
         var sql = ObjectActions.DropObjects(Services, [Ref("parent"), Ref("v", DbObjectKind.View), Ref("tr", DbObjectKind.Trigger)]);
@@ -78,7 +78,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     }
 
     [Fact]
-    public void SelectTopRowsEPreselecaoDaCollation()
+    public void SelectTopRowsAndCollationPreselection()
     {
         TestServer.RequireServer();
         Assert.Equal("SELECT * FROM `order` LIMIT 1000;", ObjectActions.SelectTopRows(Services.Dialect, Ref("order"), 1000, qualified: false));
@@ -93,10 +93,10 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task EmptyComChavesDesligadasEsvaziaAMaeEReporAsVerificacoes()
+    public async Task EmptyWithKeysOffEmptiesTheParentAndRestoresTheChecks()
     {
         TestServer.RequireServer();
-        // Sem desligar as chaves, o TRUNCATE de uma tabela referenciada falha (InnoDB).
+        // Without turning off the key checks, TRUNCATE of a referenced table fails (InnoDB).
         await Assert.ThrowsAnyAsync<Exception>(() => ObjectActions.RunAsync(_host, ObjectActions.EmptyTables(Services, [Ref("parent")], false), Ct));
 
         await ObjectActions.RunAsync(_host, ObjectActions.EmptyTables(Services, [Ref("parent"), Ref("v", DbObjectKind.View)], true), Ct);
@@ -106,7 +106,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DropQueFalhaAMeioRepoeAsVerificacoesDeChaves()
+    public async Task DropFailingHalfwayRestoresTheKeyChecks()
     {
         TestServer.RequireServer();
         var sql = ObjectActions.DropObjects(Services, [Ref("nao_existe"), Ref("child")]);
@@ -114,12 +114,12 @@ public sealed class ObjectActionsTests : IAsyncLifetime
         await Assert.ThrowsAnyAsync<Exception>(() => ObjectActions.RunAsync(_host, sql, Ct));
 
         Assert.Equal(1L, Convert.ToInt64(await Scalar("SELECT @@FOREIGN_KEY_CHECKS"), System.Globalization.CultureInfo.InvariantCulture));
-        // O primeiro erro pára as instruções seguintes.
+        // The first error stops the following statements.
         Assert.Equal(1L, Convert.ToInt64(await Scalar($"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{_database}' AND TABLE_NAME = 'child'"), System.Globalization.CultureInfo.InvariantCulture));
     }
 
     [Fact]
-    public async Task CriaEApagaBasesComCollation()
+    public async Task CreatesAndDropsDatabasesWithACollation()
     {
         TestServer.RequireServer();
         var collations = await _host.RunMetadataAsync((h, ct) => h.Metadata.GetCollationsAsync(ct), Ct);
@@ -131,7 +131,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
             await ObjectActions.RunAsync(_host, [Services.Ddl.CreateDatabase(other, "utf8mb4_unicode_ci")], Ct);
             Assert.Equal("utf8mb4_unicode_ci", await Scalar($"SELECT DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '{other}'"));
 
-            // A base em USE muda para outra antes do DROP.
+            // The database in USE switches to another one before the DROP.
             await _host.UseDatabaseAsync(other, Ct);
             await ObjectActions.DropDatabaseAsync(_host, other, [other, _database], Ct);
 

@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Results.Synthetic;
 
-/// <summary>Funções puras que geram cada valor a partir de um hash de (seed, linha, coluna).</summary>
+/// <summary>Pure functions that generate each value from a hash of (seed, row, column).</summary>
 internal static class SyntheticValues
 {
     public const int MaxTextLength = 1024;
@@ -8,28 +8,28 @@ internal static class SyntheticValues
     private static readonly DateTime DateBase = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
     private const long DateRangeSeconds = 26L * 365 * 24 * 3600;
 
-    // Palavras genéricas, com alguns acentos para exercitar UTF-8.
+    // Generic words, with a few accents to exercise UTF-8.
     private static readonly string[] Words =
     [
         "alpha", "beta", "gamma", "delta", "order", "stock", "price", "client", "store", "product",
         "discount", "budget", "status", "role", "account", "invoice", "line", "item", "value", "total",
         "north", "south", "east", "west", "red", "green", "blue", "black", "white", "large",
-        "small", "medium", "premium", "basic", "standard", "express", "ação", "preço", "coração", "café",
-        "Größe", "número", "lisboa", "porto", "braga", "faro", "coimbra", "aveiro", "setúbal", "évora",
+        "small", "medium", "premium", "basic", "standard", "express", "façade", "naïve", "résumé", "café",
+        "Größe", "jalapeño", "zürich", "oslo", "kraków", "malmö", "reykjavík", "córdoba", "genève", "tromsø",
         "server", "table", "index", "query", "filter", "export", "import", "session", "backup", "report",
         "2026", "v2", "id", "x",
     ];
 
     public static ulong Hash(ulong seed, long row, int column)
     {
-        // SplitMix64 sobre a combinação: estável entre versões do .NET (não usa HashCode).
+        // SplitMix64 over the combination: stable across .NET versions (does not use HashCode).
         var z = seed ^ ((ulong)row * 0x9E3779B97F4A7C15UL) ^ ((ulong)(column + 1) * 0xC2B2AE3D27D4EB4FUL);
         z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
         z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
         return z ^ (z >> 31);
     }
 
-    /// <summary>Cerca de 8% dos valores de colunas nullable são NULL.</summary>
+    /// <summary>About 8% of the values in nullable columns are NULL.</summary>
     public static bool IsNull(ulong h) => (h & 0xFF) < 20;
 
     public static long Int(ulong h) => (long)((h >> 8) % 20_000_000) - 10_000_000;
@@ -56,8 +56,8 @@ internal static class SyntheticValues
     };
 
     /// <summary>
-    /// Escreve texto em <paramref name="buffer"/> e devolve o comprimento escrito;
-    /// <paramref name="fullLength"/> é o comprimento que o texto teria sem o limite do buffer.
+    /// Writes text into <paramref name="buffer"/> and returns the length written;
+    /// <paramref name="fullLength"/> is the length the text would have without the buffer limit.
     /// </summary>
     public static int Text(ulong h, SyntheticKind kind, Span<char> buffer, out int fullLength)
     {

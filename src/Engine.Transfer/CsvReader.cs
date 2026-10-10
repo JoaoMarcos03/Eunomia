@@ -3,17 +3,17 @@ using System.Text;
 namespace Eunomia.Engine.Transfer;
 
 /// <summary>
-/// Opções do CSV import com os defaults do HeidiSQL (FAM-E07; anexo B §3.1): campos terminados por <c>;</c>,
-/// envolvidos (opcionalmente) por <c>"</c>, escape <c>"</c>, linhas terminadas por <c>\r\n</c>, ignorar 1 linha.
+/// CSV import options with HeidiSQL's defaults (FAM-E07; appendix B §3.1): fields terminated by <c>;</c>,
+/// (optionally) enclosed by <c>"</c>, escape <c>"</c>, lines terminated by <c>\r\n</c>, skip 1 line.
 /// </summary>
 public sealed record CsvOptions
 {
     public string FieldTerminator { get; init; } = ";";
 
-    /// <summary>Vazio: os campos nunca vêm entre aspas.</summary>
+    /// <summary>Empty: fields never come quoted.</summary>
     public string Encloser { get; init; } = "\"";
 
-    /// <summary>Só para o <c>LOAD DATA</c> (<c>OPTIONALLY ENCLOSED BY</c>); o parser do cliente aceita os dois casos.</summary>
+    /// <summary>Only for <c>LOAD DATA</c> (<c>OPTIONALLY ENCLOSED BY</c>); the client parser accepts both cases.</summary>
     public bool OptionallyEnclosed { get; init; } = true;
 
     public string Escaper { get; init; } = "\"";
@@ -23,8 +23,8 @@ public sealed record CsvOptions
     public int IgnoreLines { get; init; } = 1;
 
     /// <summary>
-    /// Valores do diálogo com sequências de barra invertida (<c>\t</c>, <c>\r</c>, <c>\n</c>, <c>\\</c>, <c>\0</c>),
-    /// como o HeidiSQL as interpreta.
+    /// Dialog values with backslash sequences (<c>\t</c>, <c>\r</c>, <c>\n</c>, <c>\\</c>, <c>\0</c>),
+    /// as HeidiSQL interprets them.
     /// </summary>
     public static string Unescape(string value)
     {
@@ -58,10 +58,10 @@ public sealed record CsvOptions
 }
 
 /// <summary>
-/// Parser de CSV em streaming para o modo cliente (secção 13.2): RFC 4180 com as opções do HeidiSQL, sem ler o
-/// ficheiro inteiro. Diferenças face ao HeidiSQL (anexo B §3.3): o encloser duplicado (<c>""</c>) passa a um só, um
-/// campo sem aspas igual a <c>\N</c> ou <c>NULL</c> é NULL, o escape funciona quando é diferente do encloser
-/// (<c>\</c> com as sequências do MySQL), e o fim de linha dentro de aspas faz parte do valor. Linhas vazias saltam-se.
+/// Streaming CSV parser for client mode (section 13.2): RFC 4180 with HeidiSQL's options, without reading the
+/// whole file. Differences from HeidiSQL (appendix B §3.3): a doubled encloser (<c>""</c>) becomes a single one, an
+/// unquoted field equal to <c>\N</c> or <c>NULL</c> is NULL, the escape works when it differs from the encloser
+/// (<c>\</c> with MySQL's sequences), and a line end inside quotes is part of the value. Empty lines are skipped.
 /// </summary>
 public sealed class CsvReader
 {
@@ -91,19 +91,19 @@ public sealed class CsvReader
         _field = options.FieldTerminator;
         _line = options.LineTerminator;
         _encloser = options.Encloser;
-        // O escape igual ao encloser (o default do HeidiSQL) é o "" do RFC 4180, já tratado dentro das aspas.
+        // An escape equal to the encloser (HeidiSQL's default) is RFC 4180's "", already handled inside the quotes.
         _escaper = options.Escaper.Length == 1 && options.Escaper != options.Encloser ? options.Escaper[0] : null;
         _toSkip = Math.Max(0, options.IgnoreLines);
         _buffer = new char[bufferSize];
     }
 
-    /// <summary>Registos lidos até agora, incluindo os ignorados no início (o checkpoint do CSV import).</summary>
+    /// <summary>Records read so far, including those skipped at the start (the CSV import checkpoint).</summary>
     public long RecordsRead { get; private set; }
 
-    /// <summary>Caracteres consumidos (progresso quando o stream não tem posição).</summary>
+    /// <summary>Characters consumed (progress when the stream has no position).</summary>
     public long CharactersRead { get; private set; }
 
-    /// <summary>Próximo registo, ou <c>null</c> no fim do ficheiro. NULL é <c>null</c> na lista.</summary>
+    /// <summary>Next record, or <c>null</c> at the end of the file. NULL is <c>null</c> in the list.</summary>
     public string?[]? Read()
     {
         while (true)
@@ -127,7 +127,7 @@ public sealed class CsvReader
         }
     }
 
-    /// <summary>Salta registos sem os devolver (retoma a partir do checkpoint).</summary>
+    /// <summary>Skips records without returning them (resuming from the checkpoint).</summary>
     public void Skip(long records)
     {
         for (var i = 0L; i < records && ReadRecord() is not null; i++)
@@ -157,14 +157,14 @@ public sealed class CsvReader
                 {
                     return null;
                 }
-                // Sem terminador no fim: o TryParse em EOF fecha sempre o registo; aqui não se chega.
+                // No terminator at the end: TryParse at EOF always closes the record; this is never reached.
                 throw new InvalidOperationException("CSV parser did not consume the end of the input.");
             }
             Fill();
         }
     }
 
-    /// <summary>Lê um registo a partir de <see cref="_start"/>; <c>null</c> se o buffer acaba antes (e não é o fim).</summary>
+    /// <summary>Reads a record starting at <see cref="_start"/>; <c>null</c> if the buffer ends first (and it is not the end).</summary>
     private string?[]? TryParse(out int consumed)
     {
         consumed = 0;
@@ -193,7 +193,7 @@ public sealed class CsvReader
                         {
                             return null;
                         }
-                        // Aspas por fechar no fim do ficheiro: o resto é o valor.
+                        // Quotes left open at the end of the file: the rest is the value.
                         break;
                     }
                     if (StartsWith(span, pos, _encloser, out partial))
@@ -240,7 +240,7 @@ public sealed class CsvReader
                 return null;
             }
 
-            // Até ao terminador do campo ou da linha (depois das aspas, o que vier é juntado ao valor).
+            // Up to the field or line terminator (after the quotes, whatever comes is appended to the value).
             var rawStart = _value.Length;
             while (true)
             {
@@ -300,7 +300,7 @@ public sealed class CsvReader
     {
         if (!enclosed)
         {
-            // \N (com ou sem escape configurado) e a palavra NULL sem aspas são NULL, como no LOAD DATA.
+            // \N (with or without a configured escape) and the unquoted word NULL are NULL, as in LOAD DATA.
             var raw = _value.ToString();
             if ((isNullMarker && raw == "N") || raw == "\\N" || raw == "NULL")
             {
@@ -333,8 +333,8 @@ public sealed class CsvReader
     }
 
     /// <summary>
-    /// O texto em <paramref name="pos"/> começa por <paramref name="token"/>; <paramref name="partial"/> diz se o
-    /// buffer acaba a meio de uma possível ocorrência (é preciso ler mais para decidir).
+    /// The text at <paramref name="pos"/> starts with <paramref name="token"/>; <paramref name="partial"/> says whether the
+    /// buffer ends in the middle of a possible match (more must be read to decide).
     /// </summary>
     private static bool StartsWith(ReadOnlySpan<char> span, int pos, string token, out bool partial)
     {

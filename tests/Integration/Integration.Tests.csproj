@@ -11,7 +11,7 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Testes contra um servidor real (secção 24): EUNOMIA_IT_MYSQL ou tests/Integration/Start-TestServer.ps1. -->
+  <!-- Tests against a real server (section 24): EUNOMIA_IT_MYSQL or tests/Integration/Start-TestServer.ps1. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\Drivers.MySql\Drivers.MySql.csproj" />
     <ProjectReference Include="..\..\src\Engine.Execution\Engine.Execution.csproj" />

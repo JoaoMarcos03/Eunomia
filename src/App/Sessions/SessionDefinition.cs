@@ -1,8 +1,8 @@
 namespace Eunomia.App.Sessions;
 
 /// <summary>
-/// Tipos de rede do HeidiSQL (anexo A §2.1). O ordinal é o que o HeidiSQL grava e tem de ficar estável para o
-/// import. No MVP só os MySQL/MariaDB (TCP, SSH, RDS) ligam; os outros existem para importar e mostrar.
+/// HeidiSQL network types (appendix A §2.1). The ordinal is what HeidiSQL saves and must stay stable for the
+/// import. In the MVP only the MySQL/MariaDB ones (TCP, SSH, RDS) connect; the others exist to import and display.
 /// </summary>
 public enum NetType
 {
@@ -28,7 +28,7 @@ public enum NetType
 
 public static class NetTypes
 {
-    /// <summary>Nome mostrado no Session Manager (HeidiSQL).</summary>
+    /// <summary>Name shown in the Session Manager (HeidiSQL).</summary>
     public static string DisplayName(NetType type) => type switch
     {
         NetType.MySqlTcpIp => "MariaDB or MySQL (TCP/IP)",
@@ -55,10 +55,10 @@ public static class NetTypes
     public static bool IsMySqlFamily(NetType type) =>
         type is NetType.MySqlTcpIp or NetType.MySqlNamedPipe or NetType.MySqlSshTunnel or NetType.ProxySqlAdmin or NetType.MySqlRds;
 
-    /// <summary>Tipos com que o MVP liga (secção 27.1; named pipe fica de fora).</summary>
+    /// <summary>Types the MVP connects with (section 27.1; named pipe is left out).</summary>
     public static bool IsSupported(NetType type) => type is NetType.MySqlTcpIp or NetType.MySqlSshTunnel or NetType.MySqlRds;
 
-    /// <summary>SSH ligado por omissão (anexo A §1.6).</summary>
+    /// <summary>SSH on by default (appendix A §1.6).</summary>
     public static bool UsesSshByDefault(NetType type) => type is NetType.MySqlSshTunnel or NetType.MySqlRds or NetType.PgSqlSshTunnel;
 
     public static int DefaultPort(NetType type) => type switch
@@ -81,15 +81,15 @@ public static class NetTypes
     };
 }
 
-/// <summary>Túnel SSH da sessão (tab "SSH tunnel"). A password vai para o cofre de segredos.</summary>
+/// <summary>The session's SSH tunnel ("SSH tunnel" tab). The password goes to the secret vault.</summary>
 public sealed class SshSettings
 {
     public bool Active { get; set; }
 
-    /// <summary>plink.exe/ssh.exe: só usado no modo externo (D7), por escolha explícita.</summary>
+    /// <summary>plink.exe/ssh.exe: only used in external mode (D7), by explicit choice.</summary>
     public string Executable { get; set; } = string.Empty;
 
-    /// <summary>Vazio = host da base de dados.</summary>
+    /// <summary>Empty = the database host.</summary>
     public string Host { get; set; } = string.Empty;
 
     public int Port { get; set; } = 22;
@@ -98,17 +98,17 @@ public sealed class SshSettings
 
     public string PrivateKeyFile { get; set; } = string.Empty;
 
-    /// <summary>Timeout de ligação SSH em segundos (HeidiSQL: 4, mínimo 1).</summary>
+    /// <summary>SSH connection timeout in seconds (HeidiSQL: 4, minimum 1).</summary>
     public int Timeout { get; set; } = 4;
 
-    /// <summary>Porta local do forward; 0 = escolhida pelo sistema.</summary>
+    /// <summary>Local forward port; 0 = chosen by the system.</summary>
     public int LocalPort { get; set; }
 
-    /// <summary>Autenticar pelo agent (OpenSSH ou Pageant) antes de chave e password.</summary>
+    /// <summary>Authenticate through the agent (OpenSSH or Pageant) before key and password.</summary>
     public bool UseAgent { get; set; } = true;
 }
 
-/// <summary>Tab "SSL" (anexo A §1.6). Verificação: 0 nenhuma, 1 CA, 2 CA + hostname (omissão).</summary>
+/// <summary>"SSL" tab (appendix A §1.6). Verification: 0 none, 1 CA, 2 CA + host name (default).</summary>
 public sealed class SslSettings
 {
     public bool Active { get; set; }
@@ -124,7 +124,7 @@ public sealed class SslSettings
     public int Verification { get; set; } = 2;
 }
 
-/// <summary>Contadores do tab "Statistics" (FAM-S08) e a versão vista na última ligação.</summary>
+/// <summary>"Statistics" tab counters (FAM-S08) and the version seen on the last connection.</summary>
 public sealed class SessionStatistics
 {
     public DateTimeOffset? Created { get; set; }
@@ -135,27 +135,27 @@ public sealed class SessionStatistics
 
     public int RefusedCount { get; set; }
 
-    /// <summary>Versão completa do servidor na última ligação (coluna Version e ícone por vendor).</summary>
+    /// <summary>Full server version on the last connection (Version column and vendor icon).</summary>
     public string ServerVersionFull { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Uma sessão gravada (tabs Settings, SSH tunnel, Advanced, SSL e Statistics do Session Manager; anexo A §1.6).
-/// As passwords nunca estão aqui: ficam no Credential Manager com a chave <see cref="Id"/> (secção 23.2).
+/// A saved session (Settings, SSH tunnel, Advanced, SSL and Statistics tabs of the Session Manager; appendix A §1.6).
+/// Passwords are never here: they live in the Credential Manager under the key <see cref="Id"/> (section 23.2).
 /// </summary>
 public sealed class SessionDefinition
 {
-    /// <summary>Identificador estável (alvo das credenciais); não muda com rename nem move.</summary>
+    /// <summary>Stable identifier (target of the credentials); does not change on rename or move.</summary>
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public string Name { get; set; } = "Unnamed";
 
-    /// <summary>Caminho de folders, do mais exterior para o mais interior (vazio = raiz).</summary>
+    /// <summary>Folder path, from the outermost to the innermost (empty = root).</summary>
     public List<string> Folder { get; set; } = [];
 
     public NetType NetType { get; set; } = NetType.MySqlTcpIp;
 
-    /// <summary>Library do HeidiSQL (DLL). Guardada só para o export; o driver é gerido.</summary>
+    /// <summary>HeidiSQL library (DLL). Kept only for export; the driver is managed.</summary>
     public string Library { get; set; } = string.Empty;
 
     public string Host { get; set; } = "127.0.0.1";
@@ -164,7 +164,7 @@ public sealed class SessionDefinition
 
     public string User { get; set; } = "root";
 
-    /// <summary>Há password gravada no cofre. Sem ela, a ligação pede-a (como "Prompt for credentials").</summary>
+    /// <summary>A password is saved in the vault. Without it, the connection asks for it (like "Prompt for credentials").</summary>
     public bool PasswordSaved { get; set; }
 
     public bool LoginPrompt { get; set; }
@@ -173,7 +173,7 @@ public sealed class SessionDefinition
 
     public bool Compressed { get; set; }
 
-    /// <summary>Whitelist separada por <c>;</c> (FAM-S04): substitui o <c>SHOW DATABASES</c>.</summary>
+    /// <summary>Whitelist separated by <c>;</c> (FAM-S04): replaces <c>SHOW DATABASES</c>.</summary>
     public string Databases { get; set; } = string.Empty;
 
     public string Comment { get; set; } = string.Empty;
@@ -185,10 +185,10 @@ public sealed class SessionDefinition
     // Advanced.
     public string StartupScript { get; set; } = string.Empty;
 
-    /// <summary>Timeout de execução no cliente em segundos (D8); 0 = sem limite.</summary>
+    /// <summary>Client-side execution timeout in seconds (D8); 0 = no limit.</summary>
     public int QueryTimeout { get; set; } = 30;
 
-    /// <summary>Ping every X seconds (keep-alive); 0 desliga.</summary>
+    /// <summary>Ping every X seconds (keep-alive); 0 turns it off.</summary>
     public int KeepAlive { get; set; } = 20;
 
     public bool LocalTimeZone { get; set; }
@@ -199,7 +199,7 @@ public sealed class SessionDefinition
 
     public bool ForceUnicode { get; set; } = true;
 
-    /// <summary>Cor da sessão 0xRRGGBB, ou <c>null</c> (FAM-S02).</summary>
+    /// <summary>Session colour 0xRRGGBB, or <c>null</c> (FAM-S02).</summary>
     public uint? Color { get; set; }
 
     /// <summary>Hide database pattern (regex, FAM-S04).</summary>
@@ -212,29 +212,29 @@ public sealed class SessionDefinition
     public bool LogDml { get; set; }
 
     /// <summary>
-    /// Modo só de leitura (secção 23.2, novo): o cliente só envia leituras (<c>ReadOnlyPolicy</c>) e o servidor fica em
-    /// <c>SET SESSION TRANSACTION READ ONLY</c>; o grid não edita.
+    /// Read-only mode (section 23.2, new): the client only sends reads (<c>ReadOnlyPolicy</c>) and the server is put in
+    /// <c>SET SESSION TRANSACTION READ ONLY</c>; the grid does not edit.
     /// </summary>
     public bool ReadOnly { get; set; }
 
     /// <summary>
-    /// Perguntar antes de correr instruções que mudam dados ou estrutura nas query tabs, no Run SQL file e no import de
-    /// CSV (Fase 14; para sessões de produção que não podem ser só de leitura).
+    /// Ask before running statements that change data or structure in the query tabs, in Run SQL file and in the CSV
+    /// import (phase 14; for production sessions that cannot be read-only).
     /// </summary>
     public bool ConfirmChanges { get; set; }
 
-    /// <summary>Ligação de metadata separada (12.2); desligar volta ao modo de ligação única do HeidiSQL.</summary>
+    /// <summary>Separate metadata connection (12.2); turning it off goes back to HeidiSQL's single-connection mode.</summary>
     public bool MetadataConnection { get; set; } = true;
 
-    /// <summary>Ligações de job em simultâneo (12.6).</summary>
+    /// <summary>Concurrent job connections (12.6).</summary>
     public int JobConnections { get; set; } = 2;
 
-    /// <summary>Última base usada (RestoreLastUsedDB).</summary>
+    /// <summary>Last database used (RestoreLastUsedDB).</summary>
     public string LastUsedDatabase { get; set; } = string.Empty;
 
     public SessionStatistics Statistics { get; set; } = new();
 
-    /// <summary>Caminho como o HeidiSQL o mostra: <c>Folder\Sub\Sessão</c>.</summary>
+    /// <summary>Path as HeidiSQL shows it: <c>Folder\Sub\Session</c>.</summary>
     public string Path => Folder.Count == 0 ? Name : string.Join('\\', Folder) + "\\" + Name;
 
     public SessionDefinition Clone()
@@ -268,8 +268,8 @@ public sealed class SessionDefinition
     };
 
     /// <summary>
-    /// Os campos editáveis do Session Manager são iguais (sem id, nome, folder, password e estatísticas): decide o
-    /// "Save modifications?" (anexo A §1.5).
+    /// The editable Session Manager fields are equal (without id, name, folder, password and statistics): decides
+    /// "Save modifications?" (appendix A §1.5).
     /// </summary>
     public bool HasSameSettings(SessionDefinition other)
     {
@@ -289,7 +289,7 @@ public sealed class SessionDefinition
             && Ssl.Certificate == other.Ssl.Certificate && Ssl.Cipher == other.Ssl.Cipher && Ssl.Verification == other.Ssl.Verification;
     }
 
-    /// <summary>Copia os campos editáveis de <paramref name="source"/> (Save).</summary>
+    /// <summary>Copies the editable fields from <paramref name="source"/> (Save).</summary>
     public void CopySettingsFrom(SessionDefinition source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -324,7 +324,7 @@ public sealed class SessionDefinition
         Ssl = copy.Ssl;
     }
 
-    /// <summary>Muda o tipo de rede e repõe os defaults da família nos campos que o utilizador não mexeu.</summary>
+    /// <summary>Changes the network type and restores the family defaults in the fields the user did not touch.</summary>
     public void ChangeNetType(NetType type)
     {
         var old = NetType;

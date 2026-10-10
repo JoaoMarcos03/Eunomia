@@ -4,9 +4,9 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.App.Data;
 
 /// <summary>
-/// Valores do Insert value ▸ do grid (anexo D B16): datetime, date, time e year do relógio do servidor; unix timestamp do
-/// relógio local (como o HeidiSQL, a hora local lida como UTC) e a versão UTC; datetime, date e time em UTC; quatro
-/// formas de GUID. A caption mostra o valor que vai para a célula ("datetime: 2026-10-06 18:30:00").
+/// Values of the grid's Insert value ▸ (appendix D B16): datetime, date, time and year from the server clock; unix timestamp
+/// from the local clock (like HeidiSQL, the local time read as UTC) and the UTC version; datetime, date and time in UTC;
+/// four GUID forms. The caption shows the value that goes into the cell ("datetime: 2026-10-06 18:30:00").
 /// </summary>
 public static class InsertValueItems
 {
@@ -33,8 +33,8 @@ public static class InsertValueItems
     }
 
     /// <summary>
-    /// "Default value: x" só para defaults literais (texto entre aspas ou número), não para expressões como
-    /// <c>CURRENT_TIMESTAMP</c>; <c>null</c> se a coluna não tiver um.
+    /// "Default value: x" only for literal defaults (quoted text or a number), not for expressions such as
+    /// <c>CURRENT_TIMESTAMP</c>; <c>null</c> if the column has none.
     /// </summary>
     public static string? DefaultLiteral(ColumnDefinition column)
     {

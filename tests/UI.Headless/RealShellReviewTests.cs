@@ -12,9 +12,9 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Fase 13: a janela principal ligada ao servidor de teste, nos ecrãs do dia a dia (Host, Database, Table, Data e
-/// Query com resultados), em claro e escuro. Os tempos e a versão do servidor mudam, por isso não há baseline: o
-/// teste verifica os fluxos e, com <c>EUNOMIA_REVIEW_DIR</c>, grava os PNG para revisão.
+/// Phase 13: the main window connected to the test server, on the everyday screens (Host, Database, Table, Data and
+/// Query with results), in light and dark. Times and the server version change, so there is no baseline: the
+/// test checks the flows and, with <c>EUNOMIA_REVIEW_DIR</c>, writes the PNGs for review.
 /// </summary>
 public sealed class RealShellReviewTests
 {
@@ -23,10 +23,10 @@ public sealed class RealShellReviewTests
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("light")]
     [InlineData("dark")]
-    public async Task EcrasDoDiaADia(string theme)
+    public async Task EverydayScreens(string theme)
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_rv_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
@@ -67,7 +67,7 @@ public sealed class RealShellReviewTests
             await Settle();
             Save(window, $"real-database-{theme}");
 
-            // Table tab (table editor) e Data tab.
+            // Table tab (table editor) and Data tab.
             var customers = TreeModel.ObjectsOf(dbNode).Single(n => n.Name == "customers");
             window.Tree.Tree.FocusedNode = customers;
             await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.TableTab) ? "ok" : null);
@@ -81,14 +81,14 @@ public sealed class RealShellReviewTests
             await Settle();
             Save(window, $"real-data-{theme}");
 
-            // View no editor por código.
+            // View in the code editor.
             window.Tree.Tree.FocusedNode = TreeModel.ObjectsOf(dbNode).Single(n => n.Name == "v_totals");
             tabs.SelectedItem = tabs.TableTab;
             await WaitAsync(() => window.CodeEditor is { Code.Length: > 0 } ? "ok" : null);
             await Settle();
             Save(window, $"real-view-{theme}");
 
-            // Query tab com resultados.
+            // Query tab with results.
             window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
             window.SqlEditor.Text = $"SELECT c.id, c.name, c.balance\nFROM `{db}`.customers c\nWHERE c.balance IS NOT NULL\nORDER BY c.name;";
             Assert.True(await context.Commands.ExecuteAsync("query.run"));

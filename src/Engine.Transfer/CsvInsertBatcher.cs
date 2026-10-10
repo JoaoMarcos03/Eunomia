@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Eunomia.Engine.Transfer;
 
-/// <summary>Tratamento de linhas duplicadas no CSV import (anexo B §3.1; omissão REPLACE).</summary>
+/// <summary>Handling of duplicate rows in the CSV import (appendix B §3.1; default REPLACE).</summary>
 public enum CsvDuplicates
 {
     Insert,
@@ -12,14 +12,14 @@ public enum CsvDuplicates
     Replace,
 }
 
-/// <summary>Coluna de destino de um campo do CSV (mapeamento posicional: o campo k vai para a k-ésima coluna).</summary>
+/// <summary>Target column of a CSV field (positional mapping: field k goes to the k-th column).</summary>
 public sealed record CsvTargetColumn(string Name, bool IsNumeric);
 
 /// <summary>
-/// INSERT multi-row do modo cliente do CSV import (anexo B §3.3): <c>INSERT [LOW_PRIORITY] [IGNORE] INTO `db`.`t`
-/// (cols) VALUES (…), (…)</c> ou <c>REPLACE</c>, fechado aos 0,5 MiB ou às 10.000 linhas. Campos em falta no fim são
-/// NULL e os que sobram ignoram-se. O tipo vem da coluna de destino de cada campo (o HeidiSQL usa a da posição
-/// original e troca os tipos quando as colunas são reordenadas).
+/// Multi-row INSERT of the CSV import's client mode (appendix B §3.3): <c>INSERT [LOW_PRIORITY] [IGNORE] INTO `db`.`t`
+/// (cols) VALUES (…), (…)</c> or <c>REPLACE</c>, closed at 0.5 MiB or 10,000 rows. Missing fields at the end are
+/// NULL and extra ones are ignored. The type comes from each field's target column (HeidiSQL uses the one at the original
+/// position and mixes up the types when the columns are reordered).
 /// </summary>
 public sealed partial class CsvInsertBatcher
 {
@@ -33,7 +33,7 @@ public sealed partial class CsvInsertBatcher
     private readonly int _maxRows;
     private readonly StringBuilder _sql = new();
 
-    /// <param name="localNumbers">Formato dos números locais (ex.: <c>1.234,56</c>); <c>null</c> sem a opção.</param>
+    /// <param name="localNumbers">Format of local numbers (e.g. <c>1.234,56</c>); <c>null</c> without the option.</param>
     public CsvInsertBatcher(
         string database,
         string table,
@@ -61,10 +61,10 @@ public sealed partial class CsvInsertBatcher
             + " (" + string.Join(", ", columns.Select(c => SqlDumpWriter.Quote(c.Name))) + ") VALUES ";
     }
 
-    /// <summary>Linhas no INSERT por enviar.</summary>
+    /// <summary>Rows in the INSERT not yet sent.</summary>
     public int PendingRows { get; private set; }
 
-    /// <summary>Junta um registo; devolve o INSERT anterior quando este já não cabe nele.</summary>
+    /// <summary>Adds a record; returns the previous INSERT when this one no longer fits in it.</summary>
     public string? Add(IReadOnlyList<string?> record)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -97,7 +97,7 @@ public sealed partial class CsvInsertBatcher
         return done;
     }
 
-    /// <summary>O INSERT por enviar (fim do ficheiro), ou <c>null</c> se não há linhas.</summary>
+    /// <summary>The INSERT not yet sent (end of file), or <c>null</c> if there are no rows.</summary>
     public string? Flush()
     {
         if (PendingRows == 0)
@@ -129,7 +129,7 @@ public sealed partial class CsvInsertBatcher
         AppendString(sb, value);
     }
 
-    /// <summary>Número local para o formato do SQL: sem separador de milhares e com ponto decimal.</summary>
+    /// <summary>Local number in SQL format: without a thousands separator and with a decimal point.</summary>
     public static string UnformatNumber(string value, NumberFormatInfo format)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -138,7 +138,7 @@ public sealed partial class CsvInsertBatcher
         if (format.NumberGroupSeparator.Length > 0)
         {
             text = text.Replace(format.NumberGroupSeparator, string.Empty, StringComparison.Ordinal);
-            // Muitas culturas usam um espaço inseparável como separador de milhares; o ficheiro pode trazer outro espaço.
+            // Many cultures use a non-breaking space as the thousands separator; the file may bring another kind of space.
             if (string.IsNullOrWhiteSpace(format.NumberGroupSeparator))
             {
                 text = string.Concat(text.Where(c => c is not (' ' or ' ' or ' ')));
@@ -147,7 +147,7 @@ public sealed partial class CsvInsertBatcher
         return format.NumberDecimalSeparator == "." ? text : text.Replace(format.NumberDecimalSeparator, ".", StringComparison.Ordinal);
     }
 
-    /// <summary>Texto entre plicas com os escapes do MySQL.</summary>
+    /// <summary>Single-quoted text with MySQL's escapes.</summary>
     internal static void AppendString(StringBuilder sb, string value)
     {
         sb.Append('\'');

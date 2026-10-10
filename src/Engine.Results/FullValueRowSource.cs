@@ -3,8 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Um source de linhas com quem sabe ir buscar os valores completos das células cortadas (o browser do Data tab): as
-/// vistas por cima (projeção, filtro local) e o grid chegam aos valores completos para o Ctrl+C e a edição.
+/// A row source together with something that knows how to fetch the full values of cut cells (the Data tab browser): the
+/// views on top (projection, local filter) and the grid reach the full values for Ctrl+C and editing.
 /// </summary>
 public sealed class FullValueRowSource(IRowSource inner, IFullValueSource values) : IRowSource, IFullValueSource
 {

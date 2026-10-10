@@ -5,11 +5,11 @@ using Eunomia.App.Secrets;
 namespace Eunomia.Infra.Secrets.Linux;
 
 /// <summary>
-/// Segredos no Secret Service do freedesktop (GNOME Keyring, KWallet 5.97+, KeePassXC) pela libsecret (secção 21.8;
-/// Fase 14): uma password por chave no keyring por omissão, com o atributo <c>eunomia-key</c> e a etiqueta
-/// <c>Eunomia (chave)</c>, visíveis no Seahorse/KWalletManager. P/Invoke à <c>libsecret-1.so.0</c> e à
-/// <c>libglib-2.0.so.0</c> (sem pacotes extra). Sem a biblioteca, <see cref="IsAvailable"/> é falso; sem serviço a
-/// correr, as operações lançam <see cref="SecretStoreException"/>.
+/// Secrets in the freedesktop Secret Service (GNOME Keyring, KWallet 5.97+, KeePassXC) through libsecret (section 21.8;
+/// phase 14): one password per key in the default keyring, with the <c>eunomia-key</c> attribute and the
+/// <c>Eunomia (key)</c> label, visible in Seahorse/KWalletManager. P/Invoke into <c>libsecret-1.so.0</c> and
+/// <c>libglib-2.0.so.0</c> (no extra packages). Without the library, <see cref="IsAvailable"/> is false; without a running
+/// service, the operations throw <see cref="SecretStoreException"/>.
 /// </summary>
 [SupportedOSPlatform("linux")]
 public sealed partial class SecretServiceStore : ISecretStore, IDisposable
@@ -50,7 +50,7 @@ public sealed partial class SecretServiceStore : ISecretStore, IDisposable
         IsAvailable = true;
     }
 
-    /// <summary>A libsecret existe nesta máquina (o serviço pode, mesmo assim, não estar a correr).</summary>
+    /// <summary>libsecret exists on this machine (the service may still not be running).</summary>
     public bool IsAvailable { get; }
 
     public string? Get(string key)
@@ -71,7 +71,7 @@ public sealed partial class SecretServiceStore : ISecretStore, IDisposable
             }
             finally
             {
-                // Apaga a memória antes de a libertar.
+                // Wipes the memory before freeing it.
                 secret_password_free(result);
             }
         });
@@ -110,7 +110,7 @@ public sealed partial class SecretServiceStore : ISecretStore, IDisposable
         EnsureAvailable();
         WithAttributes(key, attributes =>
         {
-            // Devolve FALSE sem erro quando não havia nada para apagar.
+            // Returns FALSE without an error when there was nothing to delete.
             _ = secret_password_clearv_sync(_schema, attributes, IntPtr.Zero, out var error);
             ThrowOnError(error, "delete");
             return (string?)null;
@@ -135,7 +135,7 @@ public sealed partial class SecretServiceStore : ISecretStore, IDisposable
         }
     }
 
-    /// <summary>Tabela GHashTable <c>{"eunomia-key": key}</c> para um pedido (as strings são libertadas no fim).</summary>
+    /// <summary>A <c>{"eunomia-key": key}</c> GHashTable for a request (the strings are freed at the end).</summary>
     private string? WithAttributes(string key, Func<IntPtr, string?> request)
     {
         var table = g_hash_table_new(_strHash, _strEqual);

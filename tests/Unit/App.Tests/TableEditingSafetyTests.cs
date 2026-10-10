@@ -4,7 +4,7 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Gravação do table editor sem perder dados (Fase 14): avisos antes de gravar e modo estrito no ALTER.</summary>
+/// <summary>Saving in the table editor without losing data (phase 14): warnings before saving and strict mode on the ALTER.</summary>
 public sealed class TableEditingSafetyTests
 {
     private static readonly MySqlTypeMapper Types = new();
@@ -36,13 +36,13 @@ public sealed class TableEditingSafetyTests
     [InlineData("datetime(6)", "datetime", false)]
     [InlineData("enum('a','b')", "enum('a')", false)]
     [InlineData("varchar(10)", "int(11)", false)]
-    public void AlargarNaoPedeConfirmacao(string before, string after, bool widening)
+    public void WideningDoesNotAskForConfirmation(string before, string after, bool widening)
     {
         Assert.Equal(widening, TableEditing.IsWidening(before, after));
     }
 
     [Fact]
-    public void AvisaColunasApagadasTiposEstreitadosECharsets()
+    public void WarnsAboutDroppedColumnsNarrowedTypesAndCharsets()
     {
         var before = Table(Column("id", "int(11)"), Column("name", "varchar(60)", "utf8mb4_general_ci"), Column("notes", "text"), Column("price", "double"));
         var after = Table(
@@ -61,14 +61,14 @@ public sealed class TableEditingSafetyTests
     }
 
     [Fact]
-    public void ModoEstritoParaODdl()
+    public void StrictModeForTheDdl()
     {
         var dialect = new MySqlDialect(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));
         var (enter, restore) = dialect.DdlSession("NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION", 10)!.Value;
         Assert.Equal("SET @EUNOMIA_LWT = @@SESSION.lock_wait_timeout, SESSION lock_wait_timeout = 10, SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES,STRICT_ALL_TABLES'", enter);
         Assert.Equal("SET SESSION lock_wait_timeout = @EUNOMIA_LWT, SESSION sql_mode = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION'", restore);
         Assert.EndsWith("SESSION sql_mode = 'STRICT_TRANS_TABLES,STRICT_ALL_TABLES'", dialect.DdlSession(string.Empty, 10)!.Value.Enter, StringComparison.Ordinal);
-        // Sem modo estrito (views, Drop, Empty): só o lock_wait_timeout.
+        // Without strict mode (views, Drop, Empty): only lock_wait_timeout.
         Assert.Equal(("SET @EUNOMIA_LWT = @@SESSION.lock_wait_timeout, SESSION lock_wait_timeout = 5", "SET SESSION lock_wait_timeout = @EUNOMIA_LWT"), dialect.DdlSession(null, 5)!.Value);
         Assert.Equal("SELECT @@SESSION.sql_mode", dialect.SessionModeQuery);
     }

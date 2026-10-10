@@ -12,10 +12,10 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Ficheiros nas query tabs (secção 4.7; anexo C §3.2, §4.3): Load SQL file (vários, com a codificação; um ficheiro já
-/// aberto só ativa a tab; reutiliza a tab vazia; &gt; 5 MiB pergunta), Save, Save as e Save selection, os 20 recentes no
-/// dropdown do Load (Remove absent files, Clear file list), o <c>*</c> das tabs alteradas e a pergunta ao fechar, e a
-/// pasta do ficheiro vigiada (alteração externa pergunta "Reload file?"; apagado pergunta se fecha a tab).
+/// Files in the query tabs (section 4.7; appendix C §3.2, §4.3): Load SQL file (several, with the encoding; a file already
+/// open just activates its tab; reuses the empty tab; &gt; 5 MiB asks), Save, Save as and Save selection, the 20 recent ones
+/// in the Load drop-down (Remove absent files, Clear file list), the <c>*</c> of changed tabs and the question on closing, and
+/// the file's folder watched (an external change asks "Reload file?"; a deletion asks whether to close the tab).
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -24,19 +24,19 @@ public sealed partial class MainWindow
     private readonly HashSet<QueryTabState> _fileRecheck = [];
     private bool _fileQuestionOpen;
 
-    /// <summary>Espera depois do último evento do ficheiro (uma gravação externa dá vários, a meio da escrita).</summary>
+    /// <summary>Wait after the file's last event (an external save raises several, halfway through the write).</summary>
     internal static readonly TimeSpan FileSettleDelay = TimeSpan.FromMilliseconds(300);
 
-    /// <summary>Substitui o diálogo Open (testes): os caminhos escolhidos.</summary>
+    /// <summary>Replaces the Open dialog (tests): the chosen paths.</summary>
     internal Func<IReadOnlyList<string>>? OpenSqlFilesOverride { get; set; }
 
-    /// <summary>Substitui o diálogo Save as (testes): nome sugerido → caminho.</summary>
+    /// <summary>Replaces the Save as dialog (tests): suggested name → path.</summary>
     internal Func<string, string?>? SaveSqlFileOverride { get; set; }
 
-    /// <summary>Substitui a escolha da codificação do Load (testes).</summary>
+    /// <summary>Replaces the choice of the Load encoding (tests).</summary>
     internal Func<string?>? LoadEncodingOverride { get; set; }
 
-    /// <summary>Substitui as perguntas Yes/No(/Cancel) dos ficheiros (testes).</summary>
+    /// <summary>Replaces the files' Yes/No(/Cancel) questions (tests).</summary>
     internal Func<string, MessageDialogResult>? FileQuestionOverride { get; set; }
 
     private void InitFiles()
@@ -54,7 +54,7 @@ public sealed partial class MainWindow
 
     private QueryTab? TabOf(QueryTabView view) => _tabs.QueryTabs.FirstOrDefault(t => t.HasContent && ReferenceEquals(t.Content, view));
 
-    /// <summary>Editar marca a tab com <c>*</c>.</summary>
+    /// <summary>Editing marks the tab with <c>*</c>.</summary>
     private void MarkModified(QueryTabView view)
     {
         if (TabOf(view) is { IsModified: false } tab)
@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>"Save changes to file X ?" / "Save content of tab "X"?" (Yes/No/Cancel) quando a tab está alterada.</summary>
+    /// <summary>"Save changes to file X ?" / "Save content of tab "X"?" (Yes/No/Cancel) when the tab is changed.</summary>
     private async Task<bool> ConfirmCloseAsync(QueryTab tab)
     {
         if (!_context.Settings.Query.PromptSaveOnClose || !tab.IsModified || !tab.HasContent || tab.Content is not QueryTabView view)
@@ -111,8 +111,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Um ficheiro numa query tab: a que já o tem, a ativa se estiver vazia, ou uma nova. Com mais de 5 MiB (e
-    /// <paramref name="askLarge"/>), o "Opening large files" pode corrê-lo sem o abrir.
+    /// A file in a query tab: the one that already has it, the active one if it is empty, or a new one. Over 5 MiB (and with
+    /// <paramref name="askLarge"/>), "Opening large files" can run it without opening it.
     /// </summary>
     internal async Task<bool> LoadFileAsync(string path, string encoding, bool askLarge = true)
     {
@@ -160,7 +160,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A tab passa a ser o ficheiro: caption, sem <c>*</c>, recentes e vigilância.</summary>
+    /// <summary>The tab becomes the file: caption, no <c>*</c>, recent files and watching.</summary>
     private void BindFile(QueryTab tab, QueryTabState state, string path, string encoding)
     {
         state.FilePath = path;
@@ -171,7 +171,7 @@ public sealed partial class MainWindow
         Watch(state);
     }
 
-    /// <summary>Save: no ficheiro da tab, com a codificação dele; sem ficheiro (ou Save as), pergunta onde.</summary>
+    /// <summary>Save: to the tab's file, with its encoding; without a file (or Save as), asks where.</summary>
     internal async Task<bool> SaveTabAsync(QueryTab tab, bool saveAs)
     {
         var view = QueryViewOf(tab);
@@ -240,7 +240,7 @@ public sealed partial class MainWindow
         return info.Exists ? (info.LastWriteTimeUtc, info.Length) : null;
     }
 
-    /// <summary>Vigia a pasta do ficheiro da tab (alterado, apagado ou renomeado fora do editor).</summary>
+    /// <summary>Watches the folder of the tab's file (changed, deleted or renamed outside the editor).</summary>
     private void Watch(QueryTabState state)
     {
         Unwatch(state);
@@ -272,7 +272,7 @@ public sealed partial class MainWindow
         _fileRecheck.Remove(state);
     }
 
-    /// <summary>Verifica o ficheiro quando os eventos acalmam (debounce de <see cref="FileSettleDelay"/>).</summary>
+    /// <summary>Checks the file when the events settle (debounce of <see cref="FileSettleDelay"/>).</summary>
     private void ScheduleFileCheck(QueryTabState state)
     {
         if (!_fileChecks.TryGetValue(state, out var timer))
@@ -292,12 +292,12 @@ public sealed partial class MainWindow
     private (QueryTab Tab, QueryTabView View)? TabOfState(QueryTabState state) =>
         _queryStates.FirstOrDefault(p => ReferenceEquals(p.Value, state)).Key is { } view && TabOf(view) is { } tab ? (tab, view) : null;
 
-    /// <summary>Alterado fora do editor: "Reload file?" (só uma pergunta de cada vez; as nossas gravações não contam).</summary>
+    /// <summary>Changed outside the editor: "Reload file?" (one question at a time; our own saves do not count).</summary>
     private async Task OnFileChangedAsync(QueryTabState state)
     {
         if (_fileQuestionOpen)
         {
-            // Outra pergunta aberta: volta a ver no fim.
+            // Another question open: looks again at the end.
             _fileRecheck.Add(state);
             return;
         }
@@ -339,7 +339,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Apagado fora do editor: "Close file and query tab?".</summary>
+    /// <summary>Deleted outside the editor: "Close file and query tab?".</summary>
     private async Task OnFileDeletedAsync(QueryTabState state)
     {
         if (_fileQuestionOpen || state.FilePath is not { } path || File.Exists(path) || TabOfState(state) is not var (tab, _))
@@ -373,7 +373,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Renomeado fora do editor: a tab segue o nome novo.</summary>
+    /// <summary>Renamed outside the editor: the tab follows the new name.</summary>
     private void OnFileRenamed(QueryTabState state, string newPath)
     {
         if (TabOfState(state) is not var (tab, _))
@@ -385,7 +385,7 @@ public sealed partial class MainWindow
         Watch(state);
     }
 
-    /// <summary>Dropdown do Load SQL file: os recentes, Remove absent files e Clear file list.</summary>
+    /// <summary>Load SQL file drop-down: the recent files, Remove absent files and Clear file list.</summary>
     internal IReadOnlyList<object> LoadSqlItems()
     {
         var query = _context.Settings.Query;

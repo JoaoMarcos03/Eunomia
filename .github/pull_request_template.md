@@ -1,18 +1,18 @@
-## O quê e porquê
+## What and why
 
-<!-- O que muda e qual o problema que resolve. Liga a issue, a secção da spec ou o item do docs/roadmap.md. -->
+<!-- What changes and which problem it solves. Link the issue, the spec section or the docs/roadmap.md item. -->
 
-## Como foi testado
+## How it was tested
 
-<!-- Testes novos ou alterados; snapshots revistos; testes de integração contra servidor real. -->
+<!-- New or changed tests; reviewed snapshots; integration tests against a real server. -->
 
-## Riscos para dados de produção
+## Risks to production data
 
-<!-- Mexe em caminhos de escrita (RowWriter, DML/DDL, SafeDdl, import/export, transações, read-only)? Que teste o cobre? Se não mexe, escreve "Nenhum". -->
+<!-- Does it touch write paths (RowWriter, DML/DDL, SafeDdl, import/export, transactions, read-only)? Which test covers it? If it does not, write "None". -->
 
-## Lista de verificação
+## Checklist
 
-- [ ] `dotnet build Eunomia.slnx` e `dotnet test Eunomia.slnx` verdes; `dotnet format Eunomia.slnx --verify-no-changes` sem alterações
-- [ ] Caminhos de escrita com teste de integração; SQL só pelo dialeto e pelos composers
-- [ ] Ecrãs alterados com snapshot claro e escuro revisto
-- [ ] `CHANGELOG.md`, `docs/progresso.md` e, se visível para o utilizador, `docs/utilizador/guia.md` atualizados
+- [ ] `dotnet build Eunomia.slnx` and `dotnet test Eunomia.slnx` green; `dotnet format Eunomia.slnx --verify-no-changes` clean
+- [ ] Write paths covered by integration tests; SQL only through the dialect and the composers
+- [ ] Changed screens with light and dark snapshots reviewed
+- [ ] `CHANGELOG.md`, `docs/progress.md` and, if user-visible, `docs/user-guide.md` updated

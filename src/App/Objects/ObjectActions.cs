@@ -4,17 +4,17 @@ using Eunomia.Engine.Execution;
 namespace Eunomia.App.Objects;
 
 /// <summary>
-/// Operações do <c>popupDB</c> sobre objetos e bases (anexo B §6; anexo C §3.3): SQL gerado, textos de confirmação e
-/// execução na ligação primária da sessão (as instruções aparecem no SQL log como as do HeidiSQL).
+/// <c>popupDB</c> operations on objects and databases (appendix B §6; appendix C §3.3): generated SQL, confirmation texts
+/// and execution on the session's primary connection (the statements show in the SQL log like HeidiSQL's).
 /// </summary>
 public static class ObjectActions
 {
-    /// <summary>Linhas do "Select top N rows" (<c>DatagridRowsPerStep</c>, 1000 por omissão).</summary>
+    /// <summary>Rows for "Select top N rows" (<c>DatagridRowsPerStep</c>, 1000 by default).</summary>
     public const int DefaultRowsPerStep = 1000;
 
     /// <summary>
-    /// Drop de objetos: triggers primeiro, depois views, depois o resto (como o <c>TDBObjectDropComparer</c>), com as
-    /// verificações de chaves estrangeiras desligadas à volta.
+    /// Drop of objects: triggers first, then views, then the rest (like <c>TDBObjectDropComparer</c>), with foreign key
+    /// checks turned off around them.
     /// </summary>
     public static IReadOnlyList<string> DropObjects(IServerServices services, IEnumerable<DbObjectRef> objects)
     {
@@ -37,8 +37,8 @@ public static class ObjectActions
     };
 
     /// <summary>
-    /// Empty table(s): um <c>TRUNCATE</c> por tabela, opcionalmente sem verificação de chaves estrangeiras. Nas views,
-    /// <c>DELETE FROM</c> (o <c>TRUNCATE</c> do HeidiSQL falha em views; o <c>DELETE</c> funciona nas atualizáveis).
+    /// Empty table(s): one <c>TRUNCATE</c> per table, optionally without foreign key checks. For views,
+    /// <c>DELETE FROM</c> (HeidiSQL's <c>TRUNCATE</c> fails on views; <c>DELETE</c> works on updatable ones).
     /// </summary>
     public static IReadOnlyList<string> EmptyTables(IServerServices services, IEnumerable<DbObjectRef> tables, bool disableForeignKeyChecks)
     {
@@ -61,7 +61,7 @@ public static class ObjectActions
         return [off, .. statements, on];
     }
 
-    /// <summary>"Select top N rows" numa query tab nova; com Shift, o nome vem qualificado com a base.</summary>
+    /// <summary>"Select top N rows" in a new query tab; with Shift, the name is qualified with the database.</summary>
     public static string SelectTopRows(IDialect dialect, DbObjectRef table, int rows, bool qualified)
     {
         ArgumentNullException.ThrowIfNull(dialect);
@@ -71,8 +71,8 @@ public static class ObjectActions
     }
 
     /// <summary>
-    /// Collation pré-selecionada no Create database (anexo B §5.3): a última usada, a do servidor,
-    /// <c>utf8mb4_unicode_ci</c> ou a primeira da lista.
+    /// Collation preselected in Create database (appendix B §5.3): the last one used, the server's,
+    /// <c>utf8mb4_unicode_ci</c> or the first in the list.
     /// </summary>
     public static string? PreselectCollation(IReadOnlyList<string> collations, string? lastUsed, string? serverDefault)
     {
@@ -103,8 +103,8 @@ public static class ObjectActions
     }
 
     /// <summary>
-    /// Corre as instruções por ordem na ligação primária; o primeiro erro pára as seguintes (como no HeidiSQL), mas a
-    /// instrução que repõe as verificações de chaves estrangeiras corre sempre, para a sessão não ficar sem elas.
+    /// Runs the statements in order on the primary connection; the first error stops the following ones (as in HeidiSQL),
+    /// but the statement that restores the foreign key checks always runs, so the session is never left without them.
     /// </summary>
     public static Task RunAsync(SessionHost host, IReadOnlyList<string> statements, CancellationToken cancellationToken)
     {
@@ -141,8 +141,8 @@ public static class ObjectActions
     }
 
     /// <summary>
-    /// Drop database. Se for a base em <c>USE</c>, muda primeiro para outra (o HeidiSQL faz o mesmo para evitar
-    /// "database in use"); sem alternativa, a ligação fica sem base.
+    /// Drop database. If it is the database in <c>USE</c>, switches to another one first (HeidiSQL does the same to avoid
+    /// "database in use"); with no alternative, the connection is left without a database.
     /// </summary>
     public static async Task DropDatabaseAsync(SessionHost host, string database, IReadOnlyList<string> siblings, CancellationToken cancellationToken)
     {

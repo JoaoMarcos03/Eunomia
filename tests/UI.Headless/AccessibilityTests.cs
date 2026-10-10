@@ -13,8 +13,8 @@ using Eunomia.UI.Features.TableEditor;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Leitores de ecrã (roadmap 4.4; NVDA, Narrator, VoiceOver): cada controlo interativo de cada janela tem um nome
-/// acessível (o que o leitor de ecrã lê).
+/// Screen readers (roadmap 4.4; NVDA, Narrator, VoiceOver): every interactive control of every window has an accessible
+/// name (what the screen reader reads).
 /// </summary>
 public sealed class AccessibilityTests
 {
@@ -47,14 +47,14 @@ public sealed class AccessibilityTests
 
     [AvaloniaTheory]
     [MemberData(nameof(WindowTypes))]
-    public void ControlosInterativosTemNome(string windowType)
+    public void InteractiveControlsHaveAName(string windowType)
     {
         var window = AllWindows.Factories.Single(f => f.Key.Name == windowType).Value();
         window.Show();
         try
         {
             var unnamed = Unnamed(window);
-            Assert.True(unnamed.Count == 0, $"{windowType}: sem nome acessível: {string.Join(", ", unnamed)}");
+            Assert.True(unnamed.Count == 0, $"{windowType}: no accessible name: {string.Join(", ", unnamed)}");
         }
         finally
         {
@@ -62,7 +62,7 @@ public sealed class AccessibilityTests
         }
     }
 
-    /// <summary>Vistas das tabs que só aparecem com uma sessão ligada (criadas como nos testes de snapshot).</summary>
+    /// <summary>Tab views that only appear with a connected session (created as in the snapshot tests).</summary>
     private static readonly Dictionary<string, Func<Control>> TabViews = new(StringComparer.Ordinal)
     {
         ["Query"] = () => new QueryTabView(150, 220) { Helpers = new QueryHelpersView() },
@@ -93,14 +93,14 @@ public sealed class AccessibilityTests
 
     [AvaloniaTheory]
     [MemberData(nameof(TabViewNames))]
-    public void VistasDasTabsTemNome(string view)
+    public void TabViewsHaveAName(string view)
     {
         var window = new Window { Content = TabViews[view](), Width = 1000, Height = 600 };
         window.Show();
         try
         {
             var unnamed = Unnamed(window);
-            Assert.True(unnamed.Count == 0, $"{view}: sem nome acessível: {string.Join(", ", unnamed)}");
+            Assert.True(unnamed.Count == 0, $"{view}: no accessible name: {string.Join(", ", unnamed)}");
         }
         finally
         {
@@ -109,8 +109,8 @@ public sealed class AccessibilityTests
     }
 
     /// <summary>
-    /// Controlos interativos sem nome, como <c>Tipo(Name) [onde]</c>. Percorre a árvore lógica (inclui painéis escondidos e
-    /// tabs não selecionadas); as partes dos templates são do controlo que as tem.
+    /// Interactive controls without a name, as <c>Type(Name) [where]</c>. Walks the logical tree (includes hidden panels and
+    /// unselected tabs); template parts belong to the control that has them.
     /// </summary>
     internal static List<string> Unnamed(Control root) =>
         [.. root.GetLogicalDescendants().OfType<Control>().Prepend(root)
@@ -119,7 +119,7 @@ public sealed class AccessibilityTests
             .Where(p => Interactive.Contains(p.Peer.GetAutomationControlType()) && string.IsNullOrWhiteSpace(p.Peer.GetName()))
             .Select(p => $"{p.Control.GetType().Name}({p.Control.Name}) [{Where(p.Control)}]")];
 
-    /// <summary>Para encontrar o controlo no código: o rótulo ao lado, o placeholder e os contentores.</summary>
+    /// <summary>To find the control in the code: the label next to it, the placeholder and the containers.</summary>
     private static string Where(Control control)
     {
         var siblings = (control.GetLogicalParent() as Panel)?.Children;

@@ -9,12 +9,12 @@ using Xunit.v3;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Roadmap 2.4: um diálogo modal que o teste não esperava (erro, pergunta) fica à espera de um clique que nunca chega e,
-/// na UI thread partilhada pelos testes headless, pendurava a corrida inteira. Este guarda fecha qualquer janela aberta
-/// com <c>ShowDialog</c> logo que abre (o código à espera recebe o resultado por omissão, como num Cancel) e faz falhar o
-/// teste com o título e o texto do diálogo. Os testes respondem às perguntas pelas <c>*Override</c> do MainWindow; um
-/// diálogo que faz parte do comportamento verificado é consumido com <see cref="TakeOpened"/>, e um diálogo que o teste
-/// conduz (Find text) é autorizado com <see cref="Allow"/>.
+/// Roadmap 2.4: a modal dialog the test did not expect (an error, a question) waits for a click that never comes and,
+/// on the UI thread shared by the headless tests, used to hang the whole run. This guard closes any window opened
+/// with <c>ShowDialog</c> as soon as it opens (the waiting code gets the default result, as with a Cancel) and fails the
+/// test with the dialog's title and text. Tests answer questions through the MainWindow <c>*Override</c> hooks; a
+/// dialog that is part of the verified behaviour is consumed with <see cref="TakeOpened"/>, and a dialog the test
+/// drives (Find text) is allowed with <see cref="Allow"/>.
 /// </summary>
 [AttributeUsage(AttributeTargets.Assembly)]
 internal sealed class UnexpectedDialogGuardAttribute : BeforeAfterTestAttribute
@@ -47,11 +47,11 @@ internal sealed class UnexpectedDialogGuardAttribute : BeforeAfterTestAttribute
         if (opened.Count > 0)
         {
             throw new InvalidOperationException(
-                "Diálogo modal inesperado (responder pelas *Override do MainWindow): " + string.Join(" | ", opened));
+                "Unexpected modal dialog (answer it through the MainWindow *Override hooks): " + string.Join(" | ", opened));
         }
     }
 
-    /// <summary>Diálogos fechados pelo guarda desde a última chamada (<c>Tipo "Título": textos</c>).</summary>
+    /// <summary>Dialogs closed by the guard since the last call (<c>Type "Title": texts</c>).</summary>
     internal static IReadOnlyList<string> TakeOpened()
     {
         lock (Gate)
@@ -62,7 +62,7 @@ internal sealed class UnexpectedDialogGuardAttribute : BeforeAfterTestAttribute
         }
     }
 
-    /// <summary>Diálogos deste tipo ficam abertos até ao fim do teste (o teste conduz o diálogo).</summary>
+    /// <summary>Dialogs of this type stay open until the end of the test (the test drives the dialog).</summary>
     internal static void Allow(Type dialogType)
     {
         lock (Gate)

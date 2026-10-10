@@ -13,9 +13,9 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Features.Transfer;
 
-/// <summary>O que o diálogo Copy table precisa da sessão.</summary>
-/// <param name="Rows">Estimativa das linhas da origem, se conhecida (só para a legenda do "Data").</param>
-/// <param name="TargetExists">A tabela já existe na base (o OK recusa o nome).</param>
+/// <summary>What the Copy table dialog needs from the session.</summary>
+/// <param name="Rows">Estimate of the source rows, if known (only for the "Data" caption).</param>
+/// <param name="TargetExists">The table already exists in the database (OK refuses the name).</param>
 public sealed record CopyTableServices(
     TableDefinition Source,
     long? Rows,
@@ -23,9 +23,9 @@ public sealed record CopyTableServices(
     Func<string, string, CancellationToken, Task<bool>> TargetExists);
 
 /// <summary>
-/// Copy table (Create new ▸ Table copy; anexo B §5.1): base e nome do destino (<c>&lt;nome&gt;_copy</c>), os elementos a
-/// criar (colunas, índices e chaves estrangeiras, cada grupo com a contagem escolhida/total) e os dados, com um filtro
-/// WHERE opcional. Devolve o <see cref="TableCopyRequest"/>; quem chama corre-o. Um nome que já existe é recusado aqui.
+/// Copy table (Create new ▸ Table copy; appendix B §5.1): target database and name (<c>&lt;name&gt;_copy</c>), the elements to
+/// create (columns, indexes and foreign keys, each group with the chosen/total count) and the data, with an optional WHERE
+/// filter. Returns the <see cref="TableCopyRequest"/>; the caller runs it. A name that already exists is refused here.
 /// </summary>
 public sealed class CopyTableDialog : Window
 {
@@ -67,7 +67,7 @@ public sealed class CopyTableDialog : Window
         _columns = new Group("Columns", source.Columns.Select(c => c.Name));
         _indexes = new Group("Indexes", source.Indexes.Select(i => i.Name));
         _foreignKeys = new Group("Foreign keys", source.ForeignKeys.Select(f => f.Name));
-        // A contagem da árvore é uma estimativa (no InnoDB pode ser 0 com linhas): só indica, nunca desliga os dados.
+        // The tree's count is an estimate (on InnoDB it can be 0 with rows): it only informs, it never turns the data off.
         var rows = services.Rows is { } n ? string.Create(CultureInfo.CurrentCulture, $" (~{n:N0} rows)") : string.Empty;
         _data = new CheckBox { Content = LiteralText.Of("Data" + rows), IsChecked = true }.Named("Data");
         _data.IsCheckedChanged += (_, _) => _where.IsEnabled = _data.IsChecked == true;
@@ -123,7 +123,7 @@ public sealed class CopyTableDialog : Window
 
     public string? StatusText => _status.Text;
 
-    /// <summary>Caixa de um grupo ("Columns", "Indexes", "Foreign keys") e as dos elementos (testes).</summary>
+    /// <summary>Check box of a group ("Columns", "Indexes", "Foreign keys") and those of its elements (tests).</summary>
     public (CheckBox Group, IReadOnlyList<CheckBox> Items) GroupBoxes(string group) => group switch
     {
         "Columns" => (_columns.Box, _columns.Items),
@@ -132,7 +132,7 @@ public sealed class CopyTableDialog : Window
         _ => throw new ArgumentOutOfRangeException(nameof(group)),
     };
 
-    /// <summary>O pedido com o que está escolhido, ou <c>null</c> com a mensagem do que falta.</summary>
+    /// <summary>The request with what is chosen, or <c>null</c> with the message about what is missing.</summary>
     public TableCopyRequest? Request()
     {
         var name = (_name.Text ?? string.Empty).Trim();
@@ -149,7 +149,7 @@ public sealed class CopyTableDialog : Window
         return new TableCopyRequest(database, name, _columns.Chosen, _indexes.Chosen, _foreignKeys.Chosen, _data.IsChecked == true, _data.IsChecked == true ? _where.Text : null);
     }
 
-    /// <summary>OK: valida e fecha com o pedido; um destino que já existe fica recusado (não se apaga nada).</summary>
+    /// <summary>OK: validates and closes with the request; a target that already exists is refused (nothing is dropped).</summary>
     public async Task AcceptAsync()
     {
         if (Request() is not { } request)
@@ -172,7 +172,7 @@ public sealed class CopyTableDialog : Window
         Close(request);
     }
 
-    /// <summary>Grupo com caixa de três estados e os elementos por baixo; a legenda leva "(escolhidos/total)".</summary>
+    /// <summary>Group with a three-state check box and the elements below it; the caption carries "(chosen/total)".</summary>
     private sealed class Group
     {
         private readonly string _caption;
@@ -191,8 +191,8 @@ public sealed class CopyTableDialog : Window
                     return;
                 }
                 _syncing = true;
-                // Um clique no grupo: tudo marcado passa a nada; parcial ou nada passa a tudo (o estado indeterminado
-                // só vem dos elementos).
+                // One click on the group: all checked becomes none; partial or none becomes all (the indeterminate state
+                // only comes from the elements).
                 var value = _state != true;
                 foreach (var item in Items)
                 {

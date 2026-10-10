@@ -18,15 +18,15 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Features.Transfer;
 
-/// <summary>Corre o export pedido pelo diálogo (o shell junta a sessão, o host e a versão).</summary>
+/// <summary>Runs the export requested by the dialog (the shell adds the session, the host and the version).</summary>
 public delegate Task<SqlExportResult> SqlExportRunner(SqlExportRequest request, IProgress<SqlExportProgress> progress, CancellationToken cancellationToken);
 
 /// <summary>
-/// Tools › Export database as SQL (FAM-E06; anexo B §2.3.1): árvore de bases e objetos com checkboxes e filtros
-/// (expressões regulares), Drop/Create das bases e das tabelas (Drop implica Create e aparece a bold como "Drop!!"),
-/// dados (No data, Delete + insert, Insert, Insert ignore, Replace), Max INSERT size, output (ficheiro, ZIP, diretório,
-/// clipboard) com recentes, as opções do HeidiSQL e o snapshot consistente. A grelha de baixo mostra cada objeto
-/// (Database, Table, Rows "N / P%", Duration) enquanto o job corre; Export passa a Cancel.
+/// Tools › Export database as SQL (FAM-E06; appendix B §2.3.1): a tree of databases and objects with check boxes and filters
+/// (regular expressions), Drop/Create of databases and tables (Drop implies Create and shows in bold as "Drop!!"),
+/// data (No data, Delete + insert, Insert, Insert ignore, Replace), Max INSERT size, output (file, ZIP, directory,
+/// clipboard) with recent entries, HeidiSQL's options and the consistent snapshot. The bottom grid shows each object
+/// (Database, Table, Rows "N / P%", Duration) while the job runs; Export becomes Cancel.
 /// </summary>
 public sealed class SqlExportDialog : Window
 {
@@ -105,7 +105,7 @@ public sealed class SqlExportDialog : Window
         }
         _tree.ItemsSource = _databases.Select(d => d.Item).ToList();
 
-        // Valores gravados (os Drop começam sempre desligados).
+        // Saved values (the Drop options always start off).
         _createDatabases.IsChecked = settings.CreateDatabases;
         _createTables.IsChecked = settings.CreateTables;
         _data.SelectedIndex = Math.Clamp(settings.Data, 0, DataModes.Length - 1);
@@ -120,7 +120,7 @@ public sealed class SqlExportDialog : Window
         _tableFilter.Text = settings.TableFilter;
         _path.Text = Recent().FirstOrDefault() ?? string.Empty;
 
-        // Drop implica Create; desligar Create desliga Drop (tabletools.pas L1664-L1686).
+        // Drop implies Create; turning Create off turns Drop off (tabletools.pas L1664-L1686).
         LinkDropCreate(_dropDatabases, _createDatabases);
         LinkDropCreate(_dropTables, _createTables);
         _data.SelectionChanged += (_, _) => UpdateEnabled();
@@ -146,7 +146,7 @@ public sealed class SqlExportDialog : Window
         };
         Closing += (_, e) =>
         {
-            // Fechar a janela a meio cancela o job.
+            // Closing the window halfway cancels the job.
             _running?.Cancel();
         };
         KeyDown += (_, e) =>
@@ -172,7 +172,7 @@ public sealed class SqlExportDialog : Window
         }
     }
 
-    // ---------- Para testes ----------
+    // ---------- For tests ----------
 
     internal TreeView Tree => _tree;
 
@@ -192,7 +192,7 @@ public sealed class SqlExportDialog : Window
 
     internal IReadOnlyList<TextBlock[]> ResultRows => [.. _resultRows.Values];
 
-    /// <summary>Carregamentos de objetos em curso (os testes esperam por eles).</summary>
+    /// <summary>Object loads in progress (tests wait for them).</summary>
     internal Task Loading => Task.WhenAll(_databases.Select(d => d.Loading ?? Task.CompletedTask));
 
     internal void SetDatabaseChecked(string database, bool isChecked)
@@ -207,7 +207,7 @@ public sealed class SqlExportDialog : Window
         node.Objects!.First(o => o.Info.Ref.Name == name).Check.IsChecked = isChecked;
     }
 
-    // ---------- Árvore ----------
+    // ---------- Tree ----------
 
     private sealed class DatabaseNode(string name)
     {
@@ -248,7 +248,7 @@ public sealed class SqlExportDialog : Window
             {
                 return;
             }
-            // Clicar no estado "alguns" passa a "nenhum"? Como no HeidiSQL, um clique marca tudo ou nada.
+            // Should clicking the "some" state go to "none"? As in HeidiSQL, one click checks all or nothing.
             if (node.Check.IsChecked is null)
             {
                 node.Check.IsChecked = false;
@@ -361,7 +361,7 @@ public sealed class SqlExportDialog : Window
         }
     }
 
-    /// <summary>Expressão regular sem distinguir maiúsculas; inválida ou vazia não filtra.</summary>
+    /// <summary>Case-insensitive regular expression; an invalid or empty one does not filter.</summary>
     private static Regex? Pattern(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -378,7 +378,7 @@ public sealed class SqlExportDialog : Window
         }
     }
 
-    // ---------- Opções ----------
+    // ---------- Options ----------
 
     private void LinkDropCreate(CheckBox drop, CheckBox create)
     {
@@ -403,7 +403,7 @@ public sealed class SqlExportDialog : Window
 
     private SqlExportTarget Target => (SqlExportTarget)Math.Max(0, _output.SelectedIndex);
 
-    /// <summary>Drop/Create das bases só para ficheiro, ZIP e clipboard; Max INSERT size só com dados.</summary>
+    /// <summary>Drop/Create of databases only for file, ZIP and clipboard; Max INSERT size only with data.</summary>
     private void UpdateEnabled()
     {
         var databaseBlock = Target != SqlExportTarget.Directory;
@@ -549,7 +549,7 @@ public sealed class SqlExportDialog : Window
         }
     }
 
-    /// <summary>Bases e objetos marcados, pela ordem da árvore; uma base marcada ainda por abrir carrega agora.</summary>
+    /// <summary>Checked databases and objects, in tree order; a checked database not yet opened loads now.</summary>
     private async Task<List<SqlExportDatabase>> CheckedAsync()
     {
         var result = new List<SqlExportDatabase>();
@@ -613,7 +613,7 @@ public sealed class SqlExportDialog : Window
         }
     }
 
-    // ---------- Resultados ----------
+    // ---------- Results ----------
 
     private void ResetResults()
     {
@@ -693,7 +693,7 @@ public sealed class SqlExportDialog : Window
 
     // ---------- Layout ----------
 
-    /// <summary>Texto num TextBlock: num conteúdo em string, o "_" seria tecla de acesso e desaparecia.</summary>
+    /// <summary>Text in a TextBlock: in string content, the "_" would be an access key and disappear.</summary>
     private static TextBlock Text(string text) => new() { Text = text, VerticalAlignment = VerticalAlignment.Center };
 
     private static CheckBox Option(string text) => new() { Content = Text(text), MinHeight = 24 };

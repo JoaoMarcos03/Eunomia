@@ -3,24 +3,24 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Regras de texto das query tabs (anexo C §4.4; FAM-Q03, Q04, Q08, Q11).</summary>
+/// <summary>Text rules of the query tabs (appendix C §4.4; FAM-Q03, Q04, Q08, Q11).</summary>
 public sealed class QueryTextTests
 {
     [Theory]
     [InlineData("UPDATE t SET a = 1", true)]
     [InlineData("delete from t", true)]
-    [InlineData("  -- comentário\n DELETE FROM t", true)]
+    [InlineData("  -- comment\n DELETE FROM t", true)]
     [InlineData("UPDATE t SET a = 1 WHERE id = 2", false)]
     [InlineData("DELETE FROM t\nWHERE id = 2", false)]
     [InlineData("SELECT * FROM t", false)]
     [InlineData("UPDATE t SET a = 'WHERE'", true)]
-    public void UnsafeSemWhere(string sql, bool unsafeQuery)
+    public void UnsafeWithoutWhere(string sql, bool unsafeQuery)
     {
         Assert.Equal(unsafeQuery, QueryText.IsUnsafe(sql));
     }
 
     [Fact]
-    public void NomesDosResultTabs()
+    public void ResultTabNames()
     {
         Assert.Equal(["a", "b c"], QueryText.ResultNames("-- names: a, b c\nSELECT 1; SELECT 2"));
         Assert.Empty(QueryText.ResultNames(new string(' ', 1100) + "-- names: x"));
@@ -31,7 +31,7 @@ public sealed class QueryTextTests
     }
 
     [Fact]
-    public void LinhaDoErro()
+    public void ErrorLine()
     {
         var statement = SqlSplitter.Split("SELECT 1;\nSELECT\n  1 FORM x;")[1];
         Assert.Equal(3, QueryText.ErrorLineOf(statement, "You have an error in your SQL syntax; check the manual ... near 'x' at line 2"));
@@ -39,7 +39,7 @@ public sealed class QueryTextTests
     }
 
     [Fact]
-    public void ResumoNoFormatoDoHeidiSql()
+    public void SummaryInHeidiSqlFormat()
     {
         Assert.Equal("Affected rows: 1  Found rows: 2  Warnings: 0  Duration for 1 query: 0.012 sec.",
             QueryText.Summary(1, 2, 0, 1, 1, TimeSpan.FromMilliseconds(12), TimeSpan.Zero));

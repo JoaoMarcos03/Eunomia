@@ -11,13 +11,13 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Status bar de 7 painéis (secção 5.3, anexo C §1.6, FAM-L06), 19 px. As larguras dos painéis 1–6 seguem a
-/// regra do HeidiSQL: texto de amostra + ícone + 30 px, com um teto em percentagem da janela; o painel 0 fica com
-/// o resto. A barra de progresso é desenhada por cima do painel 5. O painel 3 (servidor) é clicável.
+/// 7-panel status bar (section 5.3, appendix C §1.6, FAM-L06), 19 px. The widths of panels 1–6 follow HeidiSQL's
+/// rule: sample text + icon + 30 px, with a cap as a percentage of the window; panel 0 takes the
+/// rest. The progress bar is drawn on top of panel 5. Panel 3 (server) is clickable.
 /// </summary>
 public sealed class StatusBarView : Border
 {
-    // (texto de amostra, teto em fração da largura, ícone)
+    // (sample text, cap as a fraction of the width, icon)
     private static readonly (string Sample, double Cap, string? Icon)[] Panels =
     [
         (string.Empty, 1, null),
@@ -86,14 +86,14 @@ public sealed class StatusBarView : Border
         Update();
     }
 
-    /// <summary>Clique no painel 3: Connection properties.</summary>
+    /// <summary>Click on panel 3: Connection properties.</summary>
     public event EventHandler? ServerPanelClicked;
 
     public string PanelText(int index) => _texts[index].Text ?? string.Empty;
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        // Larguras como no FormResize do HeidiSQL: amostra + ícone + 30 px, limitadas a uma fração da janela.
+        // Widths as in HeidiSQL's FormResize: sample + icon + 30 px, capped at a fraction of the window.
         for (var i = 1; i < Panels.Length; i++)
         {
             var sample = new FormattedText(Panels[i].Sample, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(_texts[i].FontFamily), _texts[i].FontSize, Brushes.Black);
@@ -109,7 +109,7 @@ public sealed class StatusBarView : Border
     {
         _texts[0].Text = _model.Info;
         _texts[1].Text = _model.Position;
-        // Transação aberta: o painel 2 mostra-a com o fundo das linhas de aviso do SQL log.
+        // Open transaction: panel 2 shows it with the background of the SQL log's warning lines.
         _texts[2].Text = _model.Transaction.Length > 0 ? _model.Transaction : _model.Connected;
         var token = _model.Transaction.Length == 0 ? null : _model.HasUncommittedChanges ? "log.warning" : "log.note";
         if (token != _panel2Token)

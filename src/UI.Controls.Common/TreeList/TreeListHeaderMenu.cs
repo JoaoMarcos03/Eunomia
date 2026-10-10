@@ -5,8 +5,8 @@ using Eunomia.UI.Controls.Common.Text;
 namespace Eunomia.UI.Controls.Common.TreeList;
 
 /// <summary>
-/// Menu do cabeçalho das listas (<c>popupListHeader</c>, secção 5.4): "Toggle visibility of all columns", "Copy column
-/// names" e uma entrada com check por coluna. A primeira coluna fica sempre visível.
+/// List header menu (<c>popupListHeader</c>, section 5.4): "Toggle visibility of all columns", "Copy column
+/// names" and a checked entry per column. The first column always stays visible.
 /// </summary>
 public static class TreeListHeaderMenu
 {

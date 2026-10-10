@@ -13,9 +13,9 @@ using Eunomia.UI.Controls.SqlEditor;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Aspeto da aplicação (Fase 13), partilhado pela app e pelos testes headless para os snapshots mostrarem o que o
-/// utilizador vê: Fluent em densidade compacta (o HeidiSQL é uma aplicação densa, secção 5.6) com as cores dos tokens
-/// do tema, Segoe UI 9 pt, e estilos globais para botões, caixas de texto, tabs, menus e tooltips.
+/// The application's look (phase 13), shared by the app and the headless tests so the snapshots show what the
+/// user sees: Fluent in compact density (HeidiSQL is a dense application, section 5.6) with the theme token colours,
+/// Segoe UI 9 pt, and global styles for buttons, text boxes, tabs, menus and tooltips.
 /// </summary>
 public static class ShellTheme
 {
@@ -37,8 +37,8 @@ public static class ShellTheme
     }
 
     /// <summary>
-    /// Recursos do Fluent que a paleta não cobre: botões claros com contorno (em vez do cinzento translúcido), com
-    /// hover e pressed dos tokens. Ficam nos recursos da aplicação, que ganham aos dos estilos.
+    /// Fluent resources the palette does not cover: light outlined buttons (instead of translucent grey), with
+    /// hover and pressed from the tokens. They live in the application resources, which win over the styles'.
     /// </summary>
     private static void AddFluentOverrides(Application application, ThemeVariant variant, ThemeFile t)
     {
@@ -59,8 +59,8 @@ public static class ShellTheme
     }
 
     /// <summary>
-    /// Cores do Fluent a partir dos tokens: fundos (Alt*), texto (Base*), flyouts e realces (Chrome*, List*) e acento,
-    /// para os controlos do Fluent ficarem com as mesmas superfícies que os controlos desenhados à mão.
+    /// Fluent colours from the tokens: backgrounds (Alt*), text (Base*), flyouts and highlights (Chrome*, List*) and accent,
+    /// so the Fluent controls get the same surfaces as the hand-drawn controls.
     /// </summary>
     private static ColorPaletteResources Palette(ThemeFile t, bool dark)
     {
@@ -101,7 +101,7 @@ public static class ShellTheme
     {
         var styles = new Styles
         {
-            // Janelas e diálogos: Segoe UI 9 pt e o fundo dos painéis.
+            // Windows and dialogs: Segoe UI 9 pt and the panel background.
             new Style(x => x.OfType<Window>())
             {
                 Setters =
@@ -111,7 +111,7 @@ public static class ShellTheme
                     new Setter(TemplatedControl.BackgroundProperty, new DynamicResourceExtension(ThemeTokens.Key("surface.panel"))),
                 },
             },
-            // Botões: cantos e altura de uma linha de formulário.
+            // Buttons: corners and the height of a form row.
             new Style(x => x.OfType<Button>())
             {
                 Setters =

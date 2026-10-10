@@ -5,15 +5,15 @@ using Eunomia.Infra.Secrets.MacOS;
 namespace Eunomia.Infra.Secrets.Tests;
 
 /// <summary>
-/// Cofres de segredos em macOS e Linux e o recurso em memória (Fase 14). Os testes do Keychain e do Secret Service
-/// correm só no sistema certo e ficam "skipped" quando o cofre não está disponível (por exemplo, um runner sem keyring).
+/// Secret vaults on macOS and Linux and the in-memory fallback (phase 14). The Keychain and Secret Service tests
+/// only run on the right system and are skipped when the vault is not available (for example, a runner without a keyring).
 /// </summary>
 public sealed class SecretStoreTests
 {
     private static string TestKey() => "test/" + Guid.NewGuid().ToString("D");
 
     [Fact]
-    public void RecursoEmMemoriaQuandoOCofreFalha()
+    public void InMemoryFallbackWhenTheVaultFails()
     {
         var warnings = new List<string>();
         var store = new ResilientSecretStore(new BrokenStore(), warnings.Add);
@@ -31,7 +31,7 @@ public sealed class SecretStoreTests
     }
 
     [Fact]
-    public void SemCofreFicaSoEmMemoria()
+    public void WithoutAVaultItStaysOnlyInMemory()
     {
         var store = new ResilientSecretStore(null);
         Assert.False(store.IsPersistent);
@@ -41,9 +41,9 @@ public sealed class SecretStoreTests
     }
 
     [Fact]
-    public void KeychainDoMacOS()
+    public void MacOSKeychain()
     {
-        Assert.SkipUnless(OperatingSystem.IsMacOS(), "Só em macOS.");
+        Assert.SkipUnless(OperatingSystem.IsMacOS(), "macOS only.");
         if (OperatingSystem.IsMacOS())
         {
             var store = new MacKeychainSecretStore("Eunomia Tests");
@@ -52,13 +52,13 @@ public sealed class SecretStoreTests
     }
 
     [Fact]
-    public void SecretServiceDoLinux()
+    public void LinuxSecretService()
     {
-        Assert.SkipUnless(OperatingSystem.IsLinux(), "Só em Linux.");
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
         if (OperatingSystem.IsLinux())
         {
             using var store = new SecretServiceStore("org.eunomia.Tests", "Eunomia Tests");
-            Assert.SkipUnless(store.IsAvailable, "libsecret não está instalada.");
+            Assert.SkipUnless(store.IsAvailable, "libsecret is not installed.");
             RoundTrip(store);
         }
     }
@@ -68,16 +68,16 @@ public sealed class SecretStoreTests
         var key = TestKey();
         try
         {
-            store.Set(key, "primeira");
+            store.Set(key, "first");
         }
         catch (SecretStoreException ex)
         {
-            Assert.Skip("Cofre do sistema indisponível: " + ex.Message);
+            Assert.Skip("System vault unavailable: " + ex.Message);
         }
         try
         {
-            Assert.Equal("primeira", store.Get(key));
-            // Substituir, com caracteres fora do ASCII e aspas.
+            Assert.Equal("first", store.Get(key));
+            // Replacing, with non-ASCII characters and quotes.
             store.Set(key, "pá\"ss'wörd 🔑");
             Assert.Equal("pá\"ss'wörd 🔑", store.Get(key));
             store.Set(key, string.Empty);
@@ -88,7 +88,7 @@ public sealed class SecretStoreTests
             store.Delete(key);
         }
         Assert.Null(store.Get(key));
-        // Apagar o que não existe não é erro.
+        // Deleting what does not exist is not an error.
         store.Delete(key);
     }
 

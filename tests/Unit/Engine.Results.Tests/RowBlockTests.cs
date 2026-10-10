@@ -33,12 +33,12 @@ public sealed class RowBlockTests
 
         b.SetInt64(2, 0, 0);
         b.SetDecimalUnscaled(2, 1, -7);
-        // Linha 2 da coluna de texto não é escrita: fica vazia.
+        // Row 2 of the text column is not written: it stays empty.
         return b.Build();
     }
 
     [Fact]
-    public void GuardaEDevolveValoresPorTipo()
+    public void StoresAndReturnsValuesPerType()
     {
         var block = Sample();
 
@@ -54,7 +54,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void TextoForaDeOrdemEhRejeitado()
+    public void OutOfOrderTextIsRejected()
     {
         var b = new RowBlockBuilder(Schema, 0, 0, 3);
         b.SetString(2, 5, "c");
@@ -63,16 +63,16 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void ByteSizeContaOsArrays()
+    public void ByteSizeCountsTheArrays()
     {
         var block = Sample();
 
-        // 5 colunas de 3 valores de 8 bytes + texto (6 bytes UTF-8 + 4 offsets de 4 bytes) + bitmaps.
+        // 5 columns of 3 values of 8 bytes + text (6 UTF-8 bytes + 4 offsets of 4 bytes) + bitmaps.
         Assert.Equal((5 * 3 * 8) + 6 + (4 * 4) + (6 * 2 * 8), block.ByteSize);
     }
 
     [Fact]
-    public void FormatterMostraNullSeparadorDeMilharesECasasDecimais()
+    public void FormatterShowsNullThousandsSeparatorAndDecimals()
     {
         var block = Sample();
         var f = new DisplayFormatter(CultureInfo.InvariantCulture);
@@ -90,7 +90,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void FormatterSemSeparadorDeMilhares()
+    public void FormatterWithoutThousandsSeparator()
     {
         var f = new DisplayFormatter(CultureInfo.InvariantCulture, thousandsSeparator: false);
 
@@ -99,7 +99,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void FormatterUsaOsSeparadoresDaCultura()
+    public void FormatterUsesTheCultureSeparators()
     {
         var f = new DisplayFormatter(CultureInfo.GetCultureInfo("de-DE"));
 
@@ -108,7 +108,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void TextoCortadoLevaSufixo()
+    public void CutTextGetsASuffix()
     {
         var schema = new ResultSchema([new ColumnInfo("t", "TEXT", TypeCategory.Text, StorageKind.String, false, true)]);
         var b = new RowBlockBuilder(schema, 0, 0, 2);

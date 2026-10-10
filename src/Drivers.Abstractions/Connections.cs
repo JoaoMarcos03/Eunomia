@@ -9,28 +9,28 @@ public enum TlsMode
     VerifyFull,
 }
 
-/// <summary>Referência a um segredo guardado fora das settings (ADR-10). Resolvida pela porta de segredos da infraestrutura.</summary>
+/// <summary>Reference to a secret stored outside the settings (ADR-10). Resolved by the infrastructure's secrets port.</summary>
 public readonly record struct SecretReference(string Key);
 
-/// <summary>Túnel SSH in-process (ADR-09). Autenticação pela ordem: agent, chave privada (com passphrase), password.</summary>
+/// <summary>In-process SSH tunnel (ADR-09). Authentication in order: agent, private key (with passphrase), password.</summary>
 public sealed record SshTunnelOptions(string Host, int Port, string User, SecretReference? Password, string? PrivateKeyPath, int LocalPort = 0)
 {
     public SecretReference? Passphrase { get; init; }
 
-    /// <summary>Tentar as chaves do agent (OpenSSH ou Pageant).</summary>
+    /// <summary>Try the agent's keys (OpenSSH or Pageant).</summary>
     public bool UseAgent { get; init; } = true;
 
-    /// <summary>Timeout do handshake (HeidiSQL: 4 s; aqui é um limite, não uma espera fixa, PR-07).</summary>
+    /// <summary>Handshake timeout (HeidiSQL: 4 s; here it is a limit, not a fixed wait, PR-07).</summary>
     public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(10);
 
-    /// <summary>Keep-alive do canal SSH.</summary>
+    /// <summary>SSH channel keep-alive.</summary>
     public TimeSpan KeepAlive { get; init; } = TimeSpan.FromSeconds(30);
 }
 
-/// <summary>Ficheiros e cifras do tab SSL (anexo A §1.6).</summary>
+/// <summary>Files and ciphers of the SSL tab (appendix A §1.6).</summary>
 public sealed record TlsFiles(string? CaCertificate, string? Certificate, string? PrivateKey, string? Cipher);
 
-/// <summary>Parâmetros de uma ligação (os campos do Session Manager que chegam ao driver).</summary>
+/// <summary>Parameters of a connection (the Session Manager fields that reach the driver).</summary>
 public sealed record ConnectionOptions(
     string Host,
     int Port,
@@ -44,30 +44,30 @@ public sealed record ConnectionOptions(
 {
     public TlsFiles? TlsFiles { get; init; }
 
-    /// <summary>"Enable cleartext authentication" (plugin <c>mysql_clear_password</c>).</summary>
+    /// <summary>"Enable cleartext authentication" (<c>mysql_clear_password</c> plugin).</summary>
     public bool CleartextAuth { get; init; }
 
-    /// <summary>Nome da aplicação nos atributos da ligação (<c>program_name</c>).</summary>
+    /// <summary>Application name in the connection attributes (<c>program_name</c>).</summary>
     public string ApplicationName { get; init; } = "Eunomia";
 
     /// <summary>
-    /// Permite <c>LOAD DATA LOCAL INFILE</c> (CSV import no modo servidor). Deixa o servidor pedir ficheiros ao cliente:
-    /// só numa ligação dedicada ao import, fechada no fim.
+    /// Allows <c>LOAD DATA LOCAL INFILE</c> (CSV import in server mode). It lets the server request files from the client:
+    /// only on a connection dedicated to the import, closed at the end.
     /// </summary>
     public bool AllowLocalInfile { get; init; }
 }
 
 public enum BulkLoadConflict
 {
-    /// <summary>Duplicados dão erro (INSERT).</summary>
+    /// <summary>Duplicates raise an error (INSERT).</summary>
     None,
     Ignore,
     Replace,
 }
 
 /// <summary>
-/// Carregamento em bloco a partir de um stream do cliente (CSV import no modo servidor, secção 13.2): no MySQL,
-/// <c>LOAD DATA LOCAL INFILE</c> alimentado pelo stream, sem o servidor ler ficheiros do cliente por nome.
+/// Bulk load from a client stream (CSV import in server mode, section 13.2): on MySQL,
+/// <c>LOAD DATA LOCAL INFILE</c> fed by the stream, without the server reading client files by name.
 /// </summary>
 public sealed record BulkLoadRequest
 {
@@ -75,13 +75,13 @@ public sealed record BulkLoadRequest
 
     public required string Table { get; init; }
 
-    /// <summary>Dados já na codificação de <see cref="CharacterSet"/>.</summary>
+    /// <summary>Data already in the <see cref="CharacterSet"/> encoding.</summary>
     public required Stream Source { get; init; }
 
-    /// <summary>Destino de cada campo, por ordem: colunas (<c>`c`</c>) ou variáveis (<c>@v</c>), já com aspas.</summary>
+    /// <summary>Target of each field, in order: columns (<c>`c`</c>) or variables (<c>@v</c>), already quoted.</summary>
     public IReadOnlyList<string> Columns { get; init; } = [];
 
-    /// <summary>Atribuições do <c>SET</c> (<c>`c` = expressão</c>).</summary>
+    /// <summary><c>SET</c> assignments (<c>`c` = expression</c>).</summary>
     public IReadOnlyList<string> Expressions { get; init; } = [];
 
     public string FieldTerminator { get; init; } = "\t";
@@ -103,10 +103,10 @@ public sealed record BulkLoadRequest
     public string? CharacterSet { get; init; }
 }
 
-/// <summary>Abre ligações com parâmetros, TLS, SSH e autenticação (secção 14.1).</summary>
+/// <summary>Opens connections with parameters, TLS, SSH and authentication (section 14.1).</summary>
 public interface IConnectionFactory
 {
-    /// <summary>Resolve um segredo no momento de abrir; nunca fica em memória além da ligação.</summary>
+    /// <summary>Resolves a secret at opening time; it never stays in memory beyond the connection.</summary>
     ValueTask<IDbConnectionHandle> OpenAsync(
         ConnectionOptions options,
         Func<SecretReference, CancellationToken, ValueTask<string>> resolveSecret,
@@ -114,14 +114,14 @@ public interface IConnectionFactory
 }
 
 /// <summary>
-/// Uma ligação aberta. O SessionHost tem uma primária, uma de metadata e uma para jobs (ADR-05);
-/// cada uma é um handle destes.
+/// An open connection. The SessionHost has a primary one, a metadata one and one for jobs (ADR-05);
+/// each one is one of these handles.
 /// </summary>
 public interface IDbConnectionHandle : IAsyncDisposable
 {
     ServerIdentity Server { get; }
 
-    /// <summary>Id da ligação no servidor (para <c>KILL QUERY</c>).</summary>
+    /// <summary>Connection id on the server (for <c>KILL QUERY</c>).</summary>
     long ServerConnectionId { get; }
 
     bool IsOpen { get; }
@@ -131,46 +131,46 @@ public interface IDbConnectionHandle : IAsyncDisposable
     IMetadataProvider Metadata { get; }
 
     /// <summary>
-    /// Cancela o que estiver a correr (secção 12.4): pedido de cancel do protocolo ou <c>KILL QUERY</c>
-    /// por uma ligação auxiliar. Não fecha a ligação.
+    /// Cancels whatever is running (section 12.4): a protocol cancel request or <c>KILL QUERY</c>
+    /// through an auxiliary connection. Does not close the connection.
     /// </summary>
     Task CancelCurrentAsync(CancellationToken cancellationToken);
 
     Task PingAsync(CancellationToken cancellationToken);
 
-    /// <summary>SQL que a ligação vai enviar (para o SQL log: o motor marca-o como interno ou do utilizador).</summary>
+    /// <summary>SQL the connection is about to send (for the SQL log: the engine marks it as internal or the user's).</summary>
     event Action<string>? CommandIssued;
 
-    /// <summary>Executa uma instrução sem resultado (<c>USE</c>, <c>SET</c>, startup script).</summary>
+    /// <summary>Runs a statement without a result (<c>USE</c>, <c>SET</c>, startup script).</summary>
     Task<int> ExecuteNonQueryAsync(string sql, CancellationToken cancellationToken);
 
-    /// <summary>Primeiro valor da primeira linha, ou <c>null</c>.</summary>
+    /// <summary>First value of the first row, or <c>null</c>.</summary>
     Task<object?> ExecuteScalarAsync(string sql, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Carrega <see cref="BulkLoadRequest.Source"/> na tabela; devolve as linhas afetadas. Só numa ligação aberta com
+    /// Loads <see cref="BulkLoadRequest.Source"/> into the table; returns the affected rows. Only on a connection opened with
     /// <see cref="ConnectionOptions.AllowLocalInfile"/>.
     /// </summary>
     Task<long> BulkLoadAsync(BulkLoadRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Base atual da ligação (depois de <c>USE</c>), ou <c>null</c>.</summary>
+    /// <summary>The connection's current database (after <c>USE</c>), or <c>null</c>.</summary>
     string? Database { get; }
 
     /// <summary>
-    /// Cifra TLS da ligação (por exemplo <c>TLS_AES_256_GCM_SHA384</c>), <c>""</c> se a ligação vai sem TLS, ou
-    /// <c>null</c> se não se sabe.
+    /// The connection's TLS cipher (for example <c>TLS_AES_256_GCM_SHA384</c>), <c>""</c> if the connection has no TLS, or
+    /// <c>null</c> if unknown.
     /// </summary>
     string? Encryption => null;
 
     /// <summary>
-    /// Guarda das instruções (sessão read-only, secção 23.2): chamada com cada instrução antes de ir para o servidor; um
-    /// erro devolvido recusa-a (o driver lança <see cref="DbOperationException"/> com ele e nada é enviado).
+    /// Statement guard (read-only session, section 23.2): called with each statement before it goes to the server; a
+    /// returned error refuses it (the driver throws a <see cref="DbOperationException"/> with it and nothing is sent).
     /// </summary>
     Func<string, DbError?>? Guard { get; set; }
 
     /// <summary>
-    /// Relê o estado da sessão que muda o SQL gerado (em MySQL, o <c>sql_mode</c>), depois do startup script ou de um
-    /// <c>SET</c> do utilizador. Por omissão não faz nada.
+    /// Reads again the session state that changes the generated SQL (on MySQL, <c>sql_mode</c>), after the startup script or
+    /// a user <c>SET</c>. Does nothing by default.
     /// </summary>
     Task RefreshSessionAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

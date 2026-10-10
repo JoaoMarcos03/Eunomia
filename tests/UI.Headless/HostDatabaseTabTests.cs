@@ -9,16 +9,16 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Host tab (Databases, Processes) e Database tab com dados reais (Fase 4; secção 4.9).</summary>
+/// <summary>Host tab (Databases, Processes) and Database tab with real data (phase 4; section 4.9).</summary>
 public sealed class HostDatabaseTabTests
 {
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task HostTabListaBasesFetchItemsEMataProcessos()
+    public async Task HostTabListsDatabasesFetchesItemsAndKillsProcesses()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ht_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.a (id INT); CREATE TABLE `{db}`.b (id INT); CREATE VIEW `{db}`.v AS SELECT id FROM `{db}`.a;");
         await using var victim = new MySqlConnection(cs);
@@ -36,7 +36,7 @@ public sealed class HostDatabaseTabTests
             window.Tree.Tree.FocusedNode = root;
             await WaitAsync(() => ReferenceEquals(window.Tabs.SelectedItem, window.Tabs.HostTab) ? "ok" : null);
 
-            // Databases: a base aparece; sem cache, as contagens ficam vazias até "Fetch database items".
+            // Databases: the database shows; without a cache, the counts stay empty until "Fetch database items".
             var host = window.HostView;
             var row = await WaitAsync(() => host.DatabaseList.Roots.FirstOrDefault(n => n[0] == db));
             Assert.Equal(string.Empty, row[4]);
@@ -47,7 +47,7 @@ public sealed class HostDatabaseTabTests
             Assert.Equal("1", fetched[5]);
             Assert.StartsWith("Databases (", HeaderText(host.DatabasesTab), StringComparison.Ordinal);
 
-            // Variables: sessão (ligação principal) e global lado a lado; a sessão diferente fica destacada.
+            // Variables: session (main connection) and global side by side; a different session value is highlighted.
             await connector.Open[0].Host.RunPrimaryAsync((h, ct) => h.ExecuteNonQueryAsync("SET SESSION sort_buffer_size = 1048576", ct), CancellationToken.None);
             host.SelectedItem = host.VariablesTab;
             var sortBuffer = await WaitAsync(() => host.VariableList.Roots.FirstOrDefault(n => n[0] == "sort_buffer_size"));
@@ -56,7 +56,7 @@ public sealed class HostDatabaseTabTests
             Assert.Equal([1], sortBuffer.Highlighted!);
             Assert.StartsWith("Variables (", HeaderText(host.VariablesTab), StringComparison.Ordinal);
 
-            // Status: Uptime com médias; Command-Statistics: contadores Com_* por ordem decrescente, com percentagem.
+            // Status: Uptime with averages; Command-Statistics: Com_* counters in descending order, with percentages.
             host.SelectedItem = host.StatusTab;
             var uptime = await WaitAsync(() => host.StatusList.Roots.FirstOrDefault(n => n[0] == "Uptime"));
             Assert.NotEqual(string.Empty, uptime[3]);
@@ -66,7 +66,7 @@ public sealed class HostDatabaseTabTests
             var counts = host.CommandList.VisibleNodes.Select(n => ((CommandStatisticsRow)n.Tag!).Count).ToList();
             Assert.Equal(counts.OrderByDescending(c => c), counts);
 
-            // Processes: mata outra ligação, nunca a da própria sessão.
+            // Processes: kills another connection, never the session's own.
             host.SelectedItem = host.ProcessesTab;
             var process = await WaitAsync(() => host.ProcessList.Roots.FirstOrDefault(n => n.Tag is ServerProcess p && p.Id == victimId));
             host.ProcessList.FocusedNode = process;
@@ -88,10 +88,10 @@ public sealed class HostDatabaseTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DatabaseTabListaRenomeiaEsvaziaEAbreObjetos()
+    public async Task DatabaseTabListsRenamesEmptiesAndOpensObjects()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_dt_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.a (id INT); CREATE TABLE `{db}`.b (id INT); INSERT INTO `{db}`.a VALUES (1), (2); " +
             $"INSERT INTO `{db}`.b VALUES (3); CREATE VIEW `{db}`.v AS SELECT id FROM `{db}`.a;");
@@ -118,7 +118,7 @@ public sealed class HostDatabaseTabTests
             Assert.Equal(["Name", "Rows", "Size", "Created", "Updated", "Engine", "Comment", "Type"], view.VisibleColumns);
             Assert.Equal($"{db}: 3 objects (2 tables, 1 views)", context.Status.Info);
 
-            // Filter panel local também nas listas.
+            // Local filter panel on the lists too.
             window.LocalFilterBox.Text = "^V$";
             await window.ApplyLocalFilterAsync();
             Assert.Equal(["v"], list.VisibleNodes.Select(n => n[0]));
@@ -127,7 +127,7 @@ public sealed class HostDatabaseTabTests
             await window.ApplyLocalFilterAsync();
             Assert.Equal(3, list.VisibleNodes.Count);
 
-            // Empty table(s) sobre a multi-seleção (Ctrl+A) da lista, com a lista focada.
+            // Empty table(s) on the list's multi-selection (Ctrl+A), with the list focused.
             list.Focus();
             list.SelectAll();
             Assert.Equal(3, view.SelectedObjects.Count);
@@ -140,7 +140,7 @@ public sealed class HostDatabaseTabTests
                 Assert.Equal(0L, Convert.ToInt64(await count.ExecuteScalarAsync(), CultureInfo.InvariantCulture));
             }
 
-            // Rename F2: tabela renomeada no servidor, na lista e na árvore; uma view também; o resto recusa.
+            // F2 rename: table renamed on the server, in the list and in the tree; a view too; the rest refuses.
             var b = await WaitAsync(() => list.Roots.FirstOrDefault(n => n[0] == "b"));
             await window.RenameObjectAsync(new TreeListRenameEventArgs(b, "b2"));
             await WaitAsync(() => list.Roots.Any(n => n[0] == "b2") ? "ok" : null);
@@ -149,7 +149,7 @@ public sealed class HostDatabaseTabTests
             Assert.Equal(TreeNodeKind.Table, Child(dbNow, "b2").Kind);
             Assert.DoesNotContain(dbNow.Children!, n => n.Name == "b");
 
-            // Enter numa linha abre o objeto: foco na árvore e Table tab.
+            // Enter on a row opens the object: focus in the tree and the Table tab.
             list.FocusedNode = list.Roots.First(n => n[0] == "a");
             list.RaiseEvent(new Avalonia.Input.KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Avalonia.Input.Key.Enter });
             await WaitAsync(() => window.Tree.Tree.FocusedNode is { Name: "a", Kind: TreeNodeKind.Table } ? "ok" : null);

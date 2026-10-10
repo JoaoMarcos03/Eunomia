@@ -15,29 +15,29 @@ public enum CompletionKind
     Variable,
 }
 
-/// <summary>Uma sugestão: o nome mostrado, o tipo (ícone e cor) e o texto a inserir.</summary>
+/// <summary>A suggestion: the name shown, the kind (icon and colour) and the text to insert.</summary>
 public sealed record CompletionItem(string Text, CompletionKind Kind)
 {
-    /// <summary>Segunda coluna: tipo da coluna em minúsculas, valor da variável, assinatura.</summary>
+    /// <summary>Second column: column type in lower case, variable value, signature.</summary>
     public string? Detail { get; init; }
 
-    /// <summary>Comentário da coluna ou descrição (status bar).</summary>
+    /// <summary>Column comment or description (status bar).</summary>
     public string? Description { get; init; }
 
-    /// <summary>Texto inserido, quando difere do mostrado (identificadores entre crases).</summary>
+    /// <summary>Text inserted, when it differs from the one shown (identifiers in backticks).</summary>
     public string? InsertText { get; init; }
 
-    /// <summary>Coluna da chave primária (ícone de chave).</summary>
+    /// <summary>Primary key column (key icon).</summary>
     public bool IsKey { get; init; }
 }
 
-/// <summary>Resultado do autocomplete: onde começa o texto a substituir e as sugestões pela ordem.</summary>
+/// <summary>Autocomplete result: where the text to replace starts and the suggestions in order.</summary>
 public sealed record CompletionProposal(int ReplaceStart, IReadOnlyList<CompletionItem> Items);
 
 /// <summary>
-/// Lista estática de completion do spike (sem análise de contexto; o Autocomplete A da secção 16.1
-/// fica para o produto). Procura com "Find matches in the middle" ligado, como o HeidiSQL:
-/// primeiro os que começam pelo texto, depois os que o contêm; ordem alfabética dentro de cada grupo.
+/// The spike's static completion list (no context analysis; Autocomplete A of section 16.1
+/// is for the product). Searches with "Find matches in the middle" on, like HeidiSQL:
+/// first the entries that start with the text, then those containing it; alphabetical order within each group.
 /// </summary>
 public sealed class CompletionCatalog
 {
@@ -51,7 +51,7 @@ public sealed class CompletionCatalog
 
     public IReadOnlyList<CompletionItem> Items => _items;
 
-    /// <summary>Catálogo com keywords, tipos e funções MySQL mais os nomes dados.</summary>
+    /// <summary>Catalog with MySQL keywords, types and functions plus the given names.</summary>
     public static CompletionCatalog CreateMySql(IEnumerable<string> tables, IEnumerable<string> columns)
     {
         var items = MySqlKeywords.Keywords.Select(k => new CompletionItem(k, CompletionKind.Keyword))

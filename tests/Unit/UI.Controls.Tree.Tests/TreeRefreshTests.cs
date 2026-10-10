@@ -1,11 +1,11 @@
 namespace Eunomia.UI.Controls.Tree.Tests;
 
-/// <summary>Refresh com estado, caminhos, grupos e somas da coluna Size (Fase 4; FAM-T01, T02, T08).</summary>
+/// <summary>Refresh with state, paths, groups and Size column sums (phase 4; FAM-T01, T02, T08).</summary>
 public sealed class TreeRefreshTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    /// <summary>Sessão → bases → (grupo "Tables" opcional) → tabelas com tamanho. Os dados podem mudar entre refreshes.</summary>
+    /// <summary>Session → databases → (optional "Tables" group) → tables with a size. The data may change between refreshes.</summary>
     private sealed class FakeProvider : ITreeDataProvider
     {
         public Dictionary<string, List<(string Name, long? Size)>> Databases { get; } = new(StringComparer.Ordinal)
@@ -23,7 +23,7 @@ public sealed class TreeRefreshTests
         {
             if (parent.Name == Failing)
             {
-                throw new InvalidOperationException("falhou " + parent.Name);
+                throw new InvalidOperationException("failed " + parent.Name);
             }
             IReadOnlyList<TreeNode> result = parent.Kind switch
             {
@@ -56,7 +56,7 @@ public sealed class TreeRefreshTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [Fact]
-    public async Task RefreshMantemBasesEGruposAbertosEReencontraOFocado()
+    public async Task RefreshKeepsDatabasesAndGroupsOpenAndFindsTheFocusedOneAgain()
     {
         var (model, provider, session) = Create(group: true);
         await model.ExpandAsync(session, Ct);
@@ -65,7 +65,7 @@ public sealed class TreeRefreshTests
         await model.ExpandAsync(Child(a, "Tables"), Ct);
         var path = TreeModel.PathOf(Child(Child(a, "Tables"), "t2"));
         provider.Databases.Remove("b");
-        provider.Databases["d"] = [("novo", 1)];
+        provider.Databases["d"] = [("added", 1)];
 
         await model.ReloadAsync(session, Ct);
 
@@ -81,7 +81,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task ObjetoQueDesapareceuDevolveOAntepassadoMaisProximo()
+    public async Task VanishedObjectReturnsTheClosestAncestor()
     {
         var (model, provider, session) = Create();
         await model.ExpandAsync(session, Ct);
@@ -95,9 +95,9 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task GruposSaoTransparentesNoCaminho()
+    public async Task GroupsAreTransparentInThePath()
     {
-        // O objeto focado é reencontrado depois de ligar ou desligar "Group objects by type".
+        // The focused object is found again after turning "Group objects by type" on or off.
         var (model, provider, session) = Create();
         await model.ExpandAsync(session, Ct);
         await model.ExpandAsync(Child(session, "a"), Ct);
@@ -118,7 +118,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task UmaBaseQueFalhaNoRefreshFicaFechadaEAsOutrasReabrem()
+    public async Task DatabaseFailingOnRefreshStaysClosedAndTheOthersReopen()
     {
         var (model, provider, session) = Create();
         Exception? failure = null;
@@ -132,11 +132,11 @@ public sealed class TreeRefreshTests
 
         Assert.False(Child(session, "a").IsExpanded);
         Assert.True(Child(session, "b").IsExpanded);
-        Assert.Contains("falhou a", failure!.Message, StringComparison.Ordinal);
+        Assert.Contains("failed a", failure!.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task GrupoMostraAContagem()
+    public async Task GroupShowsTheCount()
     {
         var (model, _, session) = Create(group: true);
         await model.ExpandAsync(session, Ct);
@@ -150,7 +150,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task SomasDaColunaSize()
+    public async Task SizeColumnSums()
     {
         var (model, provider, session) = Create(group: true);
         provider.Databases["b"] = [("x", 50)];
@@ -158,10 +158,10 @@ public sealed class TreeRefreshTests
         await model.ExpandAsync(Child(session, "a"), Ct);
         await model.ExpandAsync(Child(session, "b"), Ct);
 
-        // Base: soma dos objetos, também dentro dos grupos. Grupos sem tamanho.
+        // Database: the sum of the objects, inside groups too. Groups have no size.
         Assert.Equal(400, Child(session, "a").SizeBytes);
         Assert.Null(Child(Child(session, "a"), "Tables").SizeBytes);
-        // Sessão: só quando todas as bases têm tamanho ("c" ainda não foi carregada).
+        // Session: only when every database has a size ("c" has not been loaded yet).
         Assert.Null(session.SizeBytes);
 
         var c = Child(session, "c");
@@ -174,7 +174,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task CollapseAllFechaOsDescendentesMasNaoASessao()
+    public async Task CollapseAllClosesTheDescendantsButNotTheSession()
     {
         var (model, _, session) = Create();
         await model.ExpandAsync(session, Ct);
@@ -188,7 +188,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task EstrelaAvisaQuemGrava()
+    public async Task StarNotifiesWhoeverSaves()
     {
         var (model, _, session) = Create();
         await model.ExpandAsync(session, Ct);

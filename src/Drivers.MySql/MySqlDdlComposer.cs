@@ -5,17 +5,17 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// CREATE, ALTER e DROP a partir do modelo (secção 14.1; anexo C §5.3). O ALTER segue o <c>ComposeAlterStatement</c> do
-/// HeidiSQL: chaves estrangeiras alteradas ou apagadas largam-se num ALTER à parte primeiro; depois as opções da tabela,
-/// as colunas pela ordem da lista (<c>CHANGE COLUMN</c> nas alteradas e <c>ADD COLUMN</c> nas novas, com
-/// <c>FIRST</c>/<c>AFTER</c>), <c>DROP COLUMN</c>, os índices (largar e voltar a criar os alterados), as chaves
-/// estrangeiras e os checks; o rename fica no fim.
+/// CREATE, ALTER and DROP from the model (section 14.1; appendix C §5.3). The ALTER follows HeidiSQL's
+/// <c>ComposeAlterStatement</c>: changed or deleted foreign keys are dropped first in a separate ALTER; then the table
+/// options, the columns in list order (<c>CHANGE COLUMN</c> for changed ones and <c>ADD COLUMN</c> for new ones, with
+/// <c>FIRST</c>/<c>AFTER</c>), <c>DROP COLUMN</c>, the indexes (dropping and recreating the changed ones), the foreign
+/// keys and the checks; the rename comes last.
 /// </summary>
 public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
 {
     /// <summary>
-    /// <c>`nome` tipo [COLLATE c] [NULL|NOT NULL] [DEFAULT …] [ON UPDATE …] [AUTO_INCREMENT] [INVISIBLE] [COMMENT '…']</c>;
-    /// colunas geradas: <c>tipo AS (expr) VIRTUAL|STORED</c>.
+    /// <c>`name` type [COLLATE c] [NULL|NOT NULL] [DEFAULT …] [ON UPDATE …] [AUTO_INCREMENT] [INVISIBLE] [COMMENT '…']</c>;
+    /// generated columns: <c>type AS (expr) VIRTUAL|STORED</c>.
     /// </summary>
     public string ColumnSpec(ColumnDefinition c)
     {
@@ -57,7 +57,7 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
         return sb.ToString();
     }
 
-    /// <summary><c>PRIMARY KEY (…)</c>, <c>UNIQUE INDEX `n` (…)</c>, <c>INDEX</c>, <c>FULLTEXT</c>, <c>SPATIAL</c>, com prefixos e algoritmo.</summary>
+    /// <summary><c>PRIMARY KEY (…)</c>, <c>UNIQUE INDEX `n` (…)</c>, <c>INDEX</c>, <c>FULLTEXT</c>, <c>SPATIAL</c>, with prefixes and algorithm.</summary>
     public string IndexSpec(IndexDefinition index)
     {
         ArgumentNullException.ThrowIfNull(index);
@@ -113,7 +113,7 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
         return [sql.ToString()];
     }
 
-    /// <summary>Opções da tabela que mudaram (ou todas, numa tabela nova), pela ordem do HeidiSQL.</summary>
+    /// <summary>Table options that changed (or all of them, for a new table), in HeidiSQL's order.</summary>
     private IEnumerable<string> TableOptions(IReadOnlyDictionary<string, string> before, IReadOnlyDictionary<string, string> after)
     {
         string? Changed(string key) =>
@@ -135,7 +135,7 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
         {
             yield return "COLLATE=" + collation;
         }
-        // Opções escritas à mão na grelha: só palavras (engine, row format) e números inteiros vão para o DDL.
+        // Options typed by hand in the grid: only words (engine, row format) and integers go into the DDL.
         if (Changed("Engine") is { } engine && IsWord(engine))
         {
             yield return "ENGINE=" + engine;
@@ -173,7 +173,7 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
         var table = dialect.QualifiedName(before.Ref);
         var statements = new List<string>();
 
-        // 1. Chaves estrangeiras alteradas ou apagadas: largadas primeiro, num ALTER à parte (erro 121 do MySQL).
+        // 1. Changed or deleted foreign keys: dropped first, in a separate ALTER (MySQL error 121).
         var fkAfter = after.ForeignKeys.ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
         var droppedFks = before.ForeignKeys.Where(f => !fkAfter.TryGetValue(f.Name, out var now) || ForeignKeySpec(now) != ForeignKeySpec(f)).ToList();
         if (droppedFks.Count > 0)
@@ -182,10 +182,10 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
         }
 
         var specs = new List<string>();
-        // 2. Opções da tabela.
+        // 2. Table options.
         specs.AddRange(TableOptions(before.Options, after.Options));
 
-        // 3. Colunas pela ordem da lista: CHANGE nas alteradas ou mudadas de sítio, ADD nas novas.
+        // 3. Columns in list order: CHANGE for changed or moved ones, ADD for new ones.
         var oldColumns = before.Columns.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
         var oldOrder = before.Columns.Select(c => c.Name).ToList();
         var kept = after.Columns.Where(c => c.OriginalName is { } o && oldColumns.ContainsKey(o)).Select(c => c.OriginalName!).ToList();
@@ -211,13 +211,13 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
             previous = column.Name;
         }
 
-        // 4. Colunas apagadas.
+        // 4. Dropped columns.
         foreach (var gone in before.Columns.Where(c => !kept.Contains(c.Name, StringComparer.OrdinalIgnoreCase)))
         {
             specs.Add("DROP COLUMN " + dialect.QuoteIdentifier(gone.Name));
         }
 
-        // 5. Índices: apagados e alterados largam-se; alterados e novos criam-se.
+        // 5. Indexes: deleted and changed ones are dropped; changed and new ones are created.
         var indexAfter = after.Indexes.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
         var indexBefore = before.Indexes.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
         foreach (var index in before.Indexes.Where(x => !indexAfter.TryGetValue(x.Name, out var now) || IndexSpec(now) != IndexSpec(x)))
@@ -229,7 +229,7 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
             specs.Add("ADD " + IndexSpec(index));
         }
 
-        // 6. Chaves estrangeiras novas ou alteradas; checks.
+        // 6. New or changed foreign keys; checks.
         var fkBefore = before.ForeignKeys.ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
         specs.AddRange(after.ForeignKeys.Where(f => !fkBefore.TryGetValue(f.Name, out var old) || ForeignKeySpec(old) != ForeignKeySpec(f)).Select(f => "ADD " + ForeignKeySpec(f)));
         var checkAfter = after.Checks.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
@@ -241,7 +241,7 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
         {
             statements.Add($"ALTER TABLE {table}\n\t" + string.Join(",\n\t", specs));
         }
-        // 7. Rename no fim.
+        // 7. Rename last.
         if (!string.Equals(before.Ref.Name, after.Ref.Name, StringComparison.Ordinal))
         {
             statements.Add(dialect.Rename(before.Ref, after.Ref.Name));
@@ -264,7 +264,7 @@ public sealed class MySqlDdlComposer(MySqlDialect dialect) : IDdlComposer
         return $"DROP {keyword} {dialect.QualifiedName(obj)}";
     }
 
-    /// <summary>Como o preview do HeidiSQL: <c>CREATE DATABASE `x` /*!40100 COLLATE 'coll' */</c> (anexo B §5.3).</summary>
+    /// <summary>Like HeidiSQL's preview: <c>CREATE DATABASE `x` /*!40100 COLLATE 'coll' */</c> (appendix B §5.3).</summary>
     public string CreateDatabase(string name, string? collation)
     {
         ArgumentNullException.ThrowIfNull(name);

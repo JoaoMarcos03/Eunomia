@@ -32,7 +32,7 @@ public enum MessageDialogResult
     Ignore,
 }
 
-/// <summary>Diálogo modal simples (erros de operações do utilizador abrem diálogo, secção 21.5).</summary>
+/// <summary>Simple modal dialog (errors of user operations open a dialog, section 21.5).</summary>
 public sealed class MessageDialog : Window
 {
     private MessageDialogResult _result = MessageDialogResult.None;
@@ -78,7 +78,7 @@ public sealed class MessageDialog : Window
         panel.Children.Add(text);
         if (verification is not null)
         {
-            // Caixa de verificação do TaskDialog ("Disable foreign key checks", anexo B §6).
+            // TaskDialog check box ("Disable foreign key checks", appendix B §6).
             Verification = new CheckBox { Content = verification, Margin = new Thickness(16, 0, 16, 12) };
             panel.Children.Add(Verification);
         }
@@ -94,7 +94,7 @@ public sealed class MessageDialog : Window
         return dialog.ShowDialog<MessageDialogResult>(owner);
     }
 
-    /// <summary>Como <see cref="ShowAsync"/>, com uma caixa de verificação; devolve também o seu estado.</summary>
+    /// <summary>Like <see cref="ShowAsync"/>, with a check box; also returns its state.</summary>
     public static async Task<(MessageDialogResult Result, bool Verified)> ShowWithVerificationAsync(Window owner, string title, string message, MessageDialogButtons buttons, string verification)
     {
         var dialog = new MessageDialog(title, message, buttons, verification);
@@ -112,7 +112,7 @@ public sealed class MessageDialog : Window
     }
 }
 
-/// <summary>Pedido de um texto (Rename query tab, Set delimiter…).</summary>
+/// <summary>Asks for a text (Rename query tab, Set delimiter…).</summary>
 public sealed class InputDialog : Window
 {
     private readonly TextBox _box;

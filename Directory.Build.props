@@ -4,20 +4,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- Regras de estilo do .editorconfig com severidade warning também no build (e não só no editor). -->
+    <!-- .editorconfig style rules with warning severity also apply in the build (not only in the editor). -->
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
-    <!-- Versões: 0.<fase>.<n> até ao MVP; a seguir 1.0.0-beta.<n> (Fase 14) até ao 1.0 estável. -->
+    <!-- Versions: 0.<phase>.<n> up to the MVP; then 1.0.0-beta.<n> (phase 14) until the stable 1.0. -->
     <Version>1.0.0-beta.1</Version>
 
-    <!-- Analyzers de AOT e trimming em todos os projetos (secção 22). -->
+    <!-- AOT and trimming analyzers in every project (spec section 22). -->
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <EnableAotAnalyzer>true</EnableAotAnalyzer>
     <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
   </PropertyGroup>
 
-  <!-- Bibliotecas em src/ declaram-se compatíveis com NativeAOT (liga também IsTrimmable). Separadores normalizados para
-       a condição valer em Windows, Linux e macOS. -->
+  <!-- Libraries in src/ declare themselves NativeAOT-compatible (which also turns on IsTrimmable). Separators are
+       normalised so the condition holds on Windows, Linux and macOS. -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/src/'))">
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>

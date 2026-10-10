@@ -1,7 +1,7 @@
-# Convenções de código do Eunomia (ver CONTRIBUTING.md, secção "Padrões de código C#").
-# Formatação verificada no CI com `dotnet format whitespace --verify-no-changes`; as regras de estilo com severidade
-# `warning` partem o build (EnforceCodeStyleInBuild + TreatWarningsAsErrors no Directory.Build.props). As de
-# severidade `suggestion` aparecem no editor e ficam como alvo para código novo.
+# Eunomia coding conventions (see CONTRIBUTING.md, section "C# coding standards").
+# Formatting checked in CI with `dotnet format whitespace --verify-no-changes`; style rules with `warning` severity
+# fail the build (EnforceCodeStyleInBuild + TreatWarningsAsErrors in Directory.Build.props). The ones with
+# `suggestion` severity show in the editor and are the target for new code.
 root = true
 
 [*]
@@ -15,14 +15,14 @@ trim_trailing_whitespace = true
 [*.{csproj,props,targets,slnx,xml,resx,manifest,yml,yaml,json}]
 indent_size = 2
 
-# Dois espaços no fim de uma linha são uma quebra de linha em Markdown.
+# Two spaces at the end of a line are a line break in Markdown.
 [*.md]
 trim_trailing_whitespace = false
 
 [*.{cmd,bat}]
 end_of_line = crlf
 
-# Ficheiros gerados ou binários de referência: não mexer.
+# Generated files or reference binaries: do not touch.
 [{tests/UI.Headless/snapshots/**,bench/results/**}]
 charset = unset
 end_of_line = unset
@@ -34,13 +34,13 @@ trim_trailing_whitespace = unset
 [*.cs]
 max_line_length = 150
 
-# --- Usings e namespaces ---
+# --- Usings and namespaces ---
 dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
 csharp_using_directive_placement = outside_namespace:warning
 csharp_style_namespace_declarations = file_scoped:warning
 
-# --- Linguagem ---
+# --- Language ---
 dotnet_style_qualification_for_field = false:warning
 dotnet_style_qualification_for_property = false:warning
 dotnet_style_qualification_for_method = false:warning
@@ -72,7 +72,7 @@ csharp_prefer_simple_using_statement = true:suggestion
 csharp_style_prefer_readonly_struct = true:suggestion
 csharp_preferred_modifier_order = public,private,protected,internal,file,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,required,volatile,async:suggestion
 
-# --- Formatação (dotnet format whitespace) ---
+# --- Formatting (dotnet format whitespace) ---
 csharp_new_line_before_open_brace = all
 csharp_new_line_before_else = true
 csharp_new_line_before_catch = true
@@ -91,9 +91,9 @@ csharp_space_between_method_call_parameter_list_parentheses = false
 csharp_preserve_single_line_statements = false
 csharp_preserve_single_line_blocks = true
 
-# --- Nomes ---
-# Tipos, métodos, propriedades, eventos e constantes em PascalCase; interfaces com prefixo I; campos privados em
-# _camelCase; constantes locais em PascalCase; parâmetros e outros locais em camelCase.
+# --- Naming ---
+# Types, methods, properties, events and constants in PascalCase; interfaces with an I prefix; private fields in
+# _camelCase; local constants in PascalCase; parameters and other locals in camelCase.
 dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum, delegate
 dotnet_naming_symbols.interfaces.applicable_kinds = interface
 dotnet_naming_symbols.members.applicable_kinds = method, property, event
@@ -130,7 +130,7 @@ dotnet_naming_rule.constants_pascal.severity = warning
 dotnet_naming_rule.local_constants_pascal.symbols = local_constants
 dotnet_naming_rule.local_constants_pascal.style = pascal
 dotnet_naming_rule.local_constants_pascal.severity = suggestion
-# Campos privados static readonly são tratados como constantes (PascalCase); os outros campos privados com _.
+# Private static readonly fields are treated as constants (PascalCase); other private fields take an _.
 dotnet_naming_rule.private_static_readonly_pascal.symbols = private_static_readonly
 dotnet_naming_rule.private_static_readonly_pascal.style = pascal
 dotnet_naming_rule.private_static_readonly_pascal.severity = suggestion

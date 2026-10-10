@@ -9,16 +9,16 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Fase 13, lacunas que um utilizador do HeidiSQL nota: Explain current query, EXPLAIN de um processo, Auto refresh,
-/// Follow Foreign Key e Open URL, contra o servidor de teste.
+/// Phase 13, gaps a HeidiSQL user notices: Explain current query, EXPLAIN of a process, Auto refresh,
+/// Follow Foreign Key and Open URL, against the test server.
 /// </summary>
 public sealed class HeidiGapsTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ExplainAutoRefreshFollowForeignKeyEOpenUrl()
+    public async Task ExplainAutoRefreshFollowForeignKeyAndOpenUrl()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_gp_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
@@ -41,7 +41,7 @@ public sealed class HeidiGapsTests
             var dbNode = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db));
             await model.ExpandAsync(dbNode);
 
-            // Explain current query: EXPLAIN da instrução do cursor, nos resultados.
+            // Explain current query: EXPLAIN of the statement under the cursor, in the results.
             window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
             window.SqlEditor.Text = $"SELECT 1;\nSELECT * FROM `{db}`.orders WHERE id = 10;";
             window.SqlEditor.Editor.CaretOffset = window.SqlEditor.Text.Length - 3;
@@ -50,8 +50,8 @@ public sealed class HeidiGapsTests
             var explain = await WaitAsync(() => view.ActiveGrid is { Source: { } s } g && s.Schema.Columns.Any(c => c.Name == "select_type") ? g : null);
             Assert.Equal("orders", explain.GetDisplayText(0, explain.Source!.Schema.Columns.ToList().FindIndex(c => c.Name == "table")));
 
-            // Host tab › Processes: EXPLAIN query do processo que dorme abre uma query tab com USE e EXPLAIN.
-            // Numa query tab, focar a sessão não muda de tab (como no HeidiSQL): escolhe-se o Host tab.
+            // Host tab › Processes: EXPLAIN query of the sleeping process opens a query tab with USE and EXPLAIN.
+            // In a query tab, focusing the session does not switch tab (as in HeidiSQL): the Host tab is chosen.
             window.Tree.Tree.FocusedNode = root;
             window.Tabs.SelectedItem = window.Tabs.HostTab;
             var host = window.HostView;
@@ -63,7 +63,7 @@ public sealed class HeidiGapsTests
             Assert.Equal(tabsBefore + 1, window.Tabs.QueryTabs.Count);
             Assert.Contains("EXPLAIN SELECT SLEEP(20) FROM DUAL;", window.SqlEditor.Text, StringComparison.Ordinal);
 
-            // Auto refresh: liga com Ctrl+F5, o intervalo muda pelo "Set interval", e cada volta relê a lista do Host tab.
+            // Auto refresh: turned on with Ctrl+F5, the interval changes through "Set interval", and each round reloads the Host tab list.
             window.Tabs.SelectedItem = window.Tabs.HostTab;
             window.AutoRefreshIntervalOverride = _ => Task.FromResult<string?>("3");
             Assert.True(await context.Commands.ExecuteAsync("view.autoRefreshInterval"));
@@ -76,14 +76,14 @@ public sealed class HeidiGapsTests
             Assert.True(await context.Commands.ExecuteAsync("view.autoRefresh"));
             Assert.False(context.Commands.StateOf("view.autoRefresh").IsChecked);
 
-            // Follow Foreign Key: na tabela orders, a coluna customer_id leva a customers filtrada pelo id.
+            // Follow Foreign Key: in the orders table, the customer_id column leads to customers filtered by the id.
             var orders = TreeModel.ObjectsOf(dbNode).Single(n => n.Name == "orders");
             window.Tree.Tree.FocusedNode = orders;
             window.Tabs.SelectedItem = window.Tabs.DataTab;
             await WaitAsync(() => window.DataGrid.RowCount == 2 ? "ok" : null);
             window.DataGrid.Focus();
             window.DataGrid.Selection.Focus(0, 1);
-            // A ordem das linhas é a do servidor (o índice da FK pode ser usado): o cliente esperado vem da linha focada.
+            // The row order is the server's (the FK index may be used): the expected customer comes from the focused row.
             var customerId = window.DataGrid.GetDisplayText(0, 1);
             Assert.True(context.Commands.StateOf("grid.followForeignKey").CanExecute);
             Assert.True(await context.Commands.ExecuteAsync("grid.followForeignKey"));
@@ -91,7 +91,7 @@ public sealed class HeidiGapsTests
             Assert.Equal(customerId == "1" ? "Ana" : "Rui", window.DataGrid.GetDisplayText(0, 1));
             Assert.Equal($"`id` = {customerId}", window.DataView.FilterEditor.Text);
 
-            // Open URL: só com um valor http/https na célula focada.
+            // Open URL: only with an http/https value in the focused cell.
             var opened = new List<string>();
             window.OpenUrlOverride = opened.Add;
             await context.Commands.ExecuteAsync("filter.remove");
@@ -121,10 +121,10 @@ public sealed class HeidiGapsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SqlHelpComF1NaPalavraDoCursor()
+    public async Task SqlHelpWithF1OnTheWordAtTheCursor()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var (window, context, session, connector, _) = CreateShell(cs, string.Empty);
         Assert.True(await window.ConnectAsync(window, session, null));
         await WaitAsync(() => window.Tree.Tree.Model!.Roots.FirstOrDefault());
@@ -138,7 +138,7 @@ public sealed class HeidiGapsTests
         var help = await WaitAsync(() => window.SqlHelp is { TopicName: "SELECT" } h ? h : null);
         Assert.Contains("SELECT", help.DescriptionText, StringComparison.Ordinal);
 
-        // Contents: as categorias; abrir uma categoria lista os tópicos dela.
+        // Contents: the categories; opening a category lists its topics.
         await help.ShowAsync("contents");
         Assert.Contains(help.Entries, e => e is { Name: "Data Manipulation", IsCategory: true });
         await help.ShowAsync("Data Manipulation");

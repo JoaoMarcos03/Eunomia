@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>Eunomia.Infra.Ssh</RootNamespace>
     <AssemblyName>Eunomia.Infra.Ssh</AssemblyName>
-    <!-- LibraryImport do transporte do Pageant (WM_COPYDATA), só usado em Windows. -->
+    <!-- LibraryImport for the Pageant transport (WM_COPYDATA), only used on Windows. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
@@ -14,7 +14,7 @@
     <InternalsVisibleTo Include="Infra.Ssh.Tests" />
   </ItemGroup>
 
-  <!-- Implementa ISshTunnelFactory (Drivers.Abstractions); ADR-09: SSH.NET + agent próprio. -->
+  <!-- Implements ISshTunnelFactory (Drivers.Abstractions); ADR-09: SSH.NET + Eunomia's own agent client. -->
   <ItemGroup>
     <ProjectReference Include="..\Drivers.Abstractions\Drivers.Abstractions.csproj" />
   </ItemGroup>

@@ -6,11 +6,11 @@ using Eunomia.Engine.Sql;
 namespace Eunomia.App.Sessions;
 
 /// <summary>
-/// "Log queries to file" do Session Manager (Advanced; Fase 14): as instruções do utilizador da sessão (query tabs, edições
-/// do grid, table editor, Drop/Empty) que mudam estrutura ("DDL queries") ou dados ("DML queries") ficam num ficheiro de
-/// texto, uma por linha com a hora, como registo do que se correu em produção. Ao contrário do HeidiSQL (secção 23.1 S7),
-/// as passwords vão mascaradas (<see cref="SecretMasking"/>) e o ficheiro fica aberto só durante cada escrita, em modo
-/// acrescentar. Uma falha de escrita (disco cheio, permissões) nunca pára a query: fica uma linha de erro no SQL log.
+/// Session Manager "Log queries to file" (Advanced; phase 14): the session user's statements (query tabs, grid edits,
+/// table editor, Drop/Empty) that change structure ("DDL queries") or data ("DML queries") go to a text file, one per
+/// line with the time, as a record of what ran in production. Unlike HeidiSQL (section 23.1 S7), passwords are masked
+/// (<see cref="SecretMasking"/>) and the file is only open during each write, in append mode. A write failure (full
+/// disk, permissions) never stops the query: an error line goes to the SQL log.
 /// </summary>
 public sealed class QueryFileLog(ISessionLog inner, string path, bool ddl, bool dml) : ISessionLog
 {

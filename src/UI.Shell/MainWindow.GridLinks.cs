@@ -6,12 +6,12 @@ using Eunomia.Engine.Results;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Ligações a partir de uma célula do Data grid (anexo C §3.5): Follow Foreign Key (a tabela referenciada abre no Data
-/// tab filtrada pela chave da linha focada) e Open URL (abre no browser um valor http/https).
+/// Links from a Data grid cell (appendix C §3.5): Follow Foreign Key (the referenced table opens in the Data
+/// tab filtered by the focused row's key) and Open URL (opens an http/https value in the browser).
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Substitui a abertura do browser (testes).</summary>
+    /// <summary>Replaces opening the browser (tests).</summary>
     internal Action<string>? OpenUrlOverride { get; set; }
 
     private void InitGridLinks()
@@ -21,7 +21,7 @@ public sealed partial class MainWindow
         c.SetHandler("grid.openUrl", OpenFocusedUrl, () => FocusedUrl() is not null);
     }
 
-    /// <summary>Chave estrangeira da tabela do Data tab que contém a coluna focada.</summary>
+    /// <summary>Foreign key of the Data tab's table that contains the focused column.</summary>
     private ForeignKeyDefinition? FocusedForeignKey()
     {
         if (QuickColumn() is not ({ } column, _) || _browser is not { } browser || DataGrid.Selection.FocusedRow < 0)
@@ -32,8 +32,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Follow Foreign Key: grava o filtro <c>col_ref = valor</c> (todas as colunas da chave) na tabela referenciada,
-    /// foca-a na árvore e fica no Data tab, que a abre já filtrada.
+    /// Follow Foreign Key: saves the filter <c>col_ref = value</c> (every column of the key) on the referenced table,
+    /// focuses it in the tree and stays on the Data tab, which opens it already filtered.
     /// </summary>
     private async Task FollowForeignKeyAsync()
     {
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
         _tabs.SelectedItem = _tabs.DataTab;
     }
 
-    /// <summary>Valor da célula focada se for um endereço http ou https.</summary>
+    /// <summary>Value of the focused cell if it is an http or https address.</summary>
     private string? FocusedUrl()
     {
         if (FocusedGrid() is not { } grid || grid.Selection.FocusedRow < 0 || grid.Selection.FocusedColumn < 0)

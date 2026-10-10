@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace Eunomia.Engine.Results.Tests;
 
-/// <summary>Filter panel local (anexo D B11; secção 11.5; FAM-G14).</summary>
+/// <summary>Local filter panel (appendix D B11; section 11.5; FAM-G14).</summary>
 public sealed class FilteredRowSourceTests
 {
     private static readonly ResultSchema Schema = new(
@@ -40,7 +40,7 @@ public sealed class FilteredRowSourceTests
     private static Regex Rx(string pattern) => new(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     [Fact]
-    public async Task FicamAsLinhasQuePassamPorOrdem()
+    public async Task MatchingRowsStayInOrder()
     {
         var filtered = await FilteredRowSource.CreateAsync(Source(100, 16), Rx("^ana"), TestContext.Current.CancellationToken);
 
@@ -55,21 +55,21 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task ComparaNumerosSemSeparadoresONumeroDaLinhaENull()
+    public async Task ComparesNumbersWithoutSeparatorsTheRowNumberAndNull()
     {
         var source = Source(30, 8);
-        // 25000 sem separador de milhares (o grid mostra 25,000).
+        // 25000 without a thousands separator (the grid shows 25,000).
         Assert.Equal(1, (await FilteredRowSource.CreateAsync(source, Rx("^25000$"), TestContext.Current.CancellationToken)).MatchCount);
-        // Número da linha (#): a linha 30 é a única com "30" só no número.
+        // Row number (#): row 30 is the only one with "30" only in its number.
         var byNumber = await FilteredRowSource.CreateAsync(source, Rx("^30$"), TestContext.Current.CancellationToken);
         Assert.Equal(1, byNumber.MatchCount);
         Assert.Equal(29, byNumber.InnerRow(0));
-        // NULL aparece como "(NULL)".
+        // NULL shows as "(NULL)".
         Assert.Equal(3, (await FilteredRowSource.CreateAsync(source, Rx(@"\(NULL\)"), TestContext.Current.CancellationToken)).MatchCount);
     }
 
     [Fact]
-    public async Task FuncionaSobreBlocosEmSpill()
+    public async Task WorksOverSpilledBlocks()
     {
         var dir = Path.Combine(Path.GetTempPath(), "eunomia-filter-" + Guid.NewGuid().ToString("N")[..8]);
         try
@@ -98,7 +98,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task OrdenacaoLocalPorColunaComNullPrimeiro()
+    public async Task LocalSortByColumnWithNullFirst()
     {
         var ct = TestContext.Current.CancellationToken;
         var source = Source(30, 8);
@@ -109,7 +109,7 @@ public sealed class FilteredRowSourceTests
         Assert.Equal(29_000, first.GetInt64(0, 0));
         Assert.Equal(22_000, first.GetInt64(7, 0));
 
-        // Texto: NULL primeiro, depois sem maiúsculas e numérico só quando os dois textos são números.
+        // Text: NULL first, then case-insensitive, and numeric only when both texts are numbers.
         var byName = await FilteredRowSource.SortAsync(source, 1, descending: false, ct);
         var block = await byName.GetBlockAsync(0, ct);
         Assert.True(block.IsNull(0, 1));
@@ -124,7 +124,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task ProcuraNoGridParaAFrenteEParaTras()
+    public async Task SearchesTheGridForwardAndBackward()
     {
         var ct = TestContext.Current.CancellationToken;
         var source = Source(30, 8);
@@ -138,7 +138,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task OrdenacaoCancelada()
+    public async Task CancelledSort()
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();

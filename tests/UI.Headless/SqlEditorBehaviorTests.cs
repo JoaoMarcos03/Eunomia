@@ -21,7 +21,7 @@ public sealed class SqlEditorBehaviorTests
     }
 
     [AvaloniaFact]
-    public void CtrlSpaceAbreCompletionComOPrefixo()
+    public void CtrlSpaceOpensCompletionWithThePrefix()
     {
         var (window, editor) = Show("SEL");
         editor.Editor.CaretOffset = 3;
@@ -35,7 +35,7 @@ public sealed class SqlEditorBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PontoAbreCompletionDepoisDe500ms()
+    public async Task DotOpensCompletionAfter500ms()
     {
         var (window, editor) = Show("SELECT t");
         editor.Editor.CaretOffset = editor.Text.Length;
@@ -49,7 +49,7 @@ public sealed class SqlEditorBehaviorTests
     }
 
     [AvaloniaFact]
-    public void ColorizerPintaKeywordsStringsEComentarios()
+    public void ColorizerPaintsKeywordsStringsAndComments()
     {
         var (window, editor) = Show("SELECT 'a' -- c\n/* x\ny */ 42");
         var view = editor.Editor.TextArea.TextView;
@@ -65,14 +65,14 @@ public sealed class SqlEditorBehaviorTests
         Assert.Same(palette.Keyword, BrushAt(1, 0));
         Assert.Same(palette.String, BrushAt(1, 7));
         Assert.Same(palette.Comment, BrushAt(1, 11));
-        // Comentário de bloco aberto na linha 2 continua na linha 3.
+        // A block comment opened on line 2 continues on line 3.
         Assert.Same(palette.Comment, BrushAt(3, 0));
         Assert.Same(palette.Number, BrushAt(3, 5));
         window.Close();
     }
 
     [AvaloniaFact]
-    public void AbrirComentarioMudaAsLinhasSeguintes()
+    public void OpeningACommentChangesTheFollowingLines()
     {
         var (window, editor) = Show("SELECT 1\nFROM t");
         var view = editor.Editor.TextArea.TextView;

@@ -1,29 +1,29 @@
 # ADR-14: Schema Visualizer
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/especificacao-fase-0.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Benchmark de 1.000 tabelas
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** Benchmark with 1,000 tables
 
-## Opções
+## Options
 
-Nativo + MSAGL, WebView2 + React Flow, nativo + ELK
+Native + MSAGL, WebView2 + React Flow, native + ELK
 
-## Decisão
+## Decision
 
-Nativo + MSAGL atrás de `IGraphLayout`
+Native + MSAGL behind `IGraphLayout`
 
-## Razão
+## Reason
 
-Coerência de UI e teclado
+Consistent UI and keyboard
 
 ## Trade-offs
 
-MSAGL parado desde 2021
+MSAGL has been idle since 2021
 
-## Risco
+## Risk
 
-Qualidade de layout
+Layout quality
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

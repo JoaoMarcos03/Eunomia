@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Results.Tests;
 
-/// <summary>Orçamento e spill do <see cref="MaterializedRowSource"/> (secção 11.3, PR-17).</summary>
+/// <summary>Budget and spill of the <see cref="MaterializedRowSource"/> (section 11.3, PR-17).</summary>
 public sealed class SpillTests : IDisposable
 {
     private static readonly ResultSchema Schema = new(
@@ -41,10 +41,10 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public async Task OrcamentoGlobalDespejaOsMaioresEDisposeTiraDoTotal()
+    public async Task GlobalBudgetSpillsTheLargestAndDisposeLeavesTheTotal()
     {
         var oneBlock = Block(0, 256).ByteSize;
-        // Cada resultado aceitaria 10 blocos; o global só deixa 6 no total.
+        // Each result would accept 10 blocks; the global budget only allows 6 in total.
         var pool = new ResultMemoryPool(oneBlock * 6);
         var storage = new ResultStorage(BudgetBytes: oneBlock * 10, SpillDirectory: _directory) { Pool = pool };
         using var big = new MaterializedRowSource(Schema, 256, storage);
@@ -60,14 +60,14 @@ public sealed class SpillTests : IDisposable
 
         Assert.True(pool.TotalBytes <= oneBlock * 6, $"{pool.TotalBytes} > {oneBlock * 6}");
         Assert.Equal(pool.TotalBytes, big.ByteSize + small.ByteSize);
-        // O maior despejou; o pequeno ficou inteiro em memória.
+        // The largest one spilled; the small one stayed whole in memory.
         Assert.True(big.SpilledBytes > 0);
         Assert.Equal(Enumerable.Range(0, 3).Sum(i => Block(i, 256).ByteSize), small.ByteSize);
         var back = await big.GetBlockAsync(0, TestContext.Current.CancellationToken);
         Assert.Equal(0, back.GetInt64(0, 0));
         Assert.True(pool.TotalBytes <= oneBlock * 6);
 
-        // Fechar um resultado tira-o do total.
+        // Closing a result takes it out of the total.
         var before = pool.TotalBytes;
         var smallBytes = small.ByteSize;
         small.Dispose();
@@ -77,7 +77,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public async Task AcimaDoOrcamentoVaiParaDiscoEVoltaIgual()
+    public async Task AboveTheBudgetGoesToDiskAndComesBackIdentical()
     {
         var oneBlock = Block(0, 256).ByteSize;
         using var source = new MaterializedRowSource(Schema, 256, new ResultStorage(BudgetBytes: oneBlock * 3, SpillDirectory: _directory));
@@ -109,7 +109,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public async Task IntervaloPedidoPeloGridNaoVaiParaDisco()
+    public async Task RangeRequestedByTheGridDoesNotGoToDisk()
     {
         var oneBlock = Block(0, 128).ByteSize;
         using var source = new MaterializedRowSource(Schema, 128, new ResultStorage(BudgetBytes: oneBlock * 2, SpillDirectory: _directory));
@@ -125,7 +125,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public void SemPastaDeSpillFicaTudoEmMemoria()
+    public void WithoutASpillFolderEverythingStaysInMemory()
     {
         using var source = new MaterializedRowSource(Schema, 64);
         for (var i = 0; i < 5; i++)
@@ -138,7 +138,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public void QuotaDeDiscoEsgotadaParaOFetch()
+    public void ExhaustedDiskQuotaStopsTheFetch()
     {
         var oneBlock = Block(0, 64).ByteSize;
         using var source = new MaterializedRowSource(Schema, 64, new ResultStorage(oneBlock, _directory, SpillQuotaBytes: oneBlock * 2));
@@ -154,7 +154,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public void FicheiroDesapareceAoFechar()
+    public void FileDisappearsOnClose()
     {
         var oneBlock = Block(0, 64).ByteSize;
         var source = new MaterializedRowSource(Schema, 64, new ResultStorage(oneBlock, _directory));

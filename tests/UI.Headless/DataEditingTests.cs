@@ -8,7 +8,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Edição no Data tab contra o servidor (Fase 7; anexo D B15–B17; FAM-G08, G09; D3).</summary>
+/// <summary>Editing in the Data tab against the server (phase 7; appendix D B15–B17; FAM-G08, G09; D3).</summary>
 public sealed class DataEditingTests
 {
     private static async Task<string?> ScalarAsync(string cs, string sql)
@@ -20,10 +20,10 @@ public sealed class DataEditingTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EditarInserirDuplicarApagarEErros()
+    public async Task EditInsertDuplicateDeleteAndErrors()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ed_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(20), age INT, note TEXT, created DATETIME) ENGINE=InnoDB; " +
             $"INSERT INTO `{db}`.people (name, age, note) VALUES ('Ana', 30, REPEAT('n', 400)), ('Rui', 40, 'curta');");
@@ -48,7 +48,7 @@ public sealed class DataEditingTests
             var note = 3;
             var created = 4;
 
-            // UPDATE pela chave; a célula mostra o valor relido (a nota cortada a 256 vem completa).
+            // UPDATE by key; the cell shows the value read back (the note cut at 256 comes complete).
             grid.FocusCell(0, name);
             Assert.True(await grid.SetCellValueAsync(0, name, new CellValue("Zé")));
             Assert.True(await grid.SetCellValueAsync(0, created, new CellValue("'2001-02-03' + INTERVAL 1 HOUR", IsFunction: true)));
@@ -58,12 +58,12 @@ public sealed class DataEditingTests
             Assert.Equal(400, grid.GetDisplayText(0, note)!.Length);
             Assert.False(grid.Edits.HasPending);
 
-            // O mesmo valor não é erro (o servidor conta 0 linhas alteradas).
+            // The same value is not an error (the server counts 0 changed rows).
             Assert.True(await grid.SetCellValueAsync(0, age, new CellValue("30")));
             Assert.True(await grid.PostAsync());
             Assert.Empty(errors);
 
-            // Insert value ▸: NULL (Ctrl+Shift+N), a data do servidor (o valor está na caption) e o default literal.
+            // Insert value ▸: NULL (Ctrl+Shift+N), the server date (the value is in the caption) and the literal default.
             window.CaptureRenderedFrame();
             grid.Focus();
             grid.FocusCell(1, age);
@@ -78,27 +78,27 @@ public sealed class DataEditingTests
             Assert.True(await grid.PostAsync());
             Assert.Equal("NULL|" + date[6..] + " 00:00:00", await ScalarAsync(cs, $"SELECT CONCAT_WS('|', IFNULL(age, 'NULL'), created) FROM `{db}`.people WHERE id = 2"));
 
-            // Insert row: só as colunas alteradas; o id vem do LAST_INSERT_ID().
+            // Insert row: only the changed columns; the id comes from LAST_INSERT_ID().
             Assert.True(await context.Commands.ExecuteAsync("grid.insertRow"));
             Assert.Equal(3, grid.RowCount);
-            Assert.True(await grid.SetCellValueAsync(2, name, new CellValue("Nova")));
+            Assert.True(await grid.SetCellValueAsync(2, name, new CellValue("Nora")));
             Assert.True(await grid.PostAsync());
             Assert.Equal("3", grid.GetDisplayText(2, 0));
-            Assert.Equal("Nova", await ScalarAsync(cs, $"SELECT name FROM `{db}`.people WHERE id = 3"));
+            Assert.Equal("Nora", await ScalarAsync(cs, $"SELECT name FROM `{db}`.people WHERE id = 3"));
 
-            // Duplicate row without keys: copia tudo menos o id e grava ao fazer Post.
+            // Duplicate row without keys: copies everything but the id and saves on Post.
             grid.FocusCell(1, name);
             Assert.True(await context.Commands.ExecuteAsync("grid.duplicateRow"));
             Assert.True(await grid.PostAsync());
             Assert.Equal("2", await ScalarAsync(cs, $"SELECT COUNT(*) FROM `{db}`.people WHERE name = 'Rui' AND age IS NULL AND note = 'curta'"));
 
-            // Delete selected row(s): pergunta, apaga e recarrega.
+            // Delete selected row(s): asks, deletes and reloads.
             grid.FocusCell(0, name);
             Assert.True(await context.Commands.ExecuteAsync("grid.deleteRows"));
             await WaitAsync(() => grid.RowCount == 3 ? "ok" : null);
             Assert.Equal("0", await ScalarAsync(cs, $"SELECT COUNT(*) FROM `{db}`.people WHERE id = 1"));
 
-            // A linha apagada por outra ligação: o UPDATE dá erro e a linha fica alterada.
+            // The row deleted by another connection: the UPDATE gives an error and the row stays changed.
             var victim = grid.GetDisplayText(0, 0);
             await ExecAsync(cs, $"DELETE FROM `{db}`.people WHERE id = {victim}");
             Assert.True(await grid.SetCellValueAsync(0, name, new CellValue("perdido")));

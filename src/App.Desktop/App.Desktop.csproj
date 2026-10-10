@@ -4,12 +4,12 @@
     <AssemblyName>Eunomia</AssemblyName>
     <OutputType>WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- Ícone do executável (recurso Win32; o NativeAOT embute-o no Eunomia.exe). -->
+    <!-- Executable icon (Win32 resource; NativeAOT embeds it in Eunomia.exe). -->
     <ApplicationIcon>..\..\assets\brand\eunomia.ico</ApplicationIcon>
-    <!-- As janelas usam o ícone de UI.Controls.Common (BrandAssets); sem uma segunda cópia como ícone por omissão. -->
+    <!-- Windows use the icon from UI.Controls.Common (BrandAssets); no second copy as the default icon. -->
     <AvaloniaIncludeApplicationIconAsWindowIcon>false</AvaloniaIncludeApplicationIconAsWindowIcon>
     <PublishAot>true</PublishAot>
-    <!-- LibraryImport (P/Invoke gerado em compile time, seguro para AOT) precisa de unsafe. -->
+    <!-- LibraryImport (P/Invoke generated at compile time, safe for AOT) needs unsafe. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>

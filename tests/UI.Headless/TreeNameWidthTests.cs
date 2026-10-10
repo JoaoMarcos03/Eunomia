@@ -5,11 +5,11 @@ using Eunomia.UI.Controls.Tree;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Os nomes da árvore usam a largura toda quando a linha não tem tamanho para mostrar (Fase 13).</summary>
+/// <summary>Tree names use the full width when the row has no size to show (phase 13).</summary>
 public sealed class TreeNameWidthTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task NomeSoCortaQuandoNaoCabe()
+    public async Task NameIsOnlyCutWhenItDoesNotFit()
     {
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(), new SyntheticTreeProvider());
         var view = new DatabaseTreeView();
@@ -28,7 +28,7 @@ public sealed class TreeNameWidthTests
         window.Show();
         window.CaptureRenderedFrame();
 
-        // Sem tamanho, o nome usa a largura toda e cabe; com tamanho, a coluna Size fica reservada e o nome corta.
+        // Without a size, the name uses the full width and fits; with a size, the Size column is reserved and the name is cut.
         Assert.False(view.Tree.IsNameClipped(noSize), noSize.Name);
         Assert.True(view.Tree.IsNameClipped(withSize), withSize.Name);
         window.Close();

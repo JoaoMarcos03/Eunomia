@@ -1,17 +1,17 @@
 namespace Eunomia.UI.Controls.Graph.Layout;
 
-/// <summary>Tamanho de um nó para o layout.</summary>
+/// <summary>Size of a node for the layout.</summary>
 public readonly record struct LayoutSize(double Width, double Height);
 
-/// <summary>Posição (canto superior esquerdo) calculada para um nó.</summary>
+/// <summary>Position (top-left corner) computed for a node.</summary>
 public readonly record struct LayoutPoint(double X, double Y);
 
-/// <summary>Aresta dirigida para o layout: <see cref="From"/> fica à esquerda de <see cref="To"/> quando possível.</summary>
+/// <summary>Directed edge for the layout: <see cref="From"/> stays to the left of <see cref="To"/> when possible.</summary>
 public readonly record struct LayoutEdge(int From, int To);
 
 /// <summary>
-/// Layout de grafos (secção 17.4): a implementação pode trocar (MSAGL, ELK) sem mexer no canvas. Corre fora da UI
-/// thread; o cancel é verificado entre fases.
+/// Graph layout (section 17.4): the implementation can be swapped (MSAGL, ELK) without touching the canvas. Runs off the UI
+/// thread; cancellation is checked between phases.
 /// </summary>
 public interface IGraphLayout
 {
@@ -19,12 +19,11 @@ public interface IGraphLayout
 }
 
 /// <summary>
-/// Layout em camadas da esquerda para a direita (Sugiyama; SV-09): por componente ligado, ciclos quebrados ao inverter
-/// as arestas de volta de uma DFS, camadas pelo caminho mais longo, nós fictícios nas arestas que saltam camadas,
-/// ordem dentro das camadas por baricentro (varrimentos nos dois sentidos, fica a ordem com menos cruzamentos) e
-/// posições verticais por regressão isotónica (cada nó o mais perto possível dos vizinhos, sem sobreposições e sem
-/// mudar a ordem). Os componentes são empacotados em prateleiras; os nós sem relações vão para uma grelha no fim.
-/// Determinístico: a mesma entrada dá as mesmas posições.
+/// Left-to-right layered layout (Sugiyama; SV-09): per connected component, cycles broken by reversing the back edges of a
+/// DFS, layers by longest path, dummy nodes on edges that skip layers, order within the layers by barycentre (sweeps in
+/// both directions, keeping the order with the fewest crossings) and vertical positions by isotonic regression (each node
+/// as close as possible to its neighbours, without overlaps and without changing the order). Components are packed on
+/// shelves; nodes without relations go to a grid at the end. Deterministic: the same input gives the same positions.
 /// </summary>
 public sealed class LayeredLayout : IGraphLayout
 {
@@ -34,7 +33,7 @@ public sealed class LayeredLayout : IGraphLayout
 
     public double ComponentGap { get; init; } = 80;
 
-    /// <summary>Varrimentos de redução de cruzamentos (cada um desce e sobe as camadas).</summary>
+    /// <summary>Crossing-reduction sweeps (each one goes down and up the layers).</summary>
     public int OrderingSweeps { get; init; } = 8;
 
     public IReadOnlyList<LayoutPoint> Layout(IReadOnlyList<LayoutSize> nodes, IReadOnlyList<LayoutEdge> edges, CancellationToken cancellationToken)
@@ -80,7 +79,7 @@ public sealed class LayeredLayout : IGraphLayout
             placed.Add((component, width, height, local));
         }
 
-        // Componentes maiores primeiro, em prateleiras com a largura do maior ou da raiz da área total.
+        // Larger components first, on shelves as wide as the largest one or the square root of the total area.
         var totalArea = placed.Sum(p => p.Width * p.Height) + singles.Sum(n => (nodes[n].Width + NodeGap) * (nodes[n].Height + NodeGap));
         var shelfWidth = Math.Max(placed.Count > 0 ? placed.Max(p => p.Width) : 0, Math.Sqrt(totalArea) * 1.6);
         double x = 0, y = 0, shelfHeight = 0;
@@ -153,10 +152,10 @@ public sealed class LayeredLayout : IGraphLayout
         return components;
     }
 
-    /// <summary>Um componente ligado; devolve posições locais (indexadas pelo nó original).</summary>
+    /// <summary>One connected component; returns local positions (indexed by the original node).</summary>
     private Dictionary<int, LayoutPoint> LayoutComponent(List<int> component, List<(int From, int To)> edges, IReadOnlyList<LayoutSize> sizes, CancellationToken cancellationToken)
     {
-        // Índices locais.
+        // Local indexes.
         var index = new Dictionary<int, int>();
         for (var i = 0; i < component.Count; i++)
         {
@@ -173,11 +172,11 @@ public sealed class LayeredLayout : IGraphLayout
             outgoing[index[from]].Add(index[to]);
         }
 
-        // 1. Ciclos: as arestas de volta de uma DFS (pela ordem dos índices) passam a ir no outro sentido.
+        // 1. Cycles: the back edges of a DFS (in index order) are reversed.
         var acyclic = RemoveCycles(outgoing);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // 2. Camadas pelo caminho mais longo a partir das fontes.
+        // 2. Layers by longest path from the sources.
         var layer = new int[n];
         var indegree = new int[n];
         foreach (var list in acyclic)
@@ -200,7 +199,7 @@ public sealed class LayeredLayout : IGraphLayout
                 }
             }
         }
-        // Fontes encostadas aos filhos (uma tabela-pai só de uma filha distante não fica na camada 0).
+        // Sources pulled next to their children (a parent table of a single distant child does not stay in layer 0).
         var hasIncoming = new bool[n];
         foreach (var list in acyclic)
         {
@@ -217,7 +216,7 @@ public sealed class LayeredLayout : IGraphLayout
             }
         }
 
-        // 3. Nós fictícios nas arestas que saltam camadas (ajudam a ordenar; não se desenham).
+        // 3. Dummy nodes on edges that skip layers (they help ordering; they are not drawn).
         var nodeLayer = new List<int>(layer);
         var height = new List<double>(component.Select(c => sizes[c].Height));
         var width = new List<double>(component.Select(c => sizes[c].Width));
@@ -263,7 +262,7 @@ public sealed class LayeredLayout : IGraphLayout
             up[to].Add(from);
         }
 
-        // 4. Ordem dentro das camadas: baricentros, a descer e a subir; fica a melhor ordem vista.
+        // 4. Order within the layers: barycentres, going down and up; the best order seen is kept.
         var position = new double[total];
         void Renumber()
         {
@@ -299,7 +298,7 @@ public sealed class LayeredLayout : IGraphLayout
         layers = best;
         Renumber();
 
-        // 5. Coordenadas: x pela largura das camadas; y alinhado com os vizinhos sem sobreposições.
+        // 5. Coordinates: x by layer width; y aligned with the neighbours without overlaps.
         var layerX = new double[layerCount];
         for (var l = 1; l < layerCount; l++)
         {
@@ -352,7 +351,7 @@ public sealed class LayeredLayout : IGraphLayout
             {
                 continue;
             }
-            // DFS iterativa: 1 = na pilha, 2 = acabado.
+            // Iterative DFS: 1 = on the stack, 2 = finished.
             var stack = new Stack<(int Node, int Next)>();
             stack.Push((start, 0));
             state[start] = 1;
@@ -365,7 +364,7 @@ public sealed class LayeredLayout : IGraphLayout
                     var w = outgoing[v][next];
                     if (state[w] == 1)
                     {
-                        // Aresta de volta: inverte.
+                        // Back edge: reverse it.
                         if (!result[w].Contains(v))
                         {
                             result[w].Add(v);
@@ -393,7 +392,7 @@ public sealed class LayeredLayout : IGraphLayout
         return result;
     }
 
-    /// <summary>Ordena uma camada pelo baricentro dos vizinhos na camada fixa (sem vizinhos, mantém o lugar).</summary>
+    /// <summary>Sorts a layer by the barycentre of its neighbours in the fixed layer (without neighbours, keeps its place).</summary>
     private static void Reorder(List<int> layer, List<int>[] neighbours, double[] position)
     {
         var keys = new Dictionary<int, double>();
@@ -410,7 +409,7 @@ public sealed class LayeredLayout : IGraphLayout
         }
     }
 
-    /// <summary>Cruzamentos entre camadas vizinhas (inversões, contadas por merge sort).</summary>
+    /// <summary>Crossings between neighbouring layers (inversions, counted by merge sort).</summary>
     private static long Crossings(List<int>[] layers, List<int>[] down, double[] position)
     {
         long total = 0;
@@ -470,8 +469,8 @@ public sealed class LayeredLayout : IGraphLayout
     }
 
     /// <summary>
-    /// Centros de uma camada: cada nó quer o centro médio dos vizinhos (senão fica onde está); a ordem e as distâncias
-    /// mínimas mantêm-se, com a soma dos quadrados dos desvios mínima (regressão isotónica, pool adjacent violators).
+    /// Centres of a layer: each node wants the mean centre of its neighbours (otherwise it stays where it is); the order and the
+    /// minimum distances are kept, with the minimum sum of squared deviations (isotonic regression, pool adjacent violators).
     /// </summary>
     private void Place(List<int> layer, List<int>[] neighbours, double[] center, List<double> height)
     {
@@ -480,7 +479,7 @@ public sealed class LayeredLayout : IGraphLayout
         {
             return;
         }
-        // Com o deslocamento mínimo s_i de cada nó ao primeiro, z_i = y_i - s_i tem de ser não decrescente.
+        // With each node's minimum offset s_i from the first, z_i = y_i - s_i must be non-decreasing.
         var offset = new double[count];
         for (var i = 1; i < count; i++)
         {
@@ -493,7 +492,7 @@ public sealed class LayeredLayout : IGraphLayout
             var desired = neighbours[v].Count > 0 ? neighbours[v].Average(w => center[w]) : center[v];
             target[i] = desired - offset[i];
         }
-        // Blocos (média, peso, fim).
+        // Blocks (mean, weight, end).
         var means = new List<double>();
         var weights = new List<int>();
         var ends = new List<int>();

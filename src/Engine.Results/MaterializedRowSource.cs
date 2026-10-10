@@ -1,12 +1,12 @@
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Orçamento de um resultado (secção 11.3, PR-17): bytes em memória por resultado, pasta de spill e quota de disco.
-/// Sem pasta de spill, tudo fica em memória.
+/// Budget of a result (section 11.3, PR-17): bytes in memory per result, spill folder and disk quota.
+/// Without a spill folder, everything stays in memory.
 /// </summary>
 public sealed record ResultStorage(long BudgetBytes = ResultStorage.DefaultBudgetBytes, string? SpillDirectory = null, long SpillQuotaBytes = ResultStorage.DefaultSpillQuotaBytes)
 {
-    /// <summary>Orçamento global partilhado com os outros resultados (PR-17), ou <c>null</c>.</summary>
+    /// <summary>Global budget shared with the other results (PR-17), or <c>null</c>.</summary>
     public ResultMemoryPool? Pool { get; init; }
 
     public const long DefaultBudgetBytes = 256L * 1024 * 1024;
@@ -16,14 +16,14 @@ public sealed record ResultStorage(long BudgetBytes = ResultStorage.DefaultBudge
     public static ResultStorage InMemory { get; } = new();
 }
 
-/// <summary>A memória e o disco permitidos para um resultado acabaram (o resultado fica parcial mas utilizável).</summary>
+/// <summary>The memory and disk allowed for a result ran out (the result is partial but usable).</summary>
 public sealed class ResultStorageFullException(string message) : Exception(message);
 
 /// <summary>
-/// Resultado com os blocos por ordem de chegada (resultados de queries; páginas do Data tab). Os blocos chegam com
-/// <see cref="Append"/> (do executor em streaming); a contagem passa a final em <see cref="Complete"/>. Acima do
-/// orçamento, os blocos menos usados e fora do intervalo pedido pelo grid vão para o ficheiro de spill e voltam quando
-/// são pedidos. Thread-safe para um escritor e vários leitores.
+/// Result with blocks in arrival order (query results; Data tab pages). Blocks arrive through
+/// <see cref="Append"/> (from the streaming executor); the count becomes final in <see cref="Complete"/>. Above the
+/// budget, the least used blocks outside the range requested by the grid go to the spill file and come back when
+/// requested. Thread-safe for one writer and several readers.
 /// </summary>
 public sealed class MaterializedRowSource : IRowSource, IDisposable
 {
@@ -40,7 +40,7 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
     private bool _completed;
     private bool _disposed;
 
-    // O despejo pode vir do próprio resultado e do orçamento global ao mesmo tempo: um de cada vez (reentrante).
+    // Eviction may come from the result itself and from the global budget at the same time: one at a time (re-entrant).
     private readonly object _trimLock = new();
 
     public MaterializedRowSource(ResultSchema schema, int blockSize = 1024, ResultStorage? storage = null)
@@ -79,7 +79,7 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         }
     }
 
-    /// <summary>Bytes em memória (para o orçamento da secção 11.3).</summary>
+    /// <summary>Bytes in memory (for the section 11.3 budget).</summary>
     public long ByteSize
     {
         get
@@ -91,14 +91,14 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         }
     }
 
-    /// <summary>Bytes no ficheiro de spill.</summary>
+    /// <summary>Bytes in the spill file.</summary>
     public long SpilledBytes => _spill?.Length ?? 0;
 
     public event EventHandler<BlocksAvailableEventArgs>? BlocksAvailable;
 
     /// <summary>
-    /// Acrescenta um bloco (tem de ser o seguinte: índice e primeira linha certos). Se o orçamento e a quota de disco
-    /// acabarem, lança <see cref="ResultStorageFullException"/> e o bloco não entra.
+    /// Appends a block (it must be the next one: right index and first row). If the budget and the disk quota
+    /// run out, throws <see cref="ResultStorageFullException"/> and the block is not added.
     /// </summary>
     public void Append(RowBlock block)
     {
@@ -108,7 +108,7 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         {
             if (block.BlockIndex != _blocks.Count || block.FirstRow != _rows)
             {
-                throw new InvalidOperationException($"Bloco fora de ordem: {block.BlockIndex} (esperado {_blocks.Count}).");
+                throw new InvalidOperationException($"Block out of order: {block.BlockIndex} (expected {_blocks.Count}).");
             }
             if (_spill is not null && _spill.Length + block.ByteSize > _storage.SpillQuotaBytes && _resident + block.ByteSize > _storage.BudgetBytes)
             {
@@ -181,7 +181,7 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         return loaded;
     }
 
-    /// <summary>Protege do spill os blocos do intervalo pedido pelo grid e traz de volta os que lá estiverem.</summary>
+    /// <summary>Protects from spilling the blocks of the range requested by the grid and brings back those that are there.</summary>
     public async Task RequestRangeAsync(long firstRow, int count, CancellationToken cancellationToken = default)
     {
         var first = (int)(Math.Max(0, firstRow) / BlockSize);
@@ -199,12 +199,12 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         }
     }
 
-    /// <summary>Acima do orçamento, escreve no spill e larga os blocos menos usados fora do intervalo protegido.</summary>
+    /// <summary>Above the budget, writes to the spill and drops the least used blocks outside the protected range.</summary>
     private void EnforceBudget() => TrimTo(_storage.BudgetBytes);
 
     /// <summary>
-    /// Despeja blocos (os menos usados, fora do intervalo protegido) até ficarem no máximo <paramref name="bytes"/> em
-    /// memória ou não haver mais candidatos; sem pasta de spill, não faz nada. O orçamento global usa-o.
+    /// Evicts blocks (the least used, outside the protected range) until at most <paramref name="bytes"/> are in
+    /// memory or there are no more candidates; without a spill folder, does nothing. The global budget uses it.
     /// </summary>
     internal void TrimTo(long bytes)
     {

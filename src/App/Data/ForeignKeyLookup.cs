@@ -7,15 +7,15 @@ using Eunomia.Engine.Results;
 namespace Eunomia.App.Data;
 
 /// <summary>
-/// Lista da chave estrangeira no editor da célula (anexo D B15, "Show values in foreign key columns"): os valores da
-/// coluna referida e, se a tabela referida tiver uma coluna de texto, os primeiros 256 caracteres dela ("texto (id)"),
-/// ordenados pelo texto, até 10.000; acima disso, o editor normal.
+/// Foreign key list in the cell editor (appendix D B15, "Show values in foreign key columns"): the values of the
+/// referenced column and, if the referenced table has a text column, its first 256 characters ("text (id)"),
+/// sorted by the text, up to 10,000; above that, the normal editor.
 /// </summary>
 public static class ForeignKeyLookup
 {
     public const int MaxRows = 10000;
 
-    /// <summary>Valores e captions, ou <c>null</c> sem chave estrangeira na coluna ou com 10.000 linhas ou mais.</summary>
+    /// <summary>Values and captions, or <c>null</c> without a foreign key on the column or with 10,000 rows or more.</summary>
     public static async Task<IReadOnlyList<(string Value, string Caption)>?> LoadAsync(OpenSession session, TableDefinition table, string column, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -66,7 +66,7 @@ public static class ForeignKeyLookup
         return rows.Count >= MaxRows ? null : rows;
     }
 
-    /// <summary><c>SELECT chave[, LEFT(texto, 256)] FROM ref ORDER BY texto|chave LIMIT 10000</c>.</summary>
+    /// <summary><c>SELECT key[, LEFT(text, 256)] FROM ref ORDER BY text|key LIMIT 10000</c>.</summary>
     public static string Sql(IDialect dialect, DbObjectRef table, string key, string? text)
     {
         ArgumentNullException.ThrowIfNull(dialect);

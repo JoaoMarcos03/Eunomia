@@ -1,28 +1,28 @@
 namespace Eunomia.UI.Controls.Grid;
 
-/// <summary>Como uma ação de foco altera a seleção.</summary>
+/// <summary>How a focus action changes the selection.</summary>
 public enum SelectMode
 {
-    /// <summary>Seleciona só a linha focada (clique ou seta sem modificadores).</summary>
+    /// <summary>Selects only the focused row (click or arrow without modifiers).</summary>
     Replace,
 
-    /// <summary>Ctrl+clique: inverte a linha e passa a ser a âncora.</summary>
+    /// <summary>Ctrl+click: toggles the row and makes it the anchor.</summary>
     Toggle,
 
-    /// <summary>Shift: seleciona da âncora até à linha focada.</summary>
+    /// <summary>Shift: selects from the anchor to the focused row.</summary>
     Extend,
 
-    /// <summary>Move só o foco (Ctrl+setas), sem mudar a seleção.</summary>
+    /// <summary>Moves only the focus (Ctrl+arrows), without changing the selection.</summary>
     FocusOnly,
 }
 
 /// <summary>
-/// Seleção do grid igual ao HeidiSQL (secção 4.4, FAM-G05): conjunto de linhas, guardado como ranges
-/// (1M linhas selecionadas custam bytes), mais uma célula focada e uma âncora. Sem seleção retangular (D10).
+/// Grid selection as in HeidiSQL (section 4.4, FAM-G05): a set of rows, stored as ranges
+/// (1M selected rows cost bytes), plus a focused cell and an anchor. No rectangular selection (D10).
 /// </summary>
 public sealed class GridSelection
 {
-    // Ranges [Start, End] inclusivos, ordenados e sem sobreposição nem adjacência.
+    // Inclusive [Start, End] ranges, sorted, without overlap or adjacency.
     private readonly List<(long Start, long End)> _ranges = [];
 
     public long FocusedRow { get; private set; } = -1;
@@ -48,7 +48,7 @@ public sealed class GridSelection
 
     public event EventHandler? Changed;
 
-    /// <summary>Texto da status bar: <c>r12 : c3 (5 sel)</c> (base 1).</summary>
+    /// <summary>Status bar text: <c>r12 : c3 (5 sel)</c> (1-based).</summary>
     public string StatusText => FocusedRow < 0 ? string.Empty : $"r{FocusedRow + 1} : c{FocusedColumn + 1} ({Count} sel)";
 
     public bool IsSelected(long row)
@@ -111,7 +111,7 @@ public sealed class GridSelection
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Muda só a coluna focada (Home/End, ←/→, Tab).</summary>
+    /// <summary>Changes only the focused column (Home/End, ←/→, Tab).</summary>
     public void FocusColumn(int column)
     {
         FocusedColumn = Math.Max(0, column);
@@ -129,7 +129,7 @@ public sealed class GridSelection
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Ctrl+I: inverte a seleção em <c>[0, rowCount)</c>.</summary>
+    /// <summary>Ctrl+I: inverts the selection in <c>[0, rowCount)</c>.</summary>
     public void Invert(long rowCount)
     {
         var inverted = new List<(long, long)>();

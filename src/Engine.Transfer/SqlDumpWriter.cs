@@ -5,7 +5,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.Engine.Transfer;
 
-/// <summary>O que o SQL export escreve dos dados (anexo B §2.3.1; não há modo UPDATE).</summary>
+/// <summary>What the SQL export writes of the data (appendix B §2.3.1; there is no UPDATE mode).</summary>
 public enum DumpDataMode
 {
     None,
@@ -15,7 +15,7 @@ public enum DumpDataMode
     Replace,
 }
 
-/// <summary>Opções do SQL export com os defaults do HeidiSQL (anexo B §2.3.1).</summary>
+/// <summary>SQL export options with HeidiSQL's defaults (appendix B §2.3.1).</summary>
 public sealed record SqlDumpOptions
 {
     public bool AddComments { get; init; } = true;
@@ -30,10 +30,10 @@ public sealed record SqlDumpOptions
 
     public DumpDataMode Data { get; init; } = DumpDataMode.None;
 
-    /// <summary>Max INSERT size em KB; 0 = um INSERT por linha. O INSERT fecha a 90% deste tamanho.</summary>
+    /// <summary>Max INSERT size in KB; 0 = one INSERT per row. The INSERT closes at 90% of this size.</summary>
     public int MaxInsertSizeKb { get; init; } = 1024;
 
-    /// <summary>Linhas por INSERT (10.000 no MySQL, MariaDB, PostgreSQL e SQLite).</summary>
+    /// <summary>Rows per INSERT (10,000 on MySQL, MariaDB, PostgreSQL and SQLite).</summary>
     public int MaxRowsPerInsert { get; init; } = 10_000;
 
     public bool WrapInTransactions { get; init; }
@@ -42,23 +42,23 @@ public sealed record SqlDumpOptions
 
     public bool RemoveDefiner { get; init; } = true;
 
-    /// <summary>Drop implica Create (o diálogo marca as duas).</summary>
+    /// <summary>Drop implies Create (the dialog checks both).</summary>
     internal bool WritesDatabases => CreateDatabases || DropDatabases;
 
     internal bool WritesStructure => CreateTables || DropTables;
 }
 
-/// <summary>Dados do cabeçalho do ficheiro (Host, Server version, Server OS e versão do programa).</summary>
+/// <summary>File header data (Host, Server version, Server OS and the program version).</summary>
 public sealed record DumpHeader(string Host, string ServerVersion, string ServerOs, string AppVersion, string Charset = "utf8mb4");
 
-/// <summary>Coluna de uma view para a tabela temporária que resolve as dependências entre views.</summary>
+/// <summary>A view column for the temporary table that resolves the dependencies between views.</summary>
 public sealed record DumpColumn(string Name, string NativeType, bool IsNullable, string? Collation = null);
 
 /// <summary>
-/// Escreve um dump SQL no formato do HeidiSQL (FAM-E06; anexo B §2.3.2–2.3.4): cabeçalho e rodapé com os
-/// <c>SET</c> condicionais, blocos por objeto com <c>-- Dumping …</c>, DDL com <c>IF NOT EXISTS</c> e quebras de linha
-/// CRLF, <c>DELIMITER //</c> para routines, triggers e events, e INSERT multi-row até 90% do Max INSERT size ou
-/// 10.000 linhas. Tudo em UTF-8 sem BOM. A ordem dos objetos é de quem chama.
+/// Writes an SQL dump in HeidiSQL's format (FAM-E06; appendix B §2.3.2–2.3.4): header and footer with the conditional
+/// <c>SET</c>s, blocks per object with <c>-- Dumping …</c>, DDL with <c>IF NOT EXISTS</c> and CRLF line breaks,
+/// <c>DELIMITER //</c> for routines, triggers and events, and multi-row INSERTs up to 90% of the Max INSERT size or
+/// 10,000 rows. Everything in UTF-8 without a BOM. The caller decides the order of the objects.
 /// </summary>
 public sealed partial class SqlDumpWriter
 {
@@ -69,7 +69,7 @@ public sealed partial class SqlDumpWriter
     private readonly SqlDumpOptions _options;
     private readonly ByteBuilder _row = new();
 
-    // INSERT em curso.
+    // INSERT in progress.
     private byte[]? _insertPrefix;
     private SqlLiteralKind[] _kinds = [];
     private int[] _scales = [];
@@ -87,7 +87,7 @@ public sealed partial class SqlDumpWriter
 
     public SqlDumpOptions Options => _options;
 
-    /// <summary>Linhas escritas na tabela em curso (ou na última).</summary>
+    /// <summary>Rows written to the current table (or the last one).</summary>
     public long TableRows { get; private set; }
 
     public void WriteHeader(DumpHeader header)
@@ -133,8 +133,8 @@ public sealed partial class SqlDumpWriter
     }
 
     /// <summary>
-    /// Bloco da base (só com Create ou Drop): <c>DROP DATABASE</c>, o <c>SHOW CREATE DATABASE</c> com
-    /// <c>IF NOT EXISTS</c> e <c>USE</c>.
+    /// Database block (only with Create or Drop): <c>DROP DATABASE</c>, the <c>SHOW CREATE DATABASE</c> with
+    /// <c>IF NOT EXISTS</c> and <c>USE</c>.
     /// </summary>
     public void WriteDatabase(string database, string createDatabase)
     {
@@ -156,7 +156,7 @@ public sealed partial class SqlDumpWriter
         _output.Write(sb.ToString());
     }
 
-    /// <summary>Estrutura de uma tabela (só com Create ou Drop): o <c>SHOW CREATE TABLE</c> com <c>IF NOT EXISTS</c>.</summary>
+    /// <summary>Structure of a table (only with Create or Drop): the <c>SHOW CREATE TABLE</c> with <c>IF NOT EXISTS</c>.</summary>
     public void WriteTable(string database, string table, string createTable)
     {
         ArgumentNullException.ThrowIfNull(createTable);
@@ -176,8 +176,8 @@ public sealed partial class SqlDumpWriter
     }
 
     /// <summary>
-    /// Primeira passagem de uma view: tabela temporária com as colunas da view (sem DEFAULT, VARCHAR com comprimento
-    /// 1), para que as views que dependem dela se criem por qualquer ordem.
+    /// First pass of a view: a temporary table with the view's columns (no DEFAULT, VARCHAR with length
+    /// 1), so the views that depend on it can be created in any order.
     /// </summary>
     public void WriteViewPlaceholder(string database, string view, IReadOnlyList<DumpColumn> columns)
     {
@@ -205,7 +205,7 @@ public sealed partial class SqlDumpWriter
         _output.Write(sb.ToString());
     }
 
-    /// <summary>Segunda passagem de uma view (depois dos triggers): larga a tabela temporária e cria a view.</summary>
+    /// <summary>Second pass of a view (after the triggers): drops the temporary table and creates the view.</summary>
     public void WriteView(string database, string view, string createView)
     {
         ArgumentNullException.ThrowIfNull(createView);
@@ -221,7 +221,7 @@ public sealed partial class SqlDumpWriter
         _output.Write(sb.ToString());
     }
 
-    /// <summary>Trigger com o SQL_MODE com que foi criado, entre <c>DELIMITER //</c> e <c>DELIMITER ;</c>.</summary>
+    /// <summary>Trigger with the SQL_MODE it was created with, between <c>DELIMITER //</c> and <c>DELIMITER ;</c>.</summary>
     public void WriteTrigger(string database, string trigger, string sqlMode, string createTrigger)
     {
         ArgumentNullException.ThrowIfNull(sqlMode);
@@ -238,8 +238,8 @@ public sealed partial class SqlDumpWriter
         _output.Write(sb.ToString());
     }
 
-    /// <summary>Function, procedure ou event entre <c>DELIMITER //</c> e <c>DELIMITER ;</c>.</summary>
-    /// <param name="objectType"><c>function</c>, <c>procedure</c> ou <c>event</c>.</param>
+    /// <summary>Function, procedure or event between <c>DELIMITER //</c> and <c>DELIMITER ;</c>.</summary>
+    /// <param name="objectType"><c>function</c>, <c>procedure</c> or <c>event</c>.</param>
     public void WriteRoutine(string database, string objectType, string name, string create)
     {
         ArgumentNullException.ThrowIfNull(objectType);
@@ -254,7 +254,7 @@ public sealed partial class SqlDumpWriter
         _output.Write(sb.ToString());
     }
 
-    /// <summary>Erro ao ler o DDL de um objeto: fica no ficheiro como comentário (anexo B §2.3.3).</summary>
+    /// <summary>Error reading an object's DDL: it goes into the file as a comment (appendix B §2.3.3).</summary>
     public void WriteError(string message)
     {
         ArgumentNullException.ThrowIfNull(message);
@@ -262,7 +262,7 @@ public sealed partial class SqlDumpWriter
         _output.Write("/* " + message.Replace("*/", "* /", StringComparison.Ordinal) + " */" + Crlf);
     }
 
-    /// <summary>Tabela cujos dados não se exportam (motor MRG_MYISAM ou FEDERATED).</summary>
+    /// <summary>Table whose data is not exported (MRG_MYISAM or FEDERATED engine).</summary>
     public void WriteDataSkipped(string database, string table, string engine)
     {
         EnsureNoData();
@@ -276,11 +276,11 @@ public sealed partial class SqlDumpWriter
     }
 
     /// <summary>
-    /// Começa os dados de uma tabela: o comentário com a estimativa de linhas, <c>DELETE FROM</c> no modo
-    /// "Delete + insert" e <c>BEGIN</c> com "Wrap data DML in transactions". Devolve <c>false</c> em "No data" (só o
-    /// comentário <c>-- Data exporting was unselected.</c>): não há linhas a pedir.
+    /// Starts a table's data: the comment with the row estimate, <c>DELETE FROM</c> in "Delete + insert" mode and
+    /// <c>BEGIN</c> with "Wrap data DML in transactions". Returns <c>false</c> for "No data" (only the
+    /// <c>-- Data exporting was unselected.</c> comment): there are no rows to request.
     /// </summary>
-    /// <param name="columns">Colunas do INSERT, na ordem dos blocos que se seguem (sem as colunas geradas).</param>
+    /// <param name="columns">INSERT columns, in the order of the blocks that follow (without generated columns).</param>
     public bool BeginData(string database, string table, long estimatedRows, bool approximate, IReadOnlyList<string> columns)
     {
         ArgumentNullException.ThrowIfNull(table);
@@ -326,7 +326,7 @@ public sealed partial class SqlDumpWriter
         return true;
     }
 
-    /// <summary>Junta as linhas de um bloco ao INSERT em curso, fechando-o e abrindo outro quando chega ao limite.</summary>
+    /// <summary>Adds a block's rows to the INSERT in progress, closing it and opening another when it reaches the limit.</summary>
     public void WriteRows(RowBlock block)
     {
         ArgumentNullException.ThrowIfNull(block);
@@ -388,7 +388,7 @@ public sealed partial class SqlDumpWriter
         }
     }
 
-    /// <summary>Fecha o INSERT em curso (também depois de um cancel: a tabela fica parcial) e o <c>COMMIT</c>.</summary>
+    /// <summary>Closes the INSERT in progress (also after a cancel: the table is left partial) and the <c>COMMIT</c>.</summary>
     public void EndData()
     {
         if (!_inData)
@@ -450,17 +450,17 @@ public sealed partial class SqlDumpWriter
 
     private string StripDefiner(string code) => _options.RemoveDefiner ? DefinerClause().Replace(code, string.Empty) : code;
 
-    /// <summary>Identificador sempre entre backticks, como no dump do HeidiSQL.</summary>
+    /// <summary>Identifier always in backticks, as in HeidiSQL's dump.</summary>
     internal static string Quote(string name) => "`" + name.Replace("`", "``", StringComparison.Ordinal) + "`";
 
     private static void HeaderLine(StringBuilder sb, string label, string value) =>
         sb.Append("-- ").Append(label.PadRight(30)).Append(value).Append(Crlf);
 
-    /// <summary>Quebras de linha CRLF, como o <c>fixNewlines</c> do HeidiSQL.</summary>
+    /// <summary>CRLF line breaks, like HeidiSQL's <c>fixNewlines</c>.</summary>
     internal static string FixNewlines(string text) =>
         text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Replace("\n", Crlf, StringComparison.Ordinal);
 
-    /// <summary>Tipo da coluna na tabela temporária: em maiúsculas fora das aspas, VARCHAR com comprimento 1.</summary>
+    /// <summary>Column type in the temporary table: upper case outside quotes, VARCHAR with length 1.</summary>
     internal static string PlaceholderType(string nativeType)
     {
         var sb = new StringBuilder(nativeType.Length);
@@ -488,7 +488,7 @@ public sealed partial class SqlDumpWriter
     [GeneratedRegex(@"^\s*CREATE\s+TABLE\s+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex CreateTablePrefix();
 
-    // O HeidiSQL exige um espaço depois do número; aqui também apanha a cláusula no fim do texto.
+    // HeidiSQL requires a space after the number; this also catches the clause at the end of the text.
     [GeneratedRegex(@"\sAUTO_INCREMENT\s*=\s*\d+(?=\s|$)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex AutoIncrementClause();
 

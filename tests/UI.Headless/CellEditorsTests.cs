@@ -8,7 +8,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Editores por tipo no Data tab (Fase 7; anexo D B15; FAM-G07, G10).</summary>
+/// <summary>Per-type editors in the Data tab (phase 7; appendix D B15; FAM-G07, G10).</summary>
 public sealed class CellEditorsTests
 {
     private static async Task<string?> ScalarAsync(string cs, string sql)
@@ -20,10 +20,10 @@ public sealed class CellEditorsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EnumSetFkDataTextoLongoBinarioEFuncao()
+    public async Task EnumSetFkDateLongTextBinaryAndFunction()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ce_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
             $"CREATE TABLE `{db}`.cities (id INT PRIMARY KEY, name VARCHAR(20)) ENGINE=InnoDB; INSERT INTO `{db}`.cities VALUES (1, 'Porto'), (2, 'Braga'); " +
@@ -51,7 +51,7 @@ public sealed class CellEditorsTests
             await WaitAsync(() => grid.RowCount == 1 ? "ok" : null);
             window.CaptureRenderedFrame();
 
-            // ENUM: lista com os valores.
+            // ENUM: a list with the values.
             grid.FocusCell(0, 1);
             await grid.BeginEditAsync();
             var combo = Assert.IsType<ComboBox>(grid.EditorControl);
@@ -60,7 +60,7 @@ public sealed class CellEditorsTests
             combo.SelectedIndex = 1;
             grid.EndEdit(commit: true);
 
-            // SET: uma caixa por valor; um valor com "_" aparece inteiro e é gravado tal como é.
+            // SET: one check box per value; a value with "_" shows whole and is saved as it is.
             grid.FocusCell(0, 2);
             await grid.BeginEditAsync();
             var boxes = ((StackPanel)((ScrollViewer)((Border)grid.EditorControl!).Child!).Content!).Children.OfType<CheckBox>().ToList();
@@ -68,13 +68,13 @@ public sealed class CellEditorsTests
             boxes[2].IsChecked = true;
             grid.EndEdit(commit: true);
 
-            // Data e hora: editor de texto com setas.
+            // Date and time: text editor with arrows.
             grid.FocusCell(0, 3);
             await grid.BeginEditAsync();
             Assert.IsType<TextBox>(grid.EditorControl);
             grid.EndEdit(commit: false);
 
-            // Chave estrangeira: "texto (id)" ordenado pelo texto.
+            // Foreign key: "text (id)" sorted by the text.
             grid.FocusCell(0, 4);
             await grid.BeginEditAsync();
             var fk = Assert.IsType<ComboBox>(grid.EditorControl);
@@ -83,7 +83,7 @@ public sealed class CellEditorsTests
             fk.SelectedIndex = 0;
             grid.EndEdit(commit: true);
 
-            // Texto com 300 caracteres e binário: editor em janela.
+            // Text with 300 characters and binary: window editor.
             popupResult = "curto";
             grid.FocusCell(0, 5);
             await grid.BeginEditAsync();
@@ -97,7 +97,7 @@ public sealed class CellEditorsTests
             Assert.True(await grid.PostAsync());
             Assert.Equal("b|x,in_progress|2|curto|beef", await ScalarAsync(cs, $"SELECT CONCAT_WS('|', e, s, city, note, LOWER(HEX(bin))) FROM `{db}`.t"));
 
-            // SQL function (Ctrl+F2): o texto vai como expressão.
+            // SQL function (Ctrl+F2): the text goes as an expression.
             grid.Focus();
             grid.FocusCell(0, 3);
             Assert.True(await window.Context.Commands.ExecuteAsync("grid.sqlFunction"));
@@ -117,7 +117,7 @@ public sealed class CellEditorsTests
     }
 
     [AvaloniaFact]
-    public void EditorEmJanelaMostraALinhaDeEstado()
+    public void WindowEditorShowsTheStatusLine()
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var window = new Eunomia.UI.Shell.Views.TextEditorWindow("Edit note", "ab\ncd", 100, binary: false);
@@ -126,7 +126,7 @@ public sealed class CellEditorsTests
         window.Text = "abc";
         Assert.StartsWith("3 characters", window.Status, StringComparison.Ordinal);
 
-        // Fechar com alterações pergunta; sem resposta (o guarda fecha a pergunta), a janela fica aberta.
+        // Closing with changes asks; without an answer (the guard closes the question), the window stays open.
         window.Close();
         Assert.Equal(["MessageDialog \"Confirm\": Apply modifications?"], UnexpectedDialogGuardAttribute.TakeOpened());
         Assert.True(window.IsVisible);

@@ -4,7 +4,7 @@ using Eunomia.Infra.Settings.Journal;
 
 namespace Eunomia.Infra.Settings.Tests;
 
-/// <summary>Journal das query tabs (TR-31; PR-21; FAM-Q07).</summary>
+/// <summary>Query tab journal (TR-31; PR-21; FAM-Q07).</summary>
 public sealed class TabJournalTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-tj-" + Guid.NewGuid().ToString("N")[..8]);
@@ -20,7 +20,7 @@ public sealed class TabJournalTests : IDisposable
     private static TabState State(Guid id, int order = 0, string caption = "Query") => new() { Id = id, Order = order, Caption = caption };
 
     [Fact]
-    public void AlteracoesSobrevivemAoReabrir()
+    public void ChangesSurviveReopening()
     {
         var id = Guid.NewGuid();
         var journal = new TabJournal(_dir);
@@ -37,7 +37,7 @@ public sealed class TabJournalTests : IDisposable
     }
 
     [Fact]
-    public void RegistoCortadoPorUmCrashEIgnorado()
+    public void RecordCutByACrashIsIgnored()
     {
         var id = Guid.NewGuid();
         var journal = new TabJournal(_dir);
@@ -47,7 +47,7 @@ public sealed class TabJournalTests : IDisposable
         journal.Append(id, new TextEdit(9, 0, " SELECT 2;"));
         journal.Flush();
 
-        // Kill a meio da escrita do registo seguinte: só metade chegou ao disco.
+        // Killed in the middle of writing the next record: only half reached the disk.
         var path = Directory.GetFiles(_dir, "*.journal").Single();
         var full = File.ReadAllBytes(path);
         journal.Append(id, new TextEdit(19, 0, " SELECT 3;"));
@@ -56,32 +56,32 @@ public sealed class TabJournalTests : IDisposable
         File.WriteAllBytes(path, withThird[..(full.Length + ((withThird.Length - full.Length) / 2))]);
         Assert.Equal("SELECT 1; SELECT 2;", TabJournal.Replay(path));
 
-        // Um byte trocado falha o CRC: fica o que estava antes.
+        // A flipped byte fails the CRC: what was there before stays.
         withThird[full.Length + 10] ^= 0xFF;
         File.WriteAllBytes(path, withThird);
         Assert.Equal("SELECT 1; SELECT 2;", TabJournal.Replay(path));
     }
 
     [Fact]
-    public void ResetCompactacaoERemove()
+    public void ResetCompactionAndRemove()
     {
         var id = Guid.NewGuid();
         var journal = new TabJournal(_dir);
         journal.SaveState(State(id));
-        journal.Append(id, new TextEdit(0, 0, "antigo"));
-        journal.Reset(id, "novo");
+        journal.Append(id, new TextEdit(0, 0, "old"));
+        journal.Reset(id, "test");
         journal.Append(id, new TextEdit(4, 0, "!"));
         journal.Flush();
         var path = Directory.GetFiles(_dir, "*.journal").Single();
-        Assert.Equal("novo!", TabJournal.Replay(path));
+        Assert.Equal("test!", TabJournal.Replay(path));
 
         for (var i = 0; i < TabJournal.CompactAfterEdits; i++)
         {
             journal.Append(id, new TextEdit(5, 0, "x"));
         }
         journal.Flush();
-        Assert.Equal("novo!" + new string('x', TabJournal.CompactAfterEdits), TabJournal.Replay(path));
-        Assert.True(new FileInfo(path).Length < 100 + TabJournal.CompactAfterEdits, "Compactado num snapshot.");
+        Assert.Equal("test!" + new string('x', TabJournal.CompactAfterEdits), TabJournal.Replay(path));
+        Assert.True(new FileInfo(path).Length < 100 + TabJournal.CompactAfterEdits, "Compacted into a snapshot.");
 
         journal.Remove(id);
         Assert.Empty(Directory.GetFiles(_dir));
@@ -89,7 +89,7 @@ public sealed class TabJournalTests : IDisposable
     }
 
     [Fact]
-    public void OrdemEStatesDeOutraInstanciaFicamDeFora()
+    public void OrderAndStatesOfAnotherInstanceAreLeftOut()
     {
         var journal = new TabJournal(_dir);
         var second = Guid.NewGuid();
@@ -102,7 +102,7 @@ public sealed class TabJournalTests : IDisposable
         {
             return;
         }
-        // Uma tab de outra instância viva (outro processo) não é restaurada.
+        // A tab of another live instance (another process) is not restored.
         using var other = Process.Start(new ProcessStartInfo("cmd.exe", "/c ping -n 30 127.0.0.1 > nul") { CreateNoWindow = true, UseShellExecute = false })!;
         try
         {

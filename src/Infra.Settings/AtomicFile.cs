@@ -3,10 +3,10 @@ using System.Text;
 namespace Eunomia.Infra.Settings;
 
 /// <summary>
-/// Escrita atómica (secção 21.4): escreve num ficheiro temporário ao lado (com nome único, para duas instâncias não
-/// colidirem), força para disco e troca com um rename. Um crash a meio deixa o ficheiro anterior intacto, nunca um
-/// ficheiro meio escrito. Em Unix os ficheiros ficam só para o dono (0600): têm hosts, utilizadores e SQL. Um rename
-/// recusado por um bloqueio passageiro (antivírus, indexador, outra instância a ler) tenta outra vez.
+/// Atomic write (section 21.4): writes to a temporary file next to the target (with a unique name, so two instances do
+/// not collide), forces it to disk and swaps it in with a rename. A crash halfway leaves the previous file intact, never a
+/// half-written one. On Unix the files are owner-only (0600): they hold hosts, users and SQL. A rename refused because
+/// of a transient lock (antivirus, indexer, another instance reading) is retried.
 /// </summary>
 public static class AtomicFile
 {
@@ -15,7 +15,7 @@ public static class AtomicFile
     public static void WriteAllText(string path, string contents, bool keepBackup = false) =>
         WriteAllBytes(path, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(contents), keepBackup);
 
-    /// <param name="keepBackup">Copia o ficheiro anterior para <c>&lt;path&gt;.bak</c> antes de o trocar.</param>
+    /// <param name="keepBackup">Copies the previous file to <c>&lt;path&gt;.bak</c> before replacing it.</param>
     public static void WriteAllBytes(string path, ReadOnlySpan<byte> contents, bool keepBackup = false)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(path));
@@ -66,7 +66,7 @@ public static class AtomicFile
         }
     }
 
-    /// <summary>Cria a pasta (e as que faltam) só para o dono em Unix (0700).</summary>
+    /// <summary>Creates the folder (and any missing parents) owner-only on Unix (0700).</summary>
     public static void CreatePrivateDirectory(string directory)
     {
         if (Directory.Exists(directory))

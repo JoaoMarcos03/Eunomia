@@ -3,7 +3,7 @@ using Avalonia.Styling;
 
 namespace Eunomia.UI.Controls.SqlEditor;
 
-/// <summary>Estilos de que o editor precisa (template do AvaloniaEdit). Adicionar a <c>Application.Styles</c>.</summary>
+/// <summary>Styles the editor needs (AvaloniaEdit template). Add to <c>Application.Styles</c>.</summary>
 public sealed partial class SqlEditorStyles : Styles
 {
     public SqlEditorStyles()

@@ -2,7 +2,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.Drivers.MySql.Tests;
 
-/// <summary>Instruções do Maintenance (anexo B §2.2): opções que cada operação aceita, pela ordem do HeidiSQL.</summary>
+/// <summary>Maintenance statements (appendix B §2.2): the options each operation accepts, in HeidiSQL's order.</summary>
 public sealed class MaintenanceSqlTests
 {
     private static readonly MySqlDialect Dialect = new(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));
@@ -18,13 +18,13 @@ public sealed class MaintenanceSqlTests
     [InlineData(MaintenanceOperation.Checksum, All, "CHECKSUM TABLE `shop`.`people` EXTENDED")]
     [InlineData(MaintenanceOperation.Optimize, All, "OPTIMIZE TABLE `shop`.`people`")]
     [InlineData(MaintenanceOperation.Repair, All, "REPAIR TABLE `shop`.`people` QUICK EXTENDED USE_FRM")]
-    public void SoAsOpcoesQueAOperacaoAceita(MaintenanceOperation operation, MaintenanceOptions options, string expected)
+    public void OnlyTheOptionsTheOperationAccepts(MaintenanceOperation operation, MaintenanceOptions options, string expected)
     {
         Assert.Equal(expected, Dialect.Maintenance(operation, People, options));
     }
 
     [Fact]
-    public void NomesComCrasesFicamCitados()
+    public void NamesWithBackticksAreQuoted()
     {
         var odd = new DbObjectRef("my`db", "my`db", "a b", DbObjectKind.View);
 

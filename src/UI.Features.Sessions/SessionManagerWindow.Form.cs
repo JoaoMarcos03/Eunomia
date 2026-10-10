@@ -13,10 +13,10 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Features.Sessions;
 
-/// <summary>Campos dos tabs do Session Manager (anexo A §1.6), com os rótulos do HeidiSQL.</summary>
+/// <summary>Fields of the Session Manager tabs (appendix A §1.6), with HeidiSQL's labels.</summary>
 public sealed partial class SessionManagerWindow
 {
-    /// <summary>Cores de sessão: as observadas nos screenshots (secção 5.5) e algumas standard.</summary>
+    /// <summary>Session colours: the ones seen in the screenshots (section 5.5) and some standard ones.</summary>
     private static readonly (string Name, uint? Rgb)[] ColorPresets =
     [
         ("None", null), ("Green", 0x006400), ("Crimson", 0xDC143C), ("Red", 0xF03333), ("Olive", 0x76845C), ("Dark yellow", 0x9D850B),
@@ -93,7 +93,7 @@ public sealed partial class SessionManagerWindow
         panel.Children.Add(_startText);
         if (_services.ImportHeidiSqlAsync is not null)
         {
-            // Quem vem do HeidiSQL: as sessões dele, sem exportar primeiro.
+            // For people coming from HeidiSQL: its sessions, without exporting first.
             var heidi = new Button { Content = "Import sessions from HeidiSQL", Name = "btnImportHeidi" };
             heidi.Click += async (_, _) => await ImportHeidiSqlAsync();
             panel.Children.Add(heidi);
@@ -102,7 +102,7 @@ public sealed partial class SessionManagerWindow
         return panel;
     }
 
-    /// <summary>Logo e versão no topo do Start tab.</summary>
+    /// <summary>Logo and version at the top of the Start tab.</summary>
     private Control BuildBrandHeader()
     {
         var title = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
@@ -262,7 +262,7 @@ public sealed partial class SessionManagerWindow
             {
                 return;
             }
-            // 23.2: níveis inferiores à verificação total exigem confirmação explícita.
+            // 23.2: levels below full verification require explicit confirmation.
             if (_sslVerify.SelectedIndex is 0 or 1 && _model.Draft?.Ssl.Verification == 2)
             {
                 var answer = await Eunomia.UI.Controls.Common.Dialogs.MessageDialog.ShowAsync(this, "SSL verification",
@@ -292,8 +292,8 @@ public sealed partial class SessionManagerWindow
     }
 
     /// <summary>
-    /// Dropdown do campo Databases (anexo A §6): liga com os valores do formulário e mostra as bases com checkboxes; marcar
-    /// ou desmarcar reescreve a lista separada por <c>;</c>. Erros de ligação aparecem como item desativado.
+    /// Databases field drop-down (appendix A §6): connects with the form values and shows the databases with check boxes;
+    /// checking or unchecking rewrites the list separated by <c>;</c>. Connection errors show as a disabled item.
     /// </summary>
     private async Task PickDatabasesAsync(Control anchor)
     {
@@ -337,7 +337,7 @@ public sealed partial class SessionManagerWindow
         new MenuFlyout { ItemsSource = items }.ShowAt(anchor);
     }
 
-    /// <summary>Carrega o rascunho para os controlos.</summary>
+    /// <summary>Loads the draft into the controls.</summary>
     private void LoadForm(SessionDefinition d)
     {
         _loading = true;
@@ -405,7 +405,7 @@ public sealed partial class SessionManagerWindow
         }
     }
 
-    /// <summary>Lê os controlos para o rascunho (cada alteração).</summary>
+    /// <summary>Reads the controls into the draft (on every change).</summary>
     private void ApplyForm(SessionDefinition d)
     {
         d.Host = _host.Text ?? string.Empty;
@@ -413,7 +413,7 @@ public sealed partial class SessionManagerWindow
         d.WindowsAuth = _windowsAuth.IsChecked == true;
         if (d.LoginPrompt && d.WindowsAuth)
         {
-            // Mutuamente exclusivos (anexo A §1.6).
+            // Mutually exclusive (appendix A §1.6).
             d.WindowsAuth = false;
             _loading = true;
             _windowsAuth.IsChecked = false;
@@ -463,7 +463,7 @@ public sealed partial class SessionManagerWindow
         UpdateEnabledFields(d);
     }
 
-    /// <summary>Campos ativos conforme o tipo de rede e as opções (anexo A §1.6, coluna "Enabled when").</summary>
+    /// <summary>Fields enabled according to the network type and the options (appendix A §1.6, "Enabled when" column).</summary>
     private void UpdateEnabledFields(SessionDefinition d)
     {
         var mysql = NetTypes.IsMySqlFamily(d.NetType);

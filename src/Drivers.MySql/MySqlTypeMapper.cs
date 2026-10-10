@@ -6,7 +6,7 @@ using Eunomia.Engine.Results;
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// Tipos nativos do MySQL/MariaDB ↔ tipos lógicos (secção 14.4). Lê o tipo como o servidor o descreve em
+/// MySQL/MariaDB native types ↔ logical types (section 14.4). Reads the type as the server describes it in
 /// <c>information_schema.COLUMNS.COLUMN_TYPE</c> (<c>decimal(12,2) unsigned</c>, <c>enum('a','b')</c>…).
 /// </summary>
 public sealed class MySqlTypeMapper : ITypeMapper
@@ -58,7 +58,7 @@ public sealed class MySqlTypeMapper : ITypeMapper
             LogicalTypeKind.Decimal => StorageKind.String,
             LogicalTypeKind.Float => StorageKind.Double,
             LogicalTypeKind.Binary or LogicalTypeKind.Spatial => StorageKind.Binary,
-            // Datas como texto: zero dates e frações exatamente como o servidor as devolve.
+            // Dates as text: zero dates and fractions exactly as the server returns them.
             _ => StorageKind.String,
         };
     }
@@ -88,7 +88,7 @@ public sealed class MySqlTypeMapper : ITypeMapper
         };
     }
 
-    /// <summary>Categoria de cor do grid para o tipo (secção 5.6).</summary>
+    /// <summary>Grid colour category for the type (section 5.6).</summary>
     public static TypeCategory CategoryOf(LogicalType type) => type.Kind switch
     {
         LogicalTypeKind.Time or LogicalTypeKind.Date or LogicalTypeKind.DateTime => TypeCategory.Temporal,
@@ -108,7 +108,7 @@ public sealed class MySqlTypeMapper : ITypeMapper
 
     private static string Quote(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
 
-    /// <summary>Separa <c>nome(args) resto</c>; os argumentos de enum/set vêm sem aspas e com <c>''</c> resolvido.</summary>
+    /// <summary>Splits <c>name(args) rest</c>; enum/set arguments come unquoted and with <c>''</c> resolved.</summary>
     internal static (string Name, List<string> Args, string Tail) Split(string type)
     {
         var open = type.IndexOf('(', StringComparison.Ordinal);

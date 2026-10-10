@@ -24,7 +24,7 @@ public sealed class CommandRegistryTests
     [InlineData("Ctrl+Insert", ChordModifiers.Ctrl, "Ins")]
     [InlineData("Ctrl+e", ChordModifiers.Ctrl, "E")]
     [InlineData("Ctrl+Alt+PgDn", ChordModifiers.Ctrl | ChordModifiers.Alt, "PgDn")]
-    public void LeAtalhos(string text, ChordModifiers modifiers, string key)
+    public void ParsesShortcuts(string text, ChordModifiers modifiers, string key)
     {
         Assert.Equal(new KeyChord(modifiers, key), KeyChord.Parse(text));
     }
@@ -34,19 +34,19 @@ public sealed class CommandRegistryTests
     [InlineData("Ctrl+")]
     [InlineData("Ctrl+Ctrl+A")]
     [InlineData("Hyper+A")]
-    public void RejeitaAtalhosInvalidos(string text)
+    public void RejectsInvalidShortcuts(string text)
     {
         Assert.False(KeyChord.TryParse(text, out _));
     }
 
     [Fact]
-    public void ToStringEhCanonico()
+    public void ToStringIsCanonical()
     {
         Assert.Equal("Ctrl+Shift+F9", KeyChord.Parse("shift+ctrl+f9").ToString());
     }
 
     [Fact]
-    public void F9DependeDoContextoDeFoco()
+    public void F9DependsOnTheFocusContext()
     {
         var r = Sample();
         var f9 = KeyChord.Parse("F9");
@@ -57,7 +57,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void ComandoGlobalValeEmQualquerContexto()
+    public void GlobalCommandWorksInAnyContext()
     {
         var r = Sample();
 
@@ -66,7 +66,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void ComandoDoContextoGanhaAoGlobal()
+    public void ContextCommandWinsOverTheGlobalOne()
     {
         var r = Sample();
         r.Register(new CommandDescriptor("editor.something", "Editor Ctrl+E", "Editor", KeyChord.Parse("Ctrl+E"), [CommandContexts.QueryEditor]));
@@ -77,7 +77,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void ConflitosNoMesmoContextoOuEntreGlobais()
+    public void ConflictsInTheSameContextOrBetweenGlobals()
     {
         var r = Sample();
         Assert.Empty(r.FindConflicts());
@@ -92,7 +92,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void RemoverAtalho()
+    public void RemoveShortcut()
     {
         var r = Sample();
         r.SetShortcut("query.run", null);
@@ -102,7 +102,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public async Task SemHandlerFicaDesativadoComTooltip()
+    public async Task WithoutAHandlerItIsDisabledWithATooltip()
     {
         var r = Sample();
 
@@ -114,7 +114,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public async Task ComHandlerExecutaERespeitaCanExecute()
+    public async Task WithAHandlerItRunsAndHonoursCanExecute()
     {
         var r = Sample();
         var runs = 0;
@@ -129,16 +129,16 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void IdsSaoUnicos()
+    public void IdsAreUnique()
     {
         var r = Sample();
 
         Assert.Throws<InvalidOperationException>(() => r.Register(new CommandDescriptor("query.run", "x", "y")));
-        Assert.Throws<KeyNotFoundException>(() => r.Get("nao.existe"));
+        Assert.Throws<KeyNotFoundException>(() => r.Get("does.not.exist"));
     }
 
     [Fact]
-    public void OrdemDeRegistoMantemAGeografiaDosMenus()
+    public void RegistrationOrderKeepsTheMenuGeography()
     {
         Assert.Equal(
             ["query.run", "filter.apply", "tree.focusTableFilter", "tree.focus", "file.newQueryTab"],
@@ -146,9 +146,9 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void ComandoDesativadoNaoConsomeOAtalho()
+    public void DisabledCommandDoesNotConsumeTheShortcut()
     {
-        // Esc: Cancel editing (grid, só com alterações pendentes) vs Cancel running operation (global, só a correr).
+        // Esc: Cancel editing (grid, only with pending changes) vs Cancel running operation (global, only while running).
         var r = new CommandRegistry();
         r.Register(new CommandDescriptor("grid.cancelEditing", "Cancel editing", "Data", KeyChord.Parse("Esc"), [CommandContexts.Grid]));
         r.Register(new CommandDescriptor("operation.cancel", "Cancel running operation", "Various", KeyChord.Parse("Esc")));
@@ -168,7 +168,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void ContextosDeFocoDoMaisInteriorParaOMaisExterior()
+    public void FocusContextsFromTheInnermostToTheOutermost()
     {
         var r = Sample();
         r.SetHandler("query.run", () => { });
@@ -179,7 +179,7 @@ public sealed class CommandRegistryTests
     }
 
     [Fact]
-    public void ExportaEImportaAtalhosRedefinidos()
+    public void ExportsAndImportsRedefinedShortcuts()
     {
         var r = Sample();
         r.SetShortcut("query.run", KeyChord.Parse("Ctrl+Enter"));
@@ -190,18 +190,18 @@ public sealed class CommandRegistryTests
         Assert.Equal(string.Empty, saved["tree.focus"]);
 
         var other = Sample();
-        saved["nao.existe"] = "F2";
+        saved["does.not.exist"] = "F2";
         saved["tree.focusTableFilter"] = "Hyper+X";
         var ignored = other.ImportShortcutOverrides(saved);
 
-        Assert.Equal(["nao.existe", "tree.focusTableFilter"], ignored.Order());
+        Assert.Equal(["does.not.exist", "tree.focusTableFilter"], ignored.Order());
         Assert.Equal(KeyChord.Parse("Ctrl+Enter"), other.ShortcutOf("query.run"));
         Assert.Null(other.ShortcutOf("tree.focus"));
         Assert.Equal(KeyChord.Parse("Ctrl+E"), other.ShortcutOf("tree.focusTableFilter"));
     }
 
     [Fact]
-    public void ConflitosParaUmNovoAtalho()
+    public void ConflictsForANewShortcut()
     {
         var r = Sample();
 

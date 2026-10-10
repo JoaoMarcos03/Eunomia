@@ -5,7 +5,7 @@ namespace Eunomia.Engine.Results.Tests;
 public sealed class SyntheticRowSourceTests
 {
     [Fact]
-    public void PorOmissaoTemUmMilhaoDeLinhasPorSessentaColunas()
+    public void ByDefaultHasAMillionRowsBySixtyColumns()
     {
         var source = new SyntheticRowSource();
 
@@ -15,7 +15,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void SchemaTemTiposMistosEPkNaPrimeiraColuna()
+    public void SchemaHasMixedTypesAndPkOnTheFirstColumn()
     {
         var schema = new SyntheticRowSource().Schema;
 
@@ -30,7 +30,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void ValoresSaoDeterministicos()
+    public void ValuesAreDeterministic()
     {
         var a = new SyntheticRowSource().BuildBlock(123);
         var b = new SyntheticRowSource().BuildBlock(123);
@@ -46,7 +46,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void SeedDiferenteDaValoresDiferentes()
+    public void DifferentSeedGivesDifferentValues()
     {
         var formatter = new DisplayFormatter(System.Globalization.CultureInfo.InvariantCulture);
         var a = new SyntheticRowSource(seed: 1).BuildBlock(0);
@@ -57,7 +57,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void IdEhNumeroDeLinhaMaisUm()
+    public void IdIsRowNumberPlusOne()
     {
         var block = new SyntheticRowSource().BuildBlock(5);
 
@@ -66,7 +66,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void ColunasNullableTemNullsENotNullNaoTem()
+    public void NullableColumnsHaveNullsAndNotNullOnesDoNot()
     {
         var source = new SyntheticRowSource();
         var block = source.BuildBlock(0);
@@ -76,7 +76,7 @@ public sealed class SyntheticRowSourceTests
             var nulls = Enumerable.Range(0, block.RowCount).Count(r => block.IsNull(r, c));
             if (source.Schema[c].IsNullable)
             {
-                // ~8% de 1024, com margem larga.
+                // ~8% of 1024, with a wide margin.
                 Assert.InRange(nulls, 30, 150);
             }
             else
@@ -87,7 +87,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void TextoLongoEhCortadoEm256EMarcado()
+    public void LongTextIsCutAt256AndFlagged()
     {
         var source = new SyntheticRowSource();
         var block = source.BuildBlock(0);
@@ -112,7 +112,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void VarcharRespeitaOComprimentoDoTipo()
+    public void VarcharHonoursTheTypeLength()
     {
         var source = new SyntheticRowSource();
         var block = source.BuildBlock(3);
@@ -127,7 +127,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public void UltimoBlocoTemSoAsLinhasQueSobram()
+    public void LastBlockHasOnlyTheRemainingRows()
     {
         var source = new SyntheticRowSource(rows: 2500, blockSize: 1024);
 
@@ -136,7 +136,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public async Task RequestRangeDeixaOsBlocosResidentes()
+    public async Task RequestRangeLeavesTheBlocksResident()
     {
         var source = new SyntheticRowSource();
         var available = new List<int>();
@@ -159,7 +159,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public async Task PedidosConcorrentesDoMesmoBlocoCarregamUmaVez()
+    public async Task ConcurrentRequestsForTheSameBlockLoadOnce()
     {
         var source = new SyntheticRowSource(latency: TimeSpan.FromMilliseconds(50));
         var ct = TestContext.Current.CancellationToken;
@@ -172,7 +172,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public async Task OrcamentoDespejaBlocosNaoFixadosEOsRefazIguais()
+    public async Task BudgetEvictsUnpinnedBlocksAndRebuildsThemIdentically()
     {
         var oneBlock = new SyntheticRowSource().BuildBlock(0).ByteSize;
         var source = new SyntheticRowSource(budgetBytes: oneBlock * 3);
@@ -197,13 +197,13 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public async Task BlocosFixadosNaoSaoDespejados()
+    public async Task PinnedBlocksAreNotEvicted()
     {
         var oneBlock = new SyntheticRowSource().BuildBlock(0).ByteSize;
         var source = new SyntheticRowSource(budgetBytes: oneBlock);
         var ct = TestContext.Current.CancellationToken;
 
-        // Range de 3 blocos acima do orçamento de 1: os 3 ficam (visível + prefetch não se despeja).
+        // A range of 3 blocks above a budget of 1: all 3 stay (visible + prefetch is not evicted).
         await source.RequestRangeAsync(0, 3 * 1024, ct);
 
         Assert.True(source.TryGetBlock(0, out _));
@@ -212,7 +212,7 @@ public sealed class SyntheticRowSourceTests
     }
 
     [Fact]
-    public async Task CancelarUmPedidoNaoCancelaOLoadPartilhado()
+    public async Task CancellingARequestDoesNotCancelTheSharedLoad()
     {
         var source = new SyntheticRowSource(latency: TimeSpan.FromMilliseconds(100));
         using var cts = new CancellationTokenSource();
@@ -230,7 +230,7 @@ public sealed class SyntheticRowSourceTests
 public sealed class FullValueTests
 {
     [Fact]
-    public async Task ValorCompletoNaoTemSeparadorNemTruncagem()
+    public async Task FullValueHasNoSeparatorOrTruncation()
     {
         var source = new SyntheticRowSource();
         var ct = TestContext.Current.CancellationToken;
@@ -247,7 +247,7 @@ public sealed class FullValueTests
     }
 
     [Fact]
-    public async Task ValorCompletoDeNullEhNull()
+    public async Task FullValueOfNullIsNull()
     {
         var source = new SyntheticRowSource();
         var block = source.BuildBlock(0);

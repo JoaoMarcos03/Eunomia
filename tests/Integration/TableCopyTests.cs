@@ -10,8 +10,8 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// Copy table (anexo B §5.1) contra o servidor: estrutura e dados iguais aos da origem, filtro WHERE, colunas parciais e
-/// nunca escrever numa tabela que já existe.
+/// Copy table (appendix B §5.1) against the server: structure and data the same as the source's, WHERE filter, partial
+/// columns and never writing to a table that already exists.
 /// </summary>
 public sealed class TableCopyTests : IAsyncLifetime
 {
@@ -44,7 +44,7 @@ public sealed class TableCopyTests : IAsyncLifetime
         if (_host is not null)
         {
             await _host.DisposeAsync();
-            // A cópia na outra base referencia a primeira: apaga-se antes.
+            // The copy in the other database references the first one: it is dropped first.
             await ExecAsync($"DROP DATABASE IF EXISTS `{_other}`; DROP DATABASE IF EXISTS `{_database}`");
         }
     }
@@ -94,7 +94,7 @@ public sealed class TableCopyTests : IAsyncLifetime
         await ObjectActions.RunAsync(_host, TableCopy.Statements(_host.ServerServices!, source, request), Ct);
 
     [Fact]
-    public async Task CopiaEstruturaEDadosSemPerdas()
+    public async Task CopiesStructureAndDataWithoutLoss()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -109,12 +109,12 @@ public sealed class TableCopyTests : IAsyncLifetime
         Assert.Contains("CONSTRAINT `people_copy_ibfk_1` FOREIGN KEY", create, StringComparison.Ordinal);
         Assert.Contains("CONSTRAINT `people_copy_chk_1` CHECK", create, StringComparison.Ordinal);
         Assert.Contains("VIRTUAL", create, StringComparison.Ordinal);
-        // A origem continua igual.
+        // The source stays the same.
         Assert.Equal(3, (await RowsAsync($"SELECT id FROM `{_database}`.people")).Count);
     }
 
     [Fact]
-    public async Task FiltroCopiaSoAsLinhasPedidas()
+    public async Task FilterCopiesOnlyTheRequestedRows()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -125,7 +125,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FiltroComVariasInstrucoesEhRecusadoAntesDeCriar()
+    public async Task FilterWithSeveralStatementsIsRefusedBeforeCreating()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -138,7 +138,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ColunasSemAChavePerdemOAutoIncrement()
+    public async Task ColumnsWithoutTheKeyLoseTheAutoIncrement()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -151,7 +151,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DestinoQueJaExisteNaoEhTocado()
+    public async Task ExistingTargetIsNotTouched()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -163,7 +163,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OutraBaseMantemOsNomesDasRestricoes()
+    public async Task AnotherDatabaseKeepsTheConstraintNames()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -177,7 +177,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SessaoReadOnlyRecusaACopia()
+    public async Task ReadOnlySessionRefusesTheCopy()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();

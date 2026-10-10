@@ -4,12 +4,12 @@ using Eunomia.Engine.Sql.Lexing;
 namespace Eunomia.Engine.Sql.Formatting;
 
 /// <summary>
-/// Reformat SQL (Ctrl+F8; secção 4.7, formatter interno; anexo C §4): regras simples sobre o token stream do lexer, as do
-/// HeidiSQL mais algumas. Keywords, tipos e funções em maiúsculas; SELECT, FROM, WHERE, GROUP BY, ORDER BY, HAVING, LIMIT,
-/// os JOINs, CREATE, DROP, UPDATE, INSERT, REPLACE, TRUNCATE e DELETE abrem linha (como no HeidiSQL), e também SET, VALUES
-/// e UNION; AND e OR das condições na linha seguinte, indentados; subqueries indentadas; uma linha em branco entre
-/// instruções. Strings, identificadores e comentários ficam como estão; o espaço entre tokens só fica onde já existia,
-/// nunca depois de "(" nem antes de ")", "," ou ";".
+/// Reformat SQL (Ctrl+F8; section 4.7, internal formatter; appendix C §4): simple rules over the lexer's token stream,
+/// HeidiSQL's plus a few more. Keywords, types and functions in upper case; SELECT, FROM, WHERE, GROUP BY, ORDER BY, HAVING,
+/// LIMIT, the JOINs, CREATE, DROP, UPDATE, INSERT, REPLACE, TRUNCATE and DELETE start a line (as in HeidiSQL), and so do SET,
+/// VALUES and UNION; AND and OR of the conditions on the next line, indented; subqueries indented; a blank line between
+/// statements. Strings, identifiers and comments stay as they are; whitespace between tokens is only kept where it already
+/// existed, never after "(" or before ")", "," or ";".
 /// </summary>
 public static class SqlFormatter
 {
@@ -47,7 +47,7 @@ public static class SqlFormatter
             var word = kind is SqlTokenKind.Keyword or SqlTokenKind.DataType or SqlTokenKind.Function ? text.ToUpperInvariant() : text;
             var lineBreak = newlineDue;
             var extraIndent = false;
-            // Dentro de parênteses que não são uma subquery (argumentos, listas) não se parte a linha: EXTRACT(YEAR FROM d).
+            // Inside parentheses that are not a subquery (arguments, lists) the line is not broken: EXTRACT(YEAR FROM d).
             var inPlainParens = subqueryDepths.Count > 0 && subqueryDepths.Peek() < 0;
             if (kind == SqlTokenKind.Keyword && !inPlainParens)
             {
@@ -109,7 +109,7 @@ public static class SqlFormatter
             else if (previous >= 0 && !newlineDue && tokens[previous].End < start && output.Length > 0 && output[^1] is not ('\n' or '\t')
                      && sql[tokens[previous].Start..tokens[previous].End] != "(" && text is not (")" or "," or ";"))
             {
-                // Havia espaço (ou linhas) entre os dois tokens: fica um espaço (nunca depois de "(" nem antes de ")", "," ou ";").
+                // There was whitespace (or lines) between the two tokens: one space stays (never after "(" or before ")", "," or ";").
                 output.Append(' ');
             }
             newlineDue = false;
@@ -146,7 +146,7 @@ public static class SqlFormatter
             }
             else if (kind == SqlTokenKind.Comment && (text.StartsWith("--", StringComparison.Ordinal) || text.StartsWith('#')))
             {
-                // Um comentário de linha acaba a linha; sem isto o token seguinte ficava comentado.
+                // A line comment ends the line; without this the next token would be commented out.
                 newlineDue = true;
             }
             previous = i;
@@ -181,7 +181,7 @@ public static class SqlFormatter
     private static string? PreviousWord(string sql, List<(int Start, int End, SqlTokenKind Kind)> tokens, int index) =>
         index >= 0 ? sql[tokens[index].Start..tokens[index].End].ToUpperInvariant() : null;
 
-    /// <summary>Tokens do texto inteiro com posições absolutas; strings e comentários de várias linhas ficam num só token.</summary>
+    /// <summary>Tokens of the whole text with absolute positions; multi-line strings and comments stay in a single token.</summary>
     private static List<(int Start, int End, SqlTokenKind Kind)> Tokens(string sql)
     {
         var result = new List<(int, int, SqlTokenKind)>();
@@ -211,7 +211,7 @@ public static class SqlFormatter
             }
             if (state != LexerState.Normal && result.Count > 0 && newline >= 0)
             {
-                // A string ou o comentário continua: a quebra de linha faz parte do token.
+                // The string or the comment continues: the line break is part of the token.
                 result[^1] = (result[^1].Item1, newline + 1, result[^1].Item3);
             }
             if (newline < 0)

@@ -16,19 +16,19 @@ using Eunomia.UI.Shell.Sessions;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Painel de helpers das query tabs (anexo C §1.11, §3.9; FAM-Q06, Q09): colunas da tabela selecionada na árvore,
-/// funções, keywords, snippets (ficheiros <c>.sql</c> na pasta dos snippets) e o histórico da sessão alvo. Duplo clique
-/// ou "Insert at cursor" insere; os snippets carregam-se, renomeiam-se e apagam-se; o histórico limpa-se por sessão ou
-/// por entrada; "Generate …" escreve SQL para as colunas escolhidas.
+/// Query tab helpers panel (appendix C §1.11, §3.9; FAM-Q06, Q09): columns of the table selected in the tree,
+/// functions, keywords, snippets (<c>.sql</c> files in the snippets folder) and the target session's history. Double click
+/// or "Insert at cursor" inserts; snippets can be loaded, renamed and deleted; the history is cleared per session or
+/// per entry; "Generate …" writes SQL for the chosen columns.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Substitui o pedido do nome de um snippet (testes): título e nome atual → nome novo.</summary>
+    /// <summary>Replaces the prompt for a snippet's name (tests): title and current name → new name.</summary>
     internal Func<string, string, string?>? SnippetNameOverride { get; set; }
 
     private string SnippetsDirectory => QueryHelpers.SnippetsDirectory(_context.Settings.Query.SnippetsDirectory);
 
-    /// <summary>Linguagem da sessão da query tab ativa (nomes inseridos pelos helpers).</summary>
+    /// <summary>Language of the active query tab's session (names inserted by the helpers).</summary>
     private ISqlLanguage HelperLanguage =>
         ActiveQueryView is { } view && TargetOf(StateOf(view)).Session is { } session ? session.Language : SqlLanguages.Default;
 
@@ -62,7 +62,7 @@ public sealed partial class MainWindow
     {
         var helpers = new QueryHelpersView();
         CommandScope.SetContext(helpers, CommandContexts.Helpers);
-        // Depois de a tab ter conteúdo: montar o menu avalia os comandos, que olham para a query tab ativa.
+        // After the tab has content: building the menu evaluates the commands, which look at the active query tab.
         Dispatcher.UIThread.Post(() => helpers.Tree.ContextMenu = _ui.BuildContextMenu(MainMenuLayout.HelpersMenu));
         helpers.Tree.NodeActivated += (_, node) =>
         {
@@ -77,7 +77,7 @@ public sealed partial class MainWindow
     private QueryHelpersView? ActiveHelpers =>
         _tabs.ActiveQueryTab is { HasContent: true } tab && tab.Content is QueryTabView view ? view.Helpers as QueryHelpersView : null;
 
-    /// <summary>Itens escolhidos no painel da query tab ativa (o focado primeiro).</summary>
+    /// <summary>Items chosen in the active query tab's panel (the focused one first).</summary>
     private IReadOnlyList<HelperItem> FocusedHelperItems()
     {
         if (ActiveHelpers is not { } helpers)
@@ -95,15 +95,15 @@ public sealed partial class MainWindow
 
     private HelperItem? FocusedSnippet() => FocusedHelperItems().FirstOrDefault() is { Kind: HelperKind.Snippet } snippet ? snippet : null;
 
-    /// <summary>Tabela ou view selecionada na árvore, na sessão onde a query tab corre.</summary>
+    /// <summary>Table or view selected in the tree, on the session the query tab runs on.</summary>
     private DbObjectRef? HelperTable(OpenSession? session) =>
         session is not null && _tree.Tree.FocusedNode?.Tag is TreeObjectTag { Object: { Kind: DbObjectKind.Table or DbObjectKind.View } obj } tag && tag.Session == session.Id
             ? obj
             : null;
 
     /// <summary>
-    /// Volta a montar o painel da tab (colunas da cache; se ainda não estão, carrega e volta a montar).
-    /// <paramref name="onlyIfTableChanged"/>: nada a fazer se a tabela selecionada é a mesma (navegar na árvore).
+    /// Rebuilds the tab's panel (columns from the cache; if they are not there yet, loads and rebuilds).
+    /// <paramref name="onlyIfTableChanged"/>: nothing to do if the selected table is the same (navigating the tree).
     /// </summary>
     private void RefreshHelpers(QueryTabView view, bool onlyIfTableChanged = false)
     {
@@ -147,7 +147,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Sem colunas no painel; o erro já foi para o SQL log pela sessão.
+            // No columns in the panel; the error already went to the SQL log through the session.
         }
     }
 
@@ -173,7 +173,7 @@ public sealed partial class MainWindow
         return node;
     }
 
-    /// <summary>Insert at cursor: o texto dos itens escolhidos (separados por vírgulas) no editor da tab.</summary>
+    /// <summary>Insert at cursor: the text of the chosen items (separated by commas) in the tab's editor.</summary>
     private void InsertHelpers()
     {
         if (ActiveQueryView is not { } view)
@@ -201,7 +201,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Colunas para os "Generate …": as escolhidas, ou todas se o foco está na raiz "Columns".</summary>
+    /// <summary>Columns for "Generate …": the chosen ones, or all of them if the focus is on the "Columns" root.</summary>
     private (DbObjectRef? Table, IReadOnlyList<string> Columns) HelperColumns()
     {
         var items = FocusedHelperItems();
@@ -224,7 +224,7 @@ public sealed partial class MainWindow
     private async Task<string?> AskSnippetNameAsync(string title, string current) =>
         SnippetNameOverride is { } fake ? fake(title, current) : await InputDialog.ShowAsync(this, title, "Snippet name:", current);
 
-    /// <summary>Save as snippet / Save selection as snippet: um <c>.sql</c> (UTF-8) na pasta dos snippets.</summary>
+    /// <summary>Save as snippet / Save selection as snippet: a <c>.sql</c> (UTF-8) in the snippets folder.</summary>
     private async Task SaveSnippetAsync(bool selection)
     {
         var view = ActiveQueryView!;
@@ -304,8 +304,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Explore folder: a pasta do snippet selecionado no gestor de ficheiros do sistema (Explorador e Finder com o
-    /// ficheiro selecionado; no Linux, a pasta pelo <c>xdg-open</c>).
+    /// Explore folder: the selected snippet's folder in the system's file manager (Explorer and Finder with the
+    /// file selected; on Linux, the folder through <c>xdg-open</c>).
     /// </summary>
     private void ExploreSnippets()
     {
@@ -326,7 +326,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Clear query history (toda a da sessão) ou Delete this query from history (uma entrada).</summary>
+    /// <summary>Clear query history (all of the session's) or Delete this query from history (one entry).</summary>
     private async Task ClearHistoryAsync()
     {
         if (_context.AppDatabase is not { } db || ActiveQueryView is not { } view || FocusedHelperItems().FirstOrDefault() is not { } item)
@@ -345,7 +345,7 @@ public sealed partial class MainWindow
         RefreshHelpers(view);
     }
 
-    /// <summary>Snippets ▸ do dropdown do Load SQL file.</summary>
+    /// <summary>Snippets ▸ in the Load SQL file drop-down.</summary>
     private Avalonia.Controls.MenuItem SnippetsMenu()
     {
         var menu = new Avalonia.Controls.MenuItem { Header = "Snippets" };

@@ -5,9 +5,9 @@ using Eunomia.UI.Controls.Common.Input;
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Actions do menu Edit no grid (secção 4.6; anexo D B17): Copy copia a célula focada; Cut copia e esvazia; Paste põe o
-/// texto do clipboard inteiro na célula focada (NULL se a última cópia foi um NULL e o clipboard ficou vazio); Select all
-/// seleciona as linhas.
+/// Edit menu actions in the grid (section 4.6; appendix D B17): Copy copies the focused cell; Cut copies and empties it; Paste
+/// puts the whole clipboard text in the focused cell (NULL if the last copy was a NULL and the clipboard is empty); Select all
+/// selects the rows.
 /// </summary>
 public sealed partial class DataGridControl
 {

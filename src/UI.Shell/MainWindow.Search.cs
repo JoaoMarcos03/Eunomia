@@ -11,16 +11,16 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Find (Ctrl+F), Replace (Ctrl+R) e Find again (F3) (anexo C §4.7; FAM-Q10): no editor focado (ou no da query tab
-/// ativa) ou no grid focado (ou no grid ativo). O texto inicial é a seleção, a palavra no cursor ou a célula focada. No
-/// grid só se procura, até a edição chegar (Fase 7). F3 repete a última pesquisa a partir do cursor.
+/// Find (Ctrl+F), Replace (Ctrl+R) and Find again (F3) (appendix C §4.7; FAM-Q10): in the focused editor (or the active query
+/// tab's) or in the focused grid (or the active grid). The initial text is the selection, the word at the cursor or the
+/// focused cell. In the grid it only searches, until editing arrives (phase 7). F3 repeats the last search from the cursor.
 /// </summary>
 public sealed partial class MainWindow
 {
     private (SearchOptions Options, object Target)? _lastSearch;
     private CancellationTokenSource? _gridSearch;
 
-    /// <summary>Substitui o diálogo (testes): recebe o texto inicial, Replace, os alvos e o selecionado.</summary>
+    /// <summary>Replaces the dialog (tests): receives the initial text, Replace, the targets and the selected one.</summary>
     internal Func<string, bool, IReadOnlyList<SearchTarget>, int, SearchRequest?>? SearchDialogOverride { get; set; }
 
     private void InitSearch()
@@ -38,7 +38,7 @@ public sealed partial class MainWindow
         c.SetHandler("edit.copyTabsToSpaces", _ => new ValueTask(CopyTabsToSpacesAsync()), () => FocusedSqlEditor() is { Editor.SelectionLength: > 0 });
     }
 
-    /// <summary>Reformat SQL (Ctrl+F8): a seleção, ou o texto todo, pelo formatter interno, num só passo de undo.</summary>
+    /// <summary>Reformat SQL (Ctrl+F8): the selection, or the whole text, through the internal formatter, as a single undo step.</summary>
     private void ReformatSql()
     {
         var editor = EditingTarget()!.Editor;
@@ -47,7 +47,7 @@ public sealed partial class MainWindow
         editor.Document.Replace(start, length, formatted);
     }
 
-    /// <summary>Copy with tabs to spaces (Ctrl+Shift+C): a seleção do editor focado, com cada tab trocado por espaços.</summary>
+    /// <summary>Copy with tabs to spaces (Ctrl+Shift+C): the focused editor's selection, with each tab replaced by spaces.</summary>
     private async Task CopyTabsToSpacesAsync()
     {
         if (FocusedSqlEditor() is { } editor && Clipboard is { } clipboard)
@@ -57,14 +57,14 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Editor das operações de texto: o focado (se se puder escrever nele), senão o da query tab ativa.</summary>
+    /// <summary>Editor for text operations: the focused one (if it can be written to), otherwise the active query tab's.</summary>
     private SqlEditorControl? EditingTarget() =>
         FocusedSqlEditor() is { Editor.IsReadOnly: false } focused ? focused
         : _tabs.ActiveQueryTab is not null ? ActiveQueryView?.Editor : null;
 
     /// <summary>
-    /// Query › Editor commands ▸ (anexo C §1.7): os comandos de edição do AvaloniaEdit, com o nome separado por espaços
-    /// e o atalho, a correr no editor da query tab ativa.
+    /// Query › Editor commands ▸ (appendix C §1.7): AvaloniaEdit's editing commands, with the name split by spaces
+    /// and the shortcut, running on the active query tab's editor.
     /// </summary>
     internal IReadOnlyList<object> EditorCommandItems()
     {
@@ -98,7 +98,7 @@ public sealed partial class MainWindow
         }).ToList();
     }
 
-    /// <summary>Alvos possíveis: o editor e o grid, o focado primeiro.</summary>
+    /// <summary>Possible targets: the editor and the grid, the focused one first.</summary>
     private List<object> SearchTargets()
     {
         var targets = new List<object>();
@@ -143,7 +143,7 @@ public sealed partial class MainWindow
         _ => new SearchTarget("Grid", CanReplace: false, HasSelection: false),
     };
 
-    /// <summary>Texto inicial: a seleção (de uma linha) ou a palavra no cursor; no grid, a célula focada.</summary>
+    /// <summary>Initial text: the (single-line) selection or the word at the cursor; in the grid, the focused cell.</summary>
     private static string Prefill(object target)
     {
         if (target is SqlEditorControl editor)
@@ -195,7 +195,7 @@ public sealed partial class MainWindow
         await SearchAsync(target, request.Options, request.ReplaceAll, again: false);
     }
 
-    /// <summary>F3: a última pesquisa (ou substituição) outra vez, a partir do cursor.</summary>
+    /// <summary>F3: the last search (or replace) again, from the cursor.</summary>
     private Task SearchAgainAsync() =>
         _lastSearch is { } last ? SearchAsync(last.Target, last.Options with { EntireScope = false }, replaceAll: false, again: true) : Task.CompletedTask;
 
@@ -215,7 +215,7 @@ public sealed partial class MainWindow
         }
         catch (ArgumentException ex)
         {
-            // Regex inválida.
+            // Invalid regex.
             ShowError(ex);
         }
         catch (RegexMatchTimeoutException ex)
@@ -319,7 +319,7 @@ public sealed partial class MainWindow
         }
         else
         {
-            // A seguir à célula focada.
+            // After the focused cell.
             (row, column) = (Math.Max(0, grid.Selection.FocusedRow), grid.Selection.FocusedColumn + (options.Backward ? -1 : 1));
             if (column >= columns)
             {

@@ -7,8 +7,8 @@ using Eunomia.Presentation.Shell;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Serviços partilhados pelo shell (composition root em <c>App.Desktop</c>): settings, registo de comandos com os
-/// atalhos do utilizador, SQL log, status bar e <c>app.db</c>.
+/// Services shared by the shell (composition root in <c>App.Desktop</c>): settings, the command registry with the
+/// user's shortcuts, SQL log, status bar and <c>app.db</c>.
 /// </summary>
 public sealed class ShellContext
 {
@@ -31,36 +31,36 @@ public sealed class ShellContext
 
     public CommandRegistry Commands { get; }
 
-    /// <summary>Atalhos das settings que não foram aplicados (comando desconhecido ou texto inválido).</summary>
+    /// <summary>Shortcuts from the settings that were not applied (unknown command or invalid text).</summary>
     public IReadOnlyList<string> IgnoredShortcuts { get; }
 
     public SqlLogBuffer Log { get; }
 
-    /// <summary>Sessões gravadas, cofre e ligações (null nas medições e nos testes que não precisam).</summary>
+    /// <summary>Saved sessions, vault and connections (null in measurements and in tests that do not need them).</summary>
     public ShellSessions? Sessions { get; init; }
 
-    /// <summary>Pasta onde fica o código de objetos que não voltaram a ser criados depois de uma gravação falhada.</summary>
+    /// <summary>Folder for the code of objects that were not created again after a failed save.</summary>
     public string? RecoveryDirectory { get; init; }
 
-    /// <summary>Pasta dos ficheiros de spill dos resultados (secção 11.3); sem ela, os resultados ficam em memória.</summary>
+    /// <summary>Folder for the results' spill files (section 11.3); without it, results stay in memory.</summary>
     public string? SpillDirectory { get; init; }
 
-    /// <summary>Journal das query tabs (restauro e crash, PR-21); sem ele, as tabs não são guardadas.</summary>
+    /// <summary>Query tab journal (restore and crash, PR-21); without it, tabs are not saved.</summary>
     public Eunomia.App.Query.ITabJournal? TabJournal { get; init; }
 
-    /// <summary>Orçamento global da memória dos resultados (PR-17), partilhado pelo Data tab e pelas query tabs.</summary>
+    /// <summary>Global memory budget for results (PR-17), shared by the Data tab and the query tabs.</summary>
     public Eunomia.Engine.Results.ResultMemoryPool ResultPool { get; } = new();
 
-    /// <summary>Log de diagnóstico em ficheiro (secção 21.5); sem ele, nada é registado fora do SQL log.</summary>
+    /// <summary>Diagnostic log in a file (section 21.5); without it, nothing is logged outside the SQL log.</summary>
     public Eunomia.App.Diagnostics.IDiagnosticLog Diagnostics { get; init; } = Eunomia.App.Diagnostics.NullDiagnosticLog.Instance;
 
-    /// <summary>Avisos do arranque para o SQL log (ficheiros de settings ou de sessões danificados e recuperados).</summary>
+    /// <summary>Startup warnings for the SQL log (damaged and recovered settings or sessions files).</summary>
     public IReadOnlyList<string> StartupWarnings { get; init; } = [];
 
-    /// <summary>Crash report da execução anterior, para o aviso no arranque.</summary>
+    /// <summary>Crash report from the previous run, for the warning at startup.</summary>
     public string? PreviousCrashReport { get; init; }
 
-    /// <summary>Journal dos jobs de import (retoma do Run SQL file); sem ele, um job parado não se retoma.</summary>
+    /// <summary>Import job journal (Run SQL file resume); without it, a stopped job cannot be resumed.</summary>
     public Eunomia.Engine.Transfer.TransferJournal? TransferJournal { get; init; }
 
     public StatusBarModel Status { get; } = new();
@@ -75,7 +75,7 @@ public sealed class ShellContext
     }
 }
 
-/// <summary>Serviços de sessões do shell (Fase 3): catálogo, persistência, cofre e ligações.</summary>
+/// <summary>The shell's session services (phase 3): catalog, persistence, vault and connections.</summary>
 public sealed class ShellSessions
 {
     public required Eunomia.App.Sessions.SessionCatalog Catalog { get; init; }
@@ -86,9 +86,9 @@ public sealed class ShellSessions
 
     public required Eunomia.App.Sessions.SessionConnector Connector { get; init; }
 
-    /// <summary>known_hosts do SSH (para gravar host keys confirmadas).</summary>
+    /// <summary>SSH known_hosts (to save confirmed host keys).</summary>
     public Eunomia.Drivers.Abstractions.ISshTunnelFactory? Ssh { get; init; }
 
-    /// <summary>Mostrar o Session Manager ao abrir a janela (Cancel no arranque fecha a aplicação).</summary>
+    /// <summary>Show the Session Manager when the window opens (Cancel at startup closes the application).</summary>
     public bool ShowManagerOnStartup { get; init; }
 }

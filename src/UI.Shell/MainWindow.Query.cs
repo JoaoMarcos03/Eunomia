@@ -22,10 +22,10 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Execução nas query tabs (secção 4.7; anexo C §4.4; anexo D B18; FAM-Q01–Q04, Q11): Run, Run selection e Run current
-/// query com o <see cref="QueryRunner"/>, um result tab por result set, aviso de UPDATE/DELETE sem WHERE, erro com a
-/// linha a rosa e o cursor nela, resumo e warnings no SQL log, histórico. O cancel atua sobre a execução da própria tab
-/// (D2). Os result tabs ordenam localmente por uma coluna (clique no header), em background e canceláveis (P20).
+/// Execution in the query tabs (section 4.7; appendix C §4.4; appendix D B18; FAM-Q01–Q04, Q11): Run, Run selection and Run
+/// current query with the <see cref="QueryRunner"/>, one result tab per result set, a warning for UPDATE/DELETE without WHERE,
+/// an error with the line in pink and the cursor on it, summary and warnings in the SQL log, history. Cancel acts on the tab's
+/// own run (D2). Result tabs sort locally by a column (header click), in the background and cancellable (P20).
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -37,45 +37,45 @@ public sealed partial class MainWindow
         Selection,
         Current,
 
-        /// <summary>Query › Explain current query: <c>EXPLAIN</c> da instrução onde está o cursor.</summary>
+        /// <summary>Query › Explain current query: <c>EXPLAIN</c> of the statement under the cursor.</summary>
         Explain,
     }
 
-    /// <summary>Estado de uma query tab: execução em curso e resultados da última.</summary>
+    /// <summary>State of a query tab: the run in progress and the results of the last one.</summary>
     private sealed class QueryTabState
     {
         public CancellationTokenSource? Run { get; set; }
 
-        /// <summary>Sessão da execução em curso.</summary>
+        /// <summary>Session of the run in progress.</summary>
         public OpenSession? Session { get; set; }
 
-        /// <summary>"Pin tab to session" (D9): a tab corre sempre nesta sessão, ligada ou não.</summary>
+        /// <summary>"Pin tab to session" (D9): the tab always runs on this session, connected or not.</summary>
         public Guid? PinnedSession { get; set; }
 
-        /// <summary>Nome da sessão fixada (para o indicador, se a sessão deixar de existir).</summary>
+        /// <summary>Name of the pinned session (for the indicator, if the session stops existing).</summary>
         public string? PinnedName { get; set; }
 
-        /// <summary>Identidade no journal (secção 21.4).</summary>
+        /// <summary>Identity in the journal (section 21.4).</summary>
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        /// <summary>Ficheiro da tab (Load / Save) e a codificação.</summary>
+        /// <summary>The tab's file (Load / Save) and its encoding.</summary>
         public string? FilePath { get; set; }
 
         public string? FileEncoding { get; set; }
 
-        /// <summary>Tabela das colunas mostradas no painel de helpers (e se as colunas já lá estavam).</summary>
+        /// <summary>Table whose columns the helpers panel shows (and whether the columns were already there).</summary>
         public (DbObjectRef? Table, bool WithColumns)? HelpersShown { get; set; }
 
-        /// <summary>Último estado gravado no journal.</summary>
+        /// <summary>Last state saved in the journal.</summary>
         public TabState? Saved { get; set; }
 
-        /// <summary>Data e tamanho do ficheiro depois do último Load ou Save (as nossas gravações não perguntam "Reload").</summary>
+        /// <summary>Date and size of the file after the last Load or Save (our own saves do not ask "Reload").</summary>
         public (DateTime, long)? FileStamp { get; set; }
 
         public List<ResultView> Results { get; } = [];
     }
 
-    /// <summary>Um result tab: o resultado, a ordenação local e a vista mostrada (antes do filtro local).</summary>
+    /// <summary>A result tab: the result, the local sort order and the view shown (before the local filter).</summary>
     private sealed class ResultView(QueryResult result, DataGridView grid)
     {
         public QueryResult Result { get; } = result;
@@ -90,7 +90,7 @@ public sealed partial class MainWindow
 
         public CancellationTokenSource? Sort { get; set; }
 
-        /// <summary>Tabela de origem quando o resultado é editável (anexo D B18).</summary>
+        /// <summary>Source table when the result is editable (appendix D B18).</summary>
         public TableDefinition? EditTable { get; set; }
     }
 
@@ -133,7 +133,7 @@ public sealed partial class MainWindow
         };
     }
 
-    /// <summary>Conteúdo de uma query tab nova: editor, helpers e o tabset de resultados.</summary>
+    /// <summary>Content of a new query tab: editor, helpers and the results tabset.</summary>
     private QueryTabView CreateQueryContent()
     {
         var panels = _context.Settings.Panels;
@@ -149,7 +149,7 @@ public sealed partial class MainWindow
         view.HelpersWidthChanged += (_, w) => panels.QueryHelpersWidth = (int)w;
         view.Results.SelectionChanged += (_, e) =>
         {
-            // O evento sobe até ao tabset principal, que não tem nada a ver com ele.
+            // The event bubbles up to the main tabset, which has nothing to do with it.
             e.Handled = true;
             if (view.ActiveGrid is { } grid)
             {
@@ -171,7 +171,7 @@ public sealed partial class MainWindow
         return view;
     }
 
-    /// <summary>Preferences › SQL no editor: fonte (pontos → pixels a 96 DPI), tab width, tabs to spaces, completion, uppercase.</summary>
+    /// <summary>Preferences › SQL on the editor: font (points → pixels at 96 DPI), tab width, tabs to spaces, completion, uppercase.</summary>
     private void ApplyEditorOptions(Eunomia.UI.Controls.SqlEditor.SqlEditorControl editor)
     {
         var q = _context.Settings.Query;
@@ -186,8 +186,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Depois do Preferences: as opções do editor em todas as query tabs abertas, as do grid em todos os grids e as
-    /// barras das listas.
+    /// After Preferences: the editor options on every open query tab, the grid ones on every grid and the
+    /// list bars.
     /// </summary>
     internal void ApplyEditorOptionsToTabs()
     {
@@ -206,7 +206,7 @@ public sealed partial class MainWindow
         ApplyListOptions();
     }
 
-    /// <summary>Preferences › Grid formatting: fonte e largura máxima das colunas.</summary>
+    /// <summary>Preferences › Grid formatting: font and maximum column width.</summary>
     private void ApplyGridOptions(Controls.Grid.DataGridControl grid)
     {
         var data = _context.Settings.Data;
@@ -215,7 +215,7 @@ public sealed partial class MainWindow
         grid.MaxAutoColumnWidth = Math.Clamp(data.MaxColumnWidth, 20, 2000);
     }
 
-    /// <summary>Preferences › General › Display bars: listas do Host e do Database tab.</summary>
+    /// <summary>Preferences › General › Display bars: Host and Database tab lists.</summary>
     private void ApplyListOptions()
     {
         var bars = _context.Settings.Display.Bars;
@@ -232,7 +232,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Sessão onde a tab corre (D9): a fixada, se houver (ligada ou não), senão a da árvore.</summary>
+    /// <summary>Session the tab runs on (D9): the pinned one, if any (connected or not), otherwise the tree's.</summary>
     private (OpenSession? Session, string? Name, uint Color, bool Pinned) TargetOf(QueryTabState state)
     {
         if (state.PinnedSession is { } id)
@@ -247,11 +247,11 @@ public sealed partial class MainWindow
 
     private static uint ArgbOf(uint? rgb) => rgb is { } value ? 0xFF000000 | value : 0;
 
-    /// <summary>Nome da sessão alvo na barra da query tab, com "(read-only)" nas sessões só de leitura.</summary>
+    /// <summary>Name of the target session in the query tab bar, with "(read-only)" for read-only sessions.</summary>
     private static string? TargetLabel(OpenSession? session, string? name) =>
         name is null ? null : session?.Definition.ReadOnly == true ? name + " (read-only)" : name;
 
-    /// <summary>Indicador da sessão alvo em todas as query tabs: cabeçalho, barra do editor, gutter e resultados.</summary>
+    /// <summary>Target session indicator on every query tab: header, editor bar, gutter and results.</summary>
     private void UpdateQueryTargets()
     {
         var active = ActiveSession;
@@ -268,7 +268,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Query tab do comando "Pin tab to session" (a do menu da barra de tabs, ou a ativa).</summary>
+    /// <summary>Query tab of the "Pin tab to session" command (the one from the tab bar menu, or the active one).</summary>
     private (QueryTabView View, QueryTabState State)? PinTarget() =>
         _tabs.TargetQueryTab is { } tab && QueryViewOf(tab) is var view ? (view, StateOf(view)) : null;
 
@@ -292,8 +292,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Autocomplete A na sessão ativa, com a tabela selecionada na árvore; o estado da UI é lido aqui e a análise
-    /// corre em background.
+    /// Autocomplete A on the active session, with the table selected in the tree; the UI state is read here and the analysis
+    /// runs in the background.
     /// </summary>
     private Task<CompletionProposal?> ProposeCompletionAsync(OpenSession? target, string text, int caret, CancellationToken cancellationToken)
     {
@@ -304,7 +304,7 @@ public sealed partial class MainWindow
         return Task.Run(() => completion.ProposeAsync(text, caret, delimiter, selected, cancellationToken), cancellationToken);
     }
 
-    /// <summary>Filtro do Data tab: o texto é visto como <c>SELECT * FROM tbl WHERE …</c> (anexo C §4.2).</summary>
+    /// <summary>Data tab filter: the text is seen as <c>SELECT * FROM tbl WHERE …</c> (appendix C §4.2).</summary>
     private async Task<CompletionProposal?> ProposeFilterCompletionAsync(string text, int caret, CancellationToken cancellationToken)
     {
         if (_browser is not { } browser)
@@ -319,7 +319,7 @@ public sealed partial class MainWindow
 
     private static QueryTabView QueryViewOf(QueryTab tab) => (QueryTabView)tab.Content;
 
-    /// <summary>Query tab ativa, se já tiver conteúdo.</summary>
+    /// <summary>Active query tab, if it already has content.</summary>
     private QueryTabView? ActiveQueryView => _tabs.ActiveQueryTab is { } tab ? QueryViewOf(tab) : null;
 
     private QueryTabState StateOf(QueryTabView view)
@@ -332,15 +332,15 @@ public sealed partial class MainWindow
         return state;
     }
 
-    /// <summary>Result tab selecionado da query tab ativa.</summary>
+    /// <summary>Selected result tab of the active query tab.</summary>
     private ResultView? ActiveResultView =>
         ActiveQueryView is { } view && _queryStates.TryGetValue(view, out var state) && view.Results.SelectedIndex is var i && i >= 0 && i < state.Results.Count
             ? state.Results[i]
             : null;
 
     /// <summary>
-    /// Run: a sessão alvo pronta (ou ocupada só pela carga do Data tab, que cede a ligação à query em
-    /// <see cref="RunQueryAsync"/>), ou fixada e desligada (o Run pede para ligar).
+    /// Run: the target session ready (or busy only with the Data tab load, which yields the connection to the query in
+    /// <see cref="RunQueryAsync"/>), or pinned and disconnected (Run asks to connect).
     /// </summary>
     private bool CanRunQuery() =>
         ActiveQueryView is { } view && StateOf(view) is { Run: null } state && view.Editor.Text.Trim().Length > 0
@@ -355,8 +355,8 @@ public sealed partial class MainWindow
             : ActiveSession is { Host.IsPrimaryBusy: true } session && !QueryRunningOn(session);
 
     /// <summary>
-    /// Esc / Cancel (D2): numa query tab, a sua execução ou a ordenação do result tab; nas outras tabs, o trabalho da
-    /// ligação primária da sessão ativa (Data tab), mas nunca a execução de uma query tab.
+    /// Esc / Cancel (D2): in a query tab, its run or the result tab's sort; in the other tabs, the work on the active session's
+    /// primary connection (Data tab), but never a query tab's run.
     /// </summary>
     private void CancelOperation()
     {
@@ -459,7 +459,7 @@ public sealed partial class MainWindow
             }
         }
 
-        // A carga do Data tab na mesma sessão é cancelada: a query não fica à espera dela na ligação primária.
+        // The Data tab load on the same session is cancelled: the query does not wait for it on the primary connection.
         if (IsLoadingData(session))
         {
             AbandonDataLoad();
@@ -508,9 +508,9 @@ public sealed partial class MainWindow
             {
                 ShowError(ex);
             }
-            // Os grids e as captions chegam por Post: esvazia-os antes do resumo.
+            // The grids and captions arrive through Post: flushes them before the summary.
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-            // Resultados cortados por erro ou cancel ficam com as linhas que chegaram.
+            // Results cut by an error or a cancel keep the rows that arrived.
             foreach (var result in state.Results.Where(r => !r.Result.Source.IsComplete))
             {
                 result.Result.Source.Complete();
@@ -542,7 +542,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Sessão onde correr (D9): com a tab fixada e a sessão desligada, pergunta se liga e nunca corre noutra sessão.
+    /// Session to run on (D9): with the tab pinned and the session disconnected, asks whether to connect and never runs on another session.
     /// </summary>
     private async Task<OpenSession?> QuerySessionAsync(QueryTabState state)
     {
@@ -557,7 +557,7 @@ public sealed partial class MainWindow
             return null;
         }
         var (ok, _) = await ConfirmAsync("Confirm", $"This query tab is pinned to session \"{definition.Path}\", which is not connected. Connect now?");
-        // A execução continua na query tab: ligar não muda para o Host tab.
+        // The run carries on in the query tab: connecting does not switch to the Host tab.
         if (!ok || !await ConnectAsync(this, definition, null, showHostTab: false))
         {
             return null;
@@ -591,7 +591,7 @@ public sealed partial class MainWindow
         state.Results.Add(entry);
     }
 
-    /// <summary>Diálogo do primeiro erro, linha a rosa e cursor nela; com Stop on errors desligado, todos vão para o log.</summary>
+    /// <summary>Dialog for the first error, line in pink and the cursor on it; with Stop on errors off, all of them go to the log.</summary>
     private void ShowQueryErrors(QueryTabView view, IReadOnlyList<QueryRunError> errors, int lineOffset)
     {
         foreach (var error in errors)
@@ -614,12 +614,12 @@ public sealed partial class MainWindow
     private static string ErrorText(QueryRunError error) =>
         string.Create(CultureInfo.InvariantCulture, $"SQL Error ({error.Error.Code}): {error.Error.Message}");
 
-    /// <summary>Substitui o diálogo de erro das query tabs (testes).</summary>
+    /// <summary>Replaces the query tabs' error dialog (tests).</summary>
     internal Action<string>? QueryErrorOverride { get; set; }
 
     /// <summary>
-    /// Histórico por sessão (anexo C §4.5): só batches sem erros, até 5 instruções e 1 MB. Batches com passwords
-    /// (<c>IDENTIFIED BY</c>, <c>SET PASSWORD</c>…) não ficam: as passwords só vivem no cofre do sistema (23.2).
+    /// Per-session history (appendix C §4.5): only batches without errors, up to 5 statements and 1 MB. Batches with passwords
+    /// (<c>IDENTIFIED BY</c>, <c>SET PASSWORD</c>…) are not kept: passwords only live in the system vault (23.2).
     /// </summary>
     private void AddHistory(OpenSession session, string sql, int statements, DateTimeOffset executedAt, TimeSpan duration)
     {
@@ -639,8 +639,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Clique no header de um result tab: ordena localmente por essa coluna, ascendente e depois alternando (anexo D
-    /// B18). Corre em background e o Esc cancela; o filtro local é reaplicado à vista ordenada.
+    /// Click on a result tab's header: sorts locally by that column, ascending and then alternating (appendix D
+    /// B18). Runs in the background and Esc cancels; the local filter is applied again to the sorted view.
     /// </summary>
     private async Task SortResultAsync(ResultView entry, int column)
     {

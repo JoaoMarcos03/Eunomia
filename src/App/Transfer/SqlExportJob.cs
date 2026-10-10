@@ -10,7 +10,7 @@ using Eunomia.Engine.Transfer;
 
 namespace Eunomia.App.Transfer;
 
-/// <summary>Destino do SQL export no MVP (outra base e outro servidor ficam para depois, 27.2).</summary>
+/// <summary>SQL export target in the MVP (another database and another server come later, 27.2).</summary>
 public enum SqlExportTarget
 {
     File,
@@ -19,7 +19,7 @@ public enum SqlExportTarget
     Clipboard,
 }
 
-/// <summary>Uma base e os objetos marcados na árvore do diálogo, pela ordem da árvore (natural, por nome).</summary>
+/// <summary>A database and the objects checked in the dialog's tree, in tree order (natural, by name).</summary>
 public sealed record SqlExportDatabase(string Name, IReadOnlyList<DbObjectInfo> Objects);
 
 public sealed record SqlExportRequest
@@ -32,21 +32,21 @@ public sealed record SqlExportRequest
 
     public SqlExportTarget Target { get; init; } = SqlExportTarget.File;
 
-    /// <summary>Ficheiro (<c>.sql</c> ou <c>.zip</c>) ou diretório.</summary>
+    /// <summary>File (<c>.sql</c> or <c>.zip</c>) or directory.</summary>
     public string Path { get; init; } = string.Empty;
 
     /// <summary>
-    /// Snapshot consistente (<c>START TRANSACTION WITH CONSISTENT SNAPSHOT</c>, como o <c>mysqldump
-    /// --single-transaction</c>): tudo numa ligação. Sem ele, as tabelas exportam-se em paralelo (secção 13.4).
+    /// Consistent snapshot (<c>START TRANSACTION WITH CONSISTENT SNAPSHOT</c>, like <c>mysqldump
+    /// --single-transaction</c>): everything on one connection. Without it, tables are exported in parallel (section 13.4).
     /// </summary>
     public bool ConsistentSnapshot { get; init; }
 
-    /// <summary>Host da sessão para o cabeçalho.</summary>
+    /// <summary>The session's host for the header.</summary>
     public string Host { get; init; } = string.Empty;
 
     public string AppVersion { get; init; } = string.Empty;
 
-    /// <summary>Tamanho máximo do texto para o clipboard (secção 13.2: clipboard com limite).</summary>
+    /// <summary>Maximum text size for the clipboard (section 13.2: bounded clipboard).</summary>
     public long ClipboardLimit { get; init; } = DefaultClipboardLimit;
 }
 
@@ -60,7 +60,7 @@ public enum SqlExportItemState
     Cancelled,
 }
 
-/// <summary>Linha da grelha de progresso (anexo B §2.3.6: Database, Table, Rows "N / P%", Duration).</summary>
+/// <summary>Row of the progress grid (appendix B §2.3.6: Database, Table, Rows "N / P%", Duration).</summary>
 public sealed record SqlExportItemProgress(
     string Database,
     string Name,
@@ -73,21 +73,21 @@ public sealed record SqlExportItemProgress(
 
 public sealed record SqlExportProgress(IReadOnlyList<SqlExportItemProgress> Items, long BytesWritten, TimeSpan Elapsed);
 
-/// <summary>Fim do export: o texto para o clipboard, ou o caminho escrito.</summary>
+/// <summary>End of the export: the text for the clipboard, or the path written.</summary>
 public sealed record SqlExportResult(bool Cancelled, long BytesWritten, IReadOnlyList<SqlExportItemProgress> Items, string? ClipboardText, TimeSpan Elapsed);
 
-/// <summary>O texto para o clipboard passou o limite configurado.</summary>
+/// <summary>The text for the clipboard went over the configured limit.</summary>
 public sealed class ClipboardLimitException(long limit)
     : Exception($"The export is larger than the clipboard limit ({limit / (1024 * 1024)} MiB). Export to a file instead.");
 
 /// <summary>
-/// Job do SQL export (FAM-E06, PR-13; secções 13.1–13.4; anexo B §2.3): ligações de job da sessão (nunca a primária),
-/// a ordem de objetos do HeidiSQL por base (tabelas, views como tabelas temporárias, routines e events pela ordem da
-/// árvore; depois triggers; depois as views finais), dados por <c>SELECT … ORDER BY</c> chave em streaming (sem
-/// OFFSET), lidos e escritos em paralelo por um canal limitado. Com snapshot consistente corre numa ligação; sem ele,
-/// os objetos vão para segmentos em paralelo e são juntados pela ordem certa. Ficheiro e ZIP escrevem-se num
-/// <c>.partial</c> renomeado no fim (apagado num cancel ou erro); o ZIP comprime em streaming; o diretório tem um
-/// ficheiro por objeto em <c>&lt;dir&gt;\&lt;base&gt;\&lt;tipo&gt;-&lt;nome&gt;.sql</c>, cada um com cabeçalho e rodapé.
+/// SQL export job (FAM-E06, PR-13; sections 13.1–13.4; appendix B §2.3): the session's job connections (never the primary),
+/// HeidiSQL's object order per database (tables, views as temporary tables, routines and events in tree order; then
+/// triggers; then the final views), data through <c>SELECT … ORDER BY</c> key in streaming (no OFFSET), read and written
+/// in parallel through a bounded channel. With a consistent snapshot it runs on one connection; without it, objects go
+/// to segments in parallel and are joined in the right order. File and ZIP are written to a <c>.partial</c> that is
+/// renamed at the end (deleted on cancel or error); the ZIP compresses while streaming; the directory has one
+/// file per object in <c>&lt;dir&gt;\&lt;database&gt;\&lt;kind&gt;-&lt;name&gt;.sql</c>, each with a header and a footer.
 /// </summary>
 public sealed class SqlExportJob
 {
@@ -101,7 +101,7 @@ public sealed class SqlExportJob
     private Utf8Output? _main;
     private long _directoryBytes;
 
-    // Base atual de cada ligação de job: o SHOW CREATE só escreve nomes sem a base quando a ligação está nela.
+    // Current database of each job connection: SHOW CREATE only writes names without the database when the connection is in it.
     private readonly ConcurrentDictionary<IDbConnectionHandle, string> _databases = new();
 
     public SqlExportJob(SessionHost host, SqlExportRequest request)
@@ -113,14 +113,14 @@ public sealed class SqlExportJob
         _items = Plan(request);
     }
 
-    /// <summary>Bytes escritos no output (no diretório, a soma dos ficheiros acabados).</summary>
+    /// <summary>Bytes written to the output (for a directory, the sum of the finished files).</summary>
     private long BytesWritten => _main?.BytesWritten ?? Interlocked.Read(ref _directoryBytes);
 
     private IDialect Dialect => (_host.ServerServices ?? throw new InvalidOperationException("The session is not connected.")).Dialect;
 
     private SqlDumpOptions Options => _request.Dump;
 
-    /// <summary>Corre o export; um cancel devolve <see cref="SqlExportResult.Cancelled"/> e apaga o <c>.partial</c>.</summary>
+    /// <summary>Runs the export; a cancel returns <see cref="SqlExportResult.Cancelled"/> and deletes the <c>.partial</c>.</summary>
     public async Task<SqlExportResult> RunAsync(IProgress<SqlExportProgress>? progress, CancellationToken cancellationToken)
     {
         _clock.Restart();
@@ -157,7 +157,7 @@ public sealed class SqlExportJob
         return result;
     }
 
-    // ---------- Plano ----------
+    // ---------- Plan ----------
 
     private enum Pass
     {
@@ -212,13 +212,13 @@ public sealed class SqlExportJob
             return Stopwatch.GetElapsedTime(started, ended == 0 ? clock.ElapsedTicks : ended);
         }
 
-        // Segmento escrito por uma ligação em paralelo, juntado ao output pela ordem do plano.
+        // Segment written by a connection in parallel, joined to the output in plan order.
         public TaskCompletionSource<Segment?> Done { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     private sealed record Segment(string? FilePath, byte[]? Bytes);
 
-    /// <summary>A ordem de objetos do HeidiSQL (anexo B §2.3.3).</summary>
+    /// <summary>HeidiSQL's object order (appendix B §2.3.3).</summary>
     private static List<Item> Plan(SqlExportRequest request)
     {
         var items = new List<Item>();
@@ -236,7 +236,7 @@ public sealed class SqlExportJob
             {
                 items.Add(new Item(database.Name, o, Pass.Trigger));
             }
-            // No diretório a view fica num só ficheiro, com as duas passagens.
+            // In a directory the view goes in a single file, with both passes.
             if (request.Target != SqlExportTarget.Directory)
             {
                 foreach (var o in database.Objects.Where(o => o.Ref.Kind == DbObjectKind.View))
@@ -248,7 +248,7 @@ public sealed class SqlExportJob
         return items;
     }
 
-    // ---------- Ficheiro, ZIP e clipboard ----------
+    // ---------- File, ZIP and clipboard ----------
 
     private async Task<string?> RunSingleAsync(CancellationToken cancellationToken)
     {
@@ -321,7 +321,7 @@ public sealed class SqlExportJob
         }
         finally
         {
-            // A entrada do ZIP fecha antes do arquivo, e o arquivo antes do ficheiro.
+            // The ZIP entry closes before the archive, and the archive before the file.
             if (!ReferenceEquals(sink, file))
             {
                 await sink.DisposeAsync().ConfigureAwait(false);
@@ -346,8 +346,8 @@ public sealed class SqlExportJob
     }
 
     /// <summary>
-    /// Sem snapshot consistente: <paramref name="connections"/> ligações de job tiram os objetos da fila pela ordem do
-    /// plano e escrevem cada um num segmento; o output junta os segmentos pela mesma ordem, à medida que acabam.
+    /// Without a consistent snapshot: <paramref name="connections"/> job connections take objects from the queue in plan
+    /// order and write each into a segment; the output joins the segments in the same order, as they finish.
     /// </summary>
     private async Task RunParallelAsync(Utf8Output output, int connections, CancellationToken cancellationToken)
     {
@@ -416,7 +416,7 @@ public sealed class SqlExportJob
             }
             catch (Exception) when (linked.IsCancellationRequested)
             {
-                // Os outros workers param com o cancel; o erro que conta é o primeiro.
+                // The other workers stop with the cancel; the first error is the one that counts.
             }
             foreach (var item in _items)
             {
@@ -429,7 +429,7 @@ public sealed class SqlExportJob
         }
     }
 
-    /// <summary>Um objeto num segmento: tabelas com dados num ficheiro temporário, o resto em memória.</summary>
+    /// <summary>An object in a segment: tables with data in a temporary file, the rest in memory.</summary>
     private async Task<Segment> WriteSegmentAsync(IDbConnectionHandle handle, Item item, int index, CancellationToken cancellationToken)
     {
         if (item.HasData && Options.Data != DumpDataMode.None)
@@ -457,7 +457,7 @@ public sealed class SqlExportJob
         return new Segment(null, memory.ToArray());
     }
 
-    // ---------- Diretório ----------
+    // ---------- Directory ----------
 
     private async Task RunDirectoryAsync(CancellationToken cancellationToken)
     {
@@ -522,13 +522,13 @@ public sealed class SqlExportJob
             }
             catch (Exception) when (linked.IsCancellationRequested)
             {
-                // Os outros workers param com o cancel; o erro que conta é o primeiro.
+                // The other workers stop with the cancel; the first error is the one that counts.
             }
             throw;
         }
     }
 
-    // ---------- Um objeto ----------
+    // ---------- One object ----------
 
     private async Task ExportItemAsync(IDbConnectionHandle handle, Item item, SqlDumpWriter writer, Utf8Output output, CancellationToken cancellationToken)
     {
@@ -598,7 +598,7 @@ public sealed class SqlExportJob
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested && _host.StatementError(e) is { } error)
         {
-            // Erro ao ler o DDL ou os dados: fica no ficheiro como comentário e o export continua (anexo B §2.3.3).
+            // Error reading the DDL or the data: it goes into the file as a comment and the export continues (appendix B §2.3.3).
             writer.EndData();
             writer.WriteError(error.Message);
             item.Error = error.Message;
@@ -632,7 +632,7 @@ public sealed class SqlExportJob
         var select = SelectFor(table, columns);
         writer.BeginData(item.Database, info.Ref.Name, estimated, approximate, [.. columns.Select(c => c.Name)]);
 
-        // Leitura e escrita em paralelo: o canal limitado faz o servidor esperar quando a escrita atrasa (secção 13).
+        // Reading and writing in parallel: the bounded channel makes the server wait when writing falls behind (section 13).
         var channel = Channel.CreateBounded<RowBlock>(new BoundedChannelOptions(4) { SingleReader = true, SingleWriter = true });
         var clipboardLimit = _request.Target == SqlExportTarget.Clipboard ? _request.ClipboardLimit : long.MaxValue;
         var consumer = Task.Run(
@@ -686,7 +686,7 @@ public sealed class SqlExportJob
             {
                 consumerError = c;
             }
-            // O canal fechou porque o consumidor falhou (escrita ou limite do clipboard): o erro dele é o que conta.
+            // The channel closed because the consumer failed (writing or the clipboard limit): its error is the one that counts.
             if (e is ChannelClosedException && consumerError is not null)
             {
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(consumerError);
@@ -695,14 +695,14 @@ public sealed class SqlExportJob
         }
         finally
         {
-            // Também num cancel: o INSERT em curso fecha e a tabela fica parcial (anexo B §2.3.6).
+            // Also on cancel: the INSERT in progress is closed and the table is left partial (appendix B §2.3.6).
             writer.EndData();
         }
     }
 
     /// <summary>
-    /// <c>SELECT * FROM `db`.`t` ORDER BY chave</c>; com colunas geradas ou invisíveis, a lista explícita das outras.
-    /// Sem chave única, sem ORDER BY (como o HeidiSQL).
+    /// <c>SELECT * FROM `db`.`t` ORDER BY key</c>; with generated or invisible columns, the explicit list of the others.
+    /// Without a unique key, no ORDER BY (like HeidiSQL).
     /// </summary>
     internal string SelectFor(TableDefinition table, IReadOnlyList<ColumnDefinition> columns)
     {
@@ -719,7 +719,7 @@ public sealed class SqlExportJob
         return sql;
     }
 
-    // ---------- Sessão de job ----------
+    // ---------- Job session ----------
 
     private async Task SetupAsync(IDbConnectionHandle handle, bool snapshot, CancellationToken cancellationToken)
     {
@@ -737,7 +737,7 @@ public sealed class SqlExportJob
         }
     }
 
-    /// <summary>Repõe a ligação de job (que é reutilizada), mesmo depois de um cancel.</summary>
+    /// <summary>Resets the job connection (which is reused), even after a cancel.</summary>
     private async Task RestoreAsync(IDbConnectionHandle handle, bool snapshot)
     {
         if (!handle.IsOpen)
@@ -759,7 +759,7 @@ public sealed class SqlExportJob
         }
         catch (Exception e) when (e is DbOperationException or OperationCanceledException or InvalidOperationException)
         {
-            // Uma ligação que não se consegue repor é reaberta no próximo uso.
+            // A connection that cannot be reset is reopened on its next use.
         }
     }
 
@@ -775,7 +775,7 @@ public sealed class SqlExportJob
         return new DumpHeader(_request.Host, version, os, _request.AppVersion);
     }
 
-    // ---------- Progresso ----------
+    // ---------- Progress ----------
 
     private async Task ReportAsync(IProgress<SqlExportProgress> progress, CancellationToken cancellationToken)
     {
@@ -789,7 +789,7 @@ public sealed class SqlExportJob
         }
         catch (OperationCanceledException)
         {
-            // Fim do job.
+            // End of the job.
         }
     }
 
@@ -797,10 +797,10 @@ public sealed class SqlExportJob
         [.. _items.Where(i => i.Pass is Pass.Object or Pass.Trigger).Select(i => new SqlExportItemProgress(
             i.Database, i.Info!.Ref.Name, i.Info.Ref.Kind, i.Rows, i.Info.RowsEstimate ?? 0, i.Duration(_clock), i.State, i.Error))];
 
-    // ---------- Ficheiros ----------
+    // ---------- Files ----------
 
     private static FileStream OpenPartial(string path) =>
-        // Sem buffer do FileStream: o Utf8Output já escreve em blocos de 1 MB.
+        // No FileStream buffer: Utf8Output already writes in 1 MB blocks.
         new(path, FileMode.Create, FileAccess.Write, FileShare.Read, 1, FileOptions.SequentialScan);
 
     private static void TryDelete(string path)

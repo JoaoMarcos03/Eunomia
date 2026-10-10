@@ -3,12 +3,12 @@ using Avalonia.Headless.XUnit;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Inventário da Fase 13: comandos do catálogo sem handler na janela principal. Os da 27.2 (<c>AvailableIn</c>) e os
-/// desta lista ficam escondidos nos menus e na toolbar; um comando novo sem handler tem de entrar aqui de propósito.
+/// Phase 13 inventory: catalog commands without a handler in the main window. The 27.2 ones (<c>AvailableIn</c>) and the
+/// ones in this list stay hidden in the menus and the toolbar; a new command without a handler must be added here on purpose.
 /// </summary>
 public sealed class CommandInventoryTests
 {
-    /// <summary>Sem handler por decisão (ver "Decisões provisórias" no progresso.md).</summary>
+    /// <summary>Without a handler by decision (see "Provisional decisions" in progress.md).</summary>
     private static readonly string[] WithoutHandler =
     [
         "edit.copyFormatted",
@@ -16,9 +16,9 @@ public sealed class CommandInventoryTests
     ];
 
     [AvaloniaFact]
-    public void SoFicamSemHandlerOsDaVersaoSeguinteEOsDecididos()
+    public void OnlyLaterVersionAndDecidedCommandsLackAHandler()
     {
-        // Sessões configuradas (sem ligar): os comandos de sessão só existem com elas.
+        // Configured sessions (without connecting): session commands only exist with them.
         var shell = RealServer.CreateShell("Server=127.0.0.1;Port=1;User ID=x;Password=y", string.Empty);
         var registry = shell.Context.Commands;
 

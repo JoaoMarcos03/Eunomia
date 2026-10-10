@@ -4,10 +4,10 @@ using Eunomia.App.Query;
 
 namespace Eunomia.App.Transfer;
 
-/// <summary>Codificação de um ficheiro lido em streaming (Run SQL file e CSV import; secção 13.1: BOM, senão a escolhida).</summary>
+/// <summary>Encoding of a file read in streaming (Run SQL file and CSV import; section 13.1: BOM, otherwise the chosen one).</summary>
 internal static class TextFileEncoding
 {
-    /// <summary>BOM (manda sempre), senão a codificação escolhida; "Auto detect": UTF-8 se o início for UTF-8 válido, senão ANSI.</summary>
+    /// <summary>BOM (always wins), otherwise the chosen encoding; "Auto detect": UTF-8 if the start is valid UTF-8, otherwise ANSI.</summary>
     public static (string Encoding, int BomLength) Detect(ReadOnlySpan<byte> head, string encoding)
     {
         if (head.StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF]))
@@ -26,7 +26,7 @@ internal static class TextFileEncoding
         {
             return (encoding == "UTF-8-BOM" ? "UTF-8" : encoding, 0);
         }
-        // Um carácter multibyte cortado no fim do bloco não conta como inválido.
+        // A multibyte character cut at the end of the block does not count as invalid.
         var decoder = new UTF8Encoding(false, throwOnInvalidBytes: true).GetDecoder();
         try
         {
@@ -39,7 +39,7 @@ internal static class TextFileEncoding
         }
     }
 
-    /// <summary>Codificação sem BOM (o BOM já foi saltado).</summary>
+    /// <summary>Encoding without a BOM (the BOM was already skipped).</summary>
     public static Encoding For(string name) => name switch
     {
         "UTF-8" or "UTF-8-BOM" => new UTF8Encoding(false),
@@ -48,7 +48,7 @@ internal static class TextFileEncoding
         _ => ExportFile.EncodingOf(name),
     };
 
-    /// <summary>Abre o ficheiro depois do BOM e diz a codificação usada.</summary>
+    /// <summary>Opens the file after the BOM and reports the encoding used.</summary>
     public static async Task<(FileStream Stream, string Encoding)> OpenAsync(string path, string encoding, CancellationToken cancellationToken)
     {
         var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1, FileOptions.SequentialScan);
@@ -68,7 +68,7 @@ internal static class TextFileEncoding
     }
 }
 
-/// <summary>Stream de leitura que conta os bytes lidos (progresso) e pára com o cancel (o LOAD DATA lê dele).</summary>
+/// <summary>Read stream that counts the bytes read (progress) and stops on cancel (LOAD DATA reads from it).</summary>
 internal sealed class CountingStream(Stream inner, CancellationToken cancellationToken) : Stream
 {
     private long _read;

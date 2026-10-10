@@ -9,8 +9,8 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// PR-10 (overhead por instrução: ≤ 1 ms além do round trip, zero round trips extra) e PR-20 (cancel parado ≤ 2 s).
-/// Só com <c>EUNOMIA_PERF=1</c>; valores indicativos (esta máquina não é a de referência).
+/// PR-10 (overhead per statement: ≤ 1 ms beyond the round trip, zero extra round trips) and PR-20 (stopped cancel ≤ 2 s).
+/// Only with <c>EUNOMIA_PERF=1</c>; indicative values (this machine is not the reference one).
 /// </summary>
 public sealed class QueryPerformanceTests : IAsyncLifetime
 {
@@ -45,7 +45,7 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
         }
     }
 
-    /// <summary>Instruções que esta ligação já mandou ao servidor (o status <c>Questions</c> da sessão).</summary>
+    /// <summary>Statements this connection has already sent to the server (the session's <c>Questions</c> status).</summary>
     private Task<long> QuestionsAsync() =>
         _host.RunPrimaryAsync(async (h, ct) =>
         {
@@ -62,13 +62,13 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
         }, Ct);
 
     [Fact]
-    public async Task Pr10OverheadPorInstrucao()
+    public async Task Pr10OverheadPerStatement()
     {
-        Assert.SkipUnless(Enabled, "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(Enabled, "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         var sql = string.Concat(Enumerable.Repeat("SELECT 1;\n", Statements));
         var statements = SqlSplitter.Split(sql);
 
-        // Referência: o mesmo número de round trips com o MySqlConnector sozinho.
+        // Reference: the same number of round trips with MySqlConnector alone.
         await using (var connection = new MySqlConnection(TestServer.ConnectionString))
         {
             await connection.OpenAsync(Ct);
@@ -105,18 +105,18 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
 
         var overhead = (oneByOne.Elapsed.TotalMilliseconds - raw.Elapsed.TotalMilliseconds) / Statements;
         TestContext.Current.SendDiagnosticMessage(string.Create(CultureInfo.InvariantCulture,
-            $"PR-10: {Statements} x SELECT 1 uma a uma {oneByOne.Elapsed.TotalMilliseconds:F0} ms, MySqlConnector sozinho {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms/instrução, {roundTrips} comandos ({questions} instruções no servidor); batch in one go {batch.Elapsed.TotalMilliseconds:F0} ms"));
+            $"PR-10: {Statements} x SELECT 1 one by one {oneByOne.Elapsed.TotalMilliseconds:F0} ms, MySqlConnector alone {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms/statement, {roundTrips} commands ({questions} statements on the server); batch in one go {batch.Elapsed.TotalMilliseconds:F0} ms"));
         Assert.Equal(Statements, summary.Executed);
-        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-10: uma a uma {oneByOne.Elapsed.TotalMilliseconds:F0} ms, sozinho {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms, {roundTrips} comandos, {questions} instruções no servidor, batch {batch.Elapsed.TotalMilliseconds:F0} ms"));
-        // Zero idas extra: um comando por instrução (o SHOW WARNINGS segue no mesmo comando).
+        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-10: one by one {oneByOne.Elapsed.TotalMilliseconds:F0} ms, alone {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms, {roundTrips} commands, {questions} statements on the server, batch {batch.Elapsed.TotalMilliseconds:F0} ms"));
+        // Zero extra round trips: one command per statement (SHOW WARNINGS follows in the same command).
         Assert.Equal(Statements, roundTrips);
-        Assert.True(overhead <= 1.0, $"Overhead {overhead:F3} ms por instrução.");
+        Assert.True(overhead <= 1.0, $"Overhead {overhead:F3} ms per statement.");
     }
 
     [Fact]
-    public async Task Pr20CancelDeUmSleep()
+    public async Task Pr20CancelOfASleep()
     {
-        Assert.SkipUnless(Enabled, "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(Enabled, "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         using var cts = new CancellationTokenSource();
         var run = new QueryRunner(_host).RunAsync("SELECT SLEEP(60);", SqlSplitter.Split("SELECT SLEEP(60);"), new QueryRunOptions(), cts.Token);
         await Task.Delay(500, Ct);
@@ -124,20 +124,20 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
         await cts.CancelAsync();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
         clock.Stop();
-        TestContext.Current.SendDiagnosticMessage(string.Create(CultureInfo.InvariantCulture, $"PR-20: SELECT SLEEP(60) parado {clock.Elapsed.TotalMilliseconds:F0} ms depois do cancel"));
-        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-20: parado {clock.Elapsed.TotalMilliseconds:F0} ms depois do cancel"));
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2), $"Cancel em {clock.Elapsed.TotalMilliseconds:F0} ms.");
+        TestContext.Current.SendDiagnosticMessage(string.Create(CultureInfo.InvariantCulture, $"PR-20: SELECT SLEEP(60) stopped {clock.Elapsed.TotalMilliseconds:F0} ms after the cancel"));
+        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-20: stopped {clock.Elapsed.TotalMilliseconds:F0} ms after the cancel"));
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2), $"Cancel in {clock.Elapsed.TotalMilliseconds:F0} ms.");
     }
 
     /// <summary>
-    /// Leitura de um resultado grande (300.000 linhas × 7 colunas de tipos comuns): o executor em blocos contra o
-    /// MySqlConnector sozinho a ler todas as células, para ver quanto custa o caminho até aos blocos. Só mede e grava em
+    /// Reading a large result (300,000 rows × 7 columns of common types): the block executor against
+    /// MySqlConnector alone reading every cell, to see what the path to the blocks costs. It only measures and writes to
     /// <c>%TEMP%\eunomia-read-throughput.txt</c>.
     /// </summary>
     [Fact]
-    public async Task LeituraDeUmResultadoGrande()
+    public async Task ReadingALargeResult()
     {
-        Assert.SkipUnless(Enabled, "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(Enabled, "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         const string db = "eunomia_read_perf";
         const string digits = "(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)";
         await _host.RunPrimaryAsync(async (h, ct) =>
@@ -200,7 +200,7 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
             $"MySqlConnector GetValue: {medianRaw:F0} ms\nexecutor (blocos): {medianEngine:F0} ms\nruns raw: {string.Join(";", raw.Select(r => r.ToString("F0", CultureInfo.InvariantCulture)))}\nruns executor: {string.Join(";", engine.Select(r => r.ToString("F0", CultureInfo.InvariantCulture)))}\n"));
     }
 
-    /// <summary>Conta os comandos que as ligações da sessão mandam (cada um é uma ida ao servidor).</summary>
+    /// <summary>Counts the commands the session's connections send (each one is a round trip).</summary>
     private sealed class CommandCounter : ISessionLog
     {
         private int _count;

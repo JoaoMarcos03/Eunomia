@@ -14,7 +14,7 @@ using ColumnDefinition = Eunomia.Drivers.Abstractions.ColumnDefinition;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Copy table (Create new ▸ Table copy; anexo B §5.1): o diálogo e o fluxo pela árvore contra o servidor.</summary>
+/// <summary>Copy table (Create new ▸ Table copy; appendix B §5.1): the dialog and the flow through the tree against the server.</summary>
 public sealed class CopyTableDialogTests
 {
     private static ColumnDefinition Column(string name, string type, bool autoIncrement = false) =>
@@ -32,7 +32,7 @@ public sealed class CopyTableDialogTests
         new(People, 1234, ["shop", "archive"], (db, name, _) => Task.FromResult(existing.Contains(db + "." + name, StringComparer.OrdinalIgnoreCase)));
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ValoresPorOmissaoEGruposComContagem()
+    public async Task DefaultsAndGroupsWithCounts()
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var dialog = new CopyTableDialog(Fake());
@@ -45,11 +45,11 @@ public sealed class CopyTableDialogTests
         Assert.Equal("first_name", ((TextBlock)items[1].Content!).Text);
         Assert.Equal("Data (~1,234 rows)", ((TextBlock)dialog.DataBox.Content!).Text);
 
-        // Um elemento desmarcado deixa o grupo indeterminado; um clique no grupo volta a marcar tudo e outro desmarca.
+        // An unchecked element leaves the group indeterminate; a click on the group checks everything again and another unchecks it.
         items[2].IsChecked = false;
         Assert.Null(columns.IsChecked);
         Assert.Equal("Columns (2/3)", ((TextBlock)columns.Content!).Text);
-        // O clique segue o ciclo do Avalonia (true → null → false → true): do indeterminado vai para false; de true, para null.
+        // The click follows Avalonia's cycle (true → null → false → true): from indeterminate it goes to false; from true, to null.
         columns.IsChecked = false;
         Assert.All(items, i => Assert.True(i.IsChecked));
         columns.IsChecked = null;
@@ -57,7 +57,7 @@ public sealed class CopyTableDialogTests
         Assert.Null(dialog.Request());
         Assert.Equal("Select at least one column.", dialog.StatusText);
 
-        // Sem dados, o WHERE fica desligado e não vai no pedido.
+        // Without data, the WHERE is disabled and does not go into the request.
         foreach (var item in items)
         {
             item.IsChecked = true;
@@ -74,7 +74,7 @@ public sealed class CopyTableDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DestinoQueJaExisteFicaRecusadoNoDialogo()
+    public async Task ExistingTargetIsRefusedInTheDialog()
     {
         var dialog = new CopyTableDialog(Fake("shop.people_copy"));
         dialog.Show();
@@ -112,10 +112,10 @@ public sealed class CopyTableDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DaArvoreATabelaNova()
+    public async Task FromTheTreeToTheNewTable()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ct_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(20)); " +
             $"INSERT INTO `{db}`.people (name) VALUES ('Ana'), ('Rui'), ('Eva');");
@@ -129,7 +129,7 @@ public sealed class CopyTableDialogTests
             await model.ExpandAsync(dbNode);
             window.Tree.Tree.FocusedNode = TreeModel.ObjectsOf(dbNode).Single(n => n.Name == "people");
 
-            // O teste conduz o diálogo modal; o comando só acaba quando ele fecha.
+            // The test drives the modal dialog; the command only finishes when it closes.
             UnexpectedDialogGuardAttribute.Allow(typeof(CopyTableDialog));
             var command = context.Commands.ExecuteAsync("object.copyTable").AsTask();
             var dialog = await WaitAsync(() => window.CopyTableWindow);

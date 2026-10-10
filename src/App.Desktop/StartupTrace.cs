@@ -1,6 +1,6 @@
 namespace Eunomia.App.Desktop;
 
-/// <summary>Marcas de tempo do arranque, gravadas pelo <c>--startup-probe</c> para decompor o PR-01.</summary>
+/// <summary>Startup timestamps, written by <c>--startup-probe</c> to break down PR-01.</summary>
 internal static class StartupTrace
 {
     private static readonly List<(string Name, DateTime Utc)> Marks = [];

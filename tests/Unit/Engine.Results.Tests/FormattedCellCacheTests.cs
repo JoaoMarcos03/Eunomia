@@ -8,7 +8,7 @@ public sealed class FormattedCellCacheTests
     private static readonly DisplayFormatter Formatter = new(CultureInfo.InvariantCulture);
 
     [Fact]
-    public void SemBlocoResidenteNaoBloqueiaNemFormata()
+    public void WithoutAResidentBlockNeitherBlocksNorFormats()
     {
         var cache = new FormattedCellCache(new SyntheticRowSource(), Formatter);
 
@@ -16,7 +16,7 @@ public sealed class FormattedCellCacheTests
     }
 
     [Fact]
-    public async Task ComBlocoResidenteFormataNaHoraSePermitido()
+    public async Task WithAResidentBlockFormatsOnTheSpotIfAllowed()
     {
         var source = new SyntheticRowSource();
         await source.RequestRangeAsync(0, 10, TestContext.Current.CancellationToken);
@@ -31,7 +31,7 @@ public sealed class FormattedCellCacheTests
     }
 
     [Fact]
-    public async Task PrefetchCarregaEFormataEmBackground()
+    public async Task PrefetchLoadsAndFormatsInTheBackground()
     {
         var source = new SyntheticRowSource();
         var cache = new FormattedCellCache(source, Formatter);
@@ -55,7 +55,7 @@ public sealed class FormattedCellCacheTests
     }
 
     [Fact]
-    public async Task OrcamentoLimitaAMemoria()
+    public async Task BudgetLimitsTheMemory()
     {
         var source = new SyntheticRowSource();
         await source.RequestRangeAsync(0, 1024, TestContext.Current.CancellationToken);
@@ -74,7 +74,7 @@ public sealed class FormattedCellCacheTests
             }
         }
 
-        // Mantém só as 64 entradas mais recentes quando o orçamento é ultrapassado.
+        // Keeps only the 64 most recent entries when the budget is exceeded.
         Assert.False(cache.TryGet(0, 0, false, out _));
         Assert.True(cache.TryGet(3, 59, false, out _));
     }

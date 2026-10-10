@@ -12,20 +12,20 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Run SQL file (Fase 8; 27.1 #21; anexo B §4.1–4.2): "Run SQL file..." corre os ficheiros sem os abrir; o Load pergunta
-/// com o "Opening large files" quando algum tem mais de 5 MiB. Cada ficheiro é um <see cref="SqlFileJob"/> numa ligação
-/// de job, com a base atual da sessão, Stop on errors e "Send batch in one go" do menu SQL. O SQL log recebe o resumo de
-/// cada ficheiro ("File X [partially] executed, with N queries and R affected rows") e os erros com nº e linha. Um job
-/// parado (erro, cancel, crash) fica no journal: Resume na janela, ou a pergunta no arranque seguinte.
+/// Run SQL file (phase 8; 27.1 #21; appendix B §4.1–4.2): "Run SQL file..." runs the files without opening them; Load asks
+/// with "Opening large files" when any of them is over 5 MiB. Each file is an <see cref="SqlFileJob"/> on a job
+/// connection, with the session's current database, and Stop on errors and "Send batch in one go" from the SQL menu. The SQL
+/// log gets each file's summary ("File X [partially] executed, with N queries and R affected rows") and the errors with their
+/// number and line. A stopped job (error, cancel, crash) stays in the journal: Resume in the window, or the question on the next start.
 /// </summary>
 public sealed partial class MainWindow
 {
     private SqlFileRunWindow? _runWindow;
 
-    /// <summary>Substitui o "Opening large files" (testes).</summary>
+    /// <summary>Replaces "Opening large files" (tests).</summary>
     internal Func<IReadOnlyList<(string Path, long Bytes)>, LargeFilesChoice>? LargeFilesOverride { get; set; }
 
-    /// <summary>Ficheiros a correr em curso (os testes esperam por eles).</summary>
+    /// <summary>File runs in progress (tests wait for them).</summary>
     internal Task RunningFiles { get; private set; } = Task.CompletedTask;
 
     internal SqlFileRunWindow? RunWindow => _runWindow;
@@ -66,8 +66,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Load ou Run: sem <paramref name="forceRun"/>, ficheiros com mais de 5 MiB levam ao "Opening large files" (correr,
-    /// abrir no editor ou cancelar).
+    /// Load or Run: without <paramref name="forceRun"/>, files over 5 MiB lead to "Opening large files" (run,
+    /// open in the editor or cancel).
     /// </summary>
     private async Task OpenSqlFilesAsync(IReadOnlyList<string> paths, string encoding, bool forceRun)
     {
@@ -123,7 +123,7 @@ public sealed partial class MainWindow
         await RunningFiles;
     }
 
-    /// <summary>Corre os ficheiros um a um na janela de progresso; um job parado espera por Resume ou Close.</summary>
+    /// <summary>Runs the files one by one in the progress window; a stopped job waits for Resume or Close.</summary>
     private async Task RunSqlFilesAsync(OpenSession open, IReadOnlyList<string> paths, string encoding, TransferJournalEntry? resume)
     {
         var journal = _context.TransferJournal;
@@ -225,7 +225,7 @@ public sealed partial class MainWindow
             TaskScheduler.Default);
     }
 
-    /// <summary>Um ficheiro: o job fora da UI thread, o resumo e os erros no SQL log; <c>null</c> se o job falhou.</summary>
+    /// <summary>One file: the job off the UI thread, the summary and the errors in the SQL log; <c>null</c> if the job failed.</summary>
     private async Task<SqlFileResult?> RunFileJobAsync(SqlFileRunWindow window, SqlFileJob job, string path)
     {
         var progress = new Progress<SqlFileProgress>(window.Show);
@@ -263,7 +263,7 @@ public sealed partial class MainWindow
         return result;
     }
 
-    /// <summary>Jobs de import parados numa execução anterior: Resume (liga a sessão), descartar, ou deixar para depois.</summary>
+    /// <summary>Import jobs stopped in an earlier run: Resume (connects the session), discard, or leave for later.</summary>
     private async Task ResumeInterruptedJobsAsync()
     {
         if (_context.TransferJournal is not { } journal || Sessions is not { } sessions)

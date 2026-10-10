@@ -2,7 +2,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.Drivers.Abstractions;
 
-/// <summary>Uma ou mais instruções já separadas pelo splitter (o <c>DELIMITER</c> é do cliente, nunca chega aqui).</summary>
+/// <summary>One or more statements already split by the splitter (<c>DELIMITER</c> belongs to the client, it never gets here).</summary>
 public sealed record SqlBatch(IReadOnlyList<string> Statements)
 {
     public static SqlBatch Single(string sql) => new([sql]);
@@ -14,29 +14,29 @@ public sealed record ExecuteOptions(
     TimeSpan? CommandTimeout = null,
     int MaxResultSets = 10)
 {
-    /// <summary>Ler os warnings de cada instrução (<c>SHOW WARNINGS</c>); o Data tab desliga para poupar idas ao servidor.</summary>
+    /// <summary>Read each statement's warnings (<c>SHOW WARNINGS</c>); the Data tab turns it off to save round trips.</summary>
     public bool CollectWarnings { get; init; } = true;
 
     /// <summary>
-    /// Colunas cortadas no SELECT (índice → comprimento, como <c>LEFT(col, 256)</c> no Data tab): o valor que chega a esse
-    /// comprimento fica marcado como truncado no bloco (sufixo " [...]" e valor completo pedido à parte).
+    /// Columns cut in the SELECT (index → length, like <c>LEFT(col, 256)</c> in the Data tab): a value that reaches that
+    /// length is flagged as truncated in the block (" [...]" suffix and the full value fetched separately).
     /// </summary>
     public IReadOnlyDictionary<int, int>? TruncatedColumns { get; init; }
 }
 
 /// <summary>
-/// Evento do stream de execução (secção 14.1): vários result sets em streaming, nunca materializados.
+/// Event of the execution stream (section 14.1): several result sets streaming, never materialised.
 /// </summary>
 public abstract record ResultEvent(int StatementIndex);
 
 public sealed record ResultSetStarted(int StatementIndex, int ResultSetIndex, ResultSchema Schema) : ResultEvent(StatementIndex);
 
-/// <summary>Um bloco de linhas do result set em curso.</summary>
+/// <summary>A block of rows of the current result set.</summary>
 public sealed record RowBlockReceived(int StatementIndex, int ResultSetIndex, RowBlock Block) : ResultEvent(StatementIndex);
 
 public sealed record ResultSetCompleted(int StatementIndex, int ResultSetIndex, long RowCount) : ResultEvent(StatementIndex);
 
-/// <summary>Fim de uma instrução: as contagens que o SQL log do HeidiSQL mostra (FAM-Q04).</summary>
+/// <summary>End of a statement: the counts HeidiSQL's SQL log shows (FAM-Q04).</summary>
 public sealed record StatementCompleted(int StatementIndex, long AffectedRows, long FoundRows, int Warnings, TimeSpan Duration, TimeSpan NetworkDuration, int SkippedResultSets = 0)
     : ResultEvent(StatementIndex);
 
@@ -47,12 +47,12 @@ public enum MessageSeverity
     Warning,
 }
 
-/// <summary><c>SHOW WARNINGS</c>, <c>mysql_info</c>, notices do PostgreSQL.</summary>
+/// <summary><c>SHOW WARNINGS</c>, <c>mysql_info</c>, PostgreSQL notices.</summary>
 public sealed record ServerMessage(int StatementIndex, MessageSeverity Severity, string Text, int? Code = null) : ResultEvent(StatementIndex);
 
 public sealed record ExecutionError(int StatementIndex, DbError Error) : ResultEvent(StatementIndex);
 
-/// <summary>Executa batches em streaming (secção 14.1).</summary>
+/// <summary>Runs batches in streaming (section 14.1).</summary>
 public interface IQueryExecutor
 {
     IAsyncEnumerable<ResultEvent> ExecuteAsync(SqlBatch batch, ExecuteOptions options, CancellationToken cancellationToken);

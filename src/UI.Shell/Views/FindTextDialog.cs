@@ -15,10 +15,10 @@ using Eunomia.UI.Controls.Common.TreeList;
 
 namespace Eunomia.UI.Shell.Views;
 
-/// <summary>O que o diálogo Find text on server precisa da sessão.</summary>
-/// <param name="LoadTables">Tabelas da base com colunas e, se conhecido, o número de linhas.</param>
-/// <param name="Count">Corre um <c>SELECT COUNT(*)</c> numa ligação de jobs.</param>
-/// <param name="SeeResults">Abre uma query tab com o SQL e corre-o.</param>
+/// <summary>What the Find text on server dialog needs from the session.</summary>
+/// <param name="LoadTables">Tables of the database with their columns and, if known, the row count.</param>
+/// <param name="Count">Runs a <c>SELECT COUNT(*)</c> on a jobs connection.</param>
+/// <param name="SeeResults">Opens a query tab with the SQL and runs it.</param>
 public sealed record FindTextServices(
     IDialect Dialect,
     IReadOnlyList<string> Databases,
@@ -29,10 +29,10 @@ public sealed record FindTextServices(
     Action<string> SeeResults);
 
 /// <summary>
-/// Find text on server (Ctrl+Shift+F; anexo B §2.4, o tab "Find text" do Table tools): base e tabelas com caixas à
-/// esquerda; texto (simples ou predicado SQL), tipos de coluna, match e maiúsculas à direita; em baixo, uma linha por
-/// tabela com as linhas encontradas e a relevância. "See results" abre uma query tab com os SELECT das tabelas com
-/// resultados e corre-a.
+/// Find text on server (Ctrl+Shift+F; appendix B §2.4, the "Find text" tab of Table tools): database and tables with check
+/// boxes on the left; text (plain or an SQL predicate), column types, match and case on the right; at the bottom, one row
+/// per table with the matching rows and the relevance. "See results" opens a query tab with the SELECTs of the tables with
+/// results and runs it.
 /// </summary>
 public sealed class FindTextDialog : Window
 {
@@ -148,7 +148,7 @@ public sealed class FindTextDialog : Window
         Closed += (_, _) => _run?.Cancel();
     }
 
-    /// <summary>Tabelas da base com a caixa (testes).</summary>
+    /// <summary>The database's tables with their check boxes (tests).</summary>
     public IReadOnlyList<CheckBox> TableBoxes => _tables.Children.OfType<CheckBox>().ToList();
 
     public TextBox FindTextBox => _text;
@@ -163,7 +163,7 @@ public sealed class FindTextDialog : Window
 
     public bool CanSeeResults => _seeResults.IsEnabled;
 
-    /// <summary>Tabelas da base escolhida (a focada na árvore fica escolhida sozinha; senão, todas).</summary>
+    /// <summary>Tables of the chosen database (the one focused in the tree is chosen alone; otherwise, all of them).</summary>
     public async Task LoadTablesAsync()
     {
         _tables.Children.Clear();
@@ -213,7 +213,7 @@ public sealed class FindTextDialog : Window
         (ServerTextMatch)Math.Max(0, _match.SelectedIndex),
         _caseSensitive.IsChecked == true);
 
-    /// <summary>Find: uma contagem por tabela escolhida, por ordem; Close ou outro Find cancelam a pesquisa em curso.</summary>
+    /// <summary>Find: one count per chosen table, in order; Close or another Find cancel the search in progress.</summary>
     public async Task FindAsync()
     {
         _run?.Cancel();
@@ -230,7 +230,7 @@ public sealed class FindTextDialog : Window
             _status.Text = "Please enter a text to find.";
             return;
         }
-        // O predicado SQL vai para um WHERE numa ligação que aceita várias instruções: um ";" correria o resto.
+        // The SQL predicate goes into a WHERE on a connection that accepts several statements: a ";" would run the rest.
         if (options.SqlPredicate && Eunomia.Engine.Sql.Splitting.SqlSplitter.Split("SELECT 1 FROM t WHERE c " + options.Text).Count > 1)
         {
             _status.Text = "The SQL predicate must be a single condition, without \";\".";
@@ -289,7 +289,7 @@ public sealed class FindTextDialog : Window
         }
     }
 
-    /// <summary>See results: os SELECT das tabelas com resultados numa query tab nova, a correr.</summary>
+    /// <summary>See results: the SELECTs of the tables with results in a new query tab, running.</summary>
     public void SeeResults()
     {
         var options = _last;

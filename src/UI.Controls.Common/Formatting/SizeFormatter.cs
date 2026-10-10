@@ -3,8 +3,8 @@ using System.Globalization;
 namespace Eunomia.UI.Controls.Common.Formatting;
 
 /// <summary>
-/// Tamanhos como o <c>FormatByteNumber</c> do HeidiSQL (anexo D A8): uma casa decimal, separador do locale, sufixos
-/// B/KiB/MiB/GiB/TiB. A unidade muda nos limiares de 1000 mas divide por 1024, por isso 1000 bytes dão "1,0 KiB".
+/// Sizes like HeidiSQL's <c>FormatByteNumber</c> (appendix D A8): one decimal place, locale separator, suffixes
+/// B/KiB/MiB/GiB/TiB. The unit changes at the 1000 thresholds but divides by 1024, so 1000 bytes give "1.0 KiB".
 /// </summary>
 public static class SizeFormatter
 {

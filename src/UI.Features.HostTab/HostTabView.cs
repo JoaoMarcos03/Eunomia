@@ -13,10 +13,10 @@ using Eunomia.UI.Controls.SqlEditor;
 namespace Eunomia.UI.Features.HostTab;
 
 /// <summary>
-/// Host tab (secção 4.9; anexo C §1.8): sub-tabs Databases (com barras e "Fetch database items"), Variables (sessão e
-/// global, com a sessão destacada quando difere), Status (com médias por hora e por segundo), Processes (Kill e painel
-/// "Process SQL:") e Command-Statistics (contadores <c>Com_*</c> com percentagem em barras). Só de leitura: editar
-/// variáveis fica para depois. A caption de cada sub-tab passa a "Nome (n)" depois de carregar.
+/// Host tab (section 4.9; appendix C §1.8): Databases sub-tab (with bars and "Fetch database items"), Variables (session and
+/// global, with the session value highlighted when it differs), Status (with per-hour and per-second averages), Processes
+/// (Kill and the "Process SQL:" panel) and Command-Statistics (<c>Com_*</c> counters with percentage bars). Read-only:
+/// editing variables comes later. Each sub-tab's caption becomes "Name (n)" after loading.
 /// </summary>
 public sealed class HostTabView : TabControl
 {
@@ -40,7 +40,7 @@ public sealed class HostTabView : TabControl
     {
         this.Named("Host");
         Padding = new Thickness(0);
-        // Mesmo tamanho das tabs principais (o estilo do shell não chega a quem usa a vista sozinha).
+        // Same size as the main tabs (the shell's style does not reach code that uses the view on its own).
         Styles.Add(new Style(x => x.OfType<TabItem>())
         {
             Setters =
@@ -127,14 +127,14 @@ public sealed class HostTabView : TabControl
 
     public TreeListControl CommandList => _commands.List;
 
-    /// <summary>Painel "Process SQL:" (só leitura) com o Info do processo focado.</summary>
+    /// <summary>"Process SQL:" panel (read-only) with the Info of the focused process.</summary>
     public SqlEditorControl ProcessSql { get; }
 
     public IReadOnlyList<string> SelectedDatabases => DatabaseList.SelectedNodes.Select(n => (string)n.Tag!).ToList();
 
     public IReadOnlyList<ServerProcess> SelectedProcesses => ProcessList.SelectedNodes.Select(n => (ServerProcess)n.Tag!).ToList();
 
-    /// <summary>Duplo clique ou Enter numa base: abre-a.</summary>
+    /// <summary>Double click or Enter on a database: opens it.</summary>
     public event EventHandler<string>? DatabaseActivated;
 
     public void ShowDatabases(IReadOnlyList<HostDatabaseRow> rows)
@@ -181,7 +181,7 @@ public sealed class HostTabView : TabControl
     {
         ArgumentNullException.ThrowIfNull(rows);
         var nodes = rows.Select(r => TreeListRows.Create([r.Command, r.Count, r.PerHour, r.PerSecond, r.Percentage], CommandFormats, tag: r)).ToList();
-        // Barras da percentagem sobre 100 (não sobre o maior), como o HeidiSQL.
+        // Percentage bars over 100 (not over the largest value), like HeidiSQL.
         foreach (var node in nodes)
         {
             if (node.Tag is CommandStatisticsRow { Percentage: > 0 } row)

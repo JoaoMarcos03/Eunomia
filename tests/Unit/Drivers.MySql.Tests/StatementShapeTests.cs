@@ -1,6 +1,6 @@
 namespace Eunomia.Drivers.MySql.Tests;
 
-/// <summary>Forma das instruções para juntar o SHOW WARNINGS (PR-10) e limpeza das mensagens de erro.</summary>
+/// <summary>Shape of statements for appending SHOW WARNINGS (PR-10) and cleaning up error messages.</summary>
 public sealed class StatementShapeTests
 {
     [Theory]
@@ -12,26 +12,26 @@ public sealed class StatementShapeTests
     [InlineData("UPDATE t SET a = 1", false)]
     [InlineData("INSERT INTO t SELECT 1", false)]
     [InlineData("/*!40101 SET NAMES utf8 */", false)]
-    [InlineData("# só comentário", false)]
-    public void PodeDevolverLinhas(string sql, bool rows)
+    [InlineData("# just a comment", false)]
+    public void CanReturnRows(string sql, bool rows)
     {
         Assert.Equal(rows, MySqlStatementShape.MayReturnRows(sql));
     }
 
     [Theory]
     [InlineData("SELECT 'a''b', \"c\\\"d\", `e``f`", true)]
-    [InlineData("SELECT 1 -- fim", true)]
+    [InlineData("SELECT 1 -- end", true)]
     [InlineData("SELECT 1 /* fechado */", true)]
     [InlineData("SELECT 'aberta", false)]
     [InlineData("SELECT 1 /* aberto", false)]
     [InlineData("SELECT `aberto", false)]
-    public void AcabaForaDeStringsEComentarios(string sql, bool code)
+    public void EndsOutsideStringsAndComments(string sql, bool code)
     {
         Assert.Equal(code, MySqlStatementShape.EndsInCode(sql));
     }
 
     [Fact]
-    public void MensagemDeErroSemOSufixo()
+    public void ErrorMessageWithoutTheSuffix()
     {
         const string prefix = "You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ";
         Assert.Equal(prefix + "'x' at line 2", MySqlQueryExecutor.StripWarningsSuffix(prefix + "'x\n;SHOW WARNINGS' at line 2"));
@@ -47,7 +47,7 @@ public sealed class StatementShapeTests
     [InlineData("DEFAULT_GENERATED on update CURRENT_TIMESTAMP", false)]
     [InlineData("DEFAULT_GENERATED", false)]
     [InlineData("auto_increment", false)]
-    public void ColunaGeradaPeloExtra(string extra, bool generated)
+    public void GeneratedColumnFromExtra(string extra, bool generated)
     {
         Assert.Equal(generated, MySqlMetadataProvider.IsGeneratedExtra(extra));
     }

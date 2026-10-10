@@ -3,12 +3,12 @@ using System.Text.RegularExpressions;
 
 namespace Eunomia.App.Search;
 
-/// <summary>Opções do "Search and replace text" (anexo C §4.7).</summary>
+/// <summary>"Search and replace text" options (appendix C §4.7).</summary>
 public sealed record SearchOptions
 {
     public string Find { get; init; } = string.Empty;
 
-    /// <summary>Texto de substituição; <c>null</c> = só procurar.</summary>
+    /// <summary>Replacement text; <c>null</c> = search only.</summary>
     public string? Replace { get; init; }
 
     public bool CaseSensitive { get; init; }
@@ -19,27 +19,27 @@ public sealed record SearchOptions
 
     public bool PromptOnReplace { get; init; } = true;
 
-    /// <summary>Direção Backward.</summary>
+    /// <summary>Backward direction.</summary>
     public bool Backward { get; init; }
 
-    /// <summary>Origem "Entire scope" (a omissão); falso = "From cursor".</summary>
+    /// <summary>"Entire scope" origin (the default); false = "From cursor".</summary>
     public bool EntireScope { get; init; } = true;
 
-    /// <summary>Âmbito "Selection" em vez de "Global".</summary>
+    /// <summary>"Selection" scope instead of "Global".</summary>
     public bool SelectionOnly { get; init; }
 }
 
-/// <summary>Uma ocorrência no texto.</summary>
+/// <summary>A match in the text.</summary>
 public readonly record struct TextMatch(int Start, int Length, string Replacement);
 
 /// <summary>
-/// Procura e substituição no texto de um editor (anexo C §4.7; FAM-Q10): texto literal ou regex, maiúsculas, palavras
-/// inteiras, para a frente ou para trás, dentro de um intervalo (o texto todo ou a seleção). A substituição aceita
-/// <c>\n</c> e <c>\t</c> e, com regex, <c>$0</c>–<c>$9</c>.
+/// Search and replace in an editor's text (appendix C §4.7; FAM-Q10): literal text or regex, case, whole words,
+/// forwards or backwards, within a range (the whole text or the selection). The replacement accepts
+/// <c>\n</c> and <c>\t</c> and, with regex, <c>$0</c>–<c>$9</c>.
 /// </summary>
 public static class TextSearch
 {
-    /// <summary>Regex das opções (ArgumentException se a expressão for inválida).</summary>
+    /// <summary>Regex for the options (ArgumentException if the expression is invalid).</summary>
     public static Regex BuildRegex(SearchOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -57,8 +57,8 @@ public static class TextSearch
     }
 
     /// <summary>
-    /// Próxima ocorrência a partir de <paramref name="from"/> (para trás: a última que acaba até <paramref name="from"/>),
-    /// dentro de [<paramref name="scopeStart"/>, <paramref name="scopeEnd"/>). Ocorrências vazias não contam.
+    /// Next match from <paramref name="from"/> (backwards: the last one ending at or before <paramref name="from"/>),
+    /// within [<paramref name="scopeStart"/>, <paramref name="scopeEnd"/>). Empty matches do not count.
     /// </summary>
     public static TextMatch? FindNext(string text, int from, int scopeStart, int scopeEnd, SearchOptions options)
     {
@@ -97,7 +97,7 @@ public static class TextSearch
         return found is null ? null : new TextMatch(found.Index, found.Length, options.Replace is { } r ? Expand(found, r, options.RegularExpression) : string.Empty);
     }
 
-    /// <summary>Substitui todas as ocorrências no intervalo; devolve o texto novo e quantas foram.</summary>
+    /// <summary>Replaces every match in the range; returns the new text and how many there were.</summary>
     public static (string Text, int Count) ReplaceAll(string text, int scopeStart, int scopeEnd, SearchOptions options)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -127,7 +127,7 @@ public static class TextSearch
         return (result.ToString(), count);
     }
 
-    /// <summary>Texto que substitui uma ocorrência: <c>\n</c>, <c>\t</c> e <c>\\</c>; com regex, os grupos <c>$n</c>.</summary>
+    /// <summary>Text that replaces a match: <c>\n</c>, <c>\t</c> and <c>\\</c>; with regex, the <c>$n</c> groups.</summary>
     public static string Expand(Match match, string replacement, bool regularExpression)
     {
         ArgumentNullException.ThrowIfNull(match);
@@ -148,7 +148,7 @@ public static class TextSearch
         return regularExpression ? match.Result(unescaped.ToString()) : unescaped.ToString();
     }
 
-    /// <summary>Junta um texto ao topo de uma lista de recentes (sem repetidos, no máximo <paramref name="max"/>).</summary>
+    /// <summary>Adds a text to the top of a recent list (no duplicates, at most <paramref name="max"/>).</summary>
     public static void AddRecent(List<string> recent, string value, int max = 25)
     {
         ArgumentNullException.ThrowIfNull(recent);

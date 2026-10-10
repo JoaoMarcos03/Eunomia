@@ -9,7 +9,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Table editor contra o servidor (Fase 7; anexo C §5; FAM-E01–E03).</summary>
+/// <summary>Table editor against the server (phase 7; appendix C §5; FAM-E01–E03).</summary>
 public sealed class TableEditorTests
 {
     private static async Task<string?> ScalarAsync(string cs, string sql)
@@ -23,12 +23,12 @@ public sealed class TableEditorTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EditarTabelaECriarOutra()
+    public async Task EditATableAndCreateAnother()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_te_");
-        await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20) NULL, PRIMARY KEY (id)) ENGINE=InnoDB COMMENT='pessoas';");
+        await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20) NULL, PRIMARY KEY (id)) ENGINE=InnoDB COMMENT='people';");
         try
         {
             var (window, context, session, _, _) = CreateShell(cs, db);
@@ -40,16 +40,16 @@ public sealed class TableEditorTests
             var dbNode = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db));
             await model.ExpandAsync(dbNode);
 
-            // A tabela abre no editor com as colunas, os índices e o comentário.
+            // The table opens in the editor with its columns, indexes and comment.
             window.Tree.Tree.FocusedNode = Child(dbNode, "people");
             var editor = await WaitAsync(() => window.TableEditor);
             var design = editor.Design;
             Assert.Equal(["id", "name"], design.Columns.Select(c => c.Name));
             Assert.Equal(DefaultKind.AutoIncrement, design.Columns[0].DefaultKind);
-            Assert.Equal("pessoas", design.Comment);
+            Assert.Equal("people", design.Comment);
             Assert.Equal("Indexes (1)", editor.IndexesTab.Header);
 
-            // Alterar: mudar o nome e o tamanho de uma coluna, juntar outra e um índice; o ALTER aparece ao vivo.
+            // Changing: renames and resizes a column, adds another one and an index; the ALTER shows live.
             design.Columns[1].Name = "full_name";
             design.Columns[1].LengthSet = "60";
             design.Columns.Add(new ColumnDesign { Name = "age", DataType = "SMALLINT", Unsigned = true, AllowNull = true, DefaultKind = DefaultKind.Null });
@@ -64,7 +64,7 @@ public sealed class TableEditorTests
             var reopened = await WaitAsync(() => window.TableEditor is { Design.Columns.Count: 3 } e ? e : null);
             Assert.Equal(string.Empty, reopened.AlterCodeText);
 
-            // Create new ▸ Table na base focada: sem nome não grava; com nome, colunas e chave cria a tabela.
+            // Create new ▸ Table on the focused database: without a name it does not save; with a name, columns and a key it creates the table.
             window.Tree.Tree.FocusedNode = dbNode;
             Assert.True(await context.Commands.ExecuteAsync("object.createTable"));
             var created = await WaitAsync(() => window.TableEditor is { Design.Name: "" } e ? e : null);
@@ -86,10 +86,10 @@ public sealed class TableEditorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SairDoEditorComAlteracoesPergunta()
+    public async Task LeavingTheEditorWithChangesAsks()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_tl_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); CREATE TABLE `{db}`.pets (id INT);");
         try
@@ -116,13 +116,13 @@ public sealed class TableEditorTests
                 var editor = await WaitAsync(() => window.TableEditor is { Design.Name: "people" } e ? e : null);
                 await Task.Delay(300);
                 Dispatcher.UIThread.RunJobs();
-                Assert.False(editor.IsModified, "Editor marcado como alterado ao abrir.");
+                Assert.False(editor.IsModified, "Editor marked as changed on opening.");
                 editor.Design.Columns[1].Name = column;
                 editor.Refresh();
                 return editor;
             }
 
-            // Cancel: a árvore volta à tabela e o editor fica com as alterações.
+            // Cancel: the tree goes back to the table and the editor keeps the changes.
             var editor = await EditPeopleAsync("full_name");
             window.Tree.Tree.FocusedNode = pets;
             await WaitAsync(() => questions.Count == 1 && ReferenceEquals(window.Tree.Tree.FocusedNode, people) ? "ok" : null);
@@ -130,22 +130,22 @@ public sealed class TableEditorTests
             Assert.Same(editor, window.TableEditor);
             Assert.True(editor.IsModified);
 
-            // No: descarta e segue para a outra tabela; o servidor fica igual.
+            // No: discards and moves on to the other table; the server stays the same.
             answer = Eunomia.UI.Controls.Common.Dialogs.MessageDialogResult.No;
             window.Tree.Tree.FocusedNode = pets;
             await WaitAsync(() => window.TableEditor is { Design.Name: "pets" } ? "ok" : null);
             Assert.Equal(2, questions.Count);
             Assert.Equal("name", await ScalarAsync(cs, $"SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{db}' AND TABLE_NAME = 'people' AND ORDINAL_POSITION = 2"));
 
-            // Yes: grava e segue.
+            // Yes: saves and moves on.
             await EditPeopleAsync("full_name");
             answer = Eunomia.UI.Controls.Common.Dialogs.MessageDialogResult.Yes;
             window.Tree.Tree.FocusedNode = pets;
             await WaitAsync(() => window.TableEditor is { Design.Name: "pets" } ? "ok" : null);
             Assert.Equal("full_name", await ScalarAsync(cs, $"SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{db}' AND TABLE_NAME = 'people' AND ORDINAL_POSITION = 2"));
 
-            // Fechar a janela com alterações: Cancel não fecha; No fecha.
-            await EditPeopleAsync("nome");
+            // Closing the window with changes: Cancel does not close; No closes.
+            await EditPeopleAsync("given_name");
             answer = Eunomia.UI.Controls.Common.Dialogs.MessageDialogResult.Cancel;
             window.Close();
             Dispatcher.UIThread.RunJobs();

@@ -4,14 +4,14 @@ using Eunomia.Presentation.Objects;
 
 namespace Eunomia.Presentation.Tests;
 
-/// <summary>Listas do Host e do Database tab (secção 4.9; anexo C §1.6, §1.8).</summary>
+/// <summary>Host and Database tab lists (section 4.9; appendix C §1.6, §1.8).</summary>
 public sealed class ObjectListsTests
 {
     private static DbObjectInfo Obj(string name, DbObjectKind kind, long? data = null, DateTime? updated = null, IReadOnlyDictionary<string, string?>? status = null) =>
         new(new DbObjectRef("shop", "shop", name, kind), DataBytes: data, IndexBytes: data is null ? null : 0, Updated: updated) { Status = status };
 
     [Fact]
-    public void BasesSemCacheFicamVaziasEComCacheContamPorTipo()
+    public void UncachedDatabasesStayEmptyAndCachedOnesCountByKind()
     {
         var objects = new DatabaseObjects("shop",
         [
@@ -38,7 +38,7 @@ public sealed class ObjectListsTests
     }
 
     [Fact]
-    public void SemEstatisticasOTamanhoDaBaseFicaVazio()
+    public void WithoutStatisticsTheDatabaseSizeStaysEmpty()
     {
         var objects = new DatabaseObjects("shop", [Obj("a", DbObjectKind.Table)], ObjectDetail.Names, DateTimeOffset.UtcNow);
 
@@ -49,7 +49,7 @@ public sealed class ObjectListsTests
     }
 
     [Fact]
-    public void StatusDoDatabaseTab()
+    public void DatabaseTabStatus()
     {
         IReadOnlyList<DbObjectInfo> objects = [Obj("a", DbObjectKind.Table), Obj("b", DbObjectKind.Table), Obj("v", DbObjectKind.View)];
 
@@ -58,7 +58,7 @@ public sealed class ObjectListsTests
     }
 
     [Fact]
-    public void ColunasDoDatabaseTab()
+    public void DatabaseTabColumns()
     {
         Assert.Equal(["Name", "Rows", "Size", "Created", "Updated", "Engine", "Comment", "Type"],
             DatabaseObjectList.Columns.Where(c => c.VisibleByDefault).Select(c => c.Header));
@@ -69,19 +69,19 @@ public sealed class ObjectListsTests
         Assert.Equal("Table", DatabaseObjectList.Value(table, 7));
         Assert.Equal(42L, DatabaseObjectList.Value(table, 14));
         Assert.Equal("Dynamic", DatabaseObjectList.Value(table, 9));
-        // Views e routines não mostram linhas nem tamanho.
+        // Views and routines show neither rows nor size.
         Assert.Null(DatabaseObjectList.Value(Obj("v", DbObjectKind.View, 10), 2));
         Assert.Equal("Procedure", DatabaseObjectList.Value(Obj("p", DbObjectKind.Procedure), 7));
     }
 
     [Fact]
-    public void KillNaoMataAsLigacoesDaPropriaSessao()
+    public void KillDoesNotKillTheSessionsOwnConnections()
     {
         Assert.Equal([7L, 9L], ProcessList.ToKill([7, 3, 9, 7], [3, null]));
     }
 
     [Fact]
-    public void VariablesJuntamSessaoEGlobalEDestacamAsDiferentes()
+    public void VariablesJoinSessionAndGlobalAndHighlightDifferences()
     {
         var rows = HostVariables.Build(
             [new("sort_buffer_size", "1048576", true), new("autocommit", "ON", true), new("session_only", "x", true)],
@@ -95,7 +95,7 @@ public sealed class ObjectListsTests
     }
 
     [Fact]
-    public void StatusComMediasPeloUptime()
+    public void StatusWithAveragesOverUptime()
     {
         var rows = HostStatus.Build([new("Uptime", "7200", false), new("Questions", "3600", false), new("Ssl_cipher", "", false)]);
 
@@ -105,7 +105,7 @@ public sealed class ObjectListsTests
     }
 
     [Fact]
-    public void CommandStatisticsComPercentagemEOrdemDecrescente()
+    public void CommandStatisticsWithPercentageInDescendingOrder()
     {
         var rows = CommandStatistics.Build(
         [

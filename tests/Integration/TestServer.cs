@@ -6,8 +6,8 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// Servidor de teste: connection string em <c>EUNOMIA_IT_MYSQL</c> ou no ficheiro escrito por
-/// <c>Start-TestServer.ps1</c>. Sem servidor, os testes ficam "skipped" (nunca falsos verdes).
+/// Test server: connection string in <c>EUNOMIA_IT_MYSQL</c> or in the file written by
+/// <c>Start-TestServer.ps1</c>. Without a server, the tests are skipped (never false greens).
 /// </summary>
 internal static class TestServer
 {
@@ -25,9 +25,9 @@ internal static class TestServer
     }
 
     /// <summary>
-    /// O ficheiro do Start-TestServer.ps1 fica depois de o servidor parar (por exemplo, num reinício): sem servidor a
-    /// responder, os testes ficam "skipped" em vez de falharem a ligar. Com <c>EUNOMIA_IT_MYSQL</c> (CI) não há
-    /// verificação: um servidor em baixo tem de falhar.
+    /// The Start-TestServer.ps1 file stays after the server stops (for example, after a restart): without a server
+    /// answering, the tests are skipped instead of failing to connect. With <c>EUNOMIA_IT_MYSQL</c> (CI) there is no
+    /// check: a server that is down has to fail.
     /// </summary>
     private static bool Reachable(string connectionString)
     {
@@ -45,7 +45,7 @@ internal static class TestServer
     }
 
     public static void RequireServer() =>
-        Assert.SkipWhen(ConnectionString is null, "Sem servidor de teste: correr tests/Integration/Start-TestServer.ps1 ou definir EUNOMIA_IT_MYSQL.");
+        Assert.SkipWhen(ConnectionString is null, "No test server: run tests/Integration/Start-TestServer.ps1 or set EUNOMIA_IT_MYSQL.");
 
     public static ConnectionOptions Options(string? database = null)
     {
@@ -60,7 +60,7 @@ internal static class TestServer
         return await new MySqlProvider().Connections.OpenAsync(Options(database), (_, _) => ValueTask.FromResult(password), TestContext.Current.CancellationToken);
     }
 
-    /// <summary>Base de dados nova e única, apagada no fim.</summary>
+    /// <summary>A new, unique database, dropped at the end.</summary>
     public static async Task<string> CreateDatabaseAsync(IDbConnectionHandle handle)
     {
         var name = "eunomia_it_" + Guid.NewGuid().ToString("N")[..10];

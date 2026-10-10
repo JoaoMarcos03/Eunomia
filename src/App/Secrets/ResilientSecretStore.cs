@@ -1,19 +1,19 @@
 namespace Eunomia.App.Secrets;
 
-/// <summary>O cofre do sistema recusou uma operação (keyring bloqueado ou inexistente, acesso negado).</summary>
+/// <summary>The system vault refused an operation (keyring locked or missing, access denied).</summary>
 public sealed class SecretStoreException(string message, Exception? inner = null) : Exception(message, inner);
 
 /// <summary>
-/// Cofre do sistema com recurso (Fase 14): se o cofre falhar (Linux sem Secret Service, Keychain bloqueado, erro do
-/// Credential Manager), o segredo fica só em memória até a aplicação fechar, nunca em ficheiro, e a primeira falha é
-/// avisada uma vez. Assim um problema do cofre não fecha a aplicação nem impede de ligar nesta execução.
+/// System vault with a fallback (phase 14): if the vault fails (Linux without Secret Service, locked Keychain, Credential
+/// Manager error), the secret stays only in memory until the application closes, never in a file, and the first failure is
+/// reported once. That way a vault problem neither closes the application nor prevents connecting in this run.
 /// </summary>
 public sealed class ResilientSecretStore(ISecretStore? primary, Action<string>? warn = null) : ISecretStore
 {
     private readonly MemorySecretStore _memory = new();
     private int _warned;
 
-    /// <summary>Os segredos gravados ficam no cofre do sistema (falso sem cofre ou depois de uma falha).</summary>
+    /// <summary>Saved secrets go to the system vault (false without a vault or after a failure).</summary>
     public bool IsPersistent => primary is not null && Volatile.Read(ref _warned) == 0;
 
     public string? Get(string key)

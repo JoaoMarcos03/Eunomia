@@ -14,13 +14,13 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Save BLOB to file (popupDataGrid) e Image preview (Grid view options; anexo D): o valor completo da célula focada (as
-/// células cortadas no Data tab vêm do servidor pela chave), binários gravados tal como são e texto em UTF-8; o preview
-/// mostra JPEG, GIF, BMP e PNG reconhecidos pelos primeiros bytes, por baixo da árvore.
+/// Save BLOB to file (popupDataGrid) and Image preview (Grid view options; appendix D): the full value of the focused cell
+/// (cells cut in the Data tab come from the server by key), binaries written as they are and text as UTF-8; the preview
+/// shows JPEG, GIF, BMP and PNG recognised by their first bytes, below the tree.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Imagens maiores não são lidas para o preview (o valor vem inteiro para a memória).</summary>
+    /// <summary>Larger images are not read for the preview (the whole value comes into memory).</summary>
     internal const int MaxPreviewBytes = 16 * 1024 * 1024;
 
     private readonly ImagePreviewPanel _preview = new() { IsVisible = false };
@@ -29,16 +29,16 @@ public sealed partial class MainWindow
     private CancellationTokenSource? _previewLoad;
     private bool _previewOn;
 
-    /// <summary>Substitui o diálogo de gravar: nome sugerido → caminho, ou <c>null</c> para cancelar (testes).</summary>
+    /// <summary>Replaces the save dialog: suggested name → path, or <c>null</c> to cancel (tests).</summary>
     internal Func<string, string?>? SaveBlobOverride { get; set; }
 
-    /// <summary>Painel do Image preview (testes).</summary>
+    /// <summary>Image preview panel (tests).</summary>
     internal ImagePreviewPanel ImagePreview => _preview;
 
-    /// <summary>A última carga do preview (testes).</summary>
+    /// <summary>The last preview load (tests).</summary>
     internal Task PreviewLoad { get; private set; } = Task.CompletedTask;
 
-    /// <summary>Árvore em cima, splitter e o painel do Image preview em baixo (escondidos até ligar o preview).</summary>
+    /// <summary>Tree on top, splitter and the Image preview panel below (hidden until the preview is turned on).</summary>
     private Control TreeColumn()
     {
         _treeColumn = new Grid { RowDefinitions = new RowDefinitions("*,0,0") };
@@ -63,10 +63,10 @@ public sealed partial class MainWindow
         WatchForPreview(_dataGrid.Control);
     }
 
-    /// <summary>A grelha do Save BLOB: a focada, ou a do preview (o botão do painel tira o foco à grelha).</summary>
+    /// <summary>The grid for Save BLOB: the focused one, or the preview's (the panel's button takes the focus from the grid).</summary>
     private DataGridControl? BlobGrid() => FocusedGrid() ?? _blobGrid;
 
-    /// <summary>A célula focada de uma grelha passa para o preview (Data tab e grelhas de resultados).</summary>
+    /// <summary>The focused cell of a grid goes to the preview (Data tab and result grids).</summary>
     private void WatchForPreview(DataGridControl grid)
     {
         grid.Selection.Changed += (_, _) =>
@@ -106,7 +106,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Lê a célula focada e mostra-a se for uma imagem; uma escolha seguinte cancela esta.</summary>
+    /// <summary>Reads the focused cell and shows it if it is an image; a later choice cancels this one.</summary>
     private async Task LoadPreviewAsync(DataGridControl grid)
     {
         _previewLoad?.Cancel();
@@ -120,7 +120,7 @@ public sealed partial class MainWindow
         }
         try
         {
-            // Mover as setas por várias células só lê a última.
+            // Moving the arrows over several cells only reads the last one.
             await Task.Delay(120, cts.Token);
             var raw = await grid.GetRawTextAsync(row, column);
             cts.Token.ThrowIfCancellationRequested();
@@ -153,7 +153,7 @@ public sealed partial class MainWindow
         catch (OperationCanceledException)
         {
         }
-#pragma warning disable CA1031 // Fronteira do preview: uma imagem estragada ou um erro ao ler a célula não pode chegar ao diálogo de erro.
+#pragma warning disable CA1031 // Preview boundary: a broken image or an error reading the cell must not reach the error dialog.
         catch (Exception ex) when (ex is not OutOfMemoryException)
 #pragma warning restore CA1031
         {
@@ -164,7 +164,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Save BLOB to file: o valor completo da célula focada para um ficheiro (binário tal como é, texto em UTF-8).</summary>
+    /// <summary>Save BLOB to file: the full value of the focused cell to a file (binary as it is, text as UTF-8).</summary>
     private async Task SaveBlobAsync()
     {
         if (BlobGrid() is not { Source: { } source } grid || grid.Selection.FocusedRow < 0 || grid.Selection.FocusedColumn < 0)

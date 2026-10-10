@@ -1,161 +1,160 @@
-# Contribuir para o Eunomia
+# Contributing to Eunomia
 
-Regras, padrões de código e processo para quem contribui. Se uma regra colidir com a especificação, a especificação vence e a regra corrige-se.
+Rules, coding standards and process for anyone who contributes. If a rule conflicts with the specification, the specification wins and the rule gets fixed.
 
-## 1. Documentos
+## 1. Documents
 
-| Documento | Para quê |
+| Document | Purpose |
 | --- | --- |
-| `docs/progresso.md` | Estado atual, decisões provisórias, o que falta |
-| `docs/roadmap.md` | O que vem a seguir, por prioridade |
-| `docs/spec/especificacao-fase-0.md` | Fonte de verdade (~2.000 linhas), com os anexos A–G em `docs/spec/anexos/` |
-| `docs/validacao.md` | Última validação do código (métricas, achados, estado dos testes) |
-| `docs/mvp-criterios.md`, `docs/fases/` | Critérios do MVP; plano de cada fase |
-| `docs/adr/` | Decisões de arquitetura. Uma decisão nova de arquitetura é uma ADR nova |
-| `docs/verificacoes-pendentes.md` | O que não se verifica automaticamente |
-| `docs/utilizador/guia.md` | Guia do utilizador |
-| `docs/desempenho.md`, `docs/auditoria-seguranca.md`, `docs/modelo-ameacas.md` | Desempenho em servidores remotos; auditoria de segurança; modelo de ameaças (rever ao mexer nas áreas da secção 6 dele) |
+| `docs/progress.md` | Current state, provisional decisions, what is left |
+| `docs/roadmap.md` | What comes next, by priority |
+| `docs/spec/specification.md` | Source of truth (~2,000 lines), with appendices A–G in `docs/spec/appendices/` |
+| `docs/validation.md` | Latest code validation (metrics, findings, test status) |
+| `docs/mvp-criteria.md`, `docs/phases/` | MVP criteria; the plan of each phase |
+| `docs/adr/` | Architecture decisions. A new architecture decision is a new ADR |
+| `docs/manual-checks.md` | What cannot be checked automatically |
+| `docs/user-guide.md` | User guide |
+| `docs/performance.md`, `docs/security-audit.md`, `docs/threat-model.md` | Performance on remote servers; security audit; threat model (review it when touching the areas in its section 6) |
 
-## 2. Preparar o ambiente
+## 2. Setting up
 
-1. Instala o SDK do .NET indicado em `global.json` (10.0.4xx). Para publicar em NativeAOT no Windows, também as Build Tools de C++.
-2. Clona o repositório, compila e corre os testes:
+1. Install the .NET SDK pinned in `global.json` (10.0.4xx). To publish with NativeAOT on Windows, also install the C++ Build Tools.
+2. Clone the repository, build and run the tests:
 
    ```bash
    dotnet build Eunomia.slnx
    dotnet test Eunomia.slnx
    ```
 
-3. Testes com servidor real (opcional): `powershell -File tests\Integration\Start-TestServer.ps1` no Windows com o XAMPP (MariaDB na porta 33106, datadir em `%TEMP%\eunomia-it`, nunca o do XAMPP), ou a variável `EUNOMIA_IT_MYSQL` com uma connection string. Sem servidor, esses testes ficam "skipped".
+3. Tests against a real server (optional): `powershell -File tests\Integration\Start-TestServer.ps1` on Windows with XAMPP (MariaDB on port 33106, data directory in `%TEMP%\eunomia-it`, never XAMPP's own), or the `EUNOMIA_IT_MYSQL` environment variable with a connection string. Without a server, those tests are reported as skipped.
 
-Comandos do dia a dia:
+Everyday commands:
 
 ```bash
-dotnet build Eunomia.slnx                                       # build (warnings partem o build)
-dotnet test Eunomia.slnx                                        # todos os testes
-dotnet test tests/Unit/Engine.Sql.Tests --filter "FullyQualifiedName~Splitter"   # um subconjunto
-dotnet test Eunomia.slnx --collect "Code Coverage;Format=cobertura" --results-directory TestResults   # com cobertura
-python build/coverage.py TestResults                            # cobertura por projeto contra build/coverage-baseline.json
-dotnet format Eunomia.slnx --verify-no-changes                  # formatação e estilo (o CI corre isto)
-dotnet format Eunomia.slnx                                      # corrige formatação e estilo
-dotnet build Eunomia.slnx -c Release                            # medições de desempenho só em Release
+dotnet build Eunomia.slnx                                       # build (warnings fail the build)
+dotnet test Eunomia.slnx                                        # all tests
+dotnet test tests/Unit/Engine.Sql.Tests --filter "FullyQualifiedName~Splitter"   # a subset
+dotnet test Eunomia.slnx --collect "Code Coverage;Format=cobertura" --results-directory TestResults   # with coverage
+python build/coverage.py TestResults                            # coverage per project against build/coverage-baseline.json
+dotnet format Eunomia.slnx --verify-no-changes                  # formatting and style (CI runs this)
+dotnet format Eunomia.slnx                                      # fix formatting and style
+dotnet build Eunomia.slnx -c Release                            # performance measurements only in Release
 ```
 
-SDK .NET fixado em `global.json`; versões de pacotes em `Directory.Packages.props` (gestão central); opções comuns em `Directory.Build.props`. Em PowerShell 5.1, `Set-Content`/`Get-Content` estragam UTF-8 sem BOM.
+The .NET SDK is pinned in `global.json`; package versions in `Directory.Packages.props` (central package management); shared options in `Directory.Build.props`. In Windows PowerShell 5.1, `Set-Content`/`Get-Content` corrupt UTF-8 files without a BOM.
 
-## 3. Arquitetura (invioláveis)
+## 3. Architecture (non-negotiable)
 
-- Camadas da secção 21 da spec. `src/Engine.*`, `src/Drivers.*`, `src/App`, `src/Infra.*` e `src/Presentation` não referenciam Avalonia, WinForms, WPF nem projetos `UI.*` (verificado em `tests/Architecture`).
-- Código específico de um sistema só em `Infra.*.<Sistema>` (Windows, MacOS, Linux) ou atrás de `OperatingSystem.Is*()`. Caminhos com `Path.Combine`, nunca `\` literal.
-- O core não conhece MySQL: usa `IDialect` (`Drivers.Abstractions`), a linguagem do editor (`ISqlLanguage`, `Engine.Sql`), capabilities e o type system. Tipos `MySql*` só em `Drivers.MySql` e na linguagem MySQL do `Engine.Sql` (verificado por `DialectBoundaryTests`).
-- **SQL nunca montado à mão.** Identificadores por `QuoteIdentifier`/`QualifiedName` do dialeto; literais pelo dialeto (`StringLiteral` é igual em qualquer `sql_mode`); texto de células por `DisplayFormatter.FormatRaw`; DDL da aplicação por `SafeDdl`; edições de linhas pelo `RowWriter`. Nada de aspas, backticks ou valores concatenados.
-- Clean-room: não copies código do HeidiSQL (GPL-2.0) nem uses os ícones Icons8. O comportamento necessário está na spec.
-- Confirma cada API na documentação ou no código do pacote, na versão fixada, antes de usar um método ou opção.
-- Pacotes NuGet novos, versões novas e software de terceiros só com acordo do mantenedor.
-- Mudar a arquitetura ou divergir da spec pede uma ADR. Dúvidas menores: a opção mais conservadora, registada em "Decisões provisórias" no `docs/progresso.md`.
+- Layers from section 21 of the spec. `src/Engine.*`, `src/Drivers.*`, `src/App`, `src/Infra.*` and `src/Presentation` do not reference Avalonia, WinForms, WPF or `UI.*` projects (checked in `tests/Architecture`).
+- Platform-specific code only in `Infra.*.<Platform>` (Windows, MacOS, Linux) or behind `OperatingSystem.Is*()`. Paths with `Path.Combine`, never a literal `\`.
+- The core does not know MySQL: it uses `IDialect` (`Drivers.Abstractions`), the editor language (`ISqlLanguage`, `Engine.Sql`), capabilities and the type system. `MySql*` types only in `Drivers.MySql` and in the MySQL language in `Engine.Sql` (checked by `DialectBoundaryTests`).
+- **SQL is never assembled by hand.** Identifiers through the dialect's `QuoteIdentifier`/`QualifiedName`; literals through the dialect (`StringLiteral` is the same under any `sql_mode`); cell text through `DisplayFormatter.FormatRaw`; application DDL through `SafeDdl`; row edits through `RowWriter`. No hand-written quotes, backticks or concatenated values.
+- Clean room: do not copy HeidiSQL code (GPL-2.0) or use the Icons8 icons. The required behaviour is in the spec.
+- Check every API in the package's documentation or source, at the pinned version, before using a method or option.
+- New NuGet packages, new versions and third-party software only with the maintainer's agreement.
+- Changing the architecture or diverging from the spec requires an ADR. Minor doubts: take the most conservative option and record it under "Provisional decisions" in `docs/progress.md`.
 
-## 4. Segurança dos dados (prioridade máxima)
+## 4. Data safety (top priority)
 
-O Eunomia é usado em bases de produção. Ordem de precedência dos princípios (secção 2 da spec): data safety > stability > UI não bloqueante > familiaridade com o HeidiSQL > grandes datasets > memória > desempenho.
+Eunomia is used on production databases. Order of precedence of the principles (spec section 2): data safety > stability > non-blocking UI > familiarity with HeidiSQL > large datasets > memory > performance.
 
-- Nenhuma operação altera dados que o utilizador não pediu. Um UPDATE ou DELETE sem chave única nunca é gerado em silêncio; escritas do grid levam `LIMIT 1` e verificam as linhas afetadas.
-- Na dúvida, recusa, pergunta ou falha depressa; nunca grava um valor cortado, convertido ou adivinhado.
-- Qualquer alteração em caminhos de escrita (`RowWriter`, composers de DML/DDL, `SafeDdl`, export/import, sessões read-only, transações) leva teste de integração contra servidor real (ver `DataSafetyTests`).
-- Segredos (passwords, chaves, connection strings) nunca em JSON, logs, mensagens de erro, crash reports nem URLs. Ficam no cofre do sistema (`Infra.Secrets.*`). O SQL log mascara `IDENTIFIED BY`/`SET PASSWORD` (`SecretMasking`).
-- Ficheiros do utilizador: escrita atómica, cópia `.bak`, permissões 0600/0700 em Unix.
+- No operation changes data the user did not ask to change. An UPDATE or DELETE without a unique key is never generated silently; grid writes carry `LIMIT 1` and check the affected rows.
+- When in doubt, refuse, ask or fail fast; never write a truncated, converted or guessed value.
+- Any change to a write path (`RowWriter`, DML/DDL composers, `SafeDdl`, export/import, read-only sessions, transactions) comes with an integration test against a real server (see `DataSafetyTests`).
+- Secrets (passwords, keys, connection strings) never in JSON, logs, error messages, crash reports or URLs. They live in the OS vault (`Infra.Secrets.*`). The SQL log masks `IDENTIFIED BY`/`SET PASSWORD` (`SecretMasking`).
+- User files: atomic writes, a `.bak` copy, 0600/0700 permissions on Unix.
 
-## 5. Padrões de código C#
+## 5. C# coding standards
 
-Seguem as [convenções de C# da Microsoft](https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions) e as [Framework Design Guidelines](https://learn.microsoft.com/dotnet/standard/design-guidelines/), com o que está abaixo. O `.editorconfig` codifica o que é verificável; o CI corre `dotnet format --verify-no-changes`. Código novo segue estas regras; código antigo alinha-se quando for tocado.
+They follow Microsoft's [C# coding conventions](https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions) and the [Framework Design Guidelines](https://learn.microsoft.com/dotnet/standard/design-guidelines/), plus what is below. `.editorconfig` encodes what can be checked; CI runs `dotnet format --verify-no-changes`. New code follows these rules; old code is aligned when it is touched.
 
-### Estrutura
+### Structure
 
-- Namespaces file-scoped; `using` fora do namespace, `System.*` primeiro; 4 espaços; LF; UTF-8 sem BOM; linhas até 150 colunas.
-- Um tipo principal por ficheiro, com o nome do ficheiro. Tipos pequenos e ligados (record de resultado, exceção própria) podem ficar no mesmo ficheiro.
-- Classes `sealed` por omissão; `record`/`readonly record struct` para dados imutáveis; primary constructors quando só guardam dependências.
-- Visibilidade mínima: `internal` antes de `public`; `InternalsVisibleTo` só para projetos de testes.
-- Métodos curtos com uma responsabilidade. Ficheiros acima de ~600 linhas ou classes `partial` que crescem por área (o `MainWindow`) são sinal para extrair um tipo.
-- Sem código morto, comentado ou "para depois". Sem `TODO` sem entrada no `docs/roadmap.md`.
+- File-scoped namespaces; `using` outside the namespace, `System.*` first; 4 spaces; LF; UTF-8 without BOM; lines up to 150 columns.
+- One main type per file, named after the file. Small related types (a result record, a dedicated exception) may share the file.
+- Classes `sealed` by default; `record`/`readonly record struct` for immutable data; primary constructors when they only store dependencies.
+- Minimal visibility: `internal` before `public`; `InternalsVisibleTo` only for test projects.
+- Short methods with a single responsibility. Files over ~600 lines, or `partial` classes that keep growing by area (`MainWindow`), are a signal to extract a type.
+- No dead, commented-out or "for later" code. No `TODO` without an entry in `docs/roadmap.md`.
 
-### Nomes
+### Naming
 
-- `PascalCase`: tipos, métodos, propriedades, eventos, constantes e campos `static readonly`. `camelCase`: parâmetros e locais. `_camelCase`: campos privados. Interfaces com `I`. Métodos assíncronos acabam em `Async`.
-- Nomes em inglês no código; nomes descritivos (sem abreviaturas obscuras). Testes em frases PT-PT em PascalCase que descrevem o comportamento (`AppDbDanificadoFicaDeLadoEAAplicacaoArranca`).
+- `PascalCase`: types, methods, properties, events, constants and `static readonly` fields. `camelCase`: parameters and locals. `_camelCase`: private fields. Interfaces start with `I`. Asynchronous methods end in `Async`.
+- Everything in English, with descriptive names (no obscure abbreviations). Test names are PascalCase sentences that describe the behaviour (`DamagedAppDbIsSetAsideAndTheAppStarts`).
 
-### Tipos, nulabilidade e validação
+### Types, nullability and validation
 
-- `Nullable` ligado e `TreatWarningsAsErrors`: zero warnings. Evita o operador `!`; se for mesmo necessário, o porquê tem de ser óbvio pelo contexto.
-- Valida argumentos públicos com `ArgumentNullException.ThrowIfNull`, `ArgumentOutOfRangeException.ThrowIf*`.
-- Comparações de texto sempre com `StringComparison` explícito (`Ordinal`/`OrdinalIgnoreCase` para identificadores). Formatação e parsing de dados com `CultureInfo.InvariantCulture`; só o que o utilizador vê usa a cultura atual.
-- Coleções expostas como `IReadOnlyList<T>`/`IReadOnlyDictionary<TKey, TValue>`.
+- `Nullable` on and `TreatWarningsAsErrors`: zero warnings. Avoid the `!` operator; if it is really needed, the reason must be obvious from the context.
+- Validate public arguments with `ArgumentNullException.ThrowIfNull`, `ArgumentOutOfRangeException.ThrowIf*`.
+- String comparisons always with an explicit `StringComparison` (`Ordinal`/`OrdinalIgnoreCase` for identifiers). Data is formatted and parsed with `CultureInfo.InvariantCulture`; only what the user sees uses the current culture.
+- Collections are exposed as `IReadOnlyList<T>`/`IReadOnlyDictionary<TKey, TValue>`.
 
-### Async, concorrência e UI
+### Async, concurrency and UI
 
-- Nenhum I/O (rede, disco, driver) na UI thread. Nada de `.Result`, `.Wait()` ou `GetAwaiter().GetResult()` em código novo.
-- `async void` só em event handlers de UI, com `try/catch` que encaminha o erro para o diálogo ou o log.
-- `ConfigureAwait(false)` em todas as bibliotecas sem UI (`Engine.*`, `Drivers.*`, `App`, `Infra.*`); nunca em código de UI que volta a mexer em controlos.
-- `CancellationToken` como último parâmetro de métodos assíncronos públicos, sempre propagado. Cancelar não é erro: `OperationCanceledException` não vai para o diálogo de erro.
-- Estado partilhado entre threads protegido (`lock`, `Channel<T>`, tipos imutáveis). Nada de `Thread.Sleep`; `Task.Delay` só com motivo.
-- Todos os buffers têm limite; streaming por omissão (secção 11 da spec).
+- No I/O (network, disk, driver) on the UI thread. No `.Result`, `.Wait()` or `GetAwaiter().GetResult()` in new code.
+- `async void` only in UI event handlers, with a `try/catch` that routes the error to the dialog or the log.
+- `ConfigureAwait(false)` in every library without UI (`Engine.*`, `Drivers.*`, `App`, `Infra.*`); never in UI code that touches controls afterwards.
+- `CancellationToken` as the last parameter of public asynchronous methods, always passed on. Cancelling is not an error: `OperationCanceledException` never reaches the error dialog.
+- State shared between threads is protected (`lock`, `Channel<T>`, immutable types). No `Thread.Sleep`; `Task.Delay` only with a reason.
+- Every buffer is bounded; streaming by default (spec section 11).
 
-### Erros e recursos
+### Errors and resources
 
-- Exceções para casos excecionais, com tipos próprios quando o chamador tem de distinguir (`RowWriteException`, `RowConflictException`).
-- `catch (Exception)` só em fronteiras (comando da UI, job de background, limpeza), com o erro registado e com `#pragma warning disable CA1031 // porquê`. Nunca um `catch` vazio; nunca engolir um erro de escrita.
-- Mensagens que o utilizador vê em inglês, como no HeidiSQL; sem segredos nem valores de dados.
-- `IDisposable`/`IAsyncDisposable` sempre com `using`/`await using`.
+- Exceptions for exceptional cases, with dedicated types when the caller has to tell them apart (`RowWriteException`, `RowConflictException`).
+- `catch (Exception)` only at boundaries (UI command, background job, cleanup), with the error logged and `#pragma warning disable CA1031 // why`. Never an empty `catch`; never swallow a write error.
+- Messages the user sees are in English, as in HeidiSQL, with no secrets or data values.
+- `IDisposable`/`IAsyncDisposable` always with `using`/`await using`.
 
-### AOT, trimming e desempenho
+### AOT, trimming and performance
 
-- O executável é NativeAOT: sem reflexão dinâmica, `dynamic` ou `Activator.CreateInstance` em tipos desconhecidos. JSON com `JsonSerializerContext` (source generators); regex com `[GeneratedRegex]`.
-- Os analyzers de AOT e trimming estão ligados: um warning IL2xxx/IL3xxx é um erro a corrigir, não a suprimir.
-- Caminhos quentes (grid, lexer, splitter, export): `Span<T>`, sem alocações por célula, sem LINQ em ciclos apertados. Uma afirmação de desempenho exige número medido em Release (secção 26 da spec).
+- The executable is NativeAOT: no dynamic reflection, `dynamic` or `Activator.CreateInstance` on unknown types. JSON through `JsonSerializerContext` (source generators); regular expressions through `[GeneratedRegex]`.
+- The AOT and trimming analyzers are on: an IL2xxx/IL3xxx warning is an error to fix, not to suppress.
+- Hot paths (grid, lexer, splitter, export): `Span<T>`, no per-cell allocations, no LINQ in tight loops. A performance claim needs a number measured in Release (spec section 26).
 
 ### UI (Avalonia)
 
-- UX igual à do HeidiSQL: posição dos comandos, atalhos, captions em inglês. Comandos vêm do registo de comandos; itens sem handler não aparecem.
-- Cores e tamanhos pelos tokens de tema (`assets/themes`), nunca valores soltos; tema claro e escuro.
-- Controlos interativos com nome acessível (leitores de ecrã): o rótulo ao lado por `.Named(label)` (`AccessibleNames`), verificado em todas as janelas por `AccessibilityTests`.
-- Janelas de topo com `BrandAssets.WindowIcon` (verificado em `BrandTests`).
+- Same UX as HeidiSQL: command placement, shortcuts, English captions. Commands come from the command registry; items without a handler are not shown.
+- Colours and sizes from the theme tokens (`assets/themes`), never loose values; light and dark themes.
+- Interactive controls have an accessible name (screen readers): the label next to them through `.Named(label)` (`AccessibleNames`), checked in every window by `AccessibilityTests`.
+- Top-level windows use `BrandAssets.WindowIcon` (checked by `BrandTests`).
 
-### Comentários e documentação
+### Comments and documentation
 
-- Comentários e XML docs em PT-PT; termos técnicos em inglês. Explicam o porquê e a referência à spec (secção, requisito, anexo), não o que o código já diz.
-- Tipos e membros públicos de bibliotecas com `/// <summary>`.
+- Comments and XML docs in English. They explain the why and point to the spec (section, requirement, appendix), not what the code already says.
+- Public types and members of libraries have a `/// <summary>`.
 
+## 6. Tests
 
-## 6. Testes
+- xUnit v3. Pyramid: unit tests in `tests/Unit/<Project>.Tests`, integration against a real server in `tests/Integration`, headless UI and snapshots in `tests/UI.Headless`, dependency rules in `tests/Architecture`.
+- Every bug fix starts with a failing test. Every new feature has tests for the happy path and the edge cases (NULL, empty, Unicode, maximum values, cancellation).
+- New or changed screens and dialogs: a light and a dark headless snapshot, reviewed by eye before accepting the baseline (pixels are compared on Windows only).
+- Headless tests: asynchronous ones carry `Timeout = UiTimeouts.Default` (checked by `TestHarnessTests`); questions are answered through the `MainWindow` `*Override` hooks. An unexpected modal dialog is closed and fails the test (`UnexpectedDialogGuard`): an expected dialog is checked with `TakeOpened`, one driven by the test is allowed with `Allow`.
+- Tests that need a server call `Assert.Skip` without one; never a false green. Tests are deterministic: no dependency on the clock, order or external network; no `Thread.Sleep` to wait for state.
+- Never change a test just to make it pass, and never tweak code just to pass a test.
 
-- xUnit v3. Pirâmide: unitários em `tests/Unit/<Projeto>.Tests`, integração contra servidor real em `tests/Integration`, UI headless e snapshots em `tests/UI.Headless`, regras de dependências em `tests/Architecture`.
-- Cada correção de bug começa por um teste que falha. Cada funcionalidade nova tem testes do caminho feliz e dos casos limite (NULL, vazio, Unicode, valores máximos, cancelamento).
-- Ecrãs e diálogos novos ou alterados: snapshot headless claro e escuro, revisto a olho antes de aceitar a baseline (só o Windows compara pixels).
-- Testes headless: os assíncronos levam `Timeout = UiTimeouts.Default` (verificado por `TestHarnessTests`); as perguntas respondem-se pelas `*Override` do `MainWindow`. Um diálogo modal inesperado é fechado e faz falhar o teste (`UnexpectedDialogGuard`): um diálogo esperado verifica-se com `TakeOpened`, um conduzido pelo teste autoriza-se com `Allow`.
-- Testes que precisam de servidor fazem `Assert.Skip` sem ele; nunca falsos verdes. Testes determinísticos: sem dependência de horas, ordem ou rede externa; sem `Thread.Sleep` para esperar estado.
-- Nunca alteres um teste só para o pôr verde nem ajustes código só para passar um teste.
+## 7. Git, commits and pull requests
 
-## 7. Git, commits e pull requests
+- One branch per topic (`feat/user-manager`, `fix/grid-conflicts`, `docs/…`); work reaches `main` through a pull request with green CI (Windows, Linux, macOS, integration, quality and coverage).
+- One commit per coherent step, with a green build and tests. Messages in English, in the [Conventional Commits](https://www.conventionalcommits.org/) format: `type(scope): imperative summary` (≤ 72 characters), with a body explaining the why when it is not obvious. Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`. Example: `fix(grid): refuse to save truncated values`.
+- Before the PR: `dotnet format Eunomia.slnx --verify-no-changes`, with `CHANGELOG.md` and `docs/progress.md` up to date.
+- Small, focused PRs with the template filled in (what, why, how it was tested, risks to data).
+- Versions follow [SemVer](https://semver.org/); `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/) and is updated with every visible change.
+- Never: `git push --force` on `main`, `--no-verify`, rewriting published history.
 
-- Um branch por tema (`feat/user-manager`, `fix/grid-conflitos`, `docs/…`); o trabalho entra no `main` por pull request com o CI verde (Windows, Linux, macOS, integração, qualidade e cobertura).
-- Um commit por passo coerente, com build e testes verdes. Mensagens em PT-PT no formato [Conventional Commits](https://www.conventionalcommits.org/): `tipo(âmbito): resumo no imperativo` (≤ 72 caracteres), com corpo a explicar o porquê quando não for óbvio. Tipos: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`. Ex.: `fix(grid): recusar gravar valores cortados`.
-- Antes do PR: `dotnet format Eunomia.slnx --verify-no-changes`, `CHANGELOG.md` e `docs/progresso.md` atualizados.
-- PRs pequenos e focados, com o template preenchido (o quê, porquê, como foi testado, riscos para dados).
-- Versões em [SemVer](https://semver.org/); `CHANGELOG.md` no formato [Keep a Changelog](https://keepachangelog.com/) atualizado em cada alteração visível.
-- Nunca: `git push --force` no `main`, `--no-verify`, reescrever histórico publicado.
+## 8. Code review
 
-## 8. Revisão de código
+Reviewers check, in this order:
 
-Quem revê verifica, por esta ordem:
+1. Data: can it corrupt, truncate or change data the user did not ask for? Is there an integration test on the write path?
+2. SQL built through the dialect and the composers (nothing by hand); secrets kept out of logs and errors.
+3. Architecture: dependencies between layers, platform code in the right place, no MySQL in the core.
+4. UI thread without I/O or synchronous waits; cancellation passed on.
+5. Tests that cover the behaviour (not just the line), and reviewed snapshots.
+6. Standards from section 5, documentation and `CHANGELOG.md` up to date.
 
-1. Dados: pode corromper, cortar ou alterar dados que o utilizador não pediu? Há teste de integração no caminho de escrita?
-2. SQL montado pelo dialeto e pelos composers (nada à mão); segredos fora de logs e erros.
-3. Arquitetura: dependências entre camadas, código por sistema no sítio certo, nada de MySQL no core.
-4. UI thread sem I/O nem esperas síncronas; cancelamento propagado.
-5. Testes que cobrem o comportamento (não só a linha) e snapshots revistos.
-6. Padrões da secção 5, documentação e `CHANGELOG.md` atualizados.
+## 9. Documentation
 
-## 9. Documentação
+- Documentation, code and UI text in English.
+- At the end of each step: `docs/progress.md` with the current step, what is done, the decisions taken and what is left. Visible features: `docs/user-guide.md`. New items for later: `docs/roadmap.md`. Anything that needs people, hardware or certificates: `docs/manual-checks.md`.
 
-- Documentação em PT-PT; termos técnicos em inglês; texto da UI em inglês.
-- No fim de cada passo: `docs/progresso.md` com o passo atual, o que está feito, as decisões tomadas e o que falta. Funcionalidade visível: `docs/utilizador/guia.md`. Item novo para o futuro: `docs/roadmap.md`. O que exige pessoas, hardware ou certificados: `docs/verificacoes-pendentes.md`.
-
-Contribuições externas só com CLA enquanto a licença estiver por decidir (ADR-16).
+External contributions require a CLA until the license is chosen (ADR-16).

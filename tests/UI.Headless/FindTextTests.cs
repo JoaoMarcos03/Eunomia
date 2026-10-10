@@ -7,16 +7,16 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Find text on server (Ctrl+Shift+F; anexo B §2.4) contra o servidor de teste.</summary>
+/// <summary>Find text on server (Ctrl+Shift+F; appendix B §2.4) against the test server.</summary>
 public sealed class FindTextTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ProcuraNasTabelasEAbreOsResultados()
+    public async Task SearchesTheTablesAndOpensTheResults()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
-        // O teste conduz o diálogo modal do Find text on server.
+        // The test drives the modal Find text on server dialog.
         UnexpectedDialogGuardAttribute.Allow(typeof(Eunomia.UI.Shell.Views.FindTextDialog));
         var db = NewDatabaseName("eunomia_ft_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
@@ -33,12 +33,12 @@ public sealed class FindTextTests
             window.Tree.Tree.FocusedNode = dbNode;
             await WaitAsync(() => ReferenceEquals(window.Tabs.SelectedItem, window.Tabs.DatabaseTab) ? "ok" : null);
 
-            // Ctrl+Shift+F abre o diálogo na base focada, com todas as tabelas escolhidas.
+            // Ctrl+Shift+F opens the dialog on the focused database, with every table chosen.
             Assert.True(window.TryExecuteShortcut("Ctrl+Shift+F"));
             var dialog = await WaitAsync(() => window.FindTextWindow is { TableBoxes.Count: 3 } d ? d : null);
             Assert.All(dialog.TableBoxes, b => Assert.True(b.IsChecked));
 
-            // Sem distinção de maiúsculas: "ana" em people (2) e notes (1); numbers sem texto também é contada.
+            // Case-insensitive: "ana" in people (2) and notes (1); numbers, without text columns, is counted too.
             dialog.FindTextBox.Text = "ana";
             await dialog.FindAsync();
             var rows = dialog.Results.Roots.ToDictionary(n => n[1], n => n[2]);
@@ -48,7 +48,7 @@ public sealed class FindTextTests
             Assert.Equal("3 matching row(s) in 2 of 3 table(s).", dialog.StatusText);
             Assert.True(dialog.CanSeeResults);
 
-            // Case sensitive e match exato.
+            // Case sensitive and exact match.
             dialog.CaseSensitiveBox.IsChecked = true;
             dialog.MatchBox.SelectedIndex = 1;
             dialog.FindTextBox.Text = "ANA";
@@ -62,7 +62,7 @@ public sealed class FindTextTests
                 dialog.CaptureRenderedFrame()!.Save(Path.Combine(dir, "find-text.png"), PngBitmapEncoderOptions.Default);
             }
 
-            // See results: uma query tab nova com o SELECT, a correr.
+            // See results: a new query tab with the SELECT, running.
             var tabs = window.Tabs.QueryTabs.Count;
             dialog.SeeResults();
             await WaitAsync(() => window.FindTextWindow is null ? "closed" : null);

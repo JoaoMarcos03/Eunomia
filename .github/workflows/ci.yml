@@ -1,6 +1,6 @@
-# CI de cada push e pull request (secção 22: ci.yml; secção 25.1: snapshots em cada PR).
-# Build + testes em Windows, Linux e macOS (Fase 14); publish dos 5 alvos com smoke test do executável e pacotes;
-# integração contra servidores reais em Linux.
+# CI for every push and pull request (spec section 22: ci.yml; section 25.1: snapshots on every PR).
+# Build and tests on Windows, Linux and macOS (phase 14); publish of the 5 targets with a smoke test of the executable
+# and packages; integration tests against real servers on Linux.
 name: ci
 
 on:
@@ -14,19 +14,19 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   AVALONIA_TELEMETRY_OPTOUT: "1"
 
-# Menor privilégio: o GITHUB_TOKEN só lê o repositório.
+# Least privilege: the GITHUB_TOKEN only reads the repository.
 permissions:
   contents: read
 
-# Um push novo num PR cancela a corrida anterior desse PR; no main corre cada push.
+# A new push to a PR cancels that PR's previous run; on main every push runs.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Formatação e estilo (.editorconfig) e pacotes com vulnerabilidades conhecidas (CONTRIBUTING.md, secção 5).
-  qualidade:
-    name: Qualidade
+  # Formatting and style (.editorconfig) and packages with known vulnerabilities (CONTRIBUTING.md, section 5).
+  quality:
+    name: Quality
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -39,10 +39,10 @@ jobs:
       - name: Restore
         run: dotnet restore Eunomia.slnx
 
-      - name: Formatação e estilo
+      - name: Formatting and style
         run: dotnet format Eunomia.slnx --verify-no-changes --no-restore --severity warn
 
-      - name: Pacotes com vulnerabilidades conhecidas
+      - name: Packages with known vulnerabilities
         run: |
           dotnet list Eunomia.slnx package --vulnerable --include-transitive --format json > vulnerable.json
           if grep -q '"vulnerabilities"' vulnerable.json; then
@@ -50,9 +50,8 @@ jobs:
             exit 1
           fi
 
-
   test:
-    name: Build e testes (${{ matrix.os }})
+    name: Build and tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
@@ -66,50 +65,50 @@ jobs:
         with:
           global-json-file: global.json
 
-      # Secret Service para os testes do cofre (libsecret) e fontes para o rendering headless.
-      - name: Dependências (Linux)
+      # Secret Service for the vault tests (libsecret) and fonts for headless rendering.
+      - name: Dependencies (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y gnome-keyring dbus-x11 libsecret-1-0 fonts-dejavu-core
 
       - name: Restore
         run: dotnet restore Eunomia.slnx
 
-      # TreatWarningsAsErrors está no Directory.Build.props: um warning parte o build.
+      # TreatWarningsAsErrors is set in Directory.Build.props: a warning fails the build.
       - name: Build
         run: dotnet build Eunomia.slnx -c Release --no-restore
 
-      - name: Testes (unitários, arquitetura, headless e snapshots)
+      - name: Tests (unit, architecture, headless and snapshots)
         if: runner.os != 'Linux'
         run: dotnet test Eunomia.slnx -c Release --no-build --logger trx --results-directory TestResults
 
-      # Numa sessão D-Bus própria com o GNOME Keyring desbloqueado (o teste do Secret Service corre a sério). Recolhe a
-      # cobertura de linhas (coletor do Microsoft.NET.Test.Sdk), junta à da integração no job "cobertura".
-      - name: Testes (Linux, com Secret Service e cobertura)
+      # In a D-Bus session of its own with GNOME Keyring unlocked (the Secret Service test runs for real). Collects line
+      # coverage (Microsoft.NET.Test.Sdk collector), merged with the integration coverage in the "coverage" job.
+      - name: Tests (Linux, with Secret Service and coverage)
         if: runner.os == 'Linux'
         run: |
           dbus-run-session -- bash -c '
             echo -n eunomia | gnome-keyring-daemon --unlock --components=secrets > /dev/null
             dotnet test Eunomia.slnx -c Release --no-build --logger trx --results-directory TestResults --collect "Code Coverage;Format=cobertura"'
 
-      - name: Cobertura (unitários)
+      - name: Coverage (unit)
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-unit
-          # Só o relatório juntado da corrida (os de cada projeto repetem as mesmas linhas).
+          # Only the run's merged report (the per-project ones repeat the same lines).
           path: TestResults/*/*.cobertura.xml
           if-no-files-found: ignore
 
-      - name: Resultados dos testes
+      - name: Test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ runner.os }}
           path: TestResults/
 
-      # Em Windows os snapshots comparam com as baselines (o PNG obtido fica só em falha); em Linux e macOS ficam
-      # sempre, para rever o aspeto com as fontes de cada sistema (ver tests/UI.Headless/Snapshot.cs).
-      - name: Snapshots obtidos
+      # On Windows the snapshots are compared with the baselines (the actual PNG is only kept on failure); on Linux and
+      # macOS they are always kept, to review the look with each system's fonts (see tests/UI.Headless/Snapshot.cs).
+      - name: Actual snapshots
         if: always() && (runner.os != 'Windows' || failure())
         uses: actions/upload-artifact@v4
         with:
@@ -127,10 +126,10 @@ jobs:
         include:
           - { os: windows-latest, rid: win-x64, aot: true, smoke: false }
           - { os: ubuntu-latest, rid: linux-x64, aot: true, smoke: true }
-          # Sem runner ARM nem sysroot de cross-compile: self-contained com JIT (corre igual, arranca mais devagar).
+          # No ARM runner or cross-compile sysroot: self-contained with JIT (runs the same, starts slower).
           - { os: ubuntu-latest, rid: linux-arm64, aot: false, smoke: false }
           - { os: macos-latest, rid: osx-arm64, aot: true, smoke: true }
-          # O ILCompiler do macOS compila para x64 a partir do runner arm64.
+          # The macOS ILCompiler targets x64 from the arm64 runner.
           - { os: macos-latest, rid: osx-x64, aot: true, smoke: false }
     steps:
       - uses: actions/checkout@v4
@@ -139,22 +138,22 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Toolchain NativeAOT (Linux)
+      - name: NativeAOT toolchain (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev xvfb
 
-      - name: Versão
+      - name: Version
         id: version
         shell: bash
         run: echo "value=$(dotnet msbuild src/App.Desktop/App.Desktop.csproj -getProperty:Version)" >> "$GITHUB_OUTPUT"
 
-      # Windows: a mesma função dos benchmarks e o ZIP portable (build/Publish-Portable.ps1).
-      - name: Publish e pacote (Windows)
+      # Windows: the same function as the benchmarks, plus the portable ZIP (build/Publish-Portable.ps1).
+      - name: Publish and package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./build/Publish-Portable.ps1
 
-      - name: Publish (Linux e macOS)
+      - name: Publish (Linux and macOS)
         if: runner.os != 'Windows'
         shell: bash
         run: |
@@ -165,23 +164,23 @@ jobs:
           fi
           ls -la artifacts/publish/${{ matrix.rid }}
 
-      # O executável arranca, desenha a janela e sai (--startup-probe, settings em memória, dados sintéticos).
-      - name: Smoke test do executável
+      # The executable starts, draws the window and exits (--startup-probe, in-memory settings, synthetic data).
+      - name: Executable smoke test
         if: matrix.smoke
         shell: bash
         run: |
           exe=artifacts/publish/${{ matrix.rid }}/Eunomia
           if [ "$RUNNER_OS" = "Linux" ]; then run="xvfb-run -a"; else run=""; fi
-          # Sem o timeout do GNU no macOS: espera no máximo 120 s e mata.
+          # No GNU timeout on macOS: wait at most 120 s, then kill.
           $run "$exe" --startup-probe "$PWD/probe.json" --exit &
           pid=$!
           for _ in $(seq 120); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
-          if kill -0 "$pid" 2>/dev/null; then kill "$pid"; echo "O executável não terminou em 120 s"; exit 1; fi
+          if kill -0 "$pid" 2>/dev/null; then kill "$pid"; echo "The executable did not exit within 120 s"; exit 1; fi
           wait "$pid"
           cat probe.json
           grep -Eq '"nativeAot": *true' probe.json
 
-      - name: Pacote (Linux e macOS)
+      - name: Package (Linux and macOS)
         if: runner.os != 'Windows'
         shell: bash
         run: bash build/package-unix.sh ${{ matrix.rid }} artifacts/publish/${{ matrix.rid }} ${{ steps.version.outputs.value }}
@@ -194,10 +193,10 @@ jobs:
             artifacts/*.tar.gz
           if-no-files-found: error
 
-  # Testes de integração contra servidores reais (secção 24; Fase 3). Os service containers só existem em Linux;
-  # o driver e o motor não têm dependências de Windows, por isso os mesmos testes correm aqui.
+  # Integration tests against real servers (spec section 24; phase 3). Service containers only exist on Linux; the
+  # driver and the engine have no Windows dependencies, so the same tests run here.
   integration:
-    name: Integração (${{ matrix.image }})
+    name: Integration (${{ matrix.image }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -205,7 +204,7 @@ jobs:
       matrix:
         image: ["mysql:8.0", "mysql:8.4", "mariadb:10.6", "mariadb:11.4"]
     services:
-      # Servidor OpenSSH com TCP forwarding (mod do linuxserver.io) para os testes do túnel SSH.
+      # OpenSSH server with TCP forwarding (linuxserver.io mod) for the SSH tunnel tests.
       ssh:
         image: linuxserver/openssh-server:latest
         env:
@@ -234,37 +233,37 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Testes de integração
+      - name: Integration tests
         env:
           EUNOMIA_IT_MYSQL: "Server=127.0.0.1;Port=3306;User ID=root;Password=eunomia;"
           EUNOMIA_IT_SSH: "127.0.0.1;2222;eunomia;eunomia"
           EUNOMIA_IT_SSH_TARGET: "db;3306"
-        # Cobertura numa das imagens (os caminhos de escrita do driver correm aqui; junta-se à dos unitários).
+        # Coverage on one of the images (the driver's write paths run here; merged with the unit coverage).
         run: |
           coverage=()
           if [ "${{ matrix.image }}" = "mysql:8.4" ]; then coverage=(--collect "Code Coverage;Format=cobertura"); fi
           dotnet test tests/Integration -c Release --logger trx --results-directory TestResults "${coverage[@]}"
 
-      - name: Resultados
+      - name: Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: integration-${{ strategy.job-index }}
           path: TestResults/
 
-      - name: Cobertura (integração)
+      - name: Coverage (integration)
         if: always() && matrix.image == 'mysql:8.4'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-integration
-          # Só o relatório juntado da corrida (os de cada projeto repetem as mesmas linhas).
+          # Only the run's merged report (the per-project ones repeat the same lines).
           path: TestResults/*/*.cobertura.xml
           if-no-files-found: ignore
 
-  # Cobertura de linhas por projeto (unitários em Linux + integração no MySQL 8.4) e limiares que só sobem
-  # (build/coverage-baseline.json, roadmap 2.2): um projeto do core que desce abaixo do limiar faz falhar.
-  cobertura:
-    name: Cobertura
+  # Line coverage per project (unit tests on Linux + integration on MySQL 8.4) and thresholds that only go up
+  # (build/coverage-baseline.json, roadmap 2.2): a core project that drops below its threshold fails the job.
+  coverage:
+    name: Coverage
     needs: [test, integration]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -276,5 +275,5 @@ jobs:
           pattern: coverage-*
           path: coverage
 
-      - name: Cobertura por projeto e limiares
+      - name: Coverage per project and thresholds
         run: python3 build/coverage.py coverage --summary "$GITHUB_STEP_SUMMARY"

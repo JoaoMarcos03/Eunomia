@@ -1,29 +1,29 @@
 # ADR-09: SSH
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/especificacao-fase-0.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Pedidos de ProxyJump
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** Requests for ProxyJump
 
-## Opções
+## Options
 
-Processo externo, SSH.NET, russh
+External process, SSH.NET, russh
 
-## Decisão
+## Decision
 
-SSH.NET + agent próprio; externo como fallback
+SSH.NET + our own agent; an external process as fallback
 
-## Razão
+## Reason
 
-Sem espera fixa nem password na linha de comandos
+No fixed wait and no password on the command line
 
 ## Trade-offs
 
-Agent a implementar
+The agent has to be implemented
 
-## Risco
+## Risk
 
-Configurações exóticas (ProxyJump, smartcards)
+Exotic configurations (ProxyJump, smart cards)
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

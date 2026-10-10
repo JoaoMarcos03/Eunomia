@@ -3,27 +3,27 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.Engine.Transfer.Tests;
 
-/// <summary>Formato do dump do HeidiSQL (FAM-E06; anexo B §2.3.2–2.3.4).</summary>
+/// <summary>HeidiSQL's dump format (FAM-E06; appendix B §2.3.2–2.3.4).</summary>
 public sealed class SqlDumpWriterTests
 {
     private static readonly DumpHeader Header = new("127.0.0.1", "10.4.32-MariaDB - mariadb.org binary distribution", "Win64", "0.8.0");
 
     [Fact]
-    public void DumpCompletoNoFormatoDoHeidiSql()
+    public void FullDumpInHeidiSqlFormat()
     {
         var options = new SqlDumpOptions { CreateDatabases = true, CreateTables = true, DropTables = true, Data = DumpDataMode.Insert };
         var text = Dump(options, w =>
         {
             w.WriteHeader(Header);
-            w.WriteDatabase("loja", "CREATE DATABASE `loja` /*!40100 DEFAULT CHARACTER SET utf8mb4 */");
-            w.WriteTable("loja", "t", "CREATE TABLE `t` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  `name` varchar(20) DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4");
-            Assert.True(w.BeginData("loja", "t", 2, approximate: true, ["id", "name"]));
+            w.WriteDatabase("shop", "CREATE DATABASE `shop` /*!40100 DEFAULT CHARACTER SET utf8mb4 */");
+            w.WriteTable("shop", "t", "CREATE TABLE `t` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  `name` varchar(20) DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4");
+            Assert.True(w.BeginData("shop", "t", 2, approximate: true, ["id", "name"]));
             w.WriteRows(Block(IdName, (1, "a\"b"), (2, null)));
             w.EndData();
-            w.WriteViewPlaceholder("loja", "v", [new DumpColumn("id", "int(11)", false), new DumpColumn("name", "varchar(20)", true, "utf8mb4_general_ci")]);
-            w.WriteRoutine("loja", "procedure", "p", "CREATE DEFINER=`root`@`localhost` PROCEDURE `p`()\nBEGIN\n  SELECT 1;\nEND");
-            w.WriteTrigger("loja", "trg", "STRICT_TRANS_TABLES", "CREATE DEFINER=`root`@`%` TRIGGER `trg` BEFORE INSERT ON `t` FOR EACH ROW SET NEW.name = 'x'");
-            w.WriteView("loja", "v", "CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v` AS select `t`.`id` AS `id`,`t`.`name` AS `name` from `t`");
+            w.WriteViewPlaceholder("shop", "v", [new DumpColumn("id", "int(11)", false), new DumpColumn("name", "varchar(20)", true, "utf8mb4_general_ci")]);
+            w.WriteRoutine("shop", "procedure", "p", "CREATE DEFINER=`root`@`localhost` PROCEDURE `p`()\nBEGIN\n  SELECT 1;\nEND");
+            w.WriteTrigger("shop", "trg", "STRICT_TRANS_TABLES", "CREATE DEFINER=`root`@`%` TRIGGER `trg` BEFORE INSERT ON `t` FOR EACH ROW SET NEW.name = 'x'");
+            w.WriteView("shop", "v", "CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v` AS select `t`.`id` AS `id`,`t`.`name` AS `name` from `t`");
             w.WriteFooter();
         });
 
@@ -45,11 +45,11 @@ public sealed class SqlDumpWriterTests
             /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
-            -- Dumping database structure for loja
-            CREATE DATABASE IF NOT EXISTS `loja` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
-            USE `loja`;
+            -- Dumping database structure for shop
+            CREATE DATABASE IF NOT EXISTS `shop` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
+            USE `shop`;
 
-            -- Dumping structure for table loja.t
+            -- Dumping structure for table shop.t
             DROP TABLE IF EXISTS `t`;
             CREATE TABLE IF NOT EXISTS `t` (
               `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -57,12 +57,12 @@ public sealed class SqlDumpWriterTests
               PRIMARY KEY (`id`)
             ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 
-            -- Dumping data for table loja.t: ~2 rows (approximately)
+            -- Dumping data for table shop.t: ~2 rows (approximately)
             INSERT INTO `t` (`id`, `name`) VALUES
             	(1, 'a"b'),
             	(2, NULL);
 
-            -- Dumping structure for view loja.v
+            -- Dumping structure for view shop.v
             DROP VIEW IF EXISTS `v`;
             -- Creating temporary table to overcome VIEW dependency errors
             CREATE TABLE `v` (
@@ -70,7 +70,7 @@ public sealed class SqlDumpWriterTests
             	`name` VARCHAR(1) NULL COLLATE 'utf8mb4_general_ci'
             ) ENGINE=MyISAM;
 
-            -- Dumping structure for procedure loja.p
+            -- Dumping structure for procedure shop.p
             DROP PROCEDURE IF EXISTS `p`;
             DELIMITER //
             CREATE PROCEDURE `p`()
@@ -79,7 +79,7 @@ public sealed class SqlDumpWriterTests
             END//
             DELIMITER ;
 
-            -- Dumping structure for trigger loja.trg
+            -- Dumping structure for trigger shop.trg
             DROP TRIGGER IF EXISTS `trg`;
             SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='STRICT_TRANS_TABLES';
             DELIMITER //
@@ -102,14 +102,14 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
-    public void SemComentariosNemEstruturaSoDados()
+    public void NoCommentsNoStructureOnlyData()
     {
         var options = new SqlDumpOptions { AddComments = false, Data = DumpDataMode.Replace, WrapInTransactions = true };
         var text = Dump(options, w =>
         {
-            w.WriteDatabase("loja", "CREATE DATABASE `loja`");
-            w.WriteTable("loja", "t", "CREATE TABLE `t` (`id` int)");
-            w.BeginData("loja", "t", 0, approximate: false, ["id", "name"]);
+            w.WriteDatabase("shop", "CREATE DATABASE `shop`");
+            w.WriteTable("shop", "t", "CREATE TABLE `t` (`id` int)");
+            w.BeginData("shop", "t", 0, approximate: false, ["id", "name"]);
             w.WriteRows(Block(IdName, (7, "x")));
             w.EndData();
         });
@@ -118,7 +118,7 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
-    public void NoDataEscreveSoOComentario()
+    public void NoDataWritesOnlyTheComment()
     {
         var text = Dump(new SqlDumpOptions(), w => Assert.False(w.BeginData("d", "t", 5, true, ["id"])));
 
@@ -126,7 +126,7 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
-    public void DeleteInsertComRemocaoDoAutoIncrement()
+    public void DeleteInsertWithAutoIncrementRemoval()
     {
         var options = new SqlDumpOptions { Data = DumpDataMode.DeleteInsert, RemoveAutoIncrement = true, CreateTables = true };
         var text = Dump(options, w =>
@@ -142,10 +142,10 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
-    public void InsertFechaAo90PorCentoDoTamanhoOuAoNumeroDeLinhas()
+    public void InsertClosesAt90PercentOfTheSizeOrAtTheRowCount()
     {
         var rows = Enumerable.Range(1, 25).Select(i => (i, (string?)new string('x', 100))).ToArray();
-        // 1 KB × 0,9 = 921 bytes: o prefixo e 7 linhas de ~110 bytes.
+        // 1 KB × 0.9 = 921 bytes: the prefix and 7 rows of ~110 bytes.
         var bySize = Dump(new SqlDumpOptions { Data = DumpDataMode.Insert, MaxInsertSizeKb = 1 }, w => WriteAll(w, rows));
         var byRows = Dump(new SqlDumpOptions { Data = DumpDataMode.Insert, MaxRowsPerInsert = 10 }, w => WriteAll(w, rows));
         var single = Dump(new SqlDumpOptions { Data = DumpDataMode.InsertIgnore, MaxInsertSizeKb = 0 }, w => WriteAll(w, rows[..2]));
@@ -161,7 +161,7 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
-    public void LiteraisPorTipo()
+    public void LiteralsPerType()
     {
         var schema = new ResultSchema(
         [
@@ -206,7 +206,7 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
-    public void TipoDaTabelaTemporariaDaView()
+    public void TypeOfTheViewsTemporaryTable()
     {
         Assert.Equal("VARCHAR(1)", SqlDumpWriter.PlaceholderType("varchar(255)"));
         Assert.Equal("INT(10) UNSIGNED", SqlDumpWriter.PlaceholderType("int(10) unsigned"));
@@ -215,7 +215,7 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
-    public void SaidaEmBlocosGrandesComOsBytesContados()
+    public void OutputInLargeBlocksWithTheBytesCounted()
     {
         using var stream = new MemoryStream();
         using (var output = new Utf8Output(stream, bufferSize: 64, leaveOpen: true))
@@ -255,7 +255,7 @@ public sealed class SqlDumpWriterTests
     private static void WriteAll(SqlDumpWriter writer, (int, string?)[] rows)
     {
         writer.BeginData("d", "t", rows.Length, false, ["id", "name"]);
-        // Em dois blocos, para o INSERT continuar entre blocos.
+        // In two blocks, so the INSERT continues across blocks.
         writer.WriteRows(Block(IdName, rows[..(rows.Length / 2)]));
         writer.WriteRows(Block(IdName, rows[(rows.Length / 2)..]));
         writer.EndData();

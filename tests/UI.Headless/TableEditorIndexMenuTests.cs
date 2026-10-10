@@ -6,11 +6,11 @@ using Eunomia.UI.Features.TableEditor;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Menu das colunas do table editor (Fase 13): Create new index ▸ e Add to index ▸, como no HeidiSQL.</summary>
+/// <summary>Table editor column menu (phase 13): Create new index ▸ and Add to index ▸, as in HeidiSQL.</summary>
 public sealed class TableEditorIndexMenuTests
 {
     [AvaloniaFact]
-    public void CriaIndicesEJuntaColunas()
+    public void CreatesIndexesAndAddsColumns()
     {
         var design = new TableDesign { Database = "shop", Name = "people" };
         design.Columns.Add(new ColumnDesign { Name = "id", DataType = "INT" });
@@ -26,7 +26,7 @@ public sealed class TableEditorIndexMenuTests
         Assert.Equal([("PRIMARY", IndexKind.Primary, "id"), ("name", IndexKind.Key, "name"), ("email", IndexKind.Key, "email")],
             design.Indexes.Select(i => (i.Name, i.Kind, i.Columns)));
 
-        // Outra PRIMARY junta-se à que existe; Add to index não repete colunas; o nome não repete.
+        // Another PRIMARY joins the existing one; Add to index does not repeat columns; the name does not repeat.
         view.CreateIndex(design.Columns[1], IndexKind.Primary);
         view.AddToIndex(design.Indexes[1], design.Columns[2]);
         view.AddToIndex(design.Indexes[1], design.Columns[2]);

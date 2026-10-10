@@ -5,23 +5,23 @@ using Eunomia.UI.Controls.Tree;
 
 namespace Eunomia.UI.Shell.Sessions;
 
-/// <summary>Referência guardada nos nós de base, objeto e coluna da árvore.</summary>
+/// <summary>Reference kept in the tree's database, object and column nodes.</summary>
 public sealed record TreeObjectTag(Guid Session, string Database, DbObjectRef? Object, string? Column = null);
 
-/// <summary>Tree style options que mudam a forma da árvore (anexo D A3): grupos por tipo e colunas abaixo das tabelas.</summary>
+/// <summary>Tree style options that change the tree's shape (appendix D A3): groups by kind and columns below tables.</summary>
 public sealed record TreeLayout(bool GroupObjects, bool ColumnsInTree);
 
 /// <summary>
-/// Filhos da árvore a partir das sessões abertas e da cache de metadata de cada uma (secção 4.2; anexo D A1–A8):
-/// bases pela ordem do servidor (whitelist e Hide database pattern na cache), objetos por ordem natural com tipos
-/// misturados ou nos 6 grupos, colunas abaixo das tabelas, favoritos e estados (base esbatida até à cache, objeto
-/// esbatido até ser selecionado, overlay da base em <c>USE</c> e da engine).
+/// Tree children from the open sessions and each one's metadata cache (section 4.2; appendix D A1–A8):
+/// databases in the server's order (whitelist and Hide database pattern in the cache), objects in natural order with kinds
+/// mixed or in the 6 groups, columns below tables, favourites and states (database dimmed until cached, object
+/// dimmed until selected, overlay for the database in <c>USE</c> and for the engine).
 /// </summary>
 public sealed class SessionTreeProvider(SessionConnector connector, Func<TreeLayout> layout) : ITreeDataProvider
 {
     private static readonly NaturalComparer Natural = new();
 
-    /// <summary>Grupos fixos, sempre os 6, mesmo sem triggers ou events no servidor (anexo D A1).</summary>
+    /// <summary>Fixed groups, always the 6 of them, even without triggers or events on the server (appendix D A1).</summary>
     public static readonly IReadOnlyList<(TreeNodeKind Kind, string Caption)> Groups =
     [
         (TreeNodeKind.Table, "Tables"),
@@ -32,13 +32,13 @@ public sealed class SessionTreeProvider(SessionConnector connector, Func<TreeLay
         (TreeNodeKind.Event, "Events"),
     ];
 
-    /// <summary>Engines com overlay no ícone da tabela (anexo D A2).</summary>
+    /// <summary>Engines with an overlay on the table icon (appendix D A2).</summary>
     private static readonly HashSet<string> OverlayEngines = new(StringComparer.OrdinalIgnoreCase)
     {
         "FEDERATED", "MEMORY", "ARIA", "CSV", "PERFORMANCE_SCHEMA", "BLACKHOLE", "MRG_MYISAM",
     };
 
-    /// <summary>Shift+F5: o próximo carregamento de objetos pede também as estatísticas.</summary>
+    /// <summary>Shift+F5: the next object load also requests the statistics.</summary>
     public bool ForceStatistics { get; set; }
 
     public async Task<IReadOnlyList<TreeNode>> LoadChildrenAsync(TreeNode parent, CancellationToken cancellationToken)
@@ -87,7 +87,7 @@ public sealed class SessionTreeProvider(SessionConnector connector, Func<TreeLay
         return node;
     }
 
-    /// <summary>Objetos de uma base: com grupos, os 6 grupos já com os filhos (e a contagem); sem grupos, tudo misturado.</summary>
+    /// <summary>Objects of a database: with groups, the 6 groups already with their children (and the count); without groups, all mixed.</summary>
     private List<TreeNode> BuildObjectNodes(TreeNode database, OpenSession session, DatabaseObjects objects, TreeLayout options)
     {
         if (!options.GroupObjects)
@@ -119,7 +119,7 @@ public sealed class SessionTreeProvider(SessionConnector connector, Func<TreeLay
                 return new TreeNode(kind, o.Ref.Name, parent)
                 {
                     Tag = tag with { Object = o.Ref },
-                    // Só as tabelas mostram tamanho (anexo D A8).
+                    // Only tables show a size (appendix D A8).
                     SizeBytes = kind == TreeNodeKind.Table ? o.SizeBytes : null,
                     IsFavorite = session.Favorites.Contains(path),
                     IsGhosted = !session.SelectedObjects.Contains(path),
@@ -140,7 +140,7 @@ public sealed class SessionTreeProvider(SessionConnector connector, Func<TreeLay
             })
             .ToList();
 
-    /// <summary>Primeira chave que contém a coluna (anexo D A2).</summary>
+    /// <summary>First key that contains the column (appendix D A2).</summary>
     private static ColumnKeyMarker KeyMarkerOf(TableDefinition definition, string column)
     {
         foreach (var index in definition.Indexes)
@@ -161,8 +161,8 @@ public sealed class SessionTreeProvider(SessionConnector connector, Func<TreeLay
     }
 
     /// <summary>
-    /// As estatísticas chegaram (ou a cache mudou) para uma base: atualiza tamanhos e engines dos objetos carregados, o
-    /// estado esbatido e as somas. Devolve <c>false</c> se a lista de objetos mudou (é preciso recarregar a base).
+    /// The statistics arrived (or the cache changed) for a database: updates the sizes and engines of the loaded objects, the
+    /// dimmed state and the sums. Returns <c>false</c> if the object list changed (the database must be reloaded).
     /// </summary>
     public static bool ApplyObjects(TreeNode database, DatabaseObjects objects)
     {

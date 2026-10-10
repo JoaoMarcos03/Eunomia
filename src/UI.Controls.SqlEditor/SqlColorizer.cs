@@ -8,7 +8,7 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Controls.SqlEditor;
 
-/// <summary>Cores do editor SQL (secção 5.6), lidas dos tokens do tema; no claro são as do HeidiSQL por omissão.</summary>
+/// <summary>SQL editor colours (section 5.6), read from the theme tokens; in light they are HeidiSQL's defaults.</summary>
 public sealed record SqlEditorPalette(
     IImmutableBrush Background,
     IImmutableBrush Foreground,
@@ -22,8 +22,8 @@ public sealed record SqlEditorPalette(
     IImmutableBrush Variable,
     IImmutableBrush Gutter)
 {
-    // Claro: as cores do HeidiSQL (comment cinzento, datatype maroon, function navy, key azul, number roxo, string verde,
-    // table name fúcsia); as duas variantes vêm dos tokens do tema.
+    // Light: HeidiSQL's colours (comment grey, datatype maroon, function navy, key blue, number purple, string green,
+    // table name fuchsia); both variants come from the theme tokens.
     public static SqlEditorPalette Light { get; } = From(ThemeTokens.Light);
 
     public static SqlEditorPalette Dark { get; } = From(ThemeTokens.Dark);
@@ -37,9 +37,9 @@ public sealed record SqlEditorPalette(
 }
 
 /// <summary>
-/// Highlighting do editor alimentado pelo lexer da linguagem (<see cref="ISqlLanguage"/>, secção 16.1): só as linhas
-/// visíveis são coloridas; o estado no fim de cada linha (string ou comentário aberto) fica em cache e é invalidado
-/// a partir da linha alterada.
+/// Editor highlighting fed by the language's lexer (<see cref="ISqlLanguage"/>, section 16.1): only the visible lines
+/// are coloured; the state at the end of each line (open string or comment) is cached and invalidated
+/// from the changed line on.
 /// </summary>
 public sealed class SqlColorizer(ISqlLanguage language) : DocumentColorizingTransformer
 {
@@ -49,7 +49,7 @@ public sealed class SqlColorizer(ISqlLanguage language) : DocumentColorizingTran
 
     public SqlEditorPalette Palette { get; set; } = SqlEditorPalette.Light;
 
-    /// <summary>Invalida o estado a partir da linha (1-based) que mudou.</summary>
+    /// <summary>Invalidates the state from the (1-based) line that changed.</summary>
     public void InvalidateFrom(int lineNumber) => _validLines = Math.Min(_validLines, Math.Max(0, lineNumber - 1));
 
     protected override void ColorizeLine(DocumentLine line)
@@ -84,8 +84,8 @@ public sealed class SqlColorizer(ISqlLanguage language) : DocumentColorizingTran
     };
 
     /// <summary>
-    /// Token que acaba exatamente em <paramref name="end"/> (offset no documento), com o estado do lexer da linha: o
-    /// auto uppercase só mexe em keywords e funções fora de strings e comentários.
+    /// Token that ends exactly at <paramref name="end"/> (document offset), with the line's lexer state: automatic
+    /// upper case only touches keywords and functions outside strings and comments.
     /// </summary>
     public (SqlTokenKind Kind, int Start, int Length)? TokenEndingAt(TextDocument document, int end)
     {
@@ -107,10 +107,10 @@ public sealed class SqlColorizer(ISqlLanguage language) : DocumentColorizingTran
             : null;
     }
 
-    /// <summary>Estado do lexer no início da linha (1-based), com a mesma cache do realce (code folding).</summary>
+    /// <summary>Lexer state at the start of the (1-based) line, with the same cache as the highlighting (code folding).</summary>
     internal LexerState StateAt(TextDocument document, int lineNumber) => StateBefore(document, lineNumber);
 
-    /// <summary>Estado do lexer no início da linha (1-based), calculando as linhas anteriores que faltarem.</summary>
+    /// <summary>Lexer state at the start of the (1-based) line, computing any missing earlier lines.</summary>
     private LexerState StateBefore(TextDocument document, int lineNumber)
     {
         if (lineNumber <= 1)

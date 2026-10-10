@@ -3,7 +3,7 @@ using Eunomia.App.Settings;
 
 namespace Eunomia.Presentation.Logging;
 
-/// <summary>Categorias do SQL log (preferências Errors / User SQL / Internal SQL / Script / Info / Debug).</summary>
+/// <summary>SQL log categories (Errors / User SQL / Internal SQL / Script / Info / Debug preferences).</summary>
 public enum LogCategory
 {
     Error,
@@ -14,7 +14,7 @@ public enum LogCategory
     Debug,
 }
 
-/// <summary>Tipo de linha, que dá a cor de fundo (anexo C §1.10).</summary>
+/// <summary>Line kind, which gives the background colour (appendix C §1.10).</summary>
 public enum LogLineKind
 {
     Sql,
@@ -25,17 +25,17 @@ public enum LogLineKind
     Comment,
 }
 
-/// <summary>Linha do SQL log com o número contínuo que aparece no gutter.</summary>
+/// <summary>SQL log line with the running number shown in the gutter.</summary>
 public sealed record LogLine(long Number, string Text, LogLineKind Kind);
 
-/// <summary>Alteração do log: linhas novas no fim e/ou linhas cortadas no início (ou tudo limpo).</summary>
+/// <summary>Log change: new lines at the end and/or lines cut at the start (or everything cleared).</summary>
 public sealed record LogChange(IReadOnlyList<LogLine> Appended, int TrimmedFromStart, bool Cleared);
 
 /// <summary>
-/// Conteúdo do SQL log com as regras do <c>LogSQL</c> do HeidiSQL (anexo C §1.10, FAM-Q04): filtro por categoria,
-/// prefixo <c>[hh:nn:ss.zzz]</c> opcional, linhas cortadas em <c>logsqlwidth</c> com <c>...</c>, delimitador
-/// acrescentado ao SQL, mensagens não-SQL como <c>/* … */</c>, só as últimas <c>logsqlnum</c> linhas com a
-/// numeração contínua. Thread-safe: o motor escreve de qualquer thread; a UI aplica <see cref="Changed"/> na UI thread.
+/// SQL log content with the rules of HeidiSQL's <c>LogSQL</c> (appendix C §1.10, FAM-Q04): filter by category,
+/// optional <c>[hh:nn:ss.zzz]</c> prefix, lines cut at <c>logsqlwidth</c> with <c>...</c>, delimiter
+/// appended to SQL, non-SQL messages as <c>/* … */</c>, only the last <c>logsqlnum</c> lines with running
+/// numbering. Thread-safe: the engine writes from any thread; the UI applies <see cref="Changed"/> on the UI thread.
 /// </summary>
 public sealed class SqlLogBuffer(LogOptions options, TimeProvider? clock = null)
 {
@@ -68,8 +68,8 @@ public sealed class SqlLogBuffer(LogOptions options, TimeProvider? clock = null)
     }
 
     /// <summary>
-    /// Acrescenta uma mensagem. Devolve a linha escrita, ou <c>null</c> se a categoria estiver desligada nas
-    /// preferências.
+    /// Appends a message. Returns the line written, or <c>null</c> if the category is turned off in the
+    /// preferences.
     /// </summary>
     public LogLine? Append(LogCategory category, string message, string delimiter = ";")
     {
@@ -96,7 +96,7 @@ public sealed class SqlLogBuffer(LogOptions options, TimeProvider? clock = null)
         return line;
     }
 
-    /// <summary>Clear (Ctrl+Q). A numeração continua.</summary>
+    /// <summary>Clear (Ctrl+Q). The numbering continues.</summary>
     public void Clear()
     {
         lock (_gate)
@@ -106,7 +106,7 @@ public sealed class SqlLogBuffer(LogOptions options, TimeProvider? clock = null)
         Changed?.Invoke(this, new LogChange([], 0, Cleared: true));
     }
 
-    /// <summary>Texto do log inteiro (Save as textfile).</summary>
+    /// <summary>Text of the whole log (Save as textfile).</summary>
     public string ToText()
     {
         lock (_gate)
@@ -128,13 +128,13 @@ public sealed class SqlLogBuffer(LogOptions options, TimeProvider? clock = null)
 
     private (string Text, LogLineKind Kind) Format(LogCategory category, string message, string delimiter)
     {
-        // O memo do log é de uma linha por entrada: quebras de linha passam a espaço.
+        // The log memo has one line per entry: line breaks become spaces.
         var text = message.Replace("\r\n", " ", StringComparison.Ordinal).Replace('\n', ' ').Replace('\r', ' ').Trim();
         LogLineKind kind;
         if (category is LogCategory.UserSql or LogCategory.InternalSql or LogCategory.Script)
         {
             kind = LogLineKind.Sql;
-            // Passwords em CREATE USER / SET PASSWORD não ficam no log (secção 23.2).
+            // Passwords in CREATE USER / SET PASSWORD stay out of the log (section 23.2).
             text = Eunomia.Engine.Sql.SecretMasking.MaskSql(text);
             if (delimiter.Length > 0 && !text.EndsWith(delimiter, StringComparison.Ordinal))
             {
@@ -162,7 +162,7 @@ public sealed class SqlLogBuffer(LogOptions options, TimeProvider? clock = null)
     }
 }
 
-/// <summary>Mensagens das sessões (motor) para o SQL log, com as categorias do HeidiSQL.</summary>
+/// <summary>Session (engine) messages for the SQL log, with HeidiSQL's categories.</summary>
 public sealed class SessionLogAdapter(SqlLogBuffer log) : Eunomia.Engine.Execution.ISessionLog
 {
     public void Write(string session, Eunomia.Engine.Execution.SessionLogCategory category, string message) =>

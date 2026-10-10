@@ -8,9 +8,9 @@ using Eunomia.UI.Controls.Common.Accessibility;
 namespace Eunomia.UI.Controls.Tree;
 
 /// <summary>
-/// Painel esquerdo da janela (secção 4.3): toolbar com "Database filter" e "Table filter" a 50/50 e o
-/// botão ★ "Show only favorites", e a árvore com scrollbar. Os filtros aplicam-se a cada tecla, sem debounce;
-/// Esc limpa a caixa; o histórico (20 por caixa, global) é gravado quando a caixa perde o foco.
+/// Left panel of the window (section 4.3): a toolbar with "Database filter" and "Table filter" at 50/50 and the
+/// ★ "Show only favorites" button, and the tree with a scrollbar. Filters apply on every key, without debounce;
+/// Esc clears the box; the history (20 per box, global) is saved when the box loses focus.
 /// </summary>
 public sealed class DatabaseTreeView : DockPanel
 {
@@ -70,14 +70,14 @@ public sealed class DatabaseTreeView : DockPanel
 
     public FilterHistory TableHistory { get; } = new();
 
-    /// <summary>Display › Tree filters: mostra ou esconde a toolbar dos filtros.</summary>
+    /// <summary>Display › Tree filters: shows or hides the filters toolbar.</summary>
     public bool FiltersVisible
     {
         get => _filters.IsVisible;
         set => _filters.IsVisible = value;
     }
 
-    /// <summary>Ctrl+E: foca o Table filter (não há atalho para o Database filter).</summary>
+    /// <summary>Ctrl+E: focuses the Table filter (there is no shortcut for the Database filter).</summary>
     public void FocusTableFilter() => TableFilterBox.Focus();
 
     private static TextBox CreateFilterBox(string placeholder, string hint)

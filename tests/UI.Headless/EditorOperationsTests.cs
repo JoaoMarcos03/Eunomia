@@ -8,7 +8,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Un/comment, Ctrl+U/L, Move line up/down e Editor commands (anexo C §1.7, §2.3; FAM-Q10).</summary>
+/// <summary>Un/comment, Ctrl+U/L, Move line up/down and Editor commands (appendix C §1.7, §2.3; FAM-Q10).</summary>
 public sealed class EditorOperationsTests
 {
     private static SqlEditorControl Editor(string text)
@@ -21,7 +21,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void ComentaEDescomentaAsLinhasDaSelecao()
+    public void CommentsAndUncommentsTheSelectedLines()
     {
         var editor = Editor("SELECT 1;\n  SELECT 2;\n\nSELECT 3;");
         editor.Editor.Select(0, editor.Text.IndexOf("SELECT 3", StringComparison.Ordinal));
@@ -33,7 +33,7 @@ public sealed class EditorOperationsTests
         editor.ToggleComment();
         Assert.Equal("SELECT 1;\n  SELECT 2;\n\nSELECT 3;", editor.Text);
 
-        // Sem seleção: a linha do cursor; uma só alteração no undo.
+        // No selection: the cursor line; a single undo step.
         editor.Editor.Select(0, 0);
         editor.Editor.CaretOffset = editor.Text.Length;
         editor.ToggleComment();
@@ -43,7 +43,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void MaiusculasMinusculasEMoverLinhas()
+    public void UpperLowerCaseAndMovingLines()
     {
         var editor = Editor("select name\nfrom people\nwhere 1");
         editor.Editor.CaretOffset = 2;
@@ -68,7 +68,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void AutoUppercaseForaDeStringsEComentarios()
+    public void AutoUppercaseOutsideStringsAndComments()
     {
         var editor = Editor(string.Empty);
         var window = (Window)TopLevel.GetTopLevel(editor)!;
@@ -92,7 +92,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void PreferencesSqlAplicaAsOpcoesAoEditor()
+    public void PreferencesSqlAppliesTheOptionsToTheEditor()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();
@@ -103,7 +103,7 @@ public sealed class EditorOperationsTests
         prefs.Show();
         prefs.CaptureRenderedFrame();
         var font = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(prefs).OfType<ComboBox>().Single(c => c.Name == "editorFont");
-        // A segunda fonte da lista do sistema (Courier New no Windows).
+        // The second font in the system list (Courier New on Windows).
         var chosen = Eunomia.UI.Shell.Views.PreferencesWindow.EditorFonts[1];
         font.SelectedItem = chosen;
         window.Context.Settings.Query.EditorFontSize = 9;
@@ -119,7 +119,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void AtalhosEMenuDoShell()
+    public void ShellShortcutsAndMenu()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();
@@ -144,7 +144,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ReformatSqlComCtrlF8NumSoUndo()
+    public async Task ReformatSqlWithCtrlF8AsASingleUndo()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();

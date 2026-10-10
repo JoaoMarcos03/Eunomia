@@ -4,7 +4,7 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Controls.Tree;
 
-/// <summary>Cores da árvore, lidas dos tokens do tema (<c>assets/themes</c>).</summary>
+/// <summary>Tree colours, read from the theme tokens (<c>assets/themes</c>).</summary>
 public sealed record TreePalette(
     IImmutableBrush Background,
     IImmutableBrush Foreground,
@@ -17,15 +17,15 @@ public sealed record TreePalette(
     IImmutableBrush Glyph)
 {
     /// <summary>
-    /// Cor do texto dos nós de coluna por categoria de tipo (anexo D A2: "a mesma paleta do grid"; ordem de
-    /// <c>GridPalette</c>: inteiro, real, texto, binário, data/hora, espacial, outro).
+    /// Text colour of column nodes by type category (appendix D A2: "the same palette as the grid"; <c>GridPalette</c>
+    /// order: integer, real, text, binary, date/time, spatial, other).
     /// </summary>
     public IReadOnlyList<IImmutableBrush> Categories { get; init; } = [];
 
-    /// <summary>Nó focado quando a árvore não tem o foco do teclado.</summary>
+    /// <summary>Focused node when the tree does not have the keyboard focus.</summary>
     public IImmutableBrush InactiveSelection { get; init; } = Brush(0xFFE6E8EC);
 
-    /// <summary>Fundo em ARGB (para a tinta da cor da sessão).</summary>
+    /// <summary>Background in ARGB (for the session colour tint).</summary>
     public uint BackgroundArgb { get; init; } = 0xFFFFFFFF;
 
     public static TreePalette Light { get; } = From(ThemeTokens.Light);

@@ -5,9 +5,9 @@ using MySqlConnector;
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// Catálogo do MySQL/MariaDB (secção 14.1, anexo A §11). Os objetos de uma base vêm numa só ida ao servidor
-/// (tabelas e views, routines, triggers e events em multi-statement, #1672). Chaves estrangeiras com duas queries
-/// juntas no cliente, como o HeidiSQL (#852).
+/// MySQL/MariaDB catalog (section 14.1, appendix A §11). A database's objects come in a single round trip
+/// (tables and views, routines, triggers and events in a multi-statement, #1672). Foreign keys with two queries
+/// joined on the client, like HeidiSQL (#852).
 /// </summary>
 public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetadataProvider
 {
@@ -32,7 +32,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         var tables = detail switch
         {
             ObjectDetail.Statistics => "SHOW TABLE STATUS FROM " + Dialect.QuoteIdentifier(schema),
-            // Só nome e tipo: em servidores com ficheiros por tabela, as outras colunas abrem cada tabela (PR-08).
+            // Only name and kind: on servers with a file per table, the other columns open every table (PR-08).
             ObjectDetail.Names => "SELECT TABLE_NAME AS `Name`, IF(TABLE_TYPE = 'VIEW', 'VIEW', NULL) AS `Comment` FROM information_schema.TABLES WHERE TABLE_SCHEMA = " + db,
             _ => "SELECT TABLE_NAME AS `Name`, ENGINE AS `Engine`, VERSION AS `Version`, ROW_FORMAT AS `Row_format`, NULL AS `Rows`, " +
                  "NULL AS `Avg_row_length`, NULL AS `Data_length`, NULL AS `Max_data_length`, NULL AS `Index_length`, NULL AS `Data_free`, " +
@@ -42,8 +42,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         };
         var sql = tables + ";\n" +
                   "SELECT ROUTINE_NAME, ROUTINE_TYPE, ROUTINE_COMMENT, CREATED, LAST_ALTERED FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = " + db + ";\n" +
-                  // SHOW TRIGGERS só abre a base pedida; o information_schema.TRIGGERS do MariaDB 10.x percorria as
-                  // tabelas de todas as bases (590 ms contra 33 ms numa base de 32 tabelas, com outras bases grandes).
+                  // SHOW TRIGGERS only opens the requested database; MariaDB 10.x's information_schema.TRIGGERS went through the
+                  // tables of every database (590 ms against 33 ms for a 32-table database, with other large databases).
                   "SHOW TRIGGERS FROM " + Dialect.QuoteIdentifier(schema);
         var withEvents = Capabilities.Supports(Capability.Events);
         if (withEvents)
@@ -56,7 +56,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         try
         {
             await using var reader = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            // 1. Tabelas e views.
+            // 1. Tables and views.
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
                 var status = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -86,7 +86,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
                     Status = status,
                 });
             }
-            // 2. Procedures e functions.
+            // 2. Procedures and functions.
             await reader.NextResultAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
@@ -98,7 +98,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
                     Created = reader.IsDBNull(3) ? null : reader.GetDateTime(3),
                 });
             }
-            // 3. Triggers (SHOW TRIGGERS: "Trigger" e, nos servidores que a têm, "Created").
+            // 3. Triggers (SHOW TRIGGERS: "Trigger" and, on servers that have it, "Created").
             await reader.NextResultAsync(cancellationToken).ConfigureAwait(false);
             var created = -1;
             for (var i = 0; i < reader.FieldCount; i++)
@@ -137,8 +137,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
     }
 
     /// <summary>
-    /// Colunas, chaves, FKs, checks e opções de uma tabela ou view numa só ida ao servidor (antes eram seis, em série:
-    /// num servidor remoto cada uma custava a latência inteira).
+    /// Columns, keys, FKs, checks and options of a table or view in a single round trip (there used to be six, in series:
+    /// on a remote server each one cost the full latency).
     /// </summary>
     public async Task<TableDefinition> GetTableAsync(DbObjectRef table, CancellationToken cancellationToken)
     {
@@ -150,7 +150,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         }
         catch (MySqlException ex) when (ex.ErrorCode == MySqlErrorCode.BadFieldError)
         {
-            // Servidores sem colunas geradas (MySQL < 5.7, MariaDB < 10.2): sem GENERATION_EXPRESSION.
+            // Servers without generated columns (MySQL < 5.7, MariaDB < 10.2): no GENERATION_EXPRESSION.
             sets = await handle.QueryResultSetsAsync(TableQueries(table, generation: false), cancellationToken).ConfigureAwait(false);
         }
         var checks = Capabilities.HasCheckConstraintsTable;
@@ -162,8 +162,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
             var extra = r[4] ?? string.Empty;
             var nullable = string.Equals(r[2], "YES", StringComparison.OrdinalIgnoreCase);
             var type = Types.Map(r[1]!) with { Charset = r[6], Collation = r[7] };
-            var generation = r.Length > 8 && !string.IsNullOrEmpty(r[8]) ? r[8] : null;
-            // "DEFAULT_GENERATED" (MySQL 8) é um default com expressão, não uma coluna gerada.
+            var generation = r.Length > 8 && !string.IsNullOrEmpty(r[8]) ? DictionaryExpression(r[8]!) : null;
+            // "DEFAULT_GENERATED" (MySQL 8) is a default with an expression, not a generated column.
             var generated = generation is not null || IsGeneratedExtra(extra);
             var (defaultSql, defaultIsExpression) = generated ? (null, false) : CanonicalDefault(r[3], extra, nullable, type);
             columns.Add(new ColumnDefinition(
@@ -222,7 +222,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
                 Action(c[2])));
         }
 
-        var checkDefinitions = checkRows.Select(r => new CheckDefinition(r[0]!, r[1]!)).ToList();
+        var checkDefinitions = checkRows.Select(r => new CheckDefinition(r[0]!, DictionaryExpression(r[1]!))).ToList();
 
         var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (statusRows.Count > 0)
@@ -239,7 +239,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         return new TableDefinition(table, columns, indexes, fks, checkDefinitions, options);
     }
 
-    /// <summary>As consultas de <see cref="GetTableAsync"/>, pela ordem dos result sets.</summary>
+    /// <summary>The queries of <see cref="GetTableAsync"/>, in result set order.</summary>
     private string TableQueries(DbObjectRef table, bool generation)
     {
         var db = Dialect.StringLiteral(table.Schema);
@@ -255,8 +255,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
             .Append(CultureInfo.InvariantCulture, $"WHERE TABLE_SCHEMA = {db} AND TABLE_NAME = {name} AND REFERENCED_TABLE_NAME IS NOT NULL ORDER BY CONSTRAINT_NAME, ORDINAL_POSITION;\n");
         if (Capabilities.HasCheckConstraintsTable)
         {
-            // MariaDB tem TABLE_NAME no CHECK_CONSTRAINTS: a consulta direta usa o filtro por base e tabela. Um JOIN com o
-            // TABLE_CONSTRAINTS abria as tabelas de todas as bases (segundos com milhares de tabelas no servidor).
+            // MariaDB has TABLE_NAME in CHECK_CONSTRAINTS: the direct query filters by database and table. A JOIN with
+            // TABLE_CONSTRAINTS opened the tables of every database (seconds with thousands of tables on the server).
             sql.Append(Capabilities.IsMariaDb
                 ? $"SELECT CONSTRAINT_NAME, CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = {db} AND TABLE_NAME = {name};\n"
                 : "SELECT tc.CONSTRAINT_NAME, cc.CHECK_CLAUSE FROM information_schema.TABLE_CONSTRAINTS tc JOIN information_schema.CHECK_CONSTRAINTS cc " +
@@ -269,8 +269,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
     }
 
     /// <summary>
-    /// <c>COLUMN_DEFAULT</c> para o SQL depois de <c>DEFAULT</c>, igual nos dois motores: o MariaDB (10.2.7+) já o dá em SQL
-    /// (<c>'abc'</c>, <c>NULL</c>, <c>current_timestamp()</c>); o MySQL dá o texto sem aspas e marca as expressões com
+    /// <c>COLUMN_DEFAULT</c> as the SQL after <c>DEFAULT</c>, the same on both engines: MariaDB (10.2.7+) already gives it as SQL
+    /// (<c>'abc'</c>, <c>NULL</c>, <c>current_timestamp()</c>); MySQL gives the text unquoted and flags expressions with
     /// <c>DEFAULT_GENERATED</c>.
     /// </summary>
     internal (string? Sql, bool IsExpression) CanonicalDefault(string? value, string extra, bool nullable, LogicalType type)
@@ -288,7 +288,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
             }
             if (value.Length >= 2 && value[0] == '\'' && value[^1] == '\'')
             {
-                // O servidor escreve o literal com escapes de barra; volta a citar-se para valer em qualquer sql_mode.
+                // The server writes the literal with backslash escapes; it is quoted again so it holds under any sql_mode.
                 return (Dialect.StringLiteral(UnquoteServerLiteral(value)), false);
             }
             var literal = decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
@@ -296,7 +296,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         }
         if (extra.Contains("DEFAULT_GENERATED", StringComparison.OrdinalIgnoreCase))
         {
-            return (IsFunctionLike(value) ? value : "(" + value + ")", true);
+            var expression = DictionaryExpression(value);
+            return (IsFunctionLike(expression) ? expression : "(" + expression + ")", true);
         }
         if (string.Equals(value, "CURRENT_TIMESTAMP", StringComparison.OrdinalIgnoreCase) && type.Kind is LogicalTypeKind.DateTime)
         {
@@ -307,7 +308,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         return (numeric ? value : Dialect.StringLiteral(value), false);
     }
 
-    /// <summary>Texto de um literal escrito pelo servidor (<c>append_unescaped</c>): tira as plicas e desfaz <c>''</c> e as barras.</summary>
+    /// <summary>Text of a literal written by the server (<c>append_unescaped</c>): removes the quotes and undoes <c>''</c> and the backslashes.</summary>
     internal static string UnquoteServerLiteral(string literal)
     {
         var inner = literal.AsSpan(1, literal.Length - 2);
@@ -332,15 +333,52 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         return sb.ToString();
     }
 
+    /// <summary>An <c>information_schema</c> expression as the server stored it (<see cref="MySqlCapabilities.EscapesDictionaryExpressions"/>).</summary>
+    private string DictionaryExpression(string text) => Capabilities.EscapesDictionaryExpressions ? UnescapeDictionaryText(text) : text;
+
+    /// <summary>
+    /// Undoes MySQL 8's <c>String::print</c>: <c>\\</c>, <c>\0</c>, <c>\'</c>, <c>\n</c>, <c>\r</c> and <c>\Z</c>. That escape
+    /// always puts a backslash before every quote and every backslash, so a lone quote, or a backslash followed by anything
+    /// else, means the text is not escaped (a server with the bug fixed) and it is left as it is.
+    /// </summary>
+    internal static string UnescapeDictionaryText(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var sb = new System.Text.StringBuilder(text.Length);
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c == '\'')
+            {
+                return text;
+            }
+            if (c != '\\')
+            {
+                sb.Append(c);
+                continue;
+            }
+            char? original = i + 1 < text.Length
+                ? text[i + 1] switch { '\\' => '\\', '0' => '\0', '\'' => '\'', 'n' => '\n', 'r' => '\r', 'Z' => '\u001A', _ => null }
+                : null;
+            if (original is null)
+            {
+                return text;
+            }
+            sb.Append(original.Value);
+            i++;
+        }
+        return sb.ToString();
+    }
+
     private static bool IsFunctionLike(string value) =>
         value.StartsWith("CURRENT_TIMESTAMP", StringComparison.OrdinalIgnoreCase) || value.StartsWith("NOW(", StringComparison.OrdinalIgnoreCase)
         || value.StartsWith("LOCALTIME", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary><c>VIRTUAL GENERATED</c>, <c>STORED GENERATED</c> (MySQL), <c>VIRTUAL</c>, <c>PERSISTENT</c> ou <c>STORED</c> (MariaDB).</summary>
+    /// <summary><c>VIRTUAL GENERATED</c>, <c>STORED GENERATED</c> (MySQL), <c>VIRTUAL</c>, <c>PERSISTENT</c> or <c>STORED</c> (MariaDB).</summary>
     internal static bool IsGeneratedExtra(string extra) =>
         extra.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(w => w.ToUpperInvariant() is "VIRTUAL" or "STORED" or "PERSISTENT");
 
-    /// <summary><c>on update CURRENT_TIMESTAMP</c> do <c>EXTRA</c>.</summary>
+    /// <summary><c>on update CURRENT_TIMESTAMP</c> from <c>EXTRA</c>.</summary>
     private static string? OnUpdateOf(string extra)
     {
         var at = extra.IndexOf("on update ", StringComparison.OrdinalIgnoreCase);
@@ -421,7 +459,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
     public async Task<string> GetTriggerSqlModeAsync(DbObjectRef trigger, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(trigger);
-        // Colunas: Trigger, sql_mode, SQL Original Statement, …
+        // Columns: Trigger, sql_mode, SQL Original Statement, …
         var rows = await handle.QueryRowsAsync("SHOW CREATE TRIGGER " + Dialect.QualifiedName(trigger), cancellationToken).ConfigureAwait(false);
         return rows.Count > 0 && rows[0].Length > 1 ? rows[0][1] ?? string.Empty : string.Empty;
     }
@@ -435,8 +473,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
     public async Task<SqlHelp> GetHelpAsync(string topic, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(topic);
-        // O HELP devolve formas diferentes: (name, description, example) para um tópico; (name, is_it_category) para
-        // vários; (source_category_name, name, is_it_category) para uma categoria. Os nomes das colunas dizem qual é.
+        // HELP returns different shapes: (name, description, example) for a topic; (name, is_it_category) for
+        // several; (source_category_name, name, is_it_category) for a category. The column names tell which one it is.
         await using var cmd = handle.CreateCommand("HELP " + Dialect.PlainStringLiteral(topic));
         try
         {
@@ -514,7 +552,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
 
     public async Task<IReadOnlyList<CollationInfo>> GetCollationsAsync(CancellationToken cancellationToken)
     {
-        // Colunas: Collation, Charset, Id, Default, Compiled, Sortlen (e mais nas versões recentes).
+        // Columns: Collation, Charset, Id, Default, Compiled, Sortlen (and more in recent versions).
         var rows = await handle.QueryRowsAsync("SHOW COLLATION", cancellationToken).ConfigureAwait(false);
         return rows
             .Where(r => r[0] is not null)

@@ -20,9 +20,9 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Sessões no shell (Fase 3; FAM-S01, S07, L06): Session Manager no arranque, ligar (login, host key SSH), uma raiz
-/// da árvore por sessão aberta, Disconnect, "Connect to ▸" e status bar. Data tab e Run mínimos sobre a ligação
-/// real até às Fases 5 e 6.
+/// Sessions in the shell (phase 3; FAM-S01, S07, L06): Session Manager at startup, connecting (login, SSH host key), one tree
+/// root per open session, Disconnect, "Connect to ▸" and the status bar. A minimal Data tab and Run on the real
+/// connection until phases 5 and 6.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -32,17 +32,17 @@ public sealed partial class MainWindow
     private DispatcherTimer? _statusTimer;
     private DateTimeOffset _lastServerPoll = DateTimeOffset.MinValue;
 
-    /// <summary>Exporta e importa ficheiros de settings (o composition root liga ao Infra.Settings).</summary>
+    /// <summary>Exports and imports settings files (the composition root wires it to Infra.Settings).</summary>
     public Func<string, string>? ImportSettingsFile { get; init; }
 
-    /// <summary>Importa as settings do HeidiSQL instalado neste computador e devolve o resumo; <c>null</c> sem HeidiSQL.</summary>
+    /// <summary>Imports the settings of the HeidiSQL installed on this computer and returns the summary; <c>null</c> without HeidiSQL.</summary>
     public Func<string>? ImportHeidiSqlRegistry { get; init; }
 
     public Func<string, string>? ExportSettingsFile { get; init; }
 
     private ShellSessions? Sessions => _context.Sessions;
 
-    /// <summary>Sessão do nó focado na árvore (a sessão ativa, FAM-S07).</summary>
+    /// <summary>Session of the node focused in the tree (the active session, FAM-S07).</summary>
     public OpenSession? ActiveSession =>
         _tree.Tree.FocusedNode?.Session?.Tag is Guid id ? Sessions?.Connector.Find(id) : null;
 
@@ -76,7 +76,7 @@ public sealed partial class MainWindow
                 LoadObjectEditor();
             }
         };
-        // StartupRequest é init: só fica disponível depois do construtor.
+        // StartupRequest is init-only: it is only available after the constructor.
         Opened += async (_, _) =>
         {
             if (StartupRequest is { IsEmpty: false } request)
@@ -98,8 +98,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Preferences › General › "Automatically reconnect to previously opened sessions on startup": liga as sessões que
-    /// estavam abertas no fecho; devolve se ligou alguma (sem nenhuma, aparece o Session Manager).
+    /// Preferences › General › "Automatically reconnect to previously opened sessions on startup": connects the sessions that
+    /// were open at shutdown; returns whether it connected any (with none, the Session Manager shows).
     /// </summary>
     internal async Task<bool> ReconnectLastSessionsAsync()
     {
@@ -119,10 +119,10 @@ public sealed partial class MainWindow
         return any;
     }
 
-    /// <summary>Linha de comandos do arranque (FAM-S06): liga a sessão pedida em vez de mostrar o Session Manager.</summary>
+    /// <summary>Startup command line (FAM-S06): connects the requested session instead of showing the Session Manager.</summary>
     public CommandLineRequest? StartupRequest { get; init; }
 
-    /// <summary>Liga sem diálogos (medições e automação); devolve o erro ou <c>null</c>.</summary>
+    /// <summary>Connects without dialogs (measurements and automation); returns the error or <c>null</c>.</summary>
     public async Task<string?> ConnectQuietAsync(SessionDefinition values, LoginCredentials? credentials)
     {
         try
@@ -164,7 +164,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Session Manager modal; no arranque, Cancel fecha a aplicação (como no HeidiSQL).</summary>
+    /// <summary>Modal Session Manager; at startup, Cancel closes the application (as in HeidiSQL).</summary>
     public async Task ShowSessionManagerAsync(bool startup)
     {
         if (Sessions is not { } sessions || _managerModel is null)
@@ -193,10 +193,10 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Liga uma sessão: pede credenciais se for preciso, confirma host keys SSH novas (e bloqueia chaves mudadas) e
-    /// mostra os erros. Devolve se ligou.
+    /// Connects a session and focuses it in the tree: asks for credentials if needed, confirms new SSH host keys (and blocks
+    /// changed keys) and shows the errors; <paramref name="showHostTab"/> shows the Host tab (as in HeidiSQL). Returns whether
+    /// it connected.
     /// </summary>
-    /// <summary>Liga uma sessão e foca-a na árvore; <paramref name="showHostTab"/> mostra o Host tab (como o HeidiSQL).</summary>
     public async Task<bool> ConnectAsync(Window owner, SessionDefinition values, LoginCredentials? credentials, bool showHostTab = true)
     {
         var sessions = Sessions ?? throw new InvalidOperationException("No session services.");
@@ -285,7 +285,7 @@ public sealed partial class MainWindow
             var last = _context.Settings.SessionManager.RestoreLastUsedDatabase ? ActiveSession?.Definition.LastUsedDatabase : null;
             if (!string.IsNullOrEmpty(last) && node.Children?.FirstOrDefault(c => c.Name == last) is { } db)
             {
-                // RestoreLastUsedDB: a última base usada fica selecionada e aberta (anexo D A7).
+                // RestoreLastUsedDB: the last database used is selected and opened (appendix D A7).
                 _tree.Tree.FocusedNode = db;
                 await _model.ExpandAsync(db);
             }
@@ -321,7 +321,7 @@ public sealed partial class MainWindow
         });
     }
 
-    /// <summary>Disconnect: fecha a sessão; sem sessões, volta o Session Manager (Cancel aí fecha a aplicação).</summary>
+    /// <summary>Disconnect: closes the session; with no sessions left, the Session Manager comes back (Cancel there closes the application).</summary>
     public async Task DisconnectAsync(OpenSession session)
     {
         if (!await ResolveOpenTransactionAsync(session))
@@ -335,7 +335,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Lista dinâmica de "Connect to ▸" e do dropdown do botão Session manager (sessões ligadas com check).</summary>
+    /// <summary>Dynamic list of "Connect to ▸" and of the Session manager button drop-down (connected sessions with a check).</summary>
     internal IReadOnlyList<object> SessionMenuItems()
     {
         if (Sessions is not { } sessions)
@@ -391,8 +391,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Depois de importar do HeidiSQL: aplica já o tema, a largura da árvore, os painéis, o log e as opções do editor e
-    /// do grid (o resto, como as tabs em várias linhas, fica para o arranque seguinte).
+    /// After importing from HeidiSQL: applies right away the theme, the tree width, the panels, the log and the editor and grid
+    /// options (the rest, such as tabs on several rows, waits for the next start).
     /// </summary>
     internal void ApplyImportedSettings()
     {
@@ -426,12 +426,12 @@ public sealed partial class MainWindow
         _ui.Refresh();
     }
 
-    /// <summary>Substitui a pergunta e o resumo do import do HeidiSQL (testes).</summary>
+    /// <summary>Replaces the question and the summary of the HeidiSQL import (tests).</summary>
     internal Func<Task<bool>>? HeidiImportQuestionOverride { get; set; }
 
     /// <summary>
-    /// Primeiro arranque sem sessões e com o HeidiSQL instalado: pergunta uma vez se importa as sessões dele (quem muda
-    /// do HeidiSQL fica logo com as ligações de sempre).
+    /// First start without sessions and with HeidiSQL installed: asks once whether to import its sessions (someone switching
+    /// from HeidiSQL gets their usual connections right away).
     /// </summary>
     internal async Task OfferHeidiSqlImportAsync()
     {
@@ -445,7 +445,7 @@ public sealed partial class MainWindow
         await ImportHeidiSqlAsync(this, ask: true);
     }
 
-    /// <summary>Import sessions from HeidiSQL: as sessões, pastas, atalhos e favoritos do registo do HeidiSQL.</summary>
+    /// <summary>Import sessions from HeidiSQL: the sessions, folders, shortcuts and favourites from HeidiSQL's registry.</summary>
     private async Task ImportHeidiSqlAsync(Window owner, bool ask)
     {
         if (ImportHeidiSqlRegistry is not { } import)
@@ -515,7 +515,7 @@ public sealed partial class MainWindow
         await MessageDialog.ShowAsync(this, "Connection properties", string.Join('\n', lines), MessageDialogButtons.Ok);
     }
 
-    /// <summary>Status bar (FAM-L06): Connected (1 s), servidor, Uptime e Server time (20 s), ocupado.</summary>
+    /// <summary>Status bar (FAM-L06): Connected (1 s), server, Uptime and Server time (20 s), busy.</summary>
     private void UpdateStatusBar()
     {
         var status = _context.Status;
@@ -544,7 +544,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Linha "Encryption" do tooltip do servidor (23.2: uma ligação sem TLS fica visível).</summary>
+    /// <summary>"Encryption" line of the server tooltip (23.2: a connection without TLS is made visible).</summary>
     private static string EncryptionLine(SessionHost host) => host.Encryption switch
     {
         null => string.Empty,
@@ -557,8 +557,8 @@ public sealed partial class MainWindow
     {
         try
         {
-            // Uma ida ao servidor, e o SHOW STATUS existe em todas as versões (o information_schema.GLOBAL_STATUS não
-            // existe no MySQL 8: o uptime e a hora do servidor ficavam por mostrar).
+            // One round trip, and SHOW STATUS exists in every version (information_schema.GLOBAL_STATUS does not exist on
+            // MySQL 8: the uptime and the server time were left blank).
             var (uptime, text) = await session.Host.RunMetadataAsync(async (h, ct) =>
             {
                 string? up = null, time = null;
@@ -582,7 +582,7 @@ public sealed partial class MainWindow
             var serverNow = now is { } dt ? new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt)) : (DateTimeOffset?)null;
             if (now is { } wall)
             {
-                // Relógio do servidor para o Insert value ▸ (datetime, date, time, year).
+                // Server clock for Insert value ▸ (datetime, date, time, year).
                 _serverClockOffsets[session.Id] = wall - DateTime.Now;
             }
             var connectedFor = session.Host.ConnectedAt is { } at ? DateTimeOffset.UtcNow - at : TimeSpan.Zero;
@@ -594,7 +594,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Abre o Preferences a partir do Session Manager.</summary>
+    /// <summary>Opens Preferences from the Session Manager.</summary>
     private sealed class PreferencesWindowLauncher(ShellContext context)
     {
         public async Task ShowAsync(Window owner) => await new Views.PreferencesWindow(context).ShowDialog(owner);

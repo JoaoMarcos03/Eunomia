@@ -11,8 +11,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Todos os projetos de src (menos o App.Desktop, o executável): garante que estão compilados e restaurados e que
-       os assemblies ficam ao lado dos testes, para o DialectBoundaryTests os ler. Um projeto novo entra aqui. -->
+  <!-- Every project in src (except App.Desktop, the executable): makes sure they are built and restored and that the
+       assemblies sit next to the tests, for DialectBoundaryTests to read them. A new project goes here. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\App\App.csproj" />
     <ProjectReference Include="..\..\src\Drivers.Abstractions\Drivers.Abstractions.csproj" />

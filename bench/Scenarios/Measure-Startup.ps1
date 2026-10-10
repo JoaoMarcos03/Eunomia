@@ -1,12 +1,12 @@
-﻿<#
+<#
 .SYNOPSIS
-  PR-01: arranque até a janela estar interativa (primeiro frame no ecrã e UI thread livre para input).
+  PR-01: startup until the window is interactive (first frame on screen and the UI thread free for input).
 
 .DESCRIPTION
-  Corre o executável N vezes com --startup-probe e calcula mediana, p95, mínimo e máximo.
-  O tempo é medido de dentro do processo: hora de criação do processo (kernel) até ao momento interativo.
-  A primeira corrida é reportada à parte ("first"), porque depois de publicar o Windows lê e analisa o exe
-  novo; o arranque a frio verdadeiro (depois de reiniciar o Windows) é uma verificação manual.
+  Runs the executable N times with --startup-probe and computes the median, p95, minimum and maximum.
+  The time is measured from inside the process: from the process creation time (kernel) to the interactive moment.
+  The first run is reported separately ("first"), because after publishing Windows reads and scans the new
+  exe; a true cold start (after restarting Windows) is a manual check.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File bench\Scenarios\Measure-Startup.ps1 -Runs 20
@@ -35,15 +35,15 @@ for ($i = 1; $i -le $Runs; $i++) {
     $r = Get-Content $probe -Raw | ConvertFrom-Json
     $times += [double]$r.startupMs
     $marks = $r.marksMs
-    Write-Host ("  corrida {0,2}: {1,7:N1} ms" -f $i, $r.startupMs)
+    Write-Host ("  run {0,2}: {1,7:N1} ms" -f $i, $r.startupMs)
 }
 
 $rest = $times | Select-Object -Skip 1
 $result = [ordered]@{
     metric     = 'PR-01'
-    target     = 'interativo <= 1000 ms'
+    target     = 'interactive <= 1000 ms'
     mode       = $(if ($Jit) { 'JIT (self-contained)' } else { 'NativeAOT' })
-    cores      = $(if ($Cores -gt 0) { "$Cores (afinidade 0x{0:X})" -f (Get-AffinityMask $Cores) } else { 'todos' })
+    cores      = $(if ($Cores -gt 0) { "$Cores (affinity 0x{0:X})" -f (Get-AffinityMask $Cores) } else { 'all' })
     appArgs    = $AppArgs
     runs       = $Runs
     firstMs    = [math]::Round($times[0], 1)

@@ -4,7 +4,7 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.App.Query;
 
-/// <summary>Regras de texto das query tabs (secção 4.7; anexo C §4.4).</summary>
+/// <summary>Text rules of the query tabs (section 4.7; appendix C §4.4).</summary>
 public static partial class QueryText
 {
     [GeneratedRegex(@"^\s*(UPDATE|DELETE)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
@@ -22,7 +22,7 @@ public static partial class QueryText
     [GeneratedRegex(@"\bat line (?<line>\d+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ErrorLine();
 
-    /// <summary>UPDATE ou DELETE sem <c>\sWHERE\s</c> ("Run unsafe queries without a WHERE clause?").</summary>
+    /// <summary>UPDATE or DELETE without <c>\sWHERE\s</c> ("Run unsafe queries without a WHERE clause?").</summary>
     public static bool IsUnsafe(string statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
@@ -57,7 +57,7 @@ public static partial class QueryText
         return text[i..];
     }
 
-    /// <summary>"-- names: a,b,c" nos primeiros 1 KiB do batch: nomes dos result tabs pela ordem.</summary>
+    /// <summary>"-- names: a,b,c" in the first 1 KiB of the batch: result tab names, in order.</summary>
     public static IReadOnlyList<string> ResultNames(string batch)
     {
         ArgumentNullException.ThrowIfNull(batch);
@@ -67,7 +67,7 @@ public static partial class QueryText
             : [];
     }
 
-    /// <summary>"-- name: x" dentro da instrução: nome do result tab dessa instrução.</summary>
+    /// <summary>"-- name: x" inside the statement: name of that statement's result tab.</summary>
     public static string? ResultName(string statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
@@ -75,15 +75,15 @@ public static partial class QueryText
     }
 
     /// <summary>
-    /// Caption do result tab: o nome (do <c>-- name:</c> / <c>-- names:</c>), senão a tabela de origem, senão "Result #n";
-    /// a seguir "(Nr × Mc)".
+    /// Result tab caption: the name (from <c>-- name:</c> / <c>-- names:</c>), otherwise the source table, otherwise "Result #n";
+    /// followed by "(Nr × Mc)".
     /// </summary>
     public static string ResultCaption(string? name, string? sourceTable, int index, long rows, int columns) =>
         string.Create(CultureInfo.InvariantCulture, $"{name ?? sourceTable ?? $"Result #{index + 1}"} ({rows}r × {columns}c)");
 
     /// <summary>
-    /// Linha do editor onde o erro aconteceu: "near … at line N" é relativa à instrução; sem número, a primeira linha da
-    /// instrução.
+    /// Editor line where the error happened: "near … at line N" is relative to the statement; without a number, the first
+    /// line of the statement.
     /// </summary>
     public static int ErrorLineOf(SqlStatement statement, string message)
     {
@@ -95,7 +95,7 @@ public static partial class QueryText
     }
 
     /// <summary>
-    /// Mensagem final no SQL log (anexo C §4.4): <c>Affected rows: n  Found rows: n  Warnings: n  Duration for k [of m]
+    /// Final message in the SQL log (appendix C §4.4): <c>Affected rows: n  Found rows: n  Warnings: n  Duration for k [of m]
     /// query|queries: x.xxx sec. (+ y sec. network)</c>.
     /// </summary>
     public static string Summary(long affected, long found, long warnings, int executed, int total, TimeSpan duration, TimeSpan network)

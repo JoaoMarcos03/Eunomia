@@ -2,10 +2,10 @@ using Eunomia.Engine.Sql.Completion;
 
 namespace Eunomia.Engine.Sql.Tests;
 
-/// <summary>Contexto do autocomplete A (anexo C §4.2; FAM-Q05).</summary>
+/// <summary>Context of autocomplete A (appendix C §4.2; FAM-Q05).</summary>
 public sealed class CompletionContextTests
 {
-    /// <summary>Analisa com o cursor no lugar de <c>|</c>.</summary>
+    /// <summary>Analyses with the cursor in place of <c>|</c>.</summary>
     private static CompletionContext At(string textWithCaret)
     {
         var caret = textWithCaret.IndexOf('|', StringComparison.Ordinal);
@@ -15,16 +15,16 @@ public sealed class CompletionContextTests
     [Theory]
     [InlineData("SELECT 'ab|c'")]
     [InlineData("SELECT \"x|")]
-    [InlineData("SELECT 1 -- com|entário")]
+    [InlineData("SELECT 1 -- com|ment")]
     [InlineData("SELECT 1 # x|")]
     [InlineData("SELECT /* a\n b| */ 1")]
-    public void SuprimidoEmStringsEComentarios(string text)
+    public void SuppressedInStringsAndComments(string text)
     {
         Assert.Equal(CompletionScope.Suppressed, At(text).Scope);
     }
 
     [Fact]
-    public void ForaDeStringsEComentariosFechados()
+    public void OutsideStringsAndClosedComments()
     {
         Assert.Equal(CompletionScope.General, At("SELECT 'a' |").Scope);
         Assert.Equal(CompletionScope.General, At("SELECT /* x */ na|").Scope);
@@ -32,7 +32,7 @@ public sealed class CompletionContextTests
     }
 
     [Fact]
-    public void PalavraAtualEQualificadores()
+    public void CurrentWordAndQualifiers()
     {
         var general = At("SELECT na| FROM t");
         Assert.Equal(CompletionScope.General, general.Scope);
@@ -58,7 +58,7 @@ public sealed class CompletionContextTests
     [Theory]
     [InlineData("SELECT @@SESSION.max|", false)]
     [InlineData("SELECT @@global.|", true)]
-    public void VariaveisDoServidor(string text, bool global)
+    public void ServerVariables(string text, bool global)
     {
         var context = At(text);
         Assert.Equal(CompletionScope.Variables, context.Scope);
@@ -66,7 +66,7 @@ public sealed class CompletionContextTests
     }
 
     [Fact]
-    public void TabelasEAliasesDaInstrucaoAtual()
+    public void TablesAndAliasesOfTheCurrentStatement()
     {
         var context = At("SELECT 1;\nSELECT p.| FROM people p LEFT JOIN shop.orders AS o ON o.person = p.id, `x y` WHERE 1;\nSELECT * FROM other");
         Assert.Equal(
@@ -80,7 +80,7 @@ public sealed class CompletionContextTests
     [InlineData("DELETE FROM people WHERE 1", "people", null)]
     [InlineData("SELECT a, b FROM user u ORDER BY a", "user", "u")]
     [InlineData("SELECT * FROM t1 STRAIGHT_JOIN t2", "t1", null)]
-    public void ListasDeTabelas(string sql, string first, string? alias)
+    public void TableLists(string sql, string first, string? alias)
     {
         var tables = CompletionContext.TablesOf(sql);
         Assert.Equal(first, tables[0].Table);
@@ -88,7 +88,7 @@ public sealed class CompletionContextTests
     }
 
     [Fact]
-    public void BaseAindaASerEscritaNaoEhTabela()
+    public void DatabaseStillBeingTypedIsNotATable()
     {
         var context = At("SELECT * FROM shop.|");
         Assert.Equal(["shop"], context.Qualifiers);
@@ -96,7 +96,7 @@ public sealed class CompletionContextTests
     }
 
     [Fact]
-    public void JoinsComoVirgulas()
+    public void JoinsAsCommas()
     {
         Assert.Equal(["a", "b", "c"], CompletionContext.TablesOf("SELECT * FROM a INNER JOIN b USING (id), c WHERE 1").Select(t => t.Table));
         Assert.Equal(["t1", "t2"], CompletionContext.TablesOf("SELECT * FROM t1 STRAIGHT_JOIN t2").Select(t => t.Table));

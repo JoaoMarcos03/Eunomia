@@ -1,6 +1,6 @@
 namespace Eunomia.Drivers.Abstractions;
 
-/// <summary>Capabilities da secção 14.3 (flags; as que têm valores vivem em <see cref="ICapabilities"/>).</summary>
+/// <summary>Capabilities of section 14.3 (flags; the ones with values live in <see cref="ICapabilities"/>).</summary>
 public enum Capability
 {
     RowValueComparison,
@@ -15,26 +15,26 @@ public enum Capability
     IndexVisibility,
     ProfileQuery,
 
-    /// <summary><c>CREATE OR REPLACE</c> de procedures, functions, triggers e events (as views têm-no sempre).</summary>
+    /// <summary><c>CREATE OR REPLACE</c> for procedures, functions, triggers and events (views always have it).</summary>
     CreateOrReplaceObjects,
 }
 
 /// <summary>
-/// Matriz declarativa por servidor (secção 14.3). A UI consulta-a para ativar ou desativar comandos.
-/// Os valores por versão validam-se contra a documentação de cada motor ao implementar o driver.
+/// Declarative matrix per server (section 14.3). The UI checks it to enable or disable commands.
+/// Per-version values are validated against each engine's documentation when the driver is implemented.
 /// </summary>
 public interface ICapabilities
 {
     bool Supports(Capability capability);
 
-    /// <summary>Carácter de citação de identificadores: backtick em MySQL/MariaDB, aspas duplas em PostgreSQL.</summary>
+    /// <summary>Identifier quote character: backtick on MySQL/MariaDB, double quotes on PostgreSQL.</summary>
     char IdentifierQuote { get; }
 
-    /// <summary>Formatos de EXPLAIN disponíveis, por ordem de preferência.</summary>
+    /// <summary>Available EXPLAIN formats, in order of preference.</summary>
     IReadOnlyList<string> ExplainFormats { get; }
 }
 
-/// <summary>Operador de comparação textual dos filtros gerados (FAM-G12, G13).</summary>
+/// <summary>Text comparison operator of the generated filters (FAM-G12, G13).</summary>
 public enum LikeOperator
 {
     Like,
@@ -42,8 +42,8 @@ public enum LikeOperator
 }
 
 /// <summary>
-/// SQL específico do motor (secção 14.1), tipado: cada operação recebe argumentos estruturados e devolve SQL
-/// pronto, sem templates de string soltos noutras camadas.
+/// Engine-specific SQL (section 14.1), typed: each operation takes structured arguments and returns ready SQL,
+/// with no loose string templates in other layers.
 /// </summary>
 public interface IDialect
 {
@@ -52,29 +52,29 @@ public interface IDialect
     string QualifiedName(DbObjectRef obj);
 
     /// <summary>
-    /// Literal de texto para uma expressão (valores, WHERE, DEFAULT). Lido da mesma forma pelo servidor em qualquer modo
-    /// da sessão (em MySQL, com e sem <c>NO_BACKSLASH_ESCAPES</c>): um modo mudado sem o cliente saber nunca altera o valor gravado.
+    /// Text literal for an expression (values, WHERE, DEFAULT). Read the same way by the server in any session mode
+    /// (on MySQL, with and without <c>NO_BACKSLASH_ESCAPES</c>): a mode changed without the client knowing never alters the saved value.
     /// </summary>
     string StringLiteral(string value);
 
     /// <summary>
-    /// Texto entre aspas para os sítios da gramática que só aceitam uma string simples (<c>COMMENT</c>, <c>LIKE</c> do
-    /// <c>SHOW</c>, <c>HELP</c>), com o escaping do modo da ligação de onde o dialeto veio.
+    /// Quoted text for the places in the grammar that only accept a simple string (<c>COMMENT</c>, <c>SHOW</c>'s
+    /// <c>LIKE</c>, <c>HELP</c>), with the escaping of the mode of the connection the dialect came from.
     /// </summary>
     string PlainStringLiteral(string value);
 
-    /// <summary>Cláusula de paginação: <c>LIMIT off, n</c> em MySQL, <c>LIMIT n OFFSET off</c> em PostgreSQL.</summary>
+    /// <summary>Paging clause: <c>LIMIT off, n</c> on MySQL, <c>LIMIT n OFFSET off</c> on PostgreSQL.</summary>
     string Paging(long offset, int count);
 
     /// <summary>
-    /// Predicado de keyset (ADR-07): <c>(c1, c2) &gt; (v1, v2)</c> com os valores já em literal; a direção vem de
+    /// Keyset predicate (ADR-07): <c>(c1, c2) &gt; (v1, v2)</c> with the values already as literals; the direction comes from
     /// <paramref name="descending"/>.
     /// </summary>
     string KeysetPredicate(IReadOnlyList<string> columns, IReadOnlyList<string> literalValues, bool descending);
 
     string KillQuery(long serverConnectionId);
 
-    /// <summary>Termina a ligação (Kill Process(es) do Host tab).</summary>
+    /// <summary>Ends the connection (Kill Process(es) in the Host tab).</summary>
     string KillConnection(long serverConnectionId);
 
     string ChangeDatabase(string database);
@@ -85,64 +85,64 @@ public interface IDialect
 
     string Explain(string statement, string format);
 
-    /// <summary>Contagem aproximada barata (como o <c>SHOW TABLE STATUS LIKE</c> do HeidiSQL).</summary>
+    /// <summary>Cheap approximate count (like HeidiSQL's <c>SHOW TABLE STATUS LIKE</c>).</summary>
     string EstimatedCount(DbObjectRef table);
 
     /// <summary>
-    /// Instrução de manutenção de uma tabela ou view (Maintenance, anexo B §2.2) com as opções pedidas que a operação
-    /// aceita; <c>null</c> se o motor não tiver a operação. Em MySQL: <c>CHECK/ANALYZE/CHECKSUM/OPTIMIZE/REPAIR TABLE</c>.
+    /// Maintenance statement for a table or view (Maintenance, appendix B §2.2) with the requested options the operation
+    /// accepts; <c>null</c> if the engine does not have the operation. On MySQL: <c>CHECK/ANALYZE/CHECKSUM/OPTIMIZE/REPAIR TABLE</c>.
     /// </summary>
     string? Maintenance(MaintenanceOperation operation, DbObjectRef table, MaintenanceOptions options);
 
-    /// <summary>Opções que a operação de manutenção aceita (as caixas ativas no diálogo); <see cref="MaintenanceOptions.None"/> se nenhuma.</summary>
+    /// <summary>Options the maintenance operation accepts (the enabled boxes in the dialog); <see cref="MaintenanceOptions.None"/> if none.</summary>
     MaintenanceOptions MaintenanceOptionsOf(MaintenanceOperation operation);
 
     LikeOperator CaseInsensitiveLike { get; }
 
     /// <summary>
-    /// Expressão que corta uma coluna longa a <paramref name="maxLength"/> caracteres no Data tab (anexo D B2), ou <c>null</c>
-    /// se o tipo não se corta (números, datas, texto curto). Em MySQL: <c>LEFT(col, 256)</c>, com <c>CAST(col AS CHAR)</c> no JSON.
+    /// Expression that cuts a long column to <paramref name="maxLength"/> characters in the Data tab (appendix D B2), or <c>null</c>
+    /// if the type is not cut (numbers, dates, short text). On MySQL: <c>LEFT(col, 256)</c>, with <c>CAST(col AS CHAR)</c> for JSON.
     /// </summary>
     string? LoadPartExpression(ColumnDefinition column, int maxLength);
 
     /// <summary>
-    /// Coluna como texto para comparações (<c>CastAsText</c> do HeidiSQL): em MySQL, <c>CAST(col AS CHAR)</c> só nas datas, horas e
-    /// JSON; as outras ficam como estão.
+    /// Column as text for comparisons (HeidiSQL's <c>CastAsText</c>): on MySQL, <c>CAST(col AS CHAR)</c> only for dates, times and
+    /// JSON; the others stay as they are.
     /// </summary>
     string CastAsText(ColumnDefinition column);
 
-    /// <summary>Desliga as verificações de chaves estrangeiras guardando o valor anterior; <c>null</c> se o motor não tiver.</summary>
+    /// <summary>Turns foreign key checks off, saving the previous value; <c>null</c> if the engine does not have them.</summary>
     string? DisableForeignKeyChecks { get; }
 
-    /// <summary>Repõe o valor guardado por <see cref="DisableForeignKeyChecks"/>.</summary>
+    /// <summary>Restores the value saved by <see cref="DisableForeignKeyChecks"/>.</summary>
     string? RestoreForeignKeyChecks { get; }
 
-    /// <summary>SQL da ligação de job do SQL export (anexo B §2.3.2; secção 13.2).</summary>
+    /// <summary>SQL of the SQL export job connection (appendix B §2.3.2; section 13.2).</summary>
     DumpSessionSql DumpSession { get; }
 
     /// <summary>
-    /// Põe a sessão em transações só de leitura (sessões read-only: o servidor recusa escritas); <c>null</c> se o
-    /// servidor não tiver.
+    /// Puts the session in read-only transactions (read-only sessions: the server refuses writes); <c>null</c> if the
+    /// server does not have them.
     /// </summary>
     string? ReadOnlySession { get; }
 
-    /// <summary>Lê o modo da sessão (<c>@@SESSION.sql_mode</c> em MySQL); <c>null</c> se o motor não tiver modos.</summary>
+    /// <summary>Reads the session mode (<c>@@SESSION.sql_mode</c> on MySQL); <c>null</c> if the engine has no modes.</summary>
     string? SessionModeQuery { get; }
 
     /// <summary>
-    /// Instruções à volta do DDL da aplicação e as que repõem a sessão: espera por locks de metadata no máximo
-    /// <paramref name="lockWaitSeconds"/> (um ALTER à espera de um lock bloqueia todas as queries seguintes à tabela) e,
-    /// com <paramref name="strictFrom"/> (o modo atual), um modo em que um ALTER que copia dados falha em vez de os
-    /// cortar em silêncio. <c>null</c> se o motor não precisar.
+    /// Statements around the application's DDL and those that restore the session: waits for metadata locks at most
+    /// <paramref name="lockWaitSeconds"/> (an ALTER waiting for a lock blocks every later query on the table) and,
+    /// with <paramref name="strictFrom"/> (the current mode), a mode in which an ALTER that copies data fails instead of
+    /// truncating it silently. <c>null</c> if the engine does not need them.
     /// </summary>
     (string Enter, string Restore)? DdlSession(string? strictFrom, int lockWaitSeconds);
 }
 
 /// <summary>
-/// Instruções do SQL export na ligação de job: <see cref="Setup"/> antes (no MySQL, <c>SQL_MODE=''</c> para o
-/// <c>SHOW CREATE</c> não usar aspas ANSI e <c>TIME_ZONE='+00:00'</c> para os TIMESTAMP saírem em UTC),
-/// <see cref="Restore"/> depois; <see cref="BeginSnapshot"/> e <see cref="EndSnapshot"/> para o snapshot consistente
-/// (como o <c>mysqldump --single-transaction</c>); <see cref="ServerOsQuery"/> para o cabeçalho.
+/// SQL export statements on the job connection: <see cref="Setup"/> before (on MySQL, <c>SQL_MODE=''</c> so that
+/// <c>SHOW CREATE</c> does not use ANSI quotes and <c>TIME_ZONE='+00:00'</c> so TIMESTAMPs come out in UTC),
+/// <see cref="Restore"/> after; <see cref="BeginSnapshot"/> and <see cref="EndSnapshot"/> for the consistent snapshot
+/// (like <c>mysqldump --single-transaction</c>); <see cref="ServerOsQuery"/> for the header.
 /// </summary>
 public sealed record DumpSessionSql(
     IReadOnlyList<string> Setup,
@@ -151,21 +151,21 @@ public sealed record DumpSessionSql(
     string? EndSnapshot,
     string? ServerOsQuery);
 
-/// <summary>CREATE/ALTER/DROP a partir de diff de modelo (secção 14.1); uma implementação por família.</summary>
+/// <summary>CREATE/ALTER/DROP from a model diff (section 14.1); one implementation per family.</summary>
 public interface IDdlComposer
 {
     IReadOnlyList<string> Create(TableDefinition table);
 
-    /// <summary>Instruções que levam <paramref name="before"/> a <paramref name="after"/>, por ordem.</summary>
+    /// <summary>Statements that take <paramref name="before"/> to <paramref name="after"/>, in order.</summary>
     IReadOnlyList<string> Alter(TableDefinition before, TableDefinition after);
 
     string Drop(DbObjectRef obj);
 
-    /// <summary><c>CREATE DATABASE</c> com a collation opcional (anexo B §5.3).</summary>
+    /// <summary><c>CREATE DATABASE</c> with an optional collation (appendix B §5.3).</summary>
     string CreateDatabase(string name, string? collation);
 
     string DropDatabase(string name);
 
-    /// <summary>Definição de uma chave estrangeira (<c>CONSTRAINT … FOREIGN KEY … REFERENCES …</c>), para um ALTER ADD.</summary>
+    /// <summary>Definition of a foreign key (<c>CONSTRAINT … FOREIGN KEY … REFERENCES …</c>), for an ALTER ADD.</summary>
     string ForeignKeySpec(ForeignKeyDefinition fk);
 }

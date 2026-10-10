@@ -3,7 +3,7 @@ namespace Eunomia.UI.Controls.Grid.Tests;
 public sealed class GridAutoScrollTests
 {
     [Fact]
-    public void DentroDaZonaMortaNaoMexe()
+    public void InsideTheDeadZoneDoesNotMove()
     {
         var s = new GridAutoScroll();
         s.Start(100, 100);
@@ -13,7 +13,7 @@ public sealed class GridAutoScrollTests
     }
 
     [Fact]
-    public void DiagonalMexeLinhasEColunasComVelocidadeProporcional()
+    public void DiagonalMovesRowsAndColumnsWithProportionalSpeed()
     {
         var s = new GridAutoScroll();
         s.Start(100, 100);
@@ -26,7 +26,7 @@ public sealed class GridAutoScrollTests
     }
 
     [Fact]
-    public void ParaCimaEParaAEsquerdaEhNegativo()
+    public void UpAndLeftAreNegative()
     {
         var s = new GridAutoScroll();
         s.Start(100, 100);
@@ -39,11 +39,11 @@ public sealed class GridAutoScrollTests
     }
 
     [Fact]
-    public void ScrollLentoAcumulaOResto()
+    public void SlowScrollAccumulatesTheRemainder()
     {
         var s = new GridAutoScroll();
         s.Start(0, 0);
-        s.Move(0, GridAutoScroll.DeadZone + 1); // 9 DIPs/s = meia linha por segundo
+        s.Move(0, GridAutoScroll.DeadZone + 1); // 9 DIPs/s = half a row per second
 
         long total = 0;
         for (var i = 0; i < 60; i++)
@@ -59,7 +59,7 @@ public sealed class GridAutoScrollTests
     }
 
     [Fact]
-    public void VelocidadeTemLimite()
+    public void SpeedHasALimit()
     {
         var s = new GridAutoScroll();
         s.Start(0, 0);
@@ -69,7 +69,7 @@ public sealed class GridAutoScrollTests
     }
 
     [Fact]
-    public void CarregarELargarSemMexerFicaAtivo()
+    public void PressAndReleaseWithoutMovingStaysActive()
     {
         var s = new GridAutoScroll();
         s.Start(50, 50);
@@ -83,7 +83,7 @@ public sealed class GridAutoScrollTests
     }
 
     [Fact]
-    public void ArrastarELargarPara()
+    public void DragAndReleaseStops()
     {
         var s = new GridAutoScroll();
         s.Start(50, 50);

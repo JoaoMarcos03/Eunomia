@@ -10,7 +10,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.App.Desktop;
 
-/// <summary>Opções de linha de comandos usadas pelos scripts de <c>bench/Scenarios</c>.</summary>
+/// <summary>Command-line options used by the <c>bench/Scenarios</c> scripts.</summary>
 internal sealed record BenchOptions(
     string? Theme,
     double Scale,
@@ -22,10 +22,10 @@ internal sealed record BenchOptions(
     bool ExitAfterProbe,
     bool NoMarkers)
 {
-    /// <summary><c>--connect-probe f</c>: liga a sessão da linha de comandos sem diálogos e grava o resultado (PR-06 e testes do binário AOT).</summary>
+    /// <summary><c>--connect-probe f</c>: connects the command-line session without dialogs and writes the result (PR-06 and tests of the AOT binary).</summary>
     public string? ConnectProbe { get; init; }
 
-    /// <summary>Alguma medição pedida: a app corre com settings em memória.</summary>
+    /// <summary>Some measurement was requested: the app runs with in-memory settings.</summary>
     public bool IsBench => StartupProbe is not null || ReadyFile is not null || ScrollOutput is not null || ConnectProbe is not null;
 
     public static BenchOptions Parse(string[] args)
@@ -54,12 +54,12 @@ internal sealed record BenchOptions(
 }
 
 /// <summary>
-/// Pontos de medição dentro do executável (para medir o binário NativeAOT real):
+/// Measurement points inside the executable (to measure the real NativeAOT binary):
 /// <list type="bullet">
-/// <item>PR-01: <c>--startup-probe f</c> grava a hora de criação do processo e a hora em que a UI thread fica livre
-/// para input depois do primeiro frame renderizado;</item>
-/// <item>PR-16: <c>--ready-file f</c> avisa o script de que a janela está pronta (o working set é lido de fora);</item>
-/// <item>PR-04: <c>--bench-scroll f</c> faz scroll programático e grava os tempos de frame.</item>
+/// <item>PR-01: <c>--startup-probe f</c> writes the process creation time and the time the UI thread is free
+/// for input after the first rendered frame;</item>
+/// <item>PR-16: <c>--ready-file f</c> tells the script the window is ready (the working set is read from outside);</item>
+/// <item>PR-04: <c>--bench-scroll f</c> scrolls programmatically and writes the frame times.</item>
 /// </list>
 /// </summary>
 internal static class BenchHooks
@@ -81,7 +81,7 @@ internal static class BenchHooks
         };
     }
 
-    /// <summary>Liga a sessão pedida na linha de comandos, sem diálogos, e grava se ligou, o servidor e o tempo.</summary>
+    /// <summary>Connects the session given on the command line, without dialogs, and writes whether it connected, the server and the time.</summary>
     private static async Task ConnectProbeAsync(MainWindow window, string output, BenchOptions options)
     {
         var clock = Stopwatch.StartNew();
@@ -116,7 +116,7 @@ internal static class BenchHooks
     {
         StartupTrace.Mark("first-frame");
         var compositor = ElementComposition.GetElementVisual(window)!.Compositor;
-        // Espera que o primeiro frame chegue ao ecrã e que a UI thread esteja livre para input.
+        // Waits for the first frame to reach the screen and for the UI thread to be free for input.
         compositor.RequestCompositionBatchCommitAsync().Rendered.ContinueWith(
             _ => Dispatcher.UIThread.Post(() => OnInteractive(window, options), DispatcherPriority.Input),
             TaskScheduler.Default);
@@ -161,8 +161,8 @@ internal static class BenchHooks
     }
 
     /// <summary>
-    /// Em NativeAOT não há compilação dinâmica. (<c>IsDynamicCodeSupported</c> não serve: <c>PublishAot</c>
-    /// desliga-o também no build normal.)
+    /// NativeAOT has no dynamic compilation. (<c>IsDynamicCodeSupported</c> does not help: <c>PublishAot</c>
+    /// turns it off in the normal build too.)
     /// </summary>
     internal static bool IsNativeAot => !System.Runtime.CompilerServices.RuntimeFeature.IsDynamicCodeCompiled;
 
@@ -177,11 +177,11 @@ internal static class BenchHooks
 }
 
 /// <summary>
-/// PR-04: scroll programático no grid com dados residentes (1M × 60), em três fases: roda (3 linhas/frame),
-/// página (25 linhas/frame, todas as linhas novas em cada frame) e horizontal (40 px/frame + 1 linha/frame).
-/// Por frame mede: intervalo entre frames (pacing, o que o utilizador vê), custo na UI thread (do callback de
-/// animação ao fim do <c>Render</c> do grid) e custo de desenho no render thread (entre dois visuais de
-/// composição marcadores, por baixo e por cima do conteúdo).
+/// PR-04: programmatic scroll in the grid with resident data (1M × 60), in three phases: wheel (3 rows/frame),
+/// page (25 rows/frame, every row new on each frame) and horizontal (40 px/frame + 1 row/frame).
+/// Per frame it measures: the interval between frames (pacing, what the user sees), the cost on the UI thread (from the
+/// animation callback to the end of the grid's <c>Render</c>) and the drawing cost on the render thread (between two
+/// marker composition visuals, below and above the content).
 /// </summary>
 internal static class ScrollBench
 {
@@ -203,7 +203,7 @@ internal static class ScrollBench
         grid.Focus();
         var source = grid.Source!;
 
-        // Dados residentes: carrega à partida todas as linhas que o scroll vai percorrer (com margem).
+        // Resident data: loads up front every row the scroll will go through (with a margin).
         var rowsNeeded = (int)(Phases.Sum(p => p.Fraction * seconds * 60 * 1.5 * p.RowsPerFrame) + (grid.ViewportRows * 6));
         await source.RequestRangeAsync(0, rowsNeeded);
 
@@ -216,11 +216,11 @@ internal static class ScrollBench
             AttachMarker(compositor, window.RenderEndMarker, endMarker);
         }
 
-        // Controlo: 2 s de frames sem scroll (pacing da plataforma sem trabalho do grid).
+        // Control: 2 s of frames without scrolling (the platform's pacing without grid work).
         var idle = new List<FrameSample>(200);
         await Drive(window, grid, 2, [new Phase("idle", 1, 0, 0)], idle);
 
-        // Aquecimento (0,5 s) fora da janela medida, depois volta ao topo.
+        // Warm-up (0.5 s) outside the measured window, then back to the top.
         await Drive(window, grid, 0.5, [new Phase("warmup", 1, 3, 0)], null);
         grid.TopRow = 0;
         grid.ScrollX = 0;
@@ -264,7 +264,7 @@ internal static class ScrollBench
             w.WriteNumber("allocatedMB", Math.Round(allocatedMB, 1));
             WriteStats(w, "idleIntervalMs", idle.Skip(1).Select(f => f.IntervalMs));
             w.WriteString("adapter", Program.GraphicsInfo.Selected ?? "n/a");
-            // Os contadores de frames do DWM (hwnd nulo) não avançam no Windows 10; só a taxa de refresh é útil.
+            // The DWM frame counters (null hwnd) do not advance on Windows 10; only the refresh rate is useful.
             if (dwmAfter is { } dwm)
             {
                 w.WriteNumber("refreshHz", Math.Round(dwm.RefreshHz, 2));
@@ -331,7 +331,7 @@ internal static class ScrollBench
             var phase = PhaseAt(phases, elapsed / seconds);
             if (phase.RowsPerFrame == 0 && phase.PixelsPerFrame == 0)
             {
-                // Fase de controlo: redesenha o grid sem mudar o scroll (texto todo já em cache).
+                // Control phase: redraws the grid without changing the scroll (all text already cached).
                 grid.InvalidateVisual();
             }
             else if (phase.PixelsPerFrame > 0)
@@ -417,7 +417,7 @@ internal static class ScrollBench
         public double GridRenderMs { get; set; }
     }
 
-    /// <summary>Visual de composição vazio que regista no render thread a hora a que é desenhado em cada frame.</summary>
+    /// <summary>Empty composition visual that records on the render thread the time it is drawn in each frame.</summary>
     private sealed class MarkerHandler : CompositionCustomVisualHandler
     {
         private readonly ConcurrentQueue<long> _stamps = new();
@@ -434,7 +434,7 @@ internal static class ScrollBench
 
         public void Clear() => _stamps.Clear();
 
-        /// <summary>Custo por frame: marcador de cima menos marcador de baixo, emparelhados por ordem.</summary>
+        /// <summary>Cost per frame: top marker minus bottom marker, paired in order.</summary>
         public double[] Pair(MarkerHandler end)
         {
             var a = _stamps.ToArray();

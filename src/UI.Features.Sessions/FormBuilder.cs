@@ -7,7 +7,7 @@ using Eunomia.UI.Controls.Common.Dialogs;
 
 namespace Eunomia.UI.Features.Sessions;
 
-/// <summary>Formulário de duas colunas (rótulo / controlo) dos tabs do Session Manager.</summary>
+/// <summary>Two-column form (label / control) of the Session Manager tabs.</summary>
 internal sealed class FormBuilder
 {
     private readonly Grid _grid = new() { ColumnDefinitions = new ColumnDefinitions("170,*"), Margin = new Thickness(8, 8, 8, 4) };
@@ -41,7 +41,7 @@ internal sealed class FormBuilder
     public NumericUpDown Number(string label, int min, int max) =>
         Row(label, new NumericUpDown { Minimum = min, Maximum = max, Increment = 1, FormatString = "0", Width = 120, HorizontalAlignment = HorizontalAlignment.Left, MinHeight = 24 });
 
-    /// <summary>Caixa de texto com botão "..." que abre o seletor de ficheiros.</summary>
+    /// <summary>Text box with a "..." button that opens the file picker.</summary>
     public TextBox File(string label, string title, Func<TopLevel?> topLevel, params FilePickerFileType[] types)
     {
         var box = new TextBox { MinHeight = 24, Padding = new Thickness(4, 2) }.Named(label);

@@ -12,18 +12,18 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Marca (assets/brand): todas as janelas de topo têm o ícone do Eunomia.</summary>
+/// <summary>Brand (assets/brand): every top-level window has the Eunomia icon.</summary>
 public sealed class BrandTests
 {
     [AvaloniaFact]
-    public void IconeDasJanelasVemDosRecursos()
+    public void WindowIconComesFromTheResources()
     {
         Assert.True(AssetLoader.Exists(BrandAssets.IconUri));
         Assert.Same(BrandAssets.WindowIcon, BrandAssets.WindowIcon);
     }
 
     [AvaloniaFact]
-    public void LogoNoAboutENoStartDoSessionManager()
+    public void LogoInAboutAndInTheSessionManagerStartTab()
     {
         Assert.IsType<DrawingImage>(BrandAssets.Logo);
         Assert.Same(BrandAssets.Logo, BrandAssets.Logo);
@@ -42,11 +42,11 @@ public sealed class BrandTests
     }
 
     [AvaloniaFact]
-    public void TodasAsJanelasDeTopoTemOIconeDaMarca()
+    public void EveryTopLevelWindowHasTheBrandIcon()
     {
         var assemblies = new[] { typeof(MainWindow), typeof(MessageDialog), typeof(SessionManagerWindow), typeof(SqlExportDialog) }
             .Select(t => t.Assembly);
-        // Código de teste: corre sem trimming.
+        // Test code: runs without trimming.
 #pragma warning disable IL2026
         var types = assemblies.SelectMany(a => a.GetTypes())
             .Where(t => typeof(Window).IsAssignableFrom(t) && !t.IsAbstract)
@@ -57,7 +57,7 @@ public sealed class BrandTests
         foreach (var (type, create) in AllWindows.Factories)
         {
             var window = create();
-            Assert.True(ReferenceEquals(BrandAssets.WindowIcon, window.Icon), $"{type.Name} sem o ícone da marca");
+            Assert.True(ReferenceEquals(BrandAssets.WindowIcon, window.Icon), $"{type.Name} without the brand icon");
             window.Close();
         }
     }

@@ -17,7 +17,7 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.App.Desktop;
 
-/// <summary>Composition root (secção 22): liga settings, sessões, cofre, SSH, driver, <c>app.db</c> e a janela principal.</summary>
+/// <summary>Composition root (section 22): wires settings, sessions, vault, SSH, driver, <c>app.db</c> and the main window.</summary>
 public sealed class App : Application
 {
     private SqliteAppDatabase? _appDatabase;
@@ -25,9 +25,9 @@ public sealed class App : Application
     public override void Initialize()
     {
         StartupTrace.Mark("app-initialize");
-        // Nome no menu da aplicação do macOS ("About Eunomia", "Quit Eunomia") e nos gestores de janelas.
+        // Name in the macOS application menu ("About Eunomia", "Quit Eunomia") and in window managers.
         Name = "Eunomia";
-        // Fluent compacto com as cores do tema e os estilos globais (os mesmos dos snapshots).
+        // Compact Fluent with the theme colours and the global styles (the same as the snapshots).
         ShellTheme.Install(this);
         DarkTitleBar.Install();
     }
@@ -43,14 +43,14 @@ public sealed class App : Application
             Func<string, string>? export = null;
             if (options.IsBench)
             {
-                // Medições com as dimensões fixas do spike e sem tocar nas settings do utilizador.
+                // Measurements with the spike's fixed dimensions and without touching the user's settings.
                 var settings = new AppSettings();
                 settings.MainWindow.Width = 1280;
                 settings.MainWindow.Height = 800;
                 var log = new SqlLogBuffer(settings.Log);
                 context = new ShellContext(settings, new MemorySettingsStore(settings), null, log)
                 {
-                    // Só o --connect-probe liga a sessões (em memória); as outras medições usam os dados sintéticos.
+                    // Only --connect-probe connects to sessions (in memory); the other measurements use synthetic data.
                     Sessions = options.ConnectProbe is null ? null : new ShellSessions
                     {
                         Catalog = new SessionCatalog(),
@@ -98,7 +98,7 @@ public sealed class App : Application
                 var ssh = new SshTunnelFactory(new KnownHostsStore(Path.Combine(paths.Roaming, "known_hosts")));
                 var log = new SqlLogBuffer(settings.Log);
                 var connector = new SessionConnector(new MySqlProvider(), secrets, ssh, new SessionLogAdapter(log));
-                // Spill de execuções anteriores que fecharam mal (os ficheiros são DeleteOnClose; isto apanha o resto).
+                // Spill files from earlier runs that closed badly (the files are DeleteOnClose; this catches the rest).
                 _ = Task.Run(() => Eunomia.Engine.Results.SpillFile.CleanOrphans(paths.Spill));
                 context = new ShellContext(settings, store, _appDatabase, log)
                 {
@@ -147,7 +147,7 @@ public sealed class App : Application
             desktop.MainWindow = window;
             if (OperatingSystem.IsMacOS())
             {
-                // Menu da aplicação do macOS: About abre o nosso diálogo (o resto do menu é o da janela).
+                // macOS application menu: About opens our dialog (the rest of the menu is the window's).
                 var about = new NativeMenuItem("About Eunomia");
                 about.Click += (_, _) => _ = Eunomia.UI.Shell.Views.AboutDialog.ShowAsync(window, ShellContext.Version);
                 NativeMenu.SetMenu(this, new NativeMenu { Items = { about } });
@@ -158,8 +158,8 @@ public sealed class App : Application
     }
 
     /// <summary>
-    /// Cofre do sistema (secção 23.2; Fase 14): Credential Manager e DPAPI no Windows, Keychain no macOS, Secret Service
-    /// (libsecret) no Linux; <c>null</c> se não houver nenhum (os segredos ficam só em memória).
+    /// System vault (section 23.2; phase 14): Credential Manager and DPAPI on Windows, Keychain on macOS, Secret Service
+    /// (libsecret) on Linux; <c>null</c> if there is none (secrets stay only in memory).
     /// </summary>
     private static ISecretStore? SystemSecretStore(AppDataPaths paths)
     {
@@ -180,7 +180,7 @@ public sealed class App : Application
     }
 
     /// <summary>
-    /// File › Import settings file (ficheiro do HeidiSQL, <c>&lt;|||&gt;</c>) e Import sessions from HeidiSQL (registo):
+    /// File › Import settings file (HeidiSQL file, <c>&lt;|||&gt;</c>) and Import sessions from HeidiSQL (registry):
     /// add-only (FAM-S05).
     /// </summary>
     private string ImportSettings(HeidiSettingsFile file, SessionCatalog catalog, ISessionStore store, ShellContext context, ISecretStore secrets)
@@ -206,7 +206,7 @@ public sealed class App : Application
     private static string KeyringName =>
         OperatingSystem.IsWindows() ? "Windows Credential Manager" : OperatingSystem.IsMacOS() ? "macOS Keychain" : "system keyring";
 
-    /// <summary>File › Export settings file: settings e sessões em JSON, sem segredos (secção 23.2).</summary>
+    /// <summary>File › Export settings file: settings and sessions as JSON, without secrets (section 23.2).</summary>
     private static string ExportSettings(string path, SessionCatalog catalog, AppSettings settings)
     {
         var temp = Path.Combine(Path.GetTempPath(), "eunomia-export-" + Guid.NewGuid().ToString("N"));
@@ -233,7 +233,7 @@ public sealed class App : Application
         return $"{catalog.Sessions.Count} session(s) exported without passwords.";
     }
 
-    /// <summary>Sessões em memória (modo de medição).</summary>
+    /// <summary>In-memory sessions (measurement mode).</summary>
     private sealed class MemorySessionStore : ISessionStore
     {
         public SessionCatalog Load() => new();
@@ -243,7 +243,7 @@ public sealed class App : Application
         }
     }
 
-    /// <summary>Settings em memória (modo de medição).</summary>
+    /// <summary>In-memory settings (measurement mode).</summary>
     private sealed class MemorySettingsStore(AppSettings settings) : ISettingsStore
     {
         public AppSettings Load() => settings;

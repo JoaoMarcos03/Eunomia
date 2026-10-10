@@ -7,7 +7,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Find, Replace e Find again no editor e no grid (anexo C §4.7; FAM-Q10).</summary>
+/// <summary>Find, Replace and Find again in the editor and the grid (appendix C §4.7; FAM-Q10).</summary>
 public sealed class SearchTests
 {
     private static MainWindow Window()
@@ -19,7 +19,7 @@ public sealed class SearchTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FindReplaceEFindAgainNoEditor()
+    public async Task FindReplaceAndFindAgainInTheEditor()
     {
         var window = Window();
         var commands = window.Context.Commands;
@@ -37,13 +37,13 @@ public sealed class SearchTests
             return options is null ? null : new SearchRequest(options, target, replaceAll);
         };
 
-        // Prefill com a palavra no cursor; Entire scope encontra a primeira.
+        // Prefilled with the word at the cursor; Entire scope finds the first one.
         options = new SearchOptions { Find = "people", WholeWords = true };
         Assert.True(await commands.ExecuteAsync("search.find"));
         Assert.Equal("name", prefills[^1]);
         Assert.Equal((17, 6), (editor.Editor.SelectionStart, editor.Editor.SelectionLength));
 
-        // F3 continua a partir da seleção; no fim, "not found" na status bar.
+        // F3 continues from the selection; at the end, "not found" in the status bar.
         Assert.True(await commands.ExecuteAsync("search.findAgain"));
         Assert.Equal(39, editor.Editor.SelectionStart);
         Assert.True(await commands.ExecuteAsync("search.findAgain"));
@@ -52,7 +52,7 @@ public sealed class SearchTests
         Assert.Equal(60, editor.Editor.SelectionStart);
         Assert.Equal("Search string \"people\" not found", window.Context.Status.Info);
 
-        // Replace all sem perguntar: uma só alteração no undo.
+        // Replace all without asking: a single undo step.
         options = new SearchOptions { Find = "people", Replace = "persons", PromptOnReplace = false };
         replaceAll = true;
         Assert.True(await commands.ExecuteAsync("search.replace"));
@@ -61,7 +61,7 @@ public sealed class SearchTests
         editor.Editor.Undo();
         Assert.Contains("FROM people;", editor.Text, StringComparison.Ordinal);
 
-        // Replace (OK) troca só a próxima, a partir do cursor.
+        // Replace (OK) replaces only the next one, from the cursor.
         options = new SearchOptions { Find = "name", Replace = "id", PromptOnReplace = false, EntireScope = false };
         replaceAll = false;
         editor.Editor.Select(0, 0);
@@ -72,14 +72,14 @@ public sealed class SearchTests
     }
 
     [AvaloniaFact]
-    public void DialogoMostraOsCamposEDesligaReplaceNoGrid()
+    public void DialogShowsTheFieldsAndDisablesReplaceInTheGrid()
     {
-        var settings = new Eunomia.App.Settings.SearchSettings { FindHistory = ["antigo"] };
-        var dialog = new SearchReplaceDialog("novo", replace: true, [new SearchTarget("Grid", false, false), new SearchTarget("SQL editor", true, true)], 0, settings);
+        var settings = new Eunomia.App.Settings.SearchSettings { FindHistory = ["old"] };
+        var dialog = new SearchReplaceDialog("new", replace: true, [new SearchTarget("Grid", false, false), new SearchTarget("SQL editor", true, true)], 0, settings);
         dialog.Show();
         dialog.CaptureRenderedFrame();
         var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(dialog).OfType<Avalonia.Controls.ComboBox>().ToList();
-        Assert.Equal("novo", boxes[0].Text);
+        Assert.Equal("new", boxes[0].Text);
         Assert.False(boxes[1].IsEnabled);
         boxes[2].SelectedIndex = 1;
         Assert.True(boxes[1].IsEnabled);
@@ -87,7 +87,7 @@ public sealed class SearchTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FindNoGrid()
+    public async Task FindInTheGrid()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();

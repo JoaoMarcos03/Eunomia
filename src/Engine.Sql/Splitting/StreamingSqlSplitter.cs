@@ -1,24 +1,24 @@
 namespace Eunomia.Engine.Sql.Splitting;
 
-/// <summary>Ponto de retoma do splitter (secção 13.3): posição absoluta em caracteres, linha e delimitador em vigor.</summary>
+/// <summary>Splitter resume point (section 13.3): absolute position in characters, line and the delimiter in effect.</summary>
 public readonly record struct SplitterPosition(long Offset, long Line, string Delimiter)
 {
     public static SplitterPosition Start(string delimiter = ";") => new(0, 1, delimiter);
 }
 
-/// <summary>Uma instrução separada em streaming, com posições absolutas (em caracteres) no texto todo.</summary>
-/// <param name="Text">Instrução sem o delimitador nem os espaços à volta.</param>
-/// <param name="Start">Posição do primeiro carácter da instrução.</param>
-/// <param name="End">Posição a seguir ao último carácter da instrução.</param>
-/// <param name="Line">Linha (a partir de 1) do primeiro carácter.</param>
-/// <param name="Delimiter">Delimitador em vigor quando a instrução acabou (para o SQL log).</param>
-/// <param name="Next">Onde retomar depois desta instrução: a seguir ao delimitador, ou à linha <c>DELIMITER</c> que a acabou.</param>
+/// <summary>A statement split in streaming, with absolute positions (in characters) in the whole text.</summary>
+/// <param name="Text">Statement without the delimiter or the surrounding whitespace.</param>
+/// <param name="Start">Position of the statement's first character.</param>
+/// <param name="End">Position after the statement's last character.</param>
+/// <param name="Line">Line (from 1) of the first character.</param>
+/// <param name="Delimiter">Delimiter in effect when the statement ended (for the SQL log).</param>
+/// <param name="Next">Where to resume after this statement: after the delimiter, or after the <c>DELIMITER</c> line that ended it.</param>
 public sealed record StreamedStatement(string Text, long Start, long End, long Line, string Delimiter, SplitterPosition Next);
 
 /// <summary>
-/// Splitter com estado entre buffers (secção 13.2, Run SQL file): as mesmas regras do <see cref="SqlSplitter"/>, mas o
-/// texto chega aos pedaços e as aspas, os comentários e o <c>DELIMITER</c> em vigor continuam no pedaço seguinte (o
-/// HeidiSQL perde o <c>DELIMITER</c> na fronteira dos 20 MB, anexo B §4.3). Só a instrução por acabar fica em memória.
+/// Splitter with state across buffers (section 13.2, Run SQL file): the same rules as <see cref="SqlSplitter"/>, but the
+/// text arrives in pieces and quotes, comments and the <c>DELIMITER</c> in effect carry over to the next piece
+/// (HeidiSQL loses the <c>DELIMITER</c> at the 20 MB boundary, appendix B §4.3). Only the unfinished statement stays in memory.
 /// </summary>
 public sealed class StreamingSqlSplitter
 {
@@ -35,7 +35,7 @@ public sealed class StreamingSqlSplitter
     private char[] _buffer = new char[4096];
     private int _length;
 
-    // Posição absoluta de _buffer[0].
+    // Absolute position of _buffer[0].
     private long _baseOffset;
     private int _scan;
     private int _statementStart;
@@ -52,8 +52,8 @@ public sealed class StreamingSqlSplitter
     }
 
     /// <summary>
-    /// Começa num ponto de retoma (<see cref="StreamedStatement.Next"/>); o texto passado a <see cref="Append"/> começa
-    /// nessa posição.
+    /// Starts at a resume point (<see cref="StreamedStatement.Next"/>); the text passed to <see cref="Append"/> starts
+    /// at that position.
     /// </summary>
     public StreamingSqlSplitter(SplitterPosition start)
     {
@@ -67,18 +67,18 @@ public sealed class StreamingSqlSplitter
         _baseOffset = start.Offset;
         _line = start.Line;
         _statementLine = start.Line;
-        // Um ponto de retoma vem a seguir a um delimitador ou antes do '\n' de uma linha DELIMITER, nunca no início de
-        // uma linha.
+        // A resume point comes after a delimiter or before the '\n' of a DELIMITER line, never at the start of
+        // a line.
         _atLineStart = start.Offset == 0;
     }
 
-    /// <summary>Delimitador em vigor.</summary>
+    /// <summary>Delimiter in effect.</summary>
     public string Delimiter { get; private set; }
 
-    /// <summary>Caracteres guardados da instrução por acabar (para limitar ao <c>max_allowed_packet</c>).</summary>
+    /// <summary>Characters kept for the unfinished statement (to cap it at <c>max_allowed_packet</c>).</summary>
     public int PendingLength => _length - _statementStart;
 
-    /// <summary>Junta um pedaço de texto e devolve as instruções que ficaram completas.</summary>
+    /// <summary>Adds a piece of text and returns the statements that became complete.</summary>
     public void Append(ReadOnlySpan<char> chunk, ICollection<StreamedStatement> output)
     {
         ArgumentNullException.ThrowIfNull(output);
@@ -90,7 +90,7 @@ public sealed class StreamingSqlSplitter
         Scan(final: false, output);
     }
 
-    /// <summary>Fim do texto: devolve a última instrução, mesmo sem delimitador.</summary>
+    /// <summary>End of the text: returns the last statement, even without a delimiter.</summary>
     public void Complete(ICollection<StreamedStatement> output)
     {
         ArgumentNullException.ThrowIfNull(output);
@@ -114,7 +114,7 @@ public sealed class StreamingSqlSplitter
             switch (_state)
             {
                 case State.Quoted:
-                    // Dentro de strings (a maior parte de um dump) salta até ao próximo carácter que importa.
+                    // Inside strings (most of a dump) skips to the next character that matters.
                     var rest = buffer.AsSpan(pos, length - pos);
                     var hit = _quote == '`' ? rest.IndexOfAny('`', '\n') : rest.IndexOfAny(_quote, '\\', '\n');
                     if (hit < 0)
@@ -172,7 +172,7 @@ public sealed class StreamingSqlSplitter
                         pos = length;
                         continue;
                     }
-                    // O '\n' é tratado no estado normal (conta a linha e marca o início da linha).
+                    // The '\n' is handled in the normal state (counts the line and marks the start of the line).
                     pos += newline;
                     _state = State.Normal;
                     continue;
@@ -209,7 +209,7 @@ public sealed class StreamingSqlSplitter
                     case CommandMatch.NeedMore:
                         goto Wait;
                     case CommandMatch.Yes:
-                        // A linha do DELIMITER não é enviada; o '\n' a seguir conta a linha. A retoma é depois dela.
+                        // The DELIMITER line is not sent; the '\n' after it counts the line. Resuming comes after it.
                         Emit(_statementStart, pos, output, new SplitterPosition(_baseOffset + pos + commandLength, _line, newDelimiter));
                         Delimiter = newDelimiter;
                         pos += commandLength;
@@ -252,7 +252,7 @@ public sealed class StreamingSqlSplitter
                     {
                         goto Wait;
                     }
-                    // "--" no fim do texto é um comentário, como no SqlSplitter.
+                    // "--" at the end of the text is a comment, as in SqlSplitter.
                     _state = State.LineComment;
                     pos += 2;
                     continue;
@@ -339,8 +339,8 @@ public sealed class StreamingSqlSplitter
     }
 
     /// <summary>
-    /// <c>DELIMITER xyz</c> no início da linha (as mesmas regras do <see cref="SqlSplitter"/>); sem o fim da linha no
-    /// buffer, espera por mais texto, mas só se o que já chegou ainda pode ser um comando.
+    /// <c>DELIMITER xyz</c> at the start of the line (the same rules as <see cref="SqlSplitter"/>); without the end of the line
+    /// in the buffer, waits for more text, but only if what has arrived could still be a command.
     /// </summary>
     private static CommandMatch TryReadDelimiterCommand(ReadOnlySpan<char> text, bool final, out string delimiter, out int length)
     {

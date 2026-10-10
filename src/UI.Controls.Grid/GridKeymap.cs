@@ -36,7 +36,7 @@ public enum GridCommand
     Copy,
 }
 
-/// <summary>Contexto do atalho: navegação no grid ou editor in-place aberto.</summary>
+/// <summary>Shortcut context: grid navigation or an open in-place editor.</summary>
 public enum GridKeyContext
 {
     Navigation,
@@ -46,9 +46,9 @@ public enum GridKeyContext
 public readonly record struct GridKeyBinding(Key Key, KeyModifiers Modifiers, GridKeyContext Context, GridCommand Command);
 
 /// <summary>
-/// Keymap declarativo do grid (secção 15.1, InputController): teclas da secção 4.4 e FAM-G05/G06.
-/// Reconfigurável substituindo <see cref="Bindings"/>. Os conflitos resolvem-se pelo contexto
-/// (Esc cancela a edição se o editor estiver aberto; senão descarta a linha).
+/// Declarative grid keymap (section 15.1, InputController): the keys of section 4.4 and FAM-G05/G06.
+/// Reconfigurable by replacing <see cref="Bindings"/>. Conflicts are resolved by context
+/// (Esc cancels editing if the editor is open; otherwise it discards the row).
 /// </summary>
 public sealed class GridKeymap
 {

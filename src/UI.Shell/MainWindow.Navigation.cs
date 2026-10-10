@@ -10,11 +10,11 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Seleção na árvore → tabs (FAM-L04, L08; anexo D A11): sessão → Host; base ou grupo → <c>USE</c> e Database; objeto
-/// → <c>USE</c>, definição em cache e Table tab só se o tab atual for Host ou Database (senão fica no Data ou na
-/// Query). Captions "Host" = sessão, "Database: x", "Table: y" com o ícone do tipo; Data só para tabelas, views e
-/// colunas. Um <c>USE</c> que falhe mostra o erro e volta ao nó anterior. O que se estava a carregar para a escolha
-/// anterior (dados, definição, editor) é cancelado: com um servidor lento, não fica a ocupar as ligações.
+/// Tree selection → tabs (FAM-L04, L08; appendix D A11): session → Host; database or group → <c>USE</c> and Database; object
+/// → <c>USE</c>, cached definition and Table tab only if the current tab is Host or Database (otherwise it stays on Data or
+/// Query). Captions "Host" = session, "Database: x", "Table: y" with the kind's icon; Data only for tables, views and
+/// columns. A failed <c>USE</c> shows the error and goes back to the previous node. Whatever was loading for the previous
+/// choice (data, definition, editor) is cancelled: with a slow server, it does not keep the connections busy.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -22,12 +22,12 @@ public sealed partial class MainWindow
     private bool _restoringTreeNode;
     private CancellationTokenSource? _editorLoad;
 
-    /// <summary>Trabalho pedido para o nó focado (definição do objeto), cancelado na escolha seguinte.</summary>
+    /// <summary>Work requested for the focused node (the object's definition), cancelled on the next choice.</summary>
     private CancellationTokenSource? _navigation;
 
     private async Task NavigateAsync(TreeNode node)
     {
-        // Antes do USE da base nova, que na ligação primária esperava pelo fim da carga do Data tab.
+        // Before the new database's USE, which on the primary connection waited for the Data tab load to finish.
         _navigation?.Cancel();
         var navigation = new CancellationTokenSource();
         _navigation = navigation;
@@ -57,7 +57,7 @@ public sealed partial class MainWindow
         {
             if (navigation.IsCancellationRequested)
             {
-                // Outro nó escolhido enquanto o USE esperava: a navegação seguinte trata das tabs.
+                // Another node chosen while the USE was waiting: the next navigation takes care of the tabs.
                 return;
             }
             if (tag.Object is null)
@@ -75,7 +75,7 @@ public sealed partial class MainWindow
                     _tabs.SelectedItem = _tabs.TableTab;
                 }
                 LoadObjectDefinition(open, tag.Object, navigation.Token);
-                // Uma tab que acabou de ser selecionada já carregou (SelectionChanged); a que ficou tem de recarregar.
+                // A tab that was just selected already loaded (SelectionChanged); the one that stayed has to reload.
                 if (ReferenceEquals(before, _tabs.SelectedItem))
                 {
                     if (ReferenceEquals(_tabs.SelectedItem, _tabs.TableTab))
@@ -89,7 +89,7 @@ public sealed partial class MainWindow
                 }
             }
         }
-        // O Host e o Database tab carregam ao ser selecionados; se já estavam, mudam de sessão ou de base aqui.
+        // The Host and Database tabs load when selected; if they already were, they switch session or database here.
         if (ReferenceEquals(before, _tabs.SelectedItem))
         {
             if (ReferenceEquals(_tabs.SelectedItem, _tabs.HostTab))
@@ -109,7 +109,7 @@ public sealed partial class MainWindow
         _ui.Refresh();
     }
 
-    /// <summary>Captions e visibilidade das tabs fixas para o nó (anexo D A11, ponto 4 e 5).</summary>
+    /// <summary>Captions and visibility of the fixed tabs for the node (appendix D A11, points 4 and 5).</summary>
     private void ApplyTabsFor(TreeNode node, OpenSession open)
     {
         MainTabsView.SetFixedCaption(_tabs.HostTab, open.Name);
@@ -142,7 +142,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary><c>USE</c> só quando a base muda; em erro, diálogo e volta ao nó anterior (anexo D A11).</summary>
+    /// <summary><c>USE</c> only when the database changes; on error, a dialog and back to the previous node (appendix D A11).</summary>
     private async Task<bool> UseDatabaseAsync(OpenSession open, string database, TreeNode node)
     {
         if (string.Equals(open.Host.CurrentDatabase, database, StringComparison.Ordinal))
@@ -175,7 +175,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Colunas, chaves e FKs de tabelas e views para a cache (o Table tab e o grid usam-nas).</summary>
+    /// <summary>Columns, keys and FKs of tables and views for the cache (the Table tab and the grid use them).</summary>
     private void LoadObjectDefinition(OpenSession open, DbObjectRef obj, CancellationToken cancellationToken)
     {
         if (obj.Kind is not (DbObjectKind.Table or DbObjectKind.View))
@@ -192,19 +192,19 @@ public sealed partial class MainWindow
             }
             catch (OperationCanceledException)
             {
-                // Outro nó escolhido entretanto.
+                // Another node chosen in the meantime.
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // Uma view inválida dá erro ao ler as chaves (o HeidiSQL avisa e continua).
+                // An invalid view gives an error when reading its keys (HeidiSQL warns and carries on).
                 _context.Log.Append(LogCategory.Error, obj.Kind == DbObjectKind.View ? "This view probably contains an error: " + ex.Message : ex.Message);
             }
         }
     }
 
     /// <summary>
-    /// Table tab: o table editor nas tabelas (Fase 7); nas views, rotinas, triggers e events, o editor por código
-    /// (Fase 13).
+    /// Table tab: the table editor for tables (phase 7); for views, routines, triggers and events, the code editor
+    /// (phase 13).
     /// </summary>
     private void LoadObjectEditor()
     {

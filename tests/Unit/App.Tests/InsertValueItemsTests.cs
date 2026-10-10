@@ -3,11 +3,11 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Insert value ▸ do grid (anexo D B16; FAM-G10).</summary>
+/// <summary>The grid's Insert value ▸ (appendix D B16; FAM-G10).</summary>
 public sealed class InsertValueItemsTests
 {
     [Fact]
-    public void DatasDoServidorUtcUnixEGuids()
+    public void ServerDatesUtcUnixAndGuids()
     {
         var guid = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
         var values = InsertValueItems.Compute(new DateTime(2026, 10, 6, 18, 30, 5), new DateTime(2026, 10, 6, 19, 0, 0), new DateTime(2026, 10, 6, 18, 0, 0), guid);
@@ -33,7 +33,7 @@ public sealed class InsertValueItemsTests
     [InlineData("CURRENT_TIMESTAMP", null)]
     [InlineData("NULL", null)]
     [InlineData(null, null)]
-    public void DefaultSoQuandoELiteral(string? expression, string? expected)
+    public void DefaultOnlyWhenLiteral(string? expression, string? expected)
     {
         var column = new ColumnDefinition("c", "VARCHAR(10)", new LogicalType(LogicalTypeKind.Text), true, expression, false, false, false, null);
         Assert.Equal(expected, InsertValueItems.DefaultLiteral(column));

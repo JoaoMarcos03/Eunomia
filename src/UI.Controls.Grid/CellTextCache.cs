@@ -5,11 +5,11 @@ using Avalonia.Media.TextFormatting;
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Cache de texto já preparado por célula (secção 15.1, Renderer: "cache de glyph runs"), para o paint
-/// não repetir trabalho em células que já estavam visíveis. Texto simples vira um <see cref="GlyphRun"/>
-/// sem shaping (<see cref="GlyphRunFactory"/>), desenhado com qualquer pincel; o resto usa
-/// <see cref="TextLayout"/> com shaping completo (fallback de fontes, RTL, marcas combinadas).
-/// Entradas não usadas há alguns frames saem quando a cache passa da capacidade. Só na UI thread.
+/// Cache of text already prepared per cell (section 15.1, Renderer: "glyph run cache"), so painting does not
+/// repeat work for cells that were already visible. Plain text becomes a <see cref="GlyphRun"/>
+/// without shaping (<see cref="GlyphRunFactory"/>), drawn with any brush; the rest uses
+/// <see cref="TextLayout"/> with full shaping (font fallback, RTL, combining marks).
+/// Entries unused for a few frames are dropped when the cache goes over capacity. UI thread only.
 /// </summary>
 internal sealed class CellTextCache
 {
@@ -23,13 +23,13 @@ internal sealed class CellTextCache
 
     public int Count => _entries.Count;
 
-    /// <summary>Entradas criadas (para benchmarks).</summary>
+    /// <summary>Entries created (for benchmarks).</summary>
     public long Created { get; private set; }
 
-    /// <summary>Entradas que precisaram de <see cref="TextLayout"/> (shaping completo).</summary>
+    /// <summary>Entries that needed a <see cref="TextLayout"/> (full shaping).</summary>
     public long CreatedWithShaping { get; private set; }
 
-    /// <summary>Desenha o texto da célula com o topo da linha em <paramref name="origin"/>.</summary>
+    /// <summary>Draws the cell text with the top of the row at <paramref name="origin"/>.</summary>
     public void Draw(
         DrawingContext context,
         long row,
@@ -73,7 +73,7 @@ internal sealed class CellTextCache
         }
         entry?.Dispose();
 
-        // Só aloca a string quando a célula não está em cache.
+        // Only allocates the string when the cell is not cached.
         var text = span.ToString();
         if (glyphs.TryCreate(text, maxWidth, alignRight, out var run, out var offsetX))
         {
@@ -81,7 +81,7 @@ internal sealed class CellTextCache
         }
         else
         {
-            // Texto muito maior do que pode caber é cortado antes do shaping (a elipse continua a aparecer).
+            // Text far larger than can fit is cut before shaping (the ellipsis still shows).
             var maxChars = (int)(maxWidth / 2.5) + 4;
             var shaped = text.Length > maxChars ? text[..SafeCut(text, maxChars)] + "…" : text;
             entry = new Entry(text, brush, maxWidth)
@@ -105,7 +105,7 @@ internal sealed class CellTextCache
         return entry;
     }
 
-    /// <summary>Fim de um frame: despeja entradas antigas se a cache estiver acima da capacidade.</summary>
+    /// <summary>End of a frame: evicts old entries if the cache is over capacity.</summary>
     public void EndFrame()
     {
         _frame++;
@@ -145,7 +145,7 @@ internal sealed class CellTextCache
     {
         public string Text { get; } = text;
 
-        /// <summary>Pincel cozido no layout (só no caminho com shaping).</summary>
+        /// <summary>Brush baked into the layout (only on the shaping path).</summary>
         public IBrush? Brush { get; } = brush;
 
         public double MaxWidth { get; } = maxWidth;

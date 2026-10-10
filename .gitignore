@@ -154,7 +154,7 @@ _TeamCity*
 coverage*.json
 coverage*.xml
 coverage*.info
-# Limiares da cobertura do Eunomia (build/coverage.py): versionados.
+# Eunomia coverage thresholds (build/coverage.py): versioned.
 !build/coverage-baseline.json
 
 # Visual Studio code coverage results
@@ -483,11 +483,11 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Artefactos do BenchmarkDotNet em bench/results (fica só o relatório .md)
+# BenchmarkDotNet artifacts in bench/results (only the .md report is kept)
 bench/results/micro/*.log
 bench/results/micro/results/*.csv
 bench/results/micro/results/*.html
 
-# Resultados TRX do dotnet test (CI e local)
+# dotnet test TRX results (CI and local)
 TestResults/
 

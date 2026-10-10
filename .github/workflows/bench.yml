@@ -1,6 +1,6 @@
-# Benchmarks (secção 22: bench.yml; secção 26). Correm à mão ou uma vez por semana, não em cada PR:
-# os runners partilhados não são a máquina de referência e os números servem só para tendência.
-# PR-04 (scroll) não corre aqui: precisa de um ecrã real com vsync (ver bench/README.md).
+# Benchmarks (spec section 22: bench.yml; section 26). They run by hand or once a week, not on every PR:
+# the shared runners are not the reference machine and the numbers only show trends.
+# PR-04 (scroll) does not run here: it needs a real screen with vsync (see bench/README.md).
 name: bench
 
 on:
@@ -34,10 +34,10 @@ jobs:
           path: BenchmarkDotNet.Artifacts/results/
 
   startup:
-    name: Arranque NativeAOT (PR-01) e memória (PR-16)
+    name: NativeAOT startup (PR-01) and memory (PR-16)
     runs-on: windows-latest
     timeout-minutes: 45
-    # A janela precisa de uma sessão de desktop; nos runners alojados isso não é garantido.
+    # The window needs a desktop session; hosted runners do not guarantee one.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4

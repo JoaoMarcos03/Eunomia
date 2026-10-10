@@ -8,9 +8,9 @@ using Eunomia.UI.Shell.Sessions;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Views, procedures, functions, triggers e events no Table tab, editados pelo <c>CREATE</c> (Fase 13): abrir o objeto
-/// mostra o código do servidor; Save apaga e volta a criar (com o antigo de volta se o novo falhar); "Create new ▸"
-/// abre um modelo. Depois de gravar, a árvore recarrega a base e foca o objeto.
+/// Views, procedures, functions, triggers and events in the Table tab, edited through their <c>CREATE</c> (phase 13): opening
+/// the object shows the server's code; Save drops and creates it again (with the old one back if the new one fails); "Create
+/// new ▸" opens a template. After saving, the tree reloads the database and focuses the object.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -20,7 +20,7 @@ public sealed partial class MainWindow
     private string? _codeEditorOriginal;
     private string _codeEditorInitial = string.Empty;
 
-    /// <summary>Editor por código aberto no Table tab (testes).</summary>
+    /// <summary>Code editor open in the Table tab (tests).</summary>
     internal ObjectCodeEditorView? CodeEditor => _tabs.TableTab.Content as ObjectCodeEditorView;
 
     private void InitObjectCode()
@@ -46,7 +46,7 @@ public sealed partial class MainWindow
         _ => ("Event", "event"),
     };
 
-    /// <summary>Create new ▸ View/Stored procedure/…: o modelo no Table tab (um trigger usa a tabela focada).</summary>
+    /// <summary>Create new ▸ View/Stored procedure/…: the template in the Table tab (a trigger uses the focused table).</summary>
     private async Task CreateCodeObjectAsync(DbObjectKind kind)
     {
         if (DatabaseOfFocus() is not { } target || target.Session.Host.ServerServices is not { } services)
@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         _tabs.SelectedItem = _tabs.TableTab;
     }
 
-    /// <summary>Abre um objeto existente com o código do servidor.</summary>
+    /// <summary>Opens an existing object with the server's code.</summary>
     private async Task OpenObjectCodeEditorAsync(OpenSession session, string database, DbObjectRef obj, CancellationToken cancellationToken)
     {
         try
@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         Views.MainTabsView.SetFixedHeader(_tabs.TableTab, caption + ": " + (obj?.Name ?? "[Untitled]"), icon);
     }
 
-    /// <summary>Save: valida que é um CREATE, grava, recarrega a base na árvore e foca o objeto gravado.</summary>
+    /// <summary>Save: checks it is a CREATE, saves, reloads the database in the tree and focuses the saved object.</summary>
     internal async Task<bool> SaveObjectCodeAsync(ObjectCodeEditorView view)
     {
         if (_codeEditorSession is not { } session || _codeEditorDatabase is not { } database)

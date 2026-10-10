@@ -6,9 +6,9 @@ using MySqlConnector;
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// Abre ligações MySQL/MariaDB com MySqlConnector (ADR-08). Sem pool (o SessionHost gere as ligações), variáveis de
-/// utilizador permitidas, zero dates preservadas, <c>LOAD DATA LOCAL</c> desligado (S4), affected rows reais (como o
-/// <c>mysql_affected_rows</c> do HeidiSQL) e sem timeout de comando no driver (D8: o cliente cancela).
+/// Opens MySQL/MariaDB connections with MySqlConnector (ADR-08). No pool (the SessionHost manages the connections), user
+/// variables allowed, zero dates preserved, <c>LOAD DATA LOCAL</c> off (S4), real affected rows (like HeidiSQL's
+/// <c>mysql_affected_rows</c>) and no command timeout in the driver (D8: the client cancels).
 /// </summary>
 public sealed class MySqlConnectionFactory : IConnectionFactory
 {
@@ -70,7 +70,7 @@ public sealed class MySqlConnectionFactory : IConnectionFactory
             ApplicationName = options.ApplicationName,
             DefaultCommandTimeout = 0,
             CharacterSet = "utf8mb4",
-            // 12.4: se o KILL QUERY não responder em 2 s, fecha-se o socket.
+            // 12.4: if KILL QUERY does not answer within 2 s, the socket is closed.
             CancellationTimeout = 2,
         };
         if (options.TlsFiles is { } files)
@@ -92,8 +92,8 @@ public sealed class MySqlConnectionFactory : IConnectionFactory
     }
 
     /// <summary>
-    /// Versão, <c>sql_mode</c> e a cifra TLS (<c>Ssl_cipher</c>: vazio sem TLS) numa só ida ao servidor. Se o
-    /// <c>SHOW STATUS</c> falhar (proxies), a cifra fica por saber e a ligação continua.
+    /// Version, <c>sql_mode</c> and the TLS cipher (<c>Ssl_cipher</c>: empty without TLS) in a single round trip. If
+    /// <c>SHOW STATUS</c> fails (proxies), the cipher stays unknown and the connection carries on.
     /// </summary>
     internal static async Task<(ServerIdentity Identity, string SqlMode, string? Encryption)> ReadIdentityAsync(MySqlConnection connection, CancellationToken cancellationToken)
     {
@@ -117,14 +117,14 @@ public sealed class MySqlConnectionFactory : IConnectionFactory
         return (ParseIdentity(versionText, comment), sqlMode, encryption);
     }
 
-    /// <summary>Motor e versão a partir de <c>VERSION()</c> ("10.4.32-MariaDB", "8.0.36", "5.5.5-10.6.12-MariaDB").</summary>
+    /// <summary>Engine and version from <c>VERSION()</c> ("10.4.32-MariaDB", "8.0.36", "5.5.5-10.6.12-MariaDB").</summary>
     public static ServerIdentity ParseIdentity(string versionText, string? comment)
     {
         ArgumentNullException.ThrowIfNull(versionText);
         var maria = versionText.Contains("mariadb", StringComparison.OrdinalIgnoreCase)
                     || (comment?.Contains("mariadb", StringComparison.OrdinalIgnoreCase) ?? false);
         var text = versionText;
-        // Proxies antigos anunciavam "5.5.5-10.x.y-MariaDB": a versão real vem a seguir.
+        // Old proxies announced "5.5.5-10.x.y-MariaDB": the real version comes after it.
         if (maria && text.StartsWith("5.5.5-", StringComparison.Ordinal))
         {
             text = text[6..];
@@ -135,7 +135,7 @@ public sealed class MySqlConnectionFactory : IConnectionFactory
     }
 }
 
-/// <summary>Uma ligação aberta: executor, metadata, ping e cancel (secção 14.1).</summary>
+/// <summary>An open connection: executor, metadata, ping and cancel (section 14.1).</summary>
 public sealed class MySqlConnectionHandle : IDbConnectionHandle
 {
     private readonly MySqlConnection _connection;
@@ -153,15 +153,15 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
 
     public ServerIdentity Server { get; }
 
-    /// <summary><c>@@sql_mode</c> da sessão, lido na abertura e em <see cref="RefreshSessionAsync"/>.</summary>
+    /// <summary>The session's <c>@@sql_mode</c>, read on opening and in <see cref="RefreshSessionAsync"/>.</summary>
     public string SqlMode { get; private set; } = string.Empty;
 
-    /// <summary>Dialeto com o modo atual da sessão (o <c>NO_BACKSLASH_ESCAPES</c> decide o <see cref="MySqlDialect.PlainStringLiteral"/>).</summary>
+    /// <summary>Dialect with the session's current mode (<c>NO_BACKSLASH_ESCAPES</c> decides <see cref="MySqlDialect.PlainStringLiteral"/>).</summary>
     public MySqlDialect Dialect { get; private set; } = null!;
 
     public bool IsRds { get; }
 
-    /// <summary>Relê o <c>@@SESSION.sql_mode</c> (depois do startup script ou de um <c>SET</c> do utilizador).</summary>
+    /// <summary>Reads <c>@@SESSION.sql_mode</c> again (after the startup script or a user <c>SET</c>).</summary>
     public async Task RefreshSessionAsync(CancellationToken cancellationToken)
     {
         var mode = await ExecuteScalarAsync("SELECT @@SESSION.sql_mode", cancellationToken).ConfigureAwait(false);
@@ -182,10 +182,10 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
 
     public IMetadataProvider Metadata { get; }
 
-    /// <summary>Base atual da ligação (depois de <c>USE</c>).</summary>
+    /// <summary>The connection's current database (after <c>USE</c>).</summary>
     public string? Database => string.IsNullOrEmpty(_connection.Database) ? null : _connection.Database;
 
-    /// <summary>Cifra TLS lida na abertura (<c>Ssl_cipher</c>), <c>""</c> sem TLS, <c>null</c> se não se sabe.</summary>
+    /// <summary>TLS cipher read on opening (<c>Ssl_cipher</c>), <c>""</c> without TLS, <c>null</c> if unknown.</summary>
     public string? Encryption { get; init; }
 
     internal MySqlConnection Connection => _connection;
@@ -196,7 +196,7 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
 
     internal MySqlCommand CreateCommand(string sql) => CreateCommand(sql, sql);
 
-    /// <summary>Comando com <paramref name="sql"/>; o SQL log mostra <paramref name="logged"/> (sem o que o cliente junta).</summary>
+    /// <summary>Command with <paramref name="sql"/>; the SQL log shows <paramref name="logged"/> (without what the client appends).</summary>
     internal MySqlCommand CreateCommand(string sql, string logged)
     {
         if (Guard?.Invoke(logged) is { } refused)
@@ -211,7 +211,7 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
 
     internal void Finished(MySqlCommand cmd) => Interlocked.CompareExchange(ref _running, null, cmd);
 
-    /// <summary>Cancela a instrução em curso com <c>KILL QUERY</c> por uma ligação auxiliar (feito pelo MySqlConnector).</summary>
+    /// <summary>Cancels the running statement with <c>KILL QUERY</c> through an auxiliary connection (done by MySqlConnector).</summary>
     public Task CancelCurrentAsync(CancellationToken cancellationToken)
     {
         Volatile.Read(ref _running)?.Cancel();
@@ -226,7 +226,7 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
         }
     }
 
-    /// <summary>Executa uma instrução sem resultado (startup script, <c>USE</c>, <c>SET</c>).</summary>
+    /// <summary>Runs a statement without a result (startup script, <c>USE</c>, <c>SET</c>).</summary>
     public async Task<int> ExecuteNonQueryAsync(string sql, CancellationToken cancellationToken)
     {
         await using var cmd = CreateCommand(sql);
@@ -241,8 +241,8 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
     }
 
     /// <summary>
-    /// <c>LOAD DATA LOCAL INFILE</c> alimentado pelo stream (<see cref="MySqlBulkLoader.SourceStream"/>): o servidor recebe
-    /// os dados sem ler ficheiros do cliente. O SQL log mostra a instrução com o stream no lugar do ficheiro.
+    /// <c>LOAD DATA LOCAL INFILE</c> fed by the stream (<see cref="MySqlBulkLoader.SourceStream"/>): the server receives
+    /// the data without reading files from the client. The SQL log shows the statement with the stream in place of the file.
     /// </summary>
     public async Task<long> BulkLoadAsync(BulkLoadRequest request, CancellationToken cancellationToken)
     {
@@ -287,13 +287,13 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
         }
         catch (MySqlException e) when (IsCancellation(e, cancellationToken))
         {
-            // O cancel lido do SourceStream chega embrulhado num erro do LOAD DATA quando ganha a corrida ao cancel do próprio
-            // MySqlConnector; para o motor, cancelar não é erro (o import mostrava um erro em vez de "cancelado").
+            // The cancel read from the SourceStream arrives wrapped in a LOAD DATA error when it wins the race against
+            // MySqlConnector's own cancel; for the engine, cancelling is not an error (the import showed an error instead of "cancelled").
             throw new OperationCanceledException(e.Message, e, cancellationToken);
         }
     }
 
-    /// <summary>O erro foi causado pelo cancel pedido pelo chamador (uma <see cref="OperationCanceledException"/> na cadeia).</summary>
+    /// <summary>The error was caused by the caller's cancel request (an <see cref="OperationCanceledException"/> in the chain).</summary>
     internal static bool IsCancellation(Exception exception, CancellationToken cancellationToken)
     {
         if (!cancellationToken.IsCancellationRequested)
@@ -310,7 +310,7 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
         return false;
     }
 
-    /// <summary>O <c>LOAD DATA</c> como o SQL log o mostra (o MySqlBulkLoader monta o texto real).</summary>
+    /// <summary>The <c>LOAD DATA</c> as the SQL log shows it (MySqlBulkLoader builds the real text).</summary>
     internal string DescribeBulkLoad(BulkLoadRequest request, string table)
     {
         var d = Dialect;
@@ -347,7 +347,7 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
         return sb.ToString();
     }
 
-    /// <summary>Lê o primeiro valor da primeira linha (ou <c>null</c>).</summary>
+    /// <summary>Reads the first value of the first row (or <c>null</c>).</summary>
     public async Task<object?> ExecuteScalarAsync(string sql, CancellationToken cancellationToken)
     {
         await using var cmd = CreateCommand(sql);
@@ -362,7 +362,7 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
         }
     }
 
-    /// <summary>Lê todas as linhas de uma query pequena (metadata) como texto; NULL fica <c>null</c>.</summary>
+    /// <summary>Reads every row of a small (metadata) query as text; NULL stays <c>null</c>.</summary>
     internal async Task<List<string?[]>> QueryRowsAsync(string sql, CancellationToken cancellationToken)
     {
         await using var cmd = CreateCommand(sql);
@@ -378,8 +378,8 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
     }
 
     /// <summary>
-    /// As linhas de cada result set de um batch com várias instruções, numa só ida ao servidor (num servidor remoto
-    /// cada ida conta).
+    /// The rows of each result set of a batch with several statements, in a single round trip (on a remote server
+    /// every round trip counts).
     /// </summary>
     internal async Task<List<List<string?[]>>> QueryResultSetsAsync(string sql, CancellationToken cancellationToken)
     {
@@ -416,7 +416,7 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
         return rows;
     }
 
-    /// <summary>Valor de uma coluna como texto, sem perdas (datas em formato ISO, binários em UTF-8).</summary>
+    /// <summary>Value of a column as text, lossless (dates in ISO format, binaries in UTF-8).</summary>
     internal static string AsText(DbDataReader reader, int ordinal)
     {
         var value = reader.GetValue(ordinal);

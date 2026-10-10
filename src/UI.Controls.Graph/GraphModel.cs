@@ -12,11 +12,11 @@ public enum GraphRowFlags
     Nullable = 8,
 }
 
-/// <summary>Uma coluna desenhada no nó (SV-01): nome, tipo, ícones PK/UNIQUE/FK e NULL; a cor vem da categoria do tipo.</summary>
-/// <param name="Category">Categoria de tipo (a ordem do <c>TypeCategory</c>): o canvas pede a cor a <see cref="SchemaCanvas.TypeColor"/>.</param>
+/// <summary>A column drawn in the node (SV-01): name, type, PK/UNIQUE/FK icons and NULL; the colour comes from the type category.</summary>
+/// <param name="Category">Type category (the <c>TypeCategory</c> order): the canvas asks <see cref="SchemaCanvas.TypeColor"/> for the colour.</param>
 public sealed record GraphRow(string Name, string Type, GraphRowFlags Flags, int Category = 6);
 
-/// <summary>Uma tabela do diagrama. A posição é do canto superior esquerdo, em coordenadas do diagrama.</summary>
+/// <summary>A table in the diagram. The position is the top-left corner, in diagram coordinates.</summary>
 public sealed class GraphNode(string id, string title, IReadOnlyList<GraphRow> rows)
 {
     public string Id { get; } = id;
@@ -27,18 +27,18 @@ public sealed class GraphNode(string id, string title, IReadOnlyList<GraphRow> r
 
     public Point Position { get; set; }
 
-    /// <summary>Tamanho calculado pelo canvas (cabeçalho e uma linha por coluna).</summary>
+    /// <summary>Size computed by the canvas (header and one row per column).</summary>
     public Size Size { get; internal set; }
 
     public Rect Bounds => new(Position, Size);
 
-    /// <summary>Escondida pelo utilizador (SV-10).</summary>
+    /// <summary>Hidden by the user (SV-10).</summary>
     public bool IsHidden { get; set; }
 
-    /// <summary>Nova desde o último layout guardado (SV-16: marcada até ser movida ou o diagrama relido).</summary>
+    /// <summary>New since the last saved layout (SV-16: highlighted until it is moved or the diagram is reloaded).</summary>
     public bool IsNew { get; set; }
 
-    /// <summary>Resultado da pesquisa (SV-06): <c>null</c> sem pesquisa; <c>false</c> fica esbatida.</summary>
+    /// <summary>Search result (SV-06): <c>null</c> without a search; <c>false</c> is dimmed.</summary>
     public bool? IsMatch { get; set; }
 
     public object? Tag { get; set; }
@@ -51,8 +51,8 @@ public enum GraphCardinality
 }
 
 /// <summary>
-/// Relação por FK (SV-02, SV-03): de <see cref="From"/> (a tabela com a FK, lado "muitos") para <see cref="To"/> (a
-/// referenciada), ligada às linhas das colunas.
+/// FK relation (SV-02, SV-03): from <see cref="From"/> (the table with the FK, the "many" side) to <see cref="To"/> (the
+/// referenced one), attached to the column rows.
 /// </summary>
 public sealed record GraphEdge(string Name, GraphNode From, IReadOnlyList<int> FromRows, GraphNode To, IReadOnlyList<int> ToRows, GraphCardinality Cardinality);
 
@@ -60,6 +60,6 @@ public sealed class GraphNodeEventArgs(GraphNode node, Point position) : EventAr
 {
     public GraphNode Node { get; } = node;
 
-    /// <summary>Posição no controlo (para abrir menus).</summary>
+    /// <summary>Position in the control (to open menus).</summary>
     public Point Position { get; } = position;
 }

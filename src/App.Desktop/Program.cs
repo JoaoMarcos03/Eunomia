@@ -8,7 +8,7 @@ internal static class Program
     public static int Main(string[] args)
     {
         StartupTrace.Mark("main");
-        // --timer-resolution N: pede resolução de N ms ao timer do Windows (para comparar nos benchmarks).
+        // --timer-resolution N: asks the Windows timer for N ms resolution (to compare in the benchmarks).
         var t = Array.IndexOf(args, "--timer-resolution");
         if (t >= 0 && t + 1 < args.Length && uint.TryParse(args[t + 1], out var period))
         {
@@ -16,7 +16,7 @@ internal static class Program
         }
         var builder = BuildAvaloniaApp();
         var options = new Win32PlatformOptions();
-        // --adapter texto: escolhe a GPU (ANGLE/D3D11) cuja descrição contém o texto; regista as disponíveis.
+        // --adapter text: picks the GPU (ANGLE/D3D11) whose description contains the text; logs the available ones.
         var a = Array.IndexOf(args, "--adapter");
         var wanted = a >= 0 && a + 1 < args.Length ? args[a + 1] : null;
         options.GraphicsAdapterSelectionCallback = adapters =>
@@ -27,7 +27,7 @@ internal static class Program
             GraphicsInfo.Selected = adapters.Count > 0 ? adapters[index].Description : null;
             return index;
         };
-        // --composition winui|dcomp|dxgi|redirection: força o modo de composição do Win32 (para comparar).
+        // --composition winui|dcomp|dxgi|redirection: forces the Win32 composition mode (to compare).
         var c = Array.IndexOf(args, "--composition");
         if (c >= 0 && c + 1 < args.Length)
         {
@@ -42,7 +42,7 @@ internal static class Program
                 },
             ];
         }
-        // --render angle|wgl|vulkan|software: força o modo de rendering do Win32 (para comparar nos benchmarks).
+        // --render angle|wgl|vulkan|software: forces the Win32 rendering mode (to compare in the benchmarks).
         var i = Array.IndexOf(args, "--render");
         if (i >= 0 && i + 1 < args.Length)
         {
@@ -58,7 +58,7 @@ internal static class Program
         return builder.With(options).StartWithClassicDesktopLifetime(args);
     }
 
-    /// <summary>GPUs vistas pelo Avalonia (só preenchido com ANGLE/D3D11).</summary>
+    /// <summary>GPUs seen by Avalonia (only filled with ANGLE/D3D11).</summary>
     internal static class GraphicsInfo
     {
         public static string[] Adapters { get; set; } = [];

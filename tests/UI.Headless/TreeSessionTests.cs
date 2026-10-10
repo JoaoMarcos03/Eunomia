@@ -9,18 +9,18 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Árvore de bases ligada a um servidor real (Fase 4): F5 que mantém o estado (FAM-T08), grupos e colunas (FAM-T01),
-/// favoritos por sessão (FAM-T03), estatísticas em background e estados (anexo D A2, A8).
+/// Database tree connected to a real server (phase 4): F5 that keeps the state (FAM-T08), groups and columns (FAM-T01),
+/// per-session favourites (FAM-T03), statistics in the background and states (appendix D A2, A8).
 /// </summary>
 public sealed class TreeSessionTests
 {
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task F5MantemBasesAbertasEOObjetoFocado()
+    public async Task F5KeepsDatabasesOpenAndTheFocusedObject()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db1 = NewDatabaseName("eunomia_t1_");
         var db2 = NewDatabaseName("eunomia_t2_");
         await ExecAsync(cs, $"CREATE DATABASE `{db1}`; CREATE DATABASE `{db2}`; CREATE TABLE `{db1}`.a (id INT); CREATE TABLE `{db1}`.b (id INT); CREATE TABLE `{db2}`.c (id INT);");
@@ -60,10 +60,10 @@ public sealed class TreeSessionTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task GruposColunasEOrdemNatural()
+    public async Task GroupsColumnsAndNaturalOrder()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_tg_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t10 (id INT PRIMARY KEY, name VARCHAR(20), born DATE, UNIQUE KEY u (name)); " +
             $"CREATE TABLE `{db}`.t2 (id INT) ENGINE=MEMORY; CREATE VIEW `{db}`.v AS SELECT 1 AS x; CREATE PROCEDURE `{db}`.p() SELECT 1;");
@@ -83,7 +83,7 @@ public sealed class TreeSessionTests
             Assert.True(Child(dbNode, "Functions").IsGhosted);
             var tables = Child(dbNode, "Tables");
             Assert.Equal(["t2", "t10"], tables.Children!.Select(t => t.Name));
-            // A engine (e o overlay) chega na segunda fase, depois dos nomes.
+            // The engine (and the overlay) arrives in the second phase, after the names.
             await WaitAsync(() => Child(tables, "t2").EngineOverlay == "MEMORY" ? "ok" : null);
             var t10 = Child(tables, "t10");
             Assert.True(t10.CanExpand);
@@ -95,11 +95,11 @@ public sealed class TreeSessionTests
             Assert.Equal(4, t10.Children![2].TextCategory); // Temporal
             window.Tree.Tree.FocusedNode = t10;
 
-            // Desligar os grupos reconstrói a árvore a partir da cache, com os tipos misturados por ordem natural.
+            // Turning the groups off rebuilds the tree from the cache, with the kinds mixed in natural order.
             Assert.True(await context.Commands.ExecuteAsync("tree.groupObjects"));
             var flat = await WaitAsync(() => root.Children?.FirstOrDefault() is { } d && !ReferenceEquals(d, dbNode) && d.Children?.Count == 4 ? d : null);
             Assert.Equal(["p", "t2", "t10", "v"], flat.Children!.Select(n => n.Name));
-            // O foco volta ao mesmo objeto (os grupos são transparentes no caminho).
+            // The focus goes back to the same object (groups are transparent in the path).
             await WaitAsync(() => ReferenceEquals(window.Tree.Tree.FocusedNode, Child(flat, "t10")) ? "ok" : null);
             Assert.False(settings.Tree.GroupObjects);
 
@@ -113,10 +113,10 @@ public sealed class TreeSessionTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FavoritosEstatisticasEEstados()
+    public async Task FavouritesStatisticsAndStates()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_tf_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT, v TEXT); INSERT INTO `{db}`.t VALUES (1, REPEAT('x', 5000)); CREATE TABLE `{db}`.u (id INT);");
         var dir = Path.Combine(Path.GetTempPath(), "eunomia-ui-" + Guid.NewGuid().ToString("N")[..8]);
@@ -126,7 +126,7 @@ public sealed class TreeSessionTests
             using var appDb = new SqliteAppDatabase(Path.Combine(dir, "app.db"));
             var (window, _, session, connector, _) = CreateShell(cs, db, appDatabase: appDb);
             var key = session.Id.ToString("D");
-            // Favorito importado do HeidiSQL (formato db||nome).
+            // Favourite imported from HeidiSQL (db||name format).
             appDb.SetFavorite(key, $"{db}||t", true);
             Assert.True(await window.ConnectAsync(window, session, null));
             var model = window.Tree.Tree.Model!;
@@ -150,7 +150,7 @@ public sealed class TreeSessionTests
             Assert.False(t.IsGhosted);
             Assert.True(u.IsGhosted);
 
-            // "Get full table status" está ligado por omissão: os tamanhos chegam depois dos nomes.
+            // "Get full table status" is on by default: the sizes arrive after the names.
             await WaitAsync(() => t.SizeBytes > 0 && dbNode.SizeBytes is not null ? "ok" : null);
             Assert.Equal(dbNode.SizeBytes, t.SizeBytes + u.SizeBytes);
             Assert.Equal(dbNode.SizeBytes, root.SizeBytes);

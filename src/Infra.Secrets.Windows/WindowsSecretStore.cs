@@ -7,10 +7,10 @@ using Eunomia.App.Secrets;
 namespace Eunomia.Infra.Secrets.Windows;
 
 /// <summary>
-/// Segredos no Windows Credential Manager (secção 23.2): <c>CRED_TYPE_GENERIC</c>, <c>CRED_PERSIST_LOCAL_MACHINE</c>,
-/// target <c>Eunomia/&lt;chave&gt;</c> (visível e removível pelo utilizador no Gestor de Credenciais). Segredos
-/// maiores do que o limite de 2.560 bytes do blob vão para um ficheiro DPAPI (scope do utilizador, com entropia da
-/// aplicação) na pasta indicada.
+/// Secrets in the Windows Credential Manager (section 23.2): <c>CRED_TYPE_GENERIC</c>, <c>CRED_PERSIST_LOCAL_MACHINE</c>,
+/// target <c>Eunomia/&lt;key&gt;</c> (visible and removable by the user in Credential Manager). Secrets larger than the
+/// blob's 2,560-byte limit go to a DPAPI file (user scope, with application entropy) in the given
+/// folder.
 /// </summary>
 public sealed partial class WindowsSecretStore(string targetPrefix, string largeSecretsDirectory) : ISecretStore
 {
@@ -86,7 +86,7 @@ public sealed partial class WindowsSecretStore(string targetPrefix, string large
         }
         finally
         {
-            // O segredo não fica em memória não gerida depois de escrito.
+            // The secret does not stay in unmanaged memory after being written.
             unsafe
             {
                 new Span<byte>((void*)blob, bytes.Length).Clear();
@@ -155,7 +155,7 @@ public sealed partial class WindowsSecretStore(string targetPrefix, string large
     private static partial void CredFree(IntPtr buffer);
 }
 
-/// <summary>DPAPI em scope do utilizador com entropia da aplicação (nunca <c>CRYPTPROTECT_LOCAL_MACHINE</c>).</summary>
+/// <summary>DPAPI in user scope with application entropy (never <c>CRYPTPROTECT_LOCAL_MACHINE</c>).</summary>
 public static partial class Dpapi
 {
     private const uint CryptProtectUiForbidden = 0x1;

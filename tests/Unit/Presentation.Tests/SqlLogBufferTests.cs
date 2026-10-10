@@ -7,7 +7,7 @@ namespace Eunomia.Presentation.Tests;
 public sealed class SqlLogBufferTests
 {
     [Fact]
-    public void SqlLevaODelimitadorEMensagensVaoEntreComentarios()
+    public void SqlGetsTheDelimiterAndMessagesGoInComments()
     {
         var log = new SqlLogBuffer(new LogOptions { Script = true });
 
@@ -28,7 +28,7 @@ public sealed class SqlLogBufferTests
     [InlineData(LogCategory.Info, "Info: Records: 3", LogLineKind.Info)]
     [InlineData(LogCategory.Info, "Connecting to localhost ...", LogLineKind.Comment)]
     [InlineData(LogCategory.UserSql, "SELECT 1", LogLineKind.Sql)]
-    public void TipoDeLinhaDaACor(LogCategory category, string message, LogLineKind kind)
+    public void LineKindGivesTheColour(LogCategory category, string message, LogLineKind kind)
     {
         var log = new SqlLogBuffer(new LogOptions());
 
@@ -36,7 +36,7 @@ public sealed class SqlLogBufferTests
     }
 
     [Fact]
-    public void GuardaSoAsUltimasLinhasComNumeracaoContinua()
+    public void KeepsOnlyTheLastLinesWithRunningNumbers()
     {
         var log = new SqlLogBuffer(new LogOptions { MaxLines = 300 });
         LogChange? last = null;
@@ -56,7 +56,7 @@ public sealed class SqlLogBufferTests
     }
 
     [Fact]
-    public void CortaLinhasLongasComReticencias()
+    public void CutsLongLinesWithAnEllipsis()
     {
         var log = new SqlLogBuffer(new LogOptions { MaxLineLength = 20 });
 
@@ -66,7 +66,7 @@ public sealed class SqlLogBufferTests
     }
 
     [Fact]
-    public void ZeroNaoCorta()
+    public void ZeroDoesNotCut()
     {
         var log = new SqlLogBuffer(new LogOptions { MaxLineLength = 0 });
         var sql = "SELECT '" + new string('x', 5000) + "'";
@@ -75,7 +75,7 @@ public sealed class SqlLogBufferTests
     }
 
     [Fact]
-    public void CategoriasDesligadasNaoEntram()
+    public void DisabledCategoriesAreLeftOut()
     {
         var log = new SqlLogBuffer(new LogOptions { InternalSql = false });
 
@@ -86,7 +86,7 @@ public sealed class SqlLogBufferTests
     }
 
     [Fact]
-    public void QuebrasDeLinhaPassamAEspacoETimestampOpcional()
+    public void LineBreaksBecomeSpacesAndOptionalTimestamp()
     {
         var clock = new FixedClock(new DateTimeOffset(2026, 10, 5, 14, 3, 9, 45, TimeSpan.Zero));
         var log = new SqlLogBuffer(new LogOptions { Timestamps = true }, clock);
@@ -97,7 +97,7 @@ public sealed class SqlLogBufferTests
     }
 
     [Fact]
-    public void ClearMantemANumeracao()
+    public void ClearKeepsTheNumbering()
     {
         var log = new SqlLogBuffer(new LogOptions());
         log.Append(LogCategory.UserSql, "SELECT 1");
@@ -116,13 +116,13 @@ public sealed class SqlLogBufferTests
     [InlineData(86_400 + 600, "1 day, 00:10 h")]
     [InlineData(4 * 86_400 + 600, "4 days, 00:10 h")]
     [InlineData(10 * 86_400 + 6 * 3600 + 52 * 60 + 30, "10 days, 06:52 h")]
-    public void DuracoesComoNoHeidiSql(int seconds, string expected)
+    public void DurationsAsInHeidiSql(int seconds, string expected)
     {
         Assert.Equal(expected, DurationFormatter.Format(TimeSpan.FromSeconds(seconds)));
     }
 
     [Fact]
-    public void StatusBarIdleEOcupado()
+    public void StatusBarIdleAndBusy()
     {
         var status = new StatusBarModel();
         Assert.False(status.IsBusy);

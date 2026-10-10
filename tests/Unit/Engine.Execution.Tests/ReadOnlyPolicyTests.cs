@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Execution.Tests;
 
-/// <summary>O que uma sessão read-only deixa enviar (secção 23.2; Fase 14): lista de permitidos.</summary>
+/// <summary>What a read-only session lets through (section 23.2; phase 14): an allow list.</summary>
 public sealed class ReadOnlyPolicyTests
 {
     [Theory]
@@ -26,7 +26,7 @@ public sealed class ReadOnlyPolicyTests
     [InlineData("TABLE t")]
     [InlineData("SELECT 1; SELECT 2;")]
     [InlineData("")]
-    public void LeiturasPassam(string sql)
+    public void ReadsGoThrough(string sql)
     {
         Assert.True(ReadOnlyPolicy.IsAllowed(sql), sql);
     }
@@ -66,7 +66,7 @@ public sealed class ReadOnlyPolicyTests
     [InlineData("FLUSH PRIVILEGES")]
     [InlineData("XA START 'x'")]
     [InlineData("HANDLER t OPEN")]
-    public void EscritasSaoRecusadas(string sql)
+    public void WritesAreRefused(string sql)
     {
         Assert.False(ReadOnlyPolicy.IsAllowed(sql), sql);
     }

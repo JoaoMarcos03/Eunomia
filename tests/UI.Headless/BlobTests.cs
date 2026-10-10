@@ -12,10 +12,10 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Save BLOB to file e Image preview (anexo D; popupDataGrid e Grid view options) contra o servidor.</summary>
+/// <summary>Save BLOB to file and Image preview (appendix D; popupDataGrid and Grid view options) against the server.</summary>
 public sealed class BlobTests
 {
-    /// <summary>PNG de ruído determinístico (bem mais de 256 bytes: no Data tab a célula vem cortada).</summary>
+    /// <summary>Deterministic noise PNG (well over 256 bytes: in the Data tab the cell comes cut).</summary>
     private static byte[] NoisePng(int width, int height)
     {
         using var bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
@@ -36,10 +36,10 @@ public sealed class BlobTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task GravaOBlobInteiroEMostraAImagem()
+    public async Task SavesTheWholeBlobAndShowsTheImage()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var png = NoisePng(40, 30);
         Assert.True(png.Length > 1000);
@@ -66,7 +66,7 @@ public sealed class BlobTests
             window.Tree.Tree.FocusedNode = TreeModel.ObjectsOf(dbNode).Single(n => n.Name == "media");
             await WaitAsync(() => window.DataGrid.RowCount == 1 ? "ok" : null);
 
-            // Save BLOB: a célula veio cortada (LEFT 256) e o ficheiro tem os bytes todos.
+            // Save BLOB: the cell came cut (LEFT 256) and the file has every byte.
             window.DataGrid.Focus();
             window.DataGrid.Selection.Focus(0, 1);
             Assert.True(context.Commands.StateOf("grid.saveBlob").CanExecute);
@@ -74,7 +74,7 @@ public sealed class BlobTests
             Assert.Equal("photo.png", suggested[^1]);
             Assert.Equal(png, await File.ReadAllBytesAsync(Path.Combine(folder, "photo.png")));
 
-            // Image preview: o painel aparece por baixo da árvore com a imagem da célula focada.
+            // Image preview: the panel appears below the tree with the focused cell's image.
             Assert.True(await context.Commands.ExecuteAsync("grid.imagePreview"));
             Assert.True(context.Commands.StateOf("grid.imagePreview").IsChecked);
             await window.PreviewLoad;
@@ -82,7 +82,7 @@ public sealed class BlobTests
             Assert.Equal(new PixelSize(40, 30), window.ImagePreview.Bitmap?.PixelSize);
             Assert.StartsWith("40 x 30, PNG, ", window.ImagePreview.Info, StringComparison.Ordinal);
 
-            // Texto: sem imagem; gravado em UTF-8 com .txt.
+            // Text: no image; written as UTF-8 with .txt.
             window.DataGrid.Selection.Focus(0, 2);
             await window.PreviewLoad;
             Assert.Null(window.ImagePreview.Bitmap);
@@ -92,7 +92,7 @@ public sealed class BlobTests
             Assert.Equal("notes.txt", suggested[^1]);
             Assert.Equal("ação_1 notes"u8.ToArray(), await File.ReadAllBytesAsync(Path.Combine(folder, "notes.txt")));
 
-            // Close preview esconde o painel e desliga o toggle.
+            // Close preview hides the panel and turns the toggle off.
             window.ImagePreview.CloseButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
             Assert.False(window.ImagePreview.IsVisible);
             Assert.False(context.Commands.StateOf("grid.imagePreview").IsChecked);
@@ -110,7 +110,7 @@ public sealed class BlobTests
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("light")]
     [InlineData("dark")]
-    public async Task SnapshotDoPainel(string theme)
+    public async Task PanelSnapshot(string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var panel = new ImagePreviewPanel();

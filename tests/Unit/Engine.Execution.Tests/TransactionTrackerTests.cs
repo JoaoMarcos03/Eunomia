@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Execution.Tests;
 
-/// <summary>Estado da transação da ligação primária seguido pelas instruções (secção 14.5; Fase 14).</summary>
+/// <summary>Transaction state of the primary connection tracked from its statements (section 14.5; phase 14).</summary>
 public sealed class TransactionTrackerTests
 {
     [Theory]
@@ -39,13 +39,13 @@ public sealed class TransactionTrackerTests
     [InlineData("TRUNCATE t", TransactionEffect.ImplicitCommit)]
     [InlineData("LOCK TABLES t WRITE", TransactionEffect.ImplicitCommit)]
     [InlineData("", TransactionEffect.None)]
-    public void ClassificaPelasPrimeirasPalavras(string sql, TransactionEffect expected)
+    public void ClassifiesByTheFirstWords(string sql, TransactionEffect expected)
     {
         Assert.Equal(expected, TransactionTracker.Classify(sql));
     }
 
     [Fact]
-    public void BeginAlteracoesECommit()
+    public void BeginChangesAndCommit()
     {
         var t = new TransactionTracker();
         var changes = 0;
@@ -66,7 +66,7 @@ public sealed class TransactionTrackerTests
     }
 
     [Fact]
-    public void AutocommitDesligadoAbreTransacaoImplicita()
+    public void AutocommitOffOpensAnImplicitTransaction()
     {
         var t = new TransactionTracker();
         t.Observe(["SET autocommit = 0"]);
@@ -77,7 +77,7 @@ public sealed class TransactionTrackerTests
         Assert.False(t.HasChanges);
         t.Observe(["DELETE FROM t"]);
         Assert.True(t.HasChanges);
-        // DDL faz commit implícito; a seguinte instrução abre outra (autocommit continua desligado).
+        // DDL commits implicitly; the next statement opens another one (autocommit stays off).
         t.Observe(["CREATE INDEX i ON t (a)"]);
         Assert.False(t.IsOpen);
         t.Observe(["INSERT INTO t VALUES (2)"]);
@@ -88,7 +88,7 @@ public sealed class TransactionTrackerTests
     }
 
     [Fact]
-    public void LigacaoPerdidaDizSeHaviaAlteracoes()
+    public void LostConnectionTellsWhetherThereWereChanges()
     {
         var t = new TransactionTracker();
         t.Observe(["START TRANSACTION", "INSERT INTO t VALUES (1)"]);

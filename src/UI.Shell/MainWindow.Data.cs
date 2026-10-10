@@ -14,28 +14,28 @@ using Eunomia.UI.Shell.Sessions;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Data tab sobre tabelas reais (Fase 5; secção 4.4; anexo D B2–B12): SELECT com truncagem, Next e Show all, label com
-/// as variantes de contagem, ordenação no servidor (clique no header, Sorting, Alt+S) e colunas ocultas, com o estado
-/// gravado por tabela no <c>app.db</c>.
+/// Data tab on real tables (phase 5; section 4.4; appendix D B2–B12): SELECT with truncation, Next and Show all, a label with
+/// the count variants, server-side sorting (header click, Sorting, Alt+S) and hidden columns, with the state
+/// saved per table in <c>app.db</c>.
 /// </summary>
 public sealed partial class MainWindow
 {
     private TableBrowser? _browser;
 
-    /// <summary>Linhas do browser com o caminho para os valores completos (Ctrl+C e edição de células cortadas).</summary>
+    /// <summary>The browser's rows with the path to the full values (Ctrl+C and editing of cut cells).</summary>
     private FullValueRowSource? _browserRows;
     private long? _restoreTopRow;
     private IReadOnlyList<int> _dataVisibleColumns = [];
     private (Guid Session, DbObjectRef Table)? _dataTarget;
 
     /// <summary>
-    /// Carga em curso do Data tab (primeira página, Next, Show all e a contagem da label), ou <c>null</c>. Escolher outra
-    /// coisa na árvore ou correr uma query na mesma sessão cancela-a (o driver manda <c>KILL QUERY</c>), em vez de a
-    /// ligação ficar ocupada até ao fim de uma tabela grande num servidor lento.
+    /// Data tab load in progress (first page, Next, Show all and the label's count), or <c>null</c>. Choosing something else
+    /// in the tree or running a query on the same session cancels it (the driver sends <c>KILL QUERY</c>), instead of the
+    /// connection staying busy until the end of a large table on a slow server.
     /// </summary>
     private CancellationTokenSource? _dataLoad;
 
-    /// <summary>Browser do Data tab (testes).</summary>
+    /// <summary>Data tab browser (tests).</summary>
     internal TableBrowser? DataBrowser => _browser;
 
     private void InitDataTab()
@@ -51,7 +51,7 @@ public sealed partial class MainWindow
         DataGrid.HeaderContextRequested += (_, _) => ShowColumnsPopup();
         DataGrid.NextPageRequested += (_, _) => _ = LoadMoreAsync(all: false);
         DataGrid.LastRowRequested += (_, _) => _ = ShowAllAndGoLastAsync();
-        // Botões First e Last da toolbar: Last é Show all e a última linha (anexo D B3).
+        // Toolbar First and Last buttons: Last is Show all and the last row (appendix D B3).
         c.SetHandler("grid.first", () =>
         {
             DataGrid.Selection.Focus(0, Math.Max(0, DataGrid.Selection.FocusedColumn));
@@ -62,7 +62,7 @@ public sealed partial class MainWindow
         c.SetHandler("data.showAll", _ => new ValueTask(LoadMoreAsync(all: true)), () => _browser?.CanLoadMore == true);
         c.SetHandler("grid.resetSorting", _ => new ValueTask(ChangeSortAsync([])), () => _browser is { Options.Sort.Count: > 0 });
 
-        // Filtro WHERE (anexo D B9): F9 e Ctrl+W no painel; F7 foca o multi column filter.
+        // WHERE filter (appendix D B9): F9 and Ctrl+W in the panel; F7 focuses the multi-column filter.
         Controls.Common.Input.CommandScope.SetContext(_dataView.FilterPanel, App.Commands.CommandContexts.FilterPanel);
         _dataView.ApplyFilterRequested += (_, _) => ApplyFilter(_dataView.FilterEditor.Text);
         _dataView.FilterEditor.CompletionProvider = (text, caret, ct) => ProposeFilterCompletionAsync(text, caret, ct);
@@ -106,7 +106,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Apply filter: o texto vai para os recentes da tabela (20, sem repetidos) e recarrega (anexo D B9).</summary>
+    /// <summary>Apply filter: the text goes to the table's recent filters (20, no duplicates) and reloads (appendix D B9).</summary>
     private void ApplyFilter(string text)
     {
         if (_dataTarget is not { } target || Sessions?.Connector.Find(target.Session) is not { } session)
@@ -128,7 +128,7 @@ public sealed partial class MainWindow
         LoadDataForFocusedNode(force: true);
     }
 
-    /// <summary>Clear (Ctrl+W) e Remove filter: limpa o filtro e o multi column filter e recarrega.</summary>
+    /// <summary>Clear (Ctrl+W) and Remove filter: clears the filter and the multi-column filter and reloads.</summary>
     private void ClearFilter()
     {
         _dataView.MultiColumnBox.Text = string.Empty;
@@ -140,7 +140,7 @@ public sealed partial class MainWindow
 
     private static TableKey KeyOf(OpenSession session, DbObjectRef table) => new(session.Id.ToString("D"), table.Schema, table.Name);
 
-    /// <summary>Estado por tabela no <c>app.db</c>; sem ele (medições, testes), só em memória.</summary>
+    /// <summary>Per-table state in <c>app.db</c>; without it (measurements, tests), only in memory.</summary>
     private string? GetTableState(TableKey table, string name) =>
         _context.AppDatabase is { } db ? db.GetTableState(table, name) : _memoryTableState.GetValueOrDefault((table, name));
 
@@ -157,8 +157,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Data tab do objeto focado (tabela ou view). Só recarrega se a tabela mudou ou com <paramref name="force"/> (F5,
-    /// ordenação, colunas, filtro); ao recarregar a mesma tabela mantém as linhas já pedidas (anexo D B3).
+    /// Data tab of the focused object (table or view). Only reloads if the table changed or with <paramref name="force"/> (F5,
+    /// sorting, columns, filter); reloading the same table keeps the rows already requested (appendix D B3).
     /// </summary>
     private void LoadDataForFocusedNode(bool force = false)
     {
@@ -178,7 +178,7 @@ public sealed partial class MainWindow
         _ = LoadTableAsync(session, obj, wanted, BeginDataLoad());
     }
 
-    /// <summary>Começa uma carga do Data tab; a que estava em curso é cancelada.</summary>
+    /// <summary>Starts a Data tab load; the one in progress is cancelled.</summary>
     private CancellationTokenSource BeginDataLoad()
     {
         _dataLoad?.Cancel();
@@ -187,7 +187,7 @@ public sealed partial class MainWindow
         return cts;
     }
 
-    /// <summary>Fim de uma carga; devolve se não ficou outra em curso (a status bar volta a idle).</summary>
+    /// <summary>End of a load; returns whether no other one is in progress (the status bar goes back to idle).</summary>
     private bool EndDataLoad(CancellationTokenSource cts)
     {
         if (ReferenceEquals(_dataLoad, cts))
@@ -197,16 +197,16 @@ public sealed partial class MainWindow
         return _dataLoad is null;
     }
 
-    /// <summary>O Data tab está a carregar uma tabela desta sessão.</summary>
+    /// <summary>The Data tab is loading a table of this session.</summary>
     private bool IsLoadingData(OpenSession session) => _dataLoad is not null && _dataTarget?.Session == session.Id;
 
-    /// <summary>O nó é a tabela (ou uma coluna dela) que o Data tab mostra ou está a carregar.</summary>
+    /// <summary>The node is the table (or one of its columns) that the Data tab shows or is loading.</summary>
     private bool IsDataTarget(TreeNode node) =>
         node.Tag is TreeObjectTag { Object: { } obj } tag && _dataTarget is { } target && target.Session == tag.Session && target.Table == obj;
 
     /// <summary>
-    /// Abandona a carga em curso (outra escolha na árvore, query na mesma sessão): o servidor para a query e a ligação
-    /// fica livre logo; voltar à tabela carrega-a de novo.
+    /// Abandons the load in progress (another choice in the tree, a query on the same session): the server stops the query and the
+    /// connection is free right away; going back to the table loads it again.
     /// </summary>
     private void AbandonDataLoad()
     {
@@ -242,7 +242,7 @@ public sealed partial class MainWindow
     private async Task LoadTableAsync(OpenSession session, DbObjectRef obj, long wanted, CancellationTokenSource cts)
     {
         var cancellationToken = cts.Token;
-        // Mudar de tabela ou recarregar grava antes a linha alterada (anexo D B15).
+        // Switching table or reloading saves the changed row first (appendix D B15).
         if (DataGrid.IsEditing || DataGrid.Edits.HasPending)
         {
             await DataGrid.PostAsync();
@@ -270,10 +270,10 @@ public sealed partial class MainWindow
             }
             if (!ReferenceEquals(_browser, browser))
             {
-                // Sem result set (não devia acontecer com SELECT): mostra pelo menos a label.
+                // No result set (should not happen with SELECT): shows the label at least.
                 ShowBrowser(browser, session);
             }
-            // Com menos linhas do que antes (filtro), o foco passa para a última; o scroll volta onde estava.
+            // With fewer rows than before (filter), the focus moves to the last one; the scroll goes back to where it was.
             var rows = browser.Loaded;
             if (DataGrid.Selection.FocusedRow >= rows)
             {
@@ -289,11 +289,11 @@ public sealed partial class MainWindow
         catch (Exception ex) when (ex is OperationCanceledException
                                    || (cancellationToken.IsCancellationRequested && ex is DbOperationException or Engine.Execution.SessionOperationException))
         {
-            // Cancelada (Esc, outra escolha na árvore, Drop da tabela): o erro de um pedido que já ia a caminho conta como cancelamento.
+            // Cancelled (Esc, another choice in the tree, Drop of the table): the error of a request already in flight counts as a cancellation.
             browser?.Dispose();
             if (ReferenceEquals(_dataLoad, cts))
             {
-                // Esc: a tabela ficou por carregar (o grid pode ter ainda a anterior); voltar a ela carrega de novo.
+                // Esc: the table was left unloaded (the grid may still show the previous one); going back to it loads it again.
                 _dataTarget = null;
             }
         }
@@ -316,7 +316,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Põe a fonte do browser no grid (colunas ocultas fora, indicadores de ordenação) e larga o browser anterior.</summary>
+    /// <summary>Puts the browser's source in the grid (hidden columns out, sort indicators) and releases the previous browser.</summary>
     private void ShowBrowser(TableBrowser browser, OpenSession session)
     {
         if (ReferenceEquals(_browser, browser) || browser.Source is not { } source)
@@ -331,7 +331,7 @@ public sealed partial class MainWindow
         DataGrid.SessionColor = session.Color is { } rgb ? 0xFF000000 | rgb : 0;
         _browserSession = session;
         DataGrid.IsReadOnly = !IsEditable(browser) || _browserSession?.Definition.ReadOnly == true;
-        // Recarregar a mesma tabela (F5, filtro, ordenação) mantém a célula focada e o scroll (anexo D A9).
+        // Reloading the same table (F5, filter, sorting) keeps the focused cell and the scroll (appendix D A9).
         var same = previous is not null && previous.Table.Ref == browser.Table.Ref;
         var (focusRow, focusColumn, topRow) = (DataGrid.Selection.FocusedRow, DataGrid.Selection.FocusedColumn, DataGrid.TopRow);
         ResetDataGridFilter();
@@ -351,7 +351,7 @@ public sealed partial class MainWindow
         var filtered = DataTabQuery.NormalizeFilter(browser.Options.Filter) is not null;
         if (previous is null || previous.Table.Ref != browser.Table.Ref)
         {
-            // Outra tabela: o painel mostra o filtro gravado dela (e abre se houver).
+            // Another table: the panel shows its saved filter (and opens if there is one).
             _dataView.MultiColumnBox.Text = string.Empty;
             _dataView.FilterEditor.Text = browser.Options.Filter ?? string.Empty;
             _dataView.FilterPanel.IsVisible = filtered;
@@ -376,7 +376,7 @@ public sealed partial class MainWindow
         return result;
     }
 
-    /// <summary>"Query exact row count" mudou: conta de novo (numa carga em curso, a contagem do fim já usa a opção nova).</summary>
+    /// <summary>"Query exact row count" changed: counts again (in a load in progress, the final count already uses the new option).</summary>
     private async Task RecountAsync()
     {
         if (_dataLoad is not null || _browser is null)
@@ -394,7 +394,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Label (anexo D B6): contagem aproximada (ou exata) só quando há limite ou filtro.</summary>
+    /// <summary>Label (appendix D B6): approximate (or exact) count only when there is a limit or a filter.</summary>
     private async Task UpdateDataLabelAsync(CancellationToken cancellationToken)
     {
         if (_browser is not { } browser)
@@ -416,7 +416,7 @@ public sealed partial class MainWindow
             }
             catch (OperationCanceledException)
             {
-                // Um COUNT(*) de uma tabela grande não prende a ligação de metadata depois de se escolher outra coisa.
+                // A COUNT(*) of a large table does not hold the metadata connection after something else is chosen.
                 return;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -438,7 +438,7 @@ public sealed partial class MainWindow
         _ui.Refresh();
     }
 
-    /// <summary>Next (mais um passo) ou Show all (até ao máximo); foca a primeira linha nova (anexo D B3).</summary>
+    /// <summary>Next (one more step) or Show all (up to the maximum); focuses the first new row (appendix D B3).</summary>
     private async Task LoadMoreAsync(bool all)
     {
         if (_browser is not { CanLoadMore: true } browser)
@@ -460,7 +460,7 @@ public sealed partial class MainWindow
         }
         catch (OperationCanceledException)
         {
-            // Esc ou outra escolha: as linhas que já chegaram ficam e Next e Show all continuam daí.
+            // Esc or another choice: the rows that already arrived stay and Next and Show all continue from there.
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -476,7 +476,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Ctrl+End e Last: Show all (se houver mais) e foco na última linha.</summary>
+    /// <summary>Ctrl+End and Last: Show all (if there is more) and focus on the last row.</summary>
     private async Task ShowAllAndGoLastAsync()
     {
         if (_browser is { CanLoadMore: true })
@@ -491,7 +491,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Clique no header: ASC → DESC → removida; coluna nova acrescentada, DESC com Shift (anexo D B7).</summary>
+    /// <summary>Header click: ASC → DESC → removed; a new column is appended, DESC with Shift (appendix D B7).</summary>
     private void OnDataHeaderClicked(object? sender, GridHeaderEventArgs e)
     {
         if (_browser is not { } browser || DataGrid.Source is not ProjectedRowSource projected || e.Column < 0)
@@ -521,7 +521,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Columns (v/t): grava as colunas ocultas da tabela e recarrega (anexo D B8).</summary>
+    /// <summary>Columns (v/t): saves the table's hidden columns and reloads (appendix D B8).</summary>
     private void ShowColumnsPopup()
     {
         if (_browser is not { } browser || _dataTarget is not { } target || Sessions?.Connector.Find(target.Session) is not { } session)

@@ -1,5 +1,5 @@
 using BenchmarkDotNet.Running;
 
-// Uso: dotnet run -c Release --project bench/Micro -- --filter *
-// Resultados em BenchmarkDotNet.Artifacts/results.
+// Usage: dotnet run -c Release --project bench/Micro -- --filter *
+// Results in BenchmarkDotNet.Artifacts/results.
 BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);

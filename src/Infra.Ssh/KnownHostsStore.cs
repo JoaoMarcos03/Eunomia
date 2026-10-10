@@ -9,14 +9,14 @@ public enum HostKeyCheck
     Unknown,
     Mismatch,
 
-    /// <summary>Nenhuma chave deste tipo, mas o host já tem uma chave de outro tipo gravada.</summary>
+    /// <summary>No key of this type, but the host already has a key of another type saved.</summary>
     OtherTypeKnown,
 }
 
 /// <summary>
-/// known_hosts próprio da aplicação (secção 23.2: confirmação no primeiro contacto, bloqueio em mudança de chave),
-/// no formato do OpenSSH: <c>host tipo base64</c>, ou <c>[host]:porta tipo base64</c> quando a porta não é 22.
-/// Escrita atómica; thread-safe.
+/// The application's own known_hosts (section 23.2: confirmation on first contact, blocking on a key change),
+/// in OpenSSH format: <c>host type base64</c>, or <c>[host]:port type base64</c> when the port is not 22.
+/// Atomic write; thread-safe.
 /// </summary>
 public sealed class KnownHostsStore(string path)
 {
@@ -56,7 +56,7 @@ public sealed class KnownHostsStore(string path)
         return sawType ? HostKeyCheck.Mismatch : sawOtherType ? HostKeyCheck.OtherTypeKnown : HostKeyCheck.Unknown;
     }
 
-    /// <summary>Grava a chave (substitui a anterior do mesmo host e tipo).</summary>
+    /// <summary>Saves the key (replaces the previous one for the same host and type).</summary>
     public void Trust(string host, int port, string keyType, ReadOnlySpan<byte> key)
     {
         var pattern = HostPattern(host, port);
@@ -81,7 +81,7 @@ public sealed class KnownHostsStore(string path)
         }
     }
 
-    /// <summary>Fingerprint SHA256 no formato do OpenSSH (base64 sem padding).</summary>
+    /// <summary>SHA256 fingerprint in OpenSSH format (base64 without padding).</summary>
     public static string Fingerprint(ReadOnlySpan<byte> key) => "SHA256:" + Convert.ToBase64String(SHA256.HashData(key)).TrimEnd('=');
 
     private sealed record Entry(string[] Hosts, string KeyType, string Key);

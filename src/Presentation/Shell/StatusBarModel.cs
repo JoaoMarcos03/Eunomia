@@ -3,9 +3,9 @@ using System.Globalization;
 namespace Eunomia.Presentation.Shell;
 
 /// <summary>
-/// Os 7 painéis da status bar (secção 5.3, anexo C §1.6, FAM-L06): 0 info, 1 posição <c>r:c (sel)</c>,
-/// 2 "Connected: …", 3 tipo e versão do servidor, 4 "Uptime: …", 5 "Server time: …" com barra de progresso por
-/// cima, 6 "Idle." ou a mensagem da operação em curso.
+/// The 7 status bar panels (section 5.3, appendix C §1.6, FAM-L06): 0 info, 1 position <c>r:c (sel)</c>,
+/// 2 "Connected: …", 3 server type and version, 4 "Uptime: …", 5 "Server time: …" with a progress bar on
+/// top, 6 "Idle." or the message of the operation in progress.
 /// </summary>
 public sealed class StatusBarModel : ObservableObject
 {
@@ -29,8 +29,8 @@ public sealed class StatusBarModel : ObservableObject
     public string Connected { get => _connected; set => Set(ref _connected, value); }
 
     /// <summary>
-    /// Estado da transação da sessão ativa (secção 14.5): vazio, "Transaction open" ou "Uncommitted changes"; quando não
-    /// está vazio, o painel 2 mostra-o em vez do tempo de ligação, com fundo de aviso.
+    /// Transaction state of the active session (section 14.5): empty, "Transaction open" or "Uncommitted changes"; when it
+    /// is not empty, panel 2 shows it instead of the connection time, with a warning background.
     /// </summary>
     public string Transaction { get => _transaction; set => Set(ref _transaction, value); }
 
@@ -38,19 +38,19 @@ public sealed class StatusBarModel : ObservableObject
 
     public string Server { get => _server; set => Set(ref _server, value); }
 
-    /// <summary>Hover do painel 3: pares chave/valor da ligação.</summary>
+    /// <summary>Panel 3 hover: key/value pairs of the connection.</summary>
     public string? ServerTooltip { get => _serverTooltip; set => Set(ref _serverTooltip, value); }
 
     public string Uptime { get => _uptime; set => Set(ref _uptime, value); }
 
     public string ServerTime { get => _serverTime; set => Set(ref _serverTime, value); }
 
-    /// <summary>Painel 6; qualquer texto diferente de <see cref="IdleText"/> mostra a ampulheta.</summary>
+    /// <summary>Panel 6; any text other than <see cref="IdleText"/> shows the hourglass.</summary>
     public string Busy { get => _busy; set => Set(ref _busy, value); }
 
     public bool IsBusy => !string.Equals(Busy, IdleText, StringComparison.Ordinal);
 
-    /// <summary>Progresso 0–1 desenhado por cima do painel 5; <c>null</c> esconde a barra.</summary>
+    /// <summary>Progress 0–1 drawn on top of panel 5; <c>null</c> hides the bar.</summary>
     public double? Progress { get => _progress; set => Set(ref _progress, value); }
 
     public void SetIdle()
@@ -78,8 +78,8 @@ public sealed class StatusBarModel : ObservableObject
 }
 
 /// <summary>
-/// Durações como no HeidiSQL ("Connected: 4 days, 00:10 h", "Uptime: 10 days, 06:52 h"). Abaixo de um dia
-/// mostra também os segundos ("00:05:12 h").
+/// Durations as in HeidiSQL ("Connected: 4 days, 00:10 h", "Uptime: 10 days, 06:52 h"). Below one day it
+/// also shows the seconds ("00:05:12 h").
 /// </summary>
 public static class DurationFormatter
 {

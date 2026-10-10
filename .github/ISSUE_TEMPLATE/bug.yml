@@ -1,115 +1,116 @@
-name: Erro
-description: Algo não funciona, funciona mal ou a aplicação fechou.
-title: "[Erro] "
+name: Bug
+description: Something does not work, works wrongly, or the app closed.
+title: "[Bug] "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Obrigado por testar o Eunomia. Quanto mais exatos forem os passos, mais depressa o erro se resolve.
-        **Não coles passwords, dados de clientes nem SQL com dados sensíveis.**
+        Thanks for testing Eunomia. The more precise the steps, the faster the bug gets fixed.
+        **Do not paste passwords, customer data or SQL containing sensitive data.**
 
   - type: input
-    id: versao
+    id: version
     attributes:
-      label: Versão do Eunomia
-      description: Em Help › About, ou no título da janela (por exemplo `0.13.1`).
-      placeholder: "0.13.1"
+      label: Eunomia version
+      description: In Help › About, or in the window title (for example `1.0.0-beta.1`).
+      placeholder: "1.0.0-beta.1"
     validations:
       required: true
 
   - type: input
-    id: windows
+    id: os
     attributes:
-      label: Versão do Windows
-      description: "Win+R, `winver`, Enter: copia a linha \"Versão ... (Compilação do SO ...)\"."
-      placeholder: "Windows 11 Pro 24H2 (compilação 26100.2314)"
+      label: Operating system and version
+      description: "Windows: Win+R, `winver`, Enter. macOS: Apple menu › About This Mac. Linux: distribution, version and desktop (X11 or Wayland)."
+      placeholder: "Windows 11 Pro 24H2 (build 26100.2314) / macOS 15.1 / Ubuntu 24.04, GNOME on Wayland"
     validations:
       required: true
 
   - type: dropdown
-    id: escala
+    id: scale
     attributes:
-      label: Escala do ecrã
-      description: Definições › Sistema › Ecrã › Escala. Se usas vários monitores, a do monitor onde estava a janela.
+      label: Display scale
+      description: Settings › System › Display › Scale. With several monitors, the one where the window was.
       options:
         - "100%"
         - "125%"
         - "150%"
         - "175%"
-        - "200% ou mais"
-        - "Outra / não sei"
+        - "200% or more"
+        - "Other / don't know"
     validations:
       required: true
 
   - type: dropdown
-    id: servidor
+    id: server
     attributes:
-      label: Servidor
+      label: Server
       options:
         - MySQL
         - MariaDB
-        - Outro (Percona, Aurora, TiDB…)
-        - Não se aplica (o erro não depende do servidor)
+        - Other (Percona, Aurora, TiDB…)
+        - Not applicable (the bug does not depend on the server)
     validations:
       required: true
 
   - type: input
-    id: servidor-versao
+    id: server-version
     attributes:
-      label: Versão do servidor
-      description: "Aparece na status bar depois de ligar, ou com `SELECT VERSION();`."
+      label: Server version
+      description: "Shown in the status bar after connecting, or with `SELECT VERSION();`."
       placeholder: "8.0.36 / 10.11.6-MariaDB"
 
   - type: dropdown
-    id: ligacao
+    id: connection
     attributes:
-      label: Tipo de ligação
+      label: Connection type
       options:
-        - Local (mesma máquina)
-        - Rede (TCP/IP direto)
-        - Túnel SSH
-        - Não se aplica
+        - Local (same machine)
+        - Network (direct TCP/IP)
+        - SSH tunnel
+        - Not applicable
 
   - type: textarea
-    id: passos
+    id: steps
     attributes:
-      label: Passos para reproduzir
-      description: Um passo por linha, a partir do arranque da aplicação.
+      label: Steps to reproduce
+      description: One step per line, starting from launching the app.
       placeholder: |
-        1. Abrir a sessão "local"
-        2. Clicar na tabela `clientes`
-        3. Abrir o tab Data
+        1. Open the "local" session
+        2. Click the `customers` table
+        3. Open the Data tab
         4. ...
     validations:
       required: true
 
   - type: textarea
-    id: esperado
+    id: expected
     attributes:
-      label: O que esperavas que acontecesse
+      label: What you expected to happen
     validations:
       required: true
 
   - type: textarea
-    id: obtido
+    id: actual
     attributes:
-      label: O que aconteceu
-      description: Mensagem de erro (texto exato), o que apareceu no SQL log e, se ajudar, uma captura de ecrã (podes colar a imagem aqui).
+      label: What happened
+      description: The error message (exact text), what appeared in the SQL log and, if it helps, a screenshot (you can paste the image here).
     validations:
       required: true
 
   - type: textarea
     id: crash
     attributes:
-      label: Crash report (se existir)
+      label: Crash report (if any)
       description: |
-        Se a aplicação fechou ou mostrou um erro inesperado, abre `%LOCALAPPDATA%\Eunomia\logs` (Win+R, cola o caminho, Enter)
-        e arrasta para aqui o `crash-*.json` mais recente (ou um ZIP com ele). Na versão portable fica em `data\logs`, ao lado do `Eunomia.exe`.
-        O ficheiro não leva SQL, valores, hostnames nem utilizadores.
+        If the app closed or showed an unexpected error, open the logs folder and drag the most recent `crash-*.json` here (or a ZIP with it):
+        `%LOCALAPPDATA%\Eunomia\logs` on Windows (Win+R, paste the path, Enter; `data\logs` next to `Eunomia.exe` in portable mode),
+        `~/Library/Application Support/Eunomia/logs` on macOS, `~/.local/share/Eunomia/logs` on Linux.
+        The file contains no SQL, values, host names or user names.
 
   - type: textarea
-    id: notas
+    id: notes
     attributes:
-      label: Mais alguma coisa
-      description: Acontece sempre ou só às vezes? Funcionava numa versão anterior? Como faz o HeidiSQL no mesmo caso?
+      label: Anything else
+      description: Does it always happen or only sometimes? Did it work in an earlier version? What does HeidiSQL do in the same case?

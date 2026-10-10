@@ -4,7 +4,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.Engine.Transfer;
 
-/// <summary>Como um valor de uma coluna é escrito num INSERT (anexo B §2.3.4).</summary>
+/// <summary>How a column value is written in an INSERT (appendix B §2.3.4).</summary>
 internal enum SqlLiteralKind
 {
     Integer,
@@ -20,10 +20,10 @@ internal enum SqlLiteralKind
 }
 
 /// <summary>
-/// Literais SQL do MySQL/MariaDB escritos diretamente em UTF-8, sem uma string por valor (anexo B §2.3.4): NULL,
-/// números sem aspas, BIT como <c>b'…'</c>, binário e geometria como <c>_binary 0x…</c> (vazio como <c>''</c>), texto
-/// entre plicas com <c>\\</c>, <c>\'</c>, <c>\r</c>, <c>\n</c> e <c>\0</c>. FLOAT e DOUBLE com o valor mais curto que
-/// volta ao mesmo número.
+/// MySQL/MariaDB SQL literals written straight as UTF-8, without a string per value (appendix B §2.3.4): NULL,
+/// numbers unquoted, BIT as <c>b'…'</c>, binary and geometry as <c>_binary 0x…</c> (empty as <c>''</c>), text
+/// single-quoted with <c>\\</c>, <c>\'</c>, <c>\r</c>, <c>\n</c> and <c>\0</c>. FLOAT and DOUBLE with the shortest value
+/// that round-trips to the same number.
 /// </summary>
 internal static class SqlLiteralWriter
 {
@@ -113,7 +113,7 @@ internal static class SqlLiteralWriter
         }
     }
 
-    /// <summary>Texto entre plicas com os escapes do MySQL.</summary>
+    /// <summary>Single-quoted text with MySQL's escapes.</summary>
     public static void WriteText(ByteBuilder output, ReadOnlySpan<byte> utf8)
     {
         output.Append((byte)'\'');
@@ -156,7 +156,7 @@ internal static class SqlLiteralWriter
         output.Advance(bytes.Length * 2);
     }
 
-    /// <summary>DECIMAL a partir do valor não escalado, com todas as casas da coluna (<c>-0.50</c>).</summary>
+    /// <summary>DECIMAL from the unscaled value, with every decimal place of the column (<c>-0.50</c>).</summary>
     public static void WriteDecimal(ByteBuilder output, long unscaled, int scale)
     {
         Span<byte> digits = stackalloc byte[24];

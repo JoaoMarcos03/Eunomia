@@ -7,9 +7,9 @@ using Eunomia.UI.Controls.Common.TreeList;
 namespace Eunomia.UI.Features.QueryTab;
 
 /// <summary>
-/// Painel de helpers à direita do editor (anexo C §1.11): caixa "Filter ..." por cima de uma árvore de duas colunas sem
-/// cabeçalho ("Main column" 64 e "Attributes" 100), com multi-seleção. O filtro mostra os nós cujo texto contém o
-/// filtrado (e as raízes deles); as raízes abertas mantêm-se quando o conteúdo muda.
+/// Helpers panel to the right of the editor (appendix C §1.11): a "Filter ..." box above a two-column tree without a
+/// header ("Main column" 64 and "Attributes" 100), with multi-selection. The filter shows the nodes whose text contains the
+/// filter text (and their roots); open roots stay open when the content changes.
 /// </summary>
 public sealed class QueryHelpersView : DockPanel
 {
@@ -19,7 +19,7 @@ public sealed class QueryHelpersView : DockPanel
         Tree = new TreeListControl { ShowHeader = false, MultiSelect = true, GroupsFirst = false };
         Tree.Columns.Add(new TreeListColumn("Main column", 140));
         Tree.Columns.Add(new TreeListColumn("Attributes", 100));
-        // A ordem é a do modelo (secções fixas, histórico do mais recente para o mais antigo).
+        // The model's order (fixed sections, history from the most recent to the oldest).
         Tree.SortBy(-1, descending: false);
         SetDock(Filter, Dock.Top);
         Children.Add(Filter);
@@ -31,7 +31,7 @@ public sealed class QueryHelpersView : DockPanel
 
     public TreeListControl Tree { get; }
 
-    /// <summary>Troca o conteúdo, mantendo abertas as raízes que estavam abertas (pelo texto).</summary>
+    /// <summary>Swaps the content, keeping open the roots that were open (by text).</summary>
     public void SetRoots(IReadOnlyList<TreeListNode> roots)
     {
         ArgumentNullException.ThrowIfNull(roots);
@@ -44,7 +44,7 @@ public sealed class QueryHelpersView : DockPanel
         ApplyFilter();
     }
 
-    /// <summary>"Columns in x" e "Columns" contam como a mesma raiz.</summary>
+    /// <summary>"Columns in x" and "Columns" count as the same root.</summary>
     private static string Key(TreeListNode root) => root[0].StartsWith("Columns", StringComparison.Ordinal) ? "Columns" : root[0];
 
     private void ApplyFilter()

@@ -2,7 +2,7 @@ using Eunomia.App.Commands;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Pesquisa da paleta de comandos (Ctrl+Shift+P).</summary>
+/// <summary>Command palette search (Ctrl+Shift+P).</summary>
 public sealed class CommandSearchTests
 {
     private static readonly CommandMatch[] Commands =
@@ -16,14 +16,14 @@ public sealed class CommandSearchTests
     ];
 
     [Fact]
-    public void SemTextoMostraTudoPelaLegenda()
+    public void WithoutTextShowsEverythingByCaption()
     {
         Assert.Equal(["Export grid rows", "Maintenance", "New query tab", "Preferences", "Run", "Wrap long lines"],
             CommandSearch.Filter(Commands, "  ").Select(c => c.Caption));
     }
 
     [Fact]
-    public void TodasAsPalavrasNaLegendaOuNaCategoriaSemMaiusculas()
+    public void EveryWordInTheCaptionOrCategoryCaseInsensitive()
     {
         Assert.Equal(["query.newTab"], CommandSearch.Filter(Commands, "NEW tab").Select(c => c.Id));
         Assert.Equal(["tools.maintenance", "tools.preferences"], CommandSearch.Filter(Commands, "tools").Select(c => c.Id));
@@ -31,14 +31,14 @@ public sealed class CommandSearchTests
     }
 
     [Fact]
-    public void QuemComecaPeloTextoVemPrimeiro()
+    public void CaptionsStartingWithTheTextComeFirst()
     {
-        // "r": "Run" começa pelo texto; "Export grid rows" tem uma palavra a começar; as outras só o contêm.
+        // "r": "Run" starts with the text; "Export grid rows" has a word starting with it; the others only contain it.
         Assert.Equal(["Run", "Export grid rows", "New query tab", "Preferences", "Wrap long lines"], CommandSearch.Filter(Commands, "r").Select(c => c.Caption));
     }
 
     [Fact]
-    public void LimiteDeResultados()
+    public void ResultLimit()
     {
         Assert.Equal(2, CommandSearch.Filter(Commands, null, max: 2).Count);
         Assert.Throws<ArgumentOutOfRangeException>(() => CommandSearch.Filter(Commands, null, max: 0));

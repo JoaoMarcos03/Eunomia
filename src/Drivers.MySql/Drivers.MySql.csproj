@@ -12,7 +12,7 @@
     <InternalsVisibleTo Include="Drivers.MySql.Tests" />
   </ItemGroup>
 
-  <!-- Implementa os contratos da secção 14.1; o motor nunca referencia este projeto diretamente (secção 21). -->
+  <!-- Implements the contracts of section 14.1; the engine never references this project directly (section 21). -->
   <ItemGroup>
     <ProjectReference Include="..\Drivers.Abstractions\Drivers.Abstractions.csproj" />
   </ItemGroup>

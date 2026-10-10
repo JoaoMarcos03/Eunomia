@@ -7,7 +7,7 @@ using Eunomia.UI.Shell;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Aplicação headless com rendering Skia real (não o desenho stub), para os snapshots terem pixels.
+/// Headless application with real Skia rendering (not the stub drawing), so the snapshots have pixels.
 /// </summary>
 public sealed class TestApp : Application
 {
@@ -17,6 +17,6 @@ public sealed class TestApp : Application
             .UseHarfBuzz()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 
-    /// <summary>O mesmo aspeto da aplicação (<see cref="ShellTheme"/>), para os snapshots mostrarem o que o utilizador vê.</summary>
+    /// <summary>The application's own look (<see cref="ShellTheme"/>), so the snapshots show what the user sees.</summary>
     public override void Initialize() => ShellTheme.Install(this);
 }

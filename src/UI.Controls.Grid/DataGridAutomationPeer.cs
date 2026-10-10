@@ -6,11 +6,11 @@ using Eunomia.Engine.Results;
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Automation peer do grid (secção 15.1). O Avalonia 12.1 não tem os padrões UIA Grid/Table
-/// (<c>IGridProvider</c>, <c>ITableProvider</c>), por isso o spike expõe o grid como <c>DataGrid</c> com um
-/// filho <c>DataItem</c> para a célula focada, com nome "header, valor" e ajuda "linha N, coluna M".
-/// A mudança de célula dispara alteração de nome com <c>LiveSetting</c> polite, para o leitor de ecrã anunciar.
-/// Validação com Narrator e NVDA: manual (relatório).
+/// Automation peer of the grid (section 15.1). Avalonia 12.1 has no UIA Grid/Table patterns
+/// (<c>IGridProvider</c>, <c>ITableProvider</c>), so the spike exposes the grid as a <c>DataGrid</c> with a
+/// <c>DataItem</c> child for the focused cell, named "header, value" with the help text "row N, column M".
+/// Changing cell raises a name change with a polite <c>LiveSetting</c>, so the screen reader announces it.
+/// Validation with Narrator and NVDA: manual (report).
 /// </summary>
 public sealed class DataGridAutomationPeer : ControlAutomationPeer
 {
@@ -27,7 +27,7 @@ public sealed class DataGridAutomationPeer : ControlAutomationPeer
 
     public DataGridControl Grid { get; }
 
-    /// <summary>Texto que o leitor de ecrã lê para a célula focada.</summary>
+    /// <summary>Text the screen reader reads for the focused cell.</summary>
     public string FocusedCellName
     {
         get

@@ -3,7 +3,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Shell com settings em memória para os testes da janela principal.</summary>
+/// <summary>Shell with in-memory settings for the main window tests.</summary>
 internal static class TestShell
 {
     public static ShellContext CreateContext(AppSettings? settings = null) => CreateContext(settings ?? new AppSettings(), out _);

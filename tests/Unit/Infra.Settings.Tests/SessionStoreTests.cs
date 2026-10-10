@@ -3,7 +3,7 @@ using Eunomia.App.Settings;
 
 namespace Eunomia.Infra.Settings.Tests;
 
-/// <summary><c>sessions.json</c> robusto (Fase 14): cópia de segurança, ficheiro corrompido e duas instâncias a gravar.</summary>
+/// <summary>Robust <c>sessions.json</c> (phase 14): backup copy, corrupted file and two instances saving.</summary>
 public sealed class SessionStoreTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-sessions-" + Guid.NewGuid().ToString("N"));
@@ -21,7 +21,7 @@ public sealed class SessionStoreTests : IDisposable
     private static SessionDefinition Session(string name, string host = "db.local") => new() { Name = name, Host = host };
 
     [Fact]
-    public void DuasInstanciasNaoApagamOTrabalhoUmaDaOutra()
+    public void TwoInstancesDoNotWipeOutEachOthersWork()
     {
         var a = new JsonSessionStore(SessionsPath);
         var b = new JsonSessionStore(SessionsPath);
@@ -32,7 +32,7 @@ public sealed class SessionStoreTests : IDisposable
         var catalogA = a.Load();
         var catalogB = b.Load();
 
-        // A: sessão nova e porta mudada na partilhada. B: host mudado na partilhada e outra sessão nova.
+        // A: a new session and a changed port on the shared one. B: a changed host on the shared one and another new session.
         catalogA.Sessions.Add(Session("dev-a"));
         catalogA.Sessions[0].Port = 3307;
         a.Save(catalogA);
@@ -44,12 +44,12 @@ public sealed class SessionStoreTests : IDisposable
         Assert.Equal(["dev-a", "dev-b", "prod"], final.Sessions.Select(s => s.Name).Order(StringComparer.Ordinal));
         var prod = final.Sessions.Single(s => s.Name == "prod");
         Assert.Equal(("db.example.com", 3307), (prod.Host, prod.Port));
-        // O catálogo em memória de B passa a ter também o que A gravou.
+        // B's in-memory catalog now also has what A saved.
         Assert.Contains(catalogB.Sessions, s => s.Name == "dev-a");
     }
 
     [Fact]
-    public void SessaoApagadaNumaInstanciaNaoVoltaPelaOutra()
+    public void SessionDeletedInOneInstanceDoesNotComeBackThroughTheOther()
     {
         var a = new JsonSessionStore(SessionsPath);
         var b = new JsonSessionStore(SessionsPath);
@@ -59,20 +59,20 @@ public sealed class SessionStoreTests : IDisposable
 
         catalogA.Sessions.RemoveAll(s => s.Name == "old");
         a.Save(catalogA);
-        catalogB.Sessions.Single(s => s.Name == "keep").Comment = "nota";
+        catalogB.Sessions.Single(s => s.Name == "keep").Comment = "note";
         b.Save(catalogB);
 
         var final = new JsonSessionStore(SessionsPath).Load();
         Assert.Equal(["keep"], final.Sessions.Select(s => s.Name));
-        Assert.Equal("nota", final.Sessions[0].Comment);
+        Assert.Equal("note", final.Sessions[0].Comment);
     }
 
     [Fact]
-    public void FicheiroCorrompidoVoltaDaCopiaDeSeguranca()
+    public void CorruptedFileComesBackFromTheBackup()
     {
         var store = new JsonSessionStore(SessionsPath);
-        store.Save(new SessionCatalog { Sessions = [Session("um")] });
-        store.Save(new SessionCatalog { Sessions = [Session("um"), Session("dois")] });
+        store.Save(new SessionCatalog { Sessions = [Session("one")] });
+        store.Save(new SessionCatalog { Sessions = [Session("one"), Session("two")] });
         Assert.True(File.Exists(SessionsPath + ".bak"));
 
         File.WriteAllText(SessionsPath, "{ \"sessions\": [ { \"name\": ");
@@ -80,12 +80,12 @@ public sealed class SessionStoreTests : IDisposable
         var catalog = reopened.Load();
 
         Assert.True(reopened.RestoredFromBackup);
-        Assert.Equal(["um"], catalog.Sessions.Select(s => s.Name));
+        Assert.Equal(["one"], catalog.Sessions.Select(s => s.Name));
         Assert.True(File.Exists(reopened.LastCorruptBackup));
     }
 
     [Fact]
-    public void SettingsCorrompidasVoltamDaCopiaDeSeguranca()
+    public void CorruptedSettingsComeBackFromTheBackup()
     {
         var path = Path.Combine(_dir, "settings.json");
         var store = new JsonSettingsStore(path);
@@ -97,7 +97,7 @@ public sealed class SessionStoreTests : IDisposable
     }
 
     [Fact]
-    public void AppDbDanificadoFicaDeLadoEAAplicacaoArranca()
+    public void DamagedAppDbIsSetAsideAndTheAppStarts()
     {
         Directory.CreateDirectory(_dir);
         var path = Path.Combine(_dir, "app.db");
@@ -113,7 +113,7 @@ public sealed class SessionStoreTests : IDisposable
     }
 
     [Fact]
-    public void EscritaNaoDeixaTemporariosEEmUnixFicaSoParaODono()
+    public void WritingLeavesNoTemporaryFilesAndIsOwnerOnlyOnUnix()
     {
         var store = new JsonSessionStore(SessionsPath);
         store.Save(new SessionCatalog { Sessions = [Session("x")] });
@@ -125,7 +125,7 @@ public sealed class SessionStoreTests : IDisposable
     }
 
     [Fact]
-    public void PastasDoSistemaPorPlataforma()
+    public void SystemFoldersPerPlatform()
     {
         var env = new Dictionary<string, string?> { ["HOME"] = "/home/ana", ["XDG_CONFIG_HOME"] = "/cfg", ["XDG_DATA_HOME"] = "relativo/ignorado" };
         var (roaming, local) = AppDataPaths.PlatformFolders(k => env.GetValueOrDefault(k));

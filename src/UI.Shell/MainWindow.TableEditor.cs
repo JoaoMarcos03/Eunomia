@@ -9,10 +9,11 @@ using Eunomia.UI.Shell.Sessions;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Table editor no Table tab (anexo C §5; FAM-E01–E03): abre com a definição da tabela focada (ou vazio no "Create new
-/// ▸ Table"), mostra o CREATE e o ALTER ao vivo e grava com Save (CREATE ou ALTER na ligação primária); depois de gravar,
-/// a árvore recarrega a base e o editor relê a tabela. Discard volta à definição do servidor. Sair com alterações por
-/// gravar (outro nó na árvore, fechar a janela) pergunta antes, aqui e no editor por código das views e rotinas.
+/// Table editor in the Table tab (appendix C §5; FAM-E01–E03): opens with the focused table's definition (or empty for
+/// "Create new ▸ Table"), shows the CREATE and the ALTER live and saves with Save (CREATE or ALTER on the primary connection);
+/// after saving, the tree reloads the database and the editor reads the table again. Discard goes back to the server's
+/// definition. Leaving with unsaved changes (another node in the tree, closing the window) asks first, here and in the code
+/// editor of views and routines.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -21,25 +22,25 @@ public sealed partial class MainWindow
     private DbObjectRef? _tableEditorTable;
     private bool _keepTableEditor;
 
-    /// <summary>Substitui a pergunta "Save modified …" (testes): recebe a pergunta e devolve a resposta.</summary>
+    /// <summary>Replaces the "Save modified …" question (tests): receives the question and returns the answer.</summary>
     internal Func<string, Task<MessageDialogResult>>? SaveTableQuestionOverride { get; set; }
 
-    /// <summary>Editor de tabelas aberto no Table tab (testes).</summary>
+    /// <summary>Table editor open in the Table tab (tests).</summary>
     internal TableEditorView? TableEditor => _tabs.TableTab.Content as TableEditorView;
 
-    /// <summary>Há um editor (de tabela ou por código) com alterações por gravar no Table tab.</summary>
+    /// <summary>There is an editor (table or code) with unsaved changes in the Table tab.</summary>
     private bool HasUnsavedObjectEditor => TableEditor is { IsModified: true } || CodeEditor is { IsModified: true };
 
     private void InitTableEditor()
     {
         _context.Commands.SetHandler("object.createTable", _ => new ValueTask(CreateTableAsync()), () => TreeTarget() is { Node.Kind: not Controls.Tree.TreeNodeKind.Session } || DatabaseOfFocus() is not null);
-        // Fechar a janela com um objeto por gravar: a mesma pergunta; Cancel não fecha.
+        // Closing the window with an unsaved object: the same question; Cancel does not close.
         _closeGuards.Add((() => HasUnsavedObjectEditor, ConfirmLeaveObjectEditorAsync));
     }
 
     /// <summary>
-    /// DDL da aplicação (gravar tabela ou objeto, apagar, esvaziar) numa sessão com alterações por confirmar: o servidor
-    /// faz commit implícito da transação antes do DDL (14.5), por isso pergunta primeiro. Devolve se pode seguir.
+    /// Application DDL (saving a table or object, dropping, emptying) on a session with uncommitted changes: the server
+    /// commits the transaction implicitly before the DDL (14.5), so it asks first. Returns whether it may proceed.
     /// </summary>
     internal async Task<bool> ConfirmImplicitCommitAsync(OpenSession session)
     {
@@ -51,7 +52,7 @@ public sealed partial class MainWindow
             $"Session \"{session.Name}\" has uncommitted changes in an open transaction. This change is DDL: the server COMMITS the open transaction before running it.\n\nContinue?")).Ok;
     }
 
-    /// <summary>O nó é o objeto aberto no editor (ou uma coluna dele): mudar para ele não sai do editor.</summary>
+    /// <summary>The node is the object open in the editor (or one of its columns): switching to it does not leave the editor.</summary>
     private bool IsEditedObject(Controls.Tree.TreeNode node)
     {
         var obj = node.Kind == Controls.Tree.TreeNodeKind.Column ? node.Parent : node;
@@ -60,9 +61,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Sair de um editor com alterações por gravar (anexo C §5): "Save modified table "x"?" (ou "Save new table?", e o
-    /// mesmo para views, rotinas, triggers e events) com Yes (grava; se falhar, fica), No (descarta) e Cancel (fica).
-    /// Devolve se pode sair.
+    /// Leaving an editor with unsaved changes (appendix C §5): "Save modified table "x"?" (or "Save new table?", and the
+    /// same for views, routines, triggers and events) with Yes (saves; if it fails, stays), No (discards) and Cancel (stays).
+    /// Returns whether it may leave.
     /// </summary>
     internal async Task<bool> ConfirmLeaveObjectEditorAsync()
     {
@@ -96,7 +97,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Outro nó na árvore com um objeto por gravar: pergunta primeiro; com Cancel a árvore volta ao objeto.</summary>
+    /// <summary>Another node in the tree with an unsaved object: asks first; with Cancel the tree goes back to the object.</summary>
     private async Task LeaveObjectEditorThenNavigateAsync(Controls.Tree.TreeNode node)
     {
         var previous = _previousTreeNode;
@@ -123,7 +124,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Base do nó focado (a própria base, ou a do objeto).</summary>
+    /// <summary>Database of the focused node (the database itself, or the object's).</summary>
     private (OpenSession Session, string Database)? DatabaseOfFocus() =>
         _tree.Tree.FocusedNode?.Tag is TreeObjectTag tag && Sessions?.Connector.Find(tag.Session) is { } open ? (open, tag.Database) : null;
 
@@ -139,8 +140,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Abre o editor: a tabela <paramref name="table"/>, ou uma tabela nova em <paramref name="database"/>. Cancelado (outra
-    /// escolha na árvore), não mexe no Table tab.
+    /// Opens the editor: the table <paramref name="table"/>, or a new table in <paramref name="database"/>. When cancelled
+    /// (another choice in the tree), it does not touch the Table tab.
     /// </summary>
     internal async Task OpenTableEditorAsync(OpenSession session, string database, DbObjectRef? table, CancellationToken cancellationToken = default)
     {
@@ -176,7 +177,7 @@ public sealed partial class MainWindow
         catch (Exception ex) when (cancellationToken.IsCancellationRequested
                                    && ex is OperationCanceledException or DbOperationException or Engine.Execution.SessionOperationException)
         {
-            // Cancelado (outra escolha na árvore, Drop do objeto): o erro de um pedido que já ia a caminho também não interessa.
+            // Cancelled (another choice in the tree, Drop of the object): the error of a request already in flight does not matter either.
         }
         catch (Exception ex) when (ex is DbOperationException or Engine.Execution.SessionOperationException or InvalidOperationException)
         {
@@ -184,7 +185,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Save: valida, corre o CREATE ou o ALTER, recarrega a base na árvore e relê a tabela gravada.</summary>
+    /// <summary>Save: validates, runs the CREATE or the ALTER, reloads the database in the tree and reads the saved table again.</summary>
     internal async Task<bool> SaveTableAsync(TableEditorView view)
     {
         if (_tableEditorSession is not { Host.ServerServices: { } services } session)

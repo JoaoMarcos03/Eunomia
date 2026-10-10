@@ -10,32 +10,32 @@ using Eunomia.UI.Controls.Graph.Layout;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Canvas do Schema Visualizer (Fase 9; SV-01–SV-04, SV-07, SV-08, SV-13, SV-15).</summary>
+/// <summary>Schema Visualizer canvas (phase 9; SV-01–SV-04, SV-07, SV-08, SV-13, SV-15).</summary>
 public sealed class SchemaCanvasTests
 {
-    /// <summary>clientes ← encomendas → produtos, e encomenda_linhas → encomendas (1:N) e perfis → clientes (1:1).</summary>
+    /// <summary>customers ← orders → products, plus order_lines → orders (1:N) and profiles → customers (1:1).</summary>
     internal static (List<GraphNode> Nodes, List<GraphEdge> Edges) Shop()
     {
         GraphNode Node(string name, params GraphRow[] rows) => new(name, name, rows);
-        var clientes = Node("clientes", new("id", "int(10) unsigned", GraphRowFlags.PrimaryKey, 0), new("nome", "varchar(120)", GraphRowFlags.None, 2), new("email", "varchar(200)", GraphRowFlags.Unique | GraphRowFlags.Nullable, 2));
-        var produtos = Node("produtos", new("id", "int(10) unsigned", GraphRowFlags.PrimaryKey, 0), new("nome", "varchar(120)", GraphRowFlags.None, 2), new("preco", "decimal(10,2)", GraphRowFlags.None, 1));
-        var encomendas = Node("encomendas", new("id", "int(10) unsigned", GraphRowFlags.PrimaryKey, 0), new("cliente_id", "int(10) unsigned", GraphRowFlags.ForeignKey, 0), new("criada", "datetime", GraphRowFlags.None, 4));
-        var linhas = Node("encomenda_linhas", new("encomenda_id", "int(10) unsigned", GraphRowFlags.PrimaryKey | GraphRowFlags.ForeignKey, 0),
-            new("produto_id", "int(10) unsigned", GraphRowFlags.PrimaryKey | GraphRowFlags.ForeignKey, 0), new("quantidade", "smallint", GraphRowFlags.None, 0));
-        var perfis = Node("perfis", new("cliente_id", "int(10) unsigned", GraphRowFlags.PrimaryKey | GraphRowFlags.ForeignKey, 0), new("bio", "text", GraphRowFlags.Nullable, 2));
-        var logs = Node("logs", new("id", "bigint", GraphRowFlags.PrimaryKey, 0), new("texto", "text", GraphRowFlags.Nullable, 2));
-        List<GraphNode> nodes = [clientes, produtos, encomendas, linhas, perfis, logs];
+        var customers = Node("customers", new("id", "int(10) unsigned", GraphRowFlags.PrimaryKey, 0), new("name", "varchar(120)", GraphRowFlags.None, 2), new("email", "varchar(200)", GraphRowFlags.Unique | GraphRowFlags.Nullable, 2));
+        var products = Node("products", new("id", "int(10) unsigned", GraphRowFlags.PrimaryKey, 0), new("name", "varchar(120)", GraphRowFlags.None, 2), new("price", "decimal(10,2)", GraphRowFlags.None, 1));
+        var orders = Node("orders", new("id", "int(10) unsigned", GraphRowFlags.PrimaryKey, 0), new("customer_id", "int(10) unsigned", GraphRowFlags.ForeignKey, 0), new("created", "datetime", GraphRowFlags.None, 4));
+        var lines = Node("order_lines", new("order_id", "int(10) unsigned", GraphRowFlags.PrimaryKey | GraphRowFlags.ForeignKey, 0),
+            new("product_id", "int(10) unsigned", GraphRowFlags.PrimaryKey | GraphRowFlags.ForeignKey, 0), new("quantity", "smallint", GraphRowFlags.None, 0));
+        var profiles = Node("profiles", new("customer_id", "int(10) unsigned", GraphRowFlags.PrimaryKey | GraphRowFlags.ForeignKey, 0), new("bio", "text", GraphRowFlags.Nullable, 2));
+        var logs = Node("logs", new("id", "bigint", GraphRowFlags.PrimaryKey, 0), new("message", "text", GraphRowFlags.Nullable, 2));
+        List<GraphNode> nodes = [customers, products, orders, lines, profiles, logs];
         List<GraphEdge> edges =
         [
-            new("fk_encomenda_cliente", encomendas, [1], clientes, [0], GraphCardinality.OneToMany),
-            new("fk_linha_encomenda", linhas, [0], encomendas, [0], GraphCardinality.OneToMany),
-            new("fk_linha_produto", linhas, [1], produtos, [0], GraphCardinality.OneToMany),
-            new("fk_perfil_cliente", perfis, [0], clientes, [0], GraphCardinality.OneToOne),
+            new("fk_order_customer", orders, [1], customers, [0], GraphCardinality.OneToMany),
+            new("fk_line_order", lines, [0], orders, [0], GraphCardinality.OneToMany),
+            new("fk_line_product", lines, [1], products, [0], GraphCardinality.OneToMany),
+            new("fk_profile_customer", profiles, [0], customers, [0], GraphCardinality.OneToOne),
         ];
         return (nodes, edges);
     }
 
-    /// <summary>Layout esquerda → direita com as tabelas referenciadas à esquerda.</summary>
+    /// <summary>Left → right layout with the referenced tables on the left.</summary>
     internal static void LayoutOf(List<GraphNode> nodes, List<GraphEdge> edges)
     {
         foreach (var n in nodes)
@@ -71,8 +71,8 @@ public sealed class SchemaCanvasTests
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var (window, canvas) = Show(theme);
         canvas.FitToView();
-        canvas.Select([canvas.Nodes.Single(n => n.Title == "encomendas")]);
-        canvas.Nodes.Single(n => n.Title == "produtos").IsMatch = true;
+        canvas.Select([canvas.Nodes.Single(n => n.Title == "orders")]);
+        canvas.Nodes.Single(n => n.Title == "products").IsMatch = true;
         canvas.Nodes.Single(n => n.Title == "logs").IsMatch = false;
         window.CaptureRenderedFrame();
         Tests.Snapshot.Match(window.CaptureRenderedFrame(), name);
@@ -80,42 +80,42 @@ public sealed class SchemaCanvasTests
     }
 
     [AvaloniaFact]
-    public void SelecaoArrastarZoomENavegacaoPorFk()
+    public void SelectionDragZoomAndFkNavigation()
     {
         var (window, canvas) = Show();
         canvas.ZoomTo(1);
-        var encomendas = canvas.Nodes.Single(n => n.Title == "encomendas");
-        var clientes = canvas.Nodes.Single(n => n.Title == "clientes");
-        canvas.CenterOn(encomendas);
+        var orders = canvas.Nodes.Single(n => n.Title == "orders");
+        var customers = canvas.Nodes.Single(n => n.Title == "customers");
+        canvas.CenterOn(orders);
         window.CaptureRenderedFrame();
-        var header = canvas.ToScreen(encomendas.Position + new Point(20, 10));
+        var header = canvas.ToScreen(orders.Position + new Point(20, 10));
 
-        // Clique no cabeçalho seleciona; Ctrl+clique noutro junta.
+        // Click on the header selects; Ctrl+click on another adds it.
         window.MouseDown(header, MouseButton.Left);
         window.MouseUp(header, MouseButton.Left);
-        Assert.Equal([encomendas], canvas.SelectedNodes);
-        canvas.CenterOn(clientes);
-        window.MouseDown(canvas.ToScreen(clientes.Position + new Point(20, 10)), MouseButton.Left, RawInputModifiers.Control);
-        window.MouseUp(canvas.ToScreen(clientes.Position + new Point(20, 10)), MouseButton.Left, RawInputModifiers.Control);
+        Assert.Equal([orders], canvas.SelectedNodes);
+        canvas.CenterOn(customers);
+        window.MouseDown(canvas.ToScreen(customers.Position + new Point(20, 10)), MouseButton.Left, RawInputModifiers.Control);
+        window.MouseUp(canvas.ToScreen(customers.Position + new Point(20, 10)), MouseButton.Left, RawInputModifiers.Control);
         Assert.Equal(2, canvas.SelectedNodes.Count);
 
-        // Arrastar move os selecionados; com snap, as posições ficam na grelha.
+        // Dragging moves the selected ones; with snap, the positions land on the grid.
         canvas.SnapToGrid = true;
         var moved = 0;
         canvas.NodesMoved += (_, _) => moved++;
-        // Longe do clique anterior (senão conta como duplo clique).
-        var start = canvas.ToScreen(clientes.Position + new Point(90, 12));
-        var before = encomendas.Position;
+        // Far from the previous click (otherwise it counts as a double click).
+        var start = canvas.ToScreen(customers.Position + new Point(90, 12));
+        var before = orders.Position;
         window.MouseDown(start, MouseButton.Left);
         window.MouseMove(start + new Point(30, 0));
         window.MouseMove(start + new Point(63, 41));
         window.MouseUp(start + new Point(63, 41), MouseButton.Left);
         Assert.Equal(1, moved);
-        Assert.NotEqual(before, encomendas.Position);
-        Assert.Equal(0, clientes.Position.X % 20);
-        Assert.Equal(0, encomendas.Position.Y % 20);
+        Assert.NotEqual(before, orders.Position);
+        Assert.Equal(0, customers.Position.X % 20);
+        Assert.Equal(0, orders.Position.Y % 20);
 
-        // Roda: zoom no ponto do rato; 0 volta a 100%; F ajusta.
+        // Wheel: zoom at the mouse point; 0 goes back to 100%; F fits.
         canvas.Focus();
         window.MouseWheel(new Point(500, 280), new Vector(0, 2));
         Assert.True(canvas.Zoom > 1.2);
@@ -124,26 +124,26 @@ public sealed class SchemaCanvasTests
         window.KeyPress(Key.F, RawInputModifiers.None, PhysicalKey.F, "f");
         Assert.True(canvas.Nodes.All(n => new Rect(canvas.Bounds.Size).Contains(canvas.ToScreen(n.Bounds.Center))));
 
-        // Clique numa coluna FK (cliente_id) ativa a relação para clientes.
+        // Click on an FK column (customer_id) activates the relation to customers.
         canvas.ZoomTo(1);
-        canvas.CenterOn(encomendas);
+        canvas.CenterOn(orders);
         GraphEdge? activated = null;
         canvas.RelationActivated += (_, e) => activated = e;
-        var fkRow = canvas.ToScreen(encomendas.Position + new Point(40, SchemaCanvas.HeaderHeight + SchemaCanvas.RowHeight + 5));
+        var fkRow = canvas.ToScreen(orders.Position + new Point(40, SchemaCanvas.HeaderHeight + SchemaCanvas.RowHeight + 5));
         window.MouseDown(fkRow, MouseButton.Left);
         window.MouseUp(fkRow, MouseButton.Left);
-        Assert.Same(clientes, activated?.To);
+        Assert.Same(customers, activated?.To);
 
-        // Duplo clique ativa o nó.
+        // Double click activates the node.
         GraphNode? opened = null;
         canvas.NodeActivated += (_, e) => opened = e.Node;
-        window.MouseDown(header = canvas.ToScreen(encomendas.Position + new Point(20, 10)), MouseButton.Left);
+        window.MouseDown(header = canvas.ToScreen(orders.Position + new Point(20, 10)), MouseButton.Left);
         window.MouseUp(header, MouseButton.Left);
         window.MouseDown(header, MouseButton.Left);
         window.MouseUp(header, MouseButton.Left);
-        Assert.Same(encomendas, opened);
+        Assert.Same(orders, opened);
 
-        // Export PNG do diagrama inteiro.
+        // Export PNG of the whole diagram.
         using var png = new MemoryStream();
         canvas.ExportPng(png, wholeDiagram: true);
         Assert.Equal([0x89, 0x50, 0x4E, 0x47], png.ToArray()[..4]);

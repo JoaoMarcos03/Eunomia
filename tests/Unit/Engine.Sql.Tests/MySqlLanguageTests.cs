@@ -8,7 +8,7 @@ public sealed class MySqlLanguageTests
 
     [Theory]
     [InlineData("prd_products", "prd_products")]
-    [InlineData("tabela$1", "tabela$1")]
+    [InlineData("orders$1", "orders$1")]
     [InlineData("order", "`order`")]
     [InlineData("Select", "`Select`")]
     [InlineData("date", "`date`")]
@@ -18,13 +18,13 @@ public sealed class MySqlLanguageTests
     [InlineData("1abc", "1abc")]
     [InlineData("a`b", "`a``b`")]
     [InlineData("", "``")]
-    public void CitaSoQuandoEhPreciso(string name, string expected)
+    public void QuotesOnlyWhenNeeded(string name, string expected)
     {
         Assert.Equal(expected, Language.EditorIdentifier(name));
     }
 
     [Fact]
-    public void QualificaComABase()
+    public void QualifiesWithTheDatabase()
     {
         Assert.Equal("elmwood.prd_products", Language.EditorQualifiedName("elmwood", "prd_products"));
         Assert.Equal("`my db`.`order`", Language.EditorQualifiedName("my db", "order"));
@@ -34,13 +34,13 @@ public sealed class MySqlLanguageTests
     [InlineData("people", "`people`")]
     [InlineData("a`b", "`a``b`")]
     [InlineData("", "``")]
-    public void QuoteIdentifierCitaSempre(string name, string expected)
+    public void QuoteIdentifierAlwaysQuotes(string name, string expected)
     {
         Assert.Equal(expected, Language.QuoteIdentifier(name));
     }
 
     [Fact]
-    public void ListasELexerSaoOsDoMySql()
+    public void ListsAndLexerAreMySqls()
     {
         Assert.Same(MySqlKeywords.Keywords, Language.Keywords);
         Assert.Same(MySqlKeywords.DataTypes, Language.DataTypes);

@@ -4,7 +4,7 @@ using Eunomia.App.Query;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Ficheiros SQL das query tabs (anexo C §4.3).</summary>
+/// <summary>SQL files of the query tabs (appendix C §4.3).</summary>
 public sealed class SqlFileTests
 {
     [Theory]
@@ -12,7 +12,7 @@ public sealed class SqlFileTests
     [InlineData("Unicode")]
     [InlineData("Unicode Big Endian")]
     [InlineData("UTF-8")]
-    public void DetecaoAutomaticaVoltaAoTextoEACodificacao(string encoding)
+    public void AutomaticDetectionRoundTripsTextAndEncoding(string encoding)
     {
         const string text = "SELECT 'ação', 'ü';";
         var (decoded, detected) = SqlFile.Decode(ExportFile.Encode(text, encoding), SqlFile.AutoDetect);
@@ -21,7 +21,7 @@ public sealed class SqlFileTests
     }
 
     [Fact]
-    public void BytesQueNaoSaoUtf8SaoAnsi()
+    public void BytesThatAreNotUtf8AreAnsi()
     {
         var bytes = Encoding.Latin1.GetBytes("SELECT 'ação';");
         var (_, detected) = SqlFile.Decode(bytes, SqlFile.AutoDetect);
@@ -30,7 +30,7 @@ public sealed class SqlFileTests
     }
 
     [Fact]
-    public void VinteRecentes()
+    public void TwentyRecent()
     {
         var recent = Enumerable.Range(0, 25).Select(i => $"f{i}.sql").ToList();
         var updated = SqlFile.AddRecent(recent, "F3.SQL");

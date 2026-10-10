@@ -9,7 +9,7 @@ Servers\localhost\LastConnect<|||>1<|||>2026-09-30 18:22:05
 Servers\localhost\SessionCreated<|||>1<|||>2024-01-02 03:04:05
 Servers\localhost\ServerVersionFull<|||>1<|||>10.11.6-MariaDB - mariadb.org binary distribution
 Servers\localhost\FavoriteObjects<|||>1<|||>elmwood||prd_products<}}}>elmwood||b2b_budgets
-Servers\localhost\Comment<|||>1<|||>Linha 1<{{{><}}}>Linha 2
+Servers\localhost\Comment<|||>1<|||>Line 1<{{{><}}}>Line 2
 Servers\localhost\localhost|elmwood|prd_products\Filter<|||>1<|||>id > 3
 Servers\localhost\QueryHistory\x<|||>1<|||>SELECT 1
 Servers\Amberline\Folder<|||>3<|||>1
@@ -62,4 +62,4 @@ GridExportEncoding<|||>3<|||>6
 GridExportSelection<|||>3<|||>0
 GridExportSeparator<|||>1<|||>,
 Theme<|||>1<|||>Windows10 Dark
-linha invalida sem delimitadores
+invalid line without delimiters

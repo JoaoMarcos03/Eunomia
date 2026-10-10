@@ -1,29 +1,29 @@
 # ADR-11: Settings
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/especificacao-fase-0.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** —
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** —
 
-## Opções
+## Options
 
-Registo, JSON, SQLite
+Registry, JSON, SQLite
 
-## Decisão
+## Decision
 
-JSON para settings, SQLite para histórico e estado por tabela
+JSON for settings, SQLite for history and per-table state
 
-## Razão
+## Reason
 
-Legível, atómico, sem registo
+Readable, atomic, no registry
 
 ## Trade-offs
 
-Dois formatos
+Two formats
 
-## Risco
+## Risk
 
-Migrações de schema
+Schema migrations
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

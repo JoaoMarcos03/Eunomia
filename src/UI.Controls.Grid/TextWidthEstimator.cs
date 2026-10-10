@@ -3,13 +3,13 @@ using Avalonia.Media;
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Largura aproximada de texto a partir dos avanços dos glifos (sem shaping nem kerning), para a largura
-/// automática das colunas (secção 15.2). A tabela é construída uma vez na UI thread; depois
-/// <see cref="Measure"/> é só aritmética e pode correr em background.
+/// Approximate text width from the glyph advances (no shaping or kerning), for automatic column
+/// widths (section 15.2). The table is built once on the UI thread; after that
+/// <see cref="Measure"/> is just arithmetic and can run in the background.
 /// </summary>
 public sealed class TextWidthEstimator
 {
-    private const int TableSize = 0x0250; // Latim básico, Latin-1 e Latin Extended-A/B.
+    private const int TableSize = 0x0250; // Basic Latin, Latin-1 and Latin Extended-A/B.
     private readonly float[] _advances = new float[TableSize];
     private readonly float _average;
 

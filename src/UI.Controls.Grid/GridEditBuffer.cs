@@ -1,8 +1,8 @@
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Valor de célula editado: <see cref="Text"/> <c>null</c> = NULL; com <see cref="IsFunction"/>, uma expressão SQL que vai
-/// tal como está (Insert value ▸ SQL function, Ctrl+F2).
+/// Edited cell value: <see cref="Text"/> <c>null</c> = NULL; with <see cref="IsFunction"/>, an SQL expression that goes
+/// as is (Insert value ▸ SQL function, Ctrl+F2).
 /// </summary>
 public readonly record struct CellValue(string? Text, bool IsFunction = false)
 {
@@ -11,43 +11,43 @@ public readonly record struct CellValue(string? Text, bool IsFunction = false)
     public bool IsNull => Text is null && !IsFunction;
 }
 
-/// <summary>Linha a gravar: índice no grid, se é nova e os valores alterados por coluna do grid.</summary>
+/// <summary>Row to save: index in the grid, whether it is new and the changed values per grid column.</summary>
 public sealed record GridRowCommit(long Row, bool IsInsert, IReadOnlyDictionary<int, CellValue> Values);
 
-/// <summary>Pedido do editor em janela para uma célula: valor atual e se é binário (hex).</summary>
+/// <summary>Request for the window editor for a cell: current value and whether it is binary (hex).</summary>
 public sealed record GridPopupEditEventArgs(long Row, int Column, string? Value, bool IsBinary);
 
-/// <summary>Resultado de uma gravação: se gravou e os valores relidos do servidor (ficam por cima do source).</summary>
+/// <summary>Result of a save: whether it saved and the values read back from the server (they sit on top of the source).</summary>
 public sealed record GridCommitResult(bool Ok, IReadOnlyDictionary<int, CellValue>? Row = null)
 {
     public static GridCommitResult Failed { get; } = new(false);
 }
 
 /// <summary>
-/// Edit buffer separado dos blocos (secções 11.5 e 15.1, EditModel): as alterações acumulam-se numa linha
-/// e são gravadas ao mudar de linha ou com Ctrl+Enter; mudar de coluna na mesma linha não grava (FAM-G08).
-/// Linhas novas (↓ na última linha) são acrescentadas no fim. No spike, "gravar" passa os valores para um
-/// overlay de valores gravados (não há servidor) e dispara <see cref="RowCommitted"/>.
+/// Edit buffer kept apart from the blocks (sections 11.5 and 15.1, EditModel): changes accumulate on one row
+/// and are saved when moving to another row or with Ctrl+Enter; moving to another column on the same row does not save
+/// (FAM-G08). New rows (↓ on the last row) are appended at the end. In the spike, "saving" moves the values into an
+/// overlay of saved values (there is no server) and raises <see cref="RowCommitted"/>.
 /// </summary>
 public sealed class GridEditBuffer
 {
     private readonly Dictionary<int, CellValue> _pending = [];
     private readonly Dictionary<long, Dictionary<int, CellValue>> _committed = [];
 
-    /// <summary>Linha com alterações por gravar, ou -1.</summary>
+    /// <summary>Row with unsaved changes, or -1.</summary>
     public long PendingRow { get; private set; } = -1;
 
-    /// <summary>Linhas novas acrescentadas depois das linhas do source.</summary>
+    /// <summary>New rows appended after the source rows.</summary>
     public long InsertedRows { get; private set; }
 
-    /// <summary>A linha pendente é uma linha nova ainda não gravada.</summary>
+    /// <summary>The pending row is a new row not yet saved.</summary>
     public bool PendingIsInsert { get; private set; }
 
     public bool HasPending => PendingRow >= 0;
 
     public event EventHandler<long>? RowCommitted;
 
-    /// <summary>Valor editado (pendente ou gravado) da célula, se existir.</summary>
+    /// <summary>Edited value (pending or saved) of the cell, if any.</summary>
     public bool TryGetValue(long row, int column, out CellValue value)
     {
         if (row == PendingRow && _pending.TryGetValue(column, out value))
@@ -62,10 +62,10 @@ public sealed class GridEditBuffer
         return false;
     }
 
-    /// <summary>Valores por gravar da linha pendente, por coluna.</summary>
+    /// <summary>Unsaved values of the pending row, per column.</summary>
     public IReadOnlyDictionary<int, CellValue> PendingValues => _pending;
 
-    /// <summary>Valor já gravado (não o pendente) da célula, se existir.</summary>
+    /// <summary>Already saved value (not the pending one) of the cell, if any.</summary>
     public bool TryGetCommitted(long row, int column, out CellValue value)
     {
         if (_committed.TryGetValue(row, out var cells) && cells.TryGetValue(column, out value))
@@ -76,7 +76,7 @@ public sealed class GridEditBuffer
         return false;
     }
 
-    /// <summary>Valor gravado no servidor e relido, por cima do source (até o grid mudar de dados).</summary>
+    /// <summary>Value saved to the server and read back, on top of the source (until the grid changes data).</summary>
     public void SetCommitted(long row, int column, CellValue value)
     {
         if (!_committed.TryGetValue(row, out var cells))
@@ -87,25 +87,25 @@ public sealed class GridEditBuffer
         cells[column] = value;
     }
 
-    /// <summary>Célula com alteração por gravar (triângulo vermelho).</summary>
+    /// <summary>Cell with an unsaved change (red triangle).</summary>
     public bool IsModified(long row, int column) => row == PendingRow && _pending.ContainsKey(column);
 
     public void SetValue(long row, int column, CellValue value)
     {
         if (PendingRow >= 0 && PendingRow != row)
         {
-            throw new InvalidOperationException("Há alterações por gravar noutra linha; chamar Commit() primeiro.");
+            throw new InvalidOperationException("There are unsaved changes on another row; call Commit() first.");
         }
         PendingRow = row;
         _pending[column] = value;
     }
 
-    /// <summary>Acrescenta uma linha nova no índice <paramref name="sourceRows"/> + linhas já inseridas.</summary>
+    /// <summary>Appends a new row at index <paramref name="sourceRows"/> + the rows already inserted.</summary>
     public long InsertRow(long sourceRows)
     {
         if (HasPending)
         {
-            throw new InvalidOperationException("Gravar a linha pendente antes de inserir.");
+            throw new InvalidOperationException("Save the pending row before inserting.");
         }
         var row = sourceRows + InsertedRows;
         InsertedRows++;
@@ -114,7 +114,7 @@ public sealed class GridEditBuffer
         return row;
     }
 
-    /// <summary>Grava a linha pendente. Devolve <c>false</c> se não havia nada para gravar.</summary>
+    /// <summary>Saves the pending row. Returns <c>false</c> if there was nothing to save.</summary>
     public bool Commit()
     {
         if (!HasPending)
@@ -136,7 +136,7 @@ public sealed class GridEditBuffer
         return true;
     }
 
-    /// <summary>Esquece tudo (pendente, gravado em memória e linhas novas): o grid mudou de dados.</summary>
+    /// <summary>Forgets everything (pending, saved in memory and new rows): the grid changed data.</summary>
     public void Reset()
     {
         ClearPending();
@@ -144,7 +144,7 @@ public sealed class GridEditBuffer
         InsertedRows = 0;
     }
 
-    /// <summary>Esc fora de edição: descarta as alterações da linha (e a linha, se for nova).</summary>
+    /// <summary>Esc outside editing: discards the row's changes (and the row, if it is new).</summary>
     public void Discard()
     {
         if (PendingIsInsert)

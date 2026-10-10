@@ -9,7 +9,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Transações da ligação primária (secção 14.5; Fase 14) contra o servidor.</summary>
+/// <summary>Transactions of the primary connection (section 14.5; phase 14) against the server.</summary>
 public sealed class TransactionTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -59,12 +59,12 @@ public sealed class TransactionTests : IAsyncLifetime
     private Task RunAsync(string sql) => new QueryRunner(_host).RunAsync(sql, SqlSplitter.Split(sql), new QueryRunOptions(), Ct);
 
     [Fact]
-    public async Task EstadoDaTransacaoSegueAsInstrucoesDaQueryTab()
+    public async Task TransactionStateFollowsTheQueryTabStatements()
     {
         TestServer.RequireServer();
         await RunAsync($"START TRANSACTION; INSERT INTO `{_database}`.t VALUES (4, 'd')");
         Assert.True(_host.Transactions.HasChanges);
-        // Ainda não está gravado para as outras ligações.
+        // Not yet committed for the other connections.
         Assert.Equal(3, await CountFromOtherConnectionAsync());
         await RunAsync("COMMIT");
         Assert.False(_host.Transactions.IsOpen);
@@ -78,14 +78,14 @@ public sealed class TransactionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task LigacaoQueCaiComAlteracoesAvisaQueSePerderam()
+    public async Task ConnectionDroppingWithChangesWarnsTheyWereLost()
     {
         TestServer.RequireServer();
         var lost = 0;
         _host.TransactionLost += (_, _) => lost++;
         await RunAsync($"BEGIN; UPDATE `{_database}`.t SET v = 'x' WHERE id = 1");
         Assert.True(_host.Transactions.HasChanges);
-        // Outra ligação mata a primária (como um timeout do servidor ou a rede a cair).
+        // Another connection kills the primary one (like a server timeout or the network dropping).
         await using (var killer = new MySqlConnection(TestServer.ConnectionString))
         {
             await killer.OpenAsync(Ct);
@@ -99,14 +99,14 @@ public sealed class TransactionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ApagarVariasLinhasETudoOuNada()
+    public async Task DeletingSeveralRowsIsAllOrNothing()
     {
         TestServer.RequireServer();
         var table = await new MetadataCache(_host, new MetadataOptions()).GetTableAsync(new DbObjectRef(_database, _database, "t", DbObjectKind.Table), Ct);
         var writer = new RowWriter(_host);
         static Dictionary<string, CellLiteral> Key(string id) => new(StringComparer.OrdinalIgnoreCase) { ["id"] = new CellLiteral(id) };
 
-        // A terceira linha já não existe: nenhuma é apagada.
+        // The third row no longer exists: none is deleted.
         await Assert.ThrowsAsync<RowWriteException>(() => writer.DeleteRowsAsync(table, [Key("1"), Key("2"), Key("99")], null, Ct));
         Assert.Equal(3, await CountFromOtherConnectionAsync());
         Assert.False(_host.Transactions.IsOpen);

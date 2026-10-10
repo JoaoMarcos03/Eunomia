@@ -7,15 +7,15 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.App.Query;
 
-/// <summary>Como correr um batch (anexo C §4.4).</summary>
+/// <summary>How to run a batch (appendix C §4.4).</summary>
 public sealed record QueryRunOptions
 {
-    /// <summary>"Send batch in one go": junta as instruções com <c>; </c> até ao <c>max_allowed_packet</c>.</summary>
+    /// <summary>"Send batch in one go": joins the statements with <c>; </c> up to <c>max_allowed_packet</c>.</summary>
     public bool BatchInOneGo { get; init; }
 
     public bool StopOnErrors { get; init; } = true;
 
-    /// <summary><c>MaxQueryResults</c>: result tabs por execução.</summary>
+    /// <summary><c>MaxQueryResults</c>: result tabs per run.</summary>
     public int MaxResultSets { get; init; } = 10;
 
     public int BlockSize { get; init; } = 1024;
@@ -23,31 +23,31 @@ public sealed record QueryRunOptions
     public ResultStorage Storage { get; init; } = ResultStorage.InMemory;
 }
 
-/// <summary>Um result set de uma execução (um result tab). A fonte enche-se em streaming.</summary>
+/// <summary>A result set of a run (one result tab). The source fills while streaming.</summary>
 public sealed class QueryResult(int index, MaterializedRowSource source, string sql, string? name)
 {
     public int Index { get; } = index;
 
     public MaterializedRowSource Source { get; } = source;
 
-    /// <summary>SQL da instrução que o produziu (hover do result tab).</summary>
+    /// <summary>SQL of the statement that produced it (result tab hover).</summary>
     public string Sql { get; } = sql;
 
-    /// <summary>Nome do <c>-- name:</c> / <c>-- names:</c>, se houver.</summary>
+    /// <summary>Name from <c>-- name:</c> / <c>-- names:</c>, if any.</summary>
     public string? Name { get; } = name;
 
-    /// <summary>Tabela de origem, se todas as colunas vierem da mesma.</summary>
+    /// <summary>Source table, if every column comes from the same one.</summary>
     public string? SourceTable =>
         Source.Schema.Columns.Select(c => c.SourceTable).Distinct(StringComparer.Ordinal).ToList() is [{ } table] ? table : null;
 
-    /// <summary>"nome (Nr × Mc)".</summary>
+    /// <summary>"name (Nr × Mc)".</summary>
     public string Caption => QueryText.ResultCaption(Name, SourceTable, Index, Source.RowCount.Count, Source.Schema.Count);
 }
 
-/// <summary>Erro de uma execução, com a instrução e a linha do editor.</summary>
+/// <summary>Error of a run, with the statement and the editor line.</summary>
 public sealed record QueryRunError(int StatementIndex, SqlStatement Statement, DbError Error, int Line);
 
-/// <summary>Resumo de uma execução (a linha final do SQL log, o diálogo de erro e o histórico).</summary>
+/// <summary>Summary of a run (the final SQL log line, the error dialog and the history).</summary>
 public sealed record QueryRunSummary(
     int Executed,
     int Total,
@@ -63,24 +63,24 @@ public sealed record QueryRunSummary(
 }
 
 /// <summary>
-/// Execução de um batch numa query tab (secção 4.7; anexo C §4.4): instruções uma a uma ou em pacotes até ao
-/// <c>max_allowed_packet</c>, Stop on errors, até 10 result sets em streaming (os seguintes são descartados com aviso),
-/// warnings e mensagens para o log, e o resumo "Affected rows … Duration for k of m queries". Corre na ligação primária.
+/// Runs a batch in a query tab (section 4.7; appendix C §4.4): statements one by one or in packets up to
+/// <c>max_allowed_packet</c>, Stop on errors, up to 10 result sets streaming (later ones are discarded with a warning),
+/// warnings and messages to the log, and the "Affected rows … Duration for k of m queries" summary. Runs on the primary connection.
 /// </summary>
 public sealed class QueryRunner(SessionHost host)
 {
-    /// <summary>Sobra por instrução num pacote (o HeidiSQL conta ~20 bytes).</summary>
+    /// <summary>Overhead per statement in a packet (HeidiSQL counts ~20 bytes).</summary>
     private const int PacketOverhead = 20;
 
-    /// <summary>Começou a instrução (ou o pacote) n de m: "Executing query #n of m ...".</summary>
+    /// <summary>Statement (or packet) n of m started: "Executing query #n of m ...".</summary>
     public event EventHandler<(int Number, int Total)>? Progress;
 
-    /// <summary>Novo result set: a fonte já existe e vai enchendo.</summary>
+    /// <summary>New result set: the source already exists and keeps filling.</summary>
     public event EventHandler<QueryResult>? ResultStarted;
 
     public event EventHandler<QueryResult>? ResultCompleted;
 
-    /// <summary>Linhas para o SQL log (warnings, notas, limite de result tabs).</summary>
+    /// <summary>Lines for the SQL log (warnings, notes, result tab limit).</summary>
     public event EventHandler<string>? Message;
 
     public async Task<QueryRunSummary> RunAsync(string batchText, IReadOnlyList<SqlStatement> statements, QueryRunOptions options, CancellationToken cancellationToken)
@@ -101,7 +101,7 @@ public sealed class QueryRunner(SessionHost host)
         var skipped = 0;
         var results = new Dictionary<int, QueryResult>();
         Progress?.Invoke(this, (1, packets.Count));
-        // Um SET do sql_mode muda o escaping dos literais simples que a aplicação gera nesta ligação.
+        // A SET of sql_mode changes the escaping of the simple literals the application generates on this connection.
         var changesMode = statements.Any(s => s.Text.Contains("sql_mode", StringComparison.OrdinalIgnoreCase));
         await host.RunPrimaryAsync(async (handle, ct) =>
         {
@@ -186,7 +186,7 @@ public sealed class QueryRunner(SessionHost host)
         return new QueryRunSummary(executed, statements.Count, affected, found, warnings, duration, network, errors, skipped > 0);
     }
 
-    /// <summary>"Send batch in one go": pacotes de instruções unidas por <c>; </c> até ao <c>max_allowed_packet</c>.</summary>
+    /// <summary>"Send batch in one go": packets of statements joined by <c>; </c> up to <c>max_allowed_packet</c>.</summary>
     private async Task<List<(string Sql, int First, int Count)>> PacketsAsync(IReadOnlyList<SqlStatement> statements, CancellationToken cancellationToken)
     {
         var maxPacket = await host.RunPrimaryAsync(

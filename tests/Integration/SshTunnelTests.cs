@@ -7,10 +7,10 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// Túnel SSH in-process contra um servidor OpenSSH real (REQ-CON-02, PR-07, secção 23.2): host key no primeiro
-/// contacto, bloqueio de chave mudada, password errada, e uma sessão MySQL através do túnel. Precisa de
-/// <c>EUNOMIA_IT_SSH</c> (<c>host;porta;user;password</c>) e <c>EUNOMIA_IT_SSH_TARGET</c> (<c>host;porta</c> da base vista
-/// do servidor SSH); o CI dá-os, localmente ficam "skipped".
+/// In-process SSH tunnel against a real OpenSSH server (REQ-CON-02, PR-07, section 23.2): host key on first
+/// contact, blocking a changed key, wrong password, and a MySQL session through the tunnel. Needs
+/// <c>EUNOMIA_IT_SSH</c> (<c>host;port;user;password</c>) and <c>EUNOMIA_IT_SSH_TARGET</c> (<c>host;port</c> of the database as seen
+/// from the SSH server); CI provides them, locally they are skipped.
 /// </summary>
 public sealed class SshTunnelTests : IDisposable
 {
@@ -23,7 +23,7 @@ public sealed class SshTunnelTests : IDisposable
 
     private static void Require() =>
         Assert.SkipWhen(Ssh is not { Length: 4 } || Target is not { Length: 2 } || TestServer.ConnectionString is null,
-            "Sem servidor SSH de teste (EUNOMIA_IT_SSH e EUNOMIA_IT_SSH_TARGET).");
+            "No SSH test server (EUNOMIA_IT_SSH and EUNOMIA_IT_SSH_TARGET).");
 
     private static SshTunnelOptions Options(string? password = null) =>
         new(Ssh![0], int.Parse(Ssh[1], System.Globalization.CultureInfo.InvariantCulture), Ssh[2], new SecretReference("ssh"), null)
@@ -36,7 +36,7 @@ public sealed class SshTunnelTests : IDisposable
     private static Func<SecretReference, CancellationToken, ValueTask<string>> Secrets(string? sshPassword = null) =>
         (r, _) => ValueTask.FromResult(r.Key == "ssh" ? sshPassword ?? Ssh![3] : new MySqlConnectionStringBuilder(TestServer.ConnectionString!).Password);
 
-    /// <summary>O container do OpenSSH demora a arrancar (mods): tenta durante 90 s.</summary>
+    /// <summary>The OpenSSH container takes a while to start (mods): retries for 90 s.</summary>
     private async Task<ISshTunnel> OpenWithRetryAsync(SshTunnelFactory factory)
     {
         var deadline = DateTime.UtcNow.AddSeconds(90);
@@ -58,7 +58,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task HostKeyDesconhecidaPedeConfirmacao()
+    public async Task UnknownHostKeyAsksForConfirmation()
     {
         Require();
         var factory = new SshTunnelFactory(new KnownHostsStore(_knownHosts), () => null);
@@ -75,7 +75,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task ChaveMudadaEhBloqueada()
+    public async Task ChangedKeyIsBlocked()
     {
         Require();
         var store = new KnownHostsStore(_knownHosts);
@@ -93,7 +93,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task PasswordErradaFalha()
+    public async Task WrongPasswordFails()
     {
         Require();
         var factory = new SshTunnelFactory(new KnownHostsStore(_knownHosts), () => null);
@@ -106,7 +106,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task SessaoMySqlAtravesDoTunel()
+    public async Task MySqlSessionThroughTheTunnel()
     {
         Require();
         var factory = new SshTunnelFactory(new KnownHostsStore(_knownHosts), () => null);

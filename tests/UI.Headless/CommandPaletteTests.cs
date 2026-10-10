@@ -8,7 +8,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Paleta de comandos (Tools ▸ Command palette, Ctrl+Shift+P).</summary>
+/// <summary>Command palette (Tools ▸ Command palette, Ctrl+Shift+P).</summary>
 public sealed class CommandPaletteTests
 {
     internal static IReadOnlyList<CommandMatch> Sample { get; } =
@@ -22,13 +22,13 @@ public sealed class CommandPaletteTests
     ];
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task AtalhoAbreAPaletaEOComandoEscolhidoCorre()
+    public async Task ShortcutOpensThePaletteAndTheChosenCommandRuns()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();
         var tabs = window.Tabs.QueryTabs.Count;
 
-        // O teste conduz o diálogo modal.
+        // The test drives the modal dialog.
         UnexpectedDialogGuardAttribute.Allow(typeof(CommandPaletteWindow));
         Assert.True(window.TryExecuteShortcut("Ctrl+Shift+P"));
         var palette = await WaitAsync(() => window.CommandPalette);

@@ -1,12 +1,12 @@
 namespace Eunomia.UI.Controls.Tree.Tests;
 
 /// <summary>
-/// Regras da secção 4.3 que dependem do tipo de nó, uma por teste (FAM-T04).
-/// Os casos de regex estão em <c>Engine.Sql.Tests/TreeFilterExpressionTests</c>.
+/// Section 4.3 rules that depend on the node kind, one per test (FAM-T04).
+/// The regex cases are in <c>Engine.Sql.Tests/TreeFilterExpressionTests</c>.
 /// </summary>
 public sealed class TreeFilterRulesTests
 {
-    /// <summary>Provider com filhos fixos por nó, sem latência.</summary>
+    /// <summary>Provider with fixed children per node, without latency.</summary>
     private sealed class StaticProvider : ITreeDataProvider
     {
         public Dictionary<TreeNode, Func<TreeNode, IReadOnlyList<TreeNode>>> Children { get; } = [];
@@ -65,7 +65,7 @@ public sealed class TreeFilterRulesTests
     private static List<string> Names(TreeModel model) => model.Visible.Select(n => n.Name).ToList();
 
     [Fact]
-    public async Task SemFiltrosMostraTudoOQueEstaExpandido()
+    public async Task WithoutFiltersShowsEverythingExpanded()
     {
         var (model, _) = await BuildAsync();
 
@@ -76,7 +76,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task DatabaseFilterEscondeBasesEOsSeusFilhos()
+    public async Task DatabaseFilterHidesDatabasesAndTheirChildren()
     {
         var (model, _) = await BuildAsync();
 
@@ -86,31 +86,31 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task DatabaseFilterNaoSeAplicaAObjetos()
+    public async Task DatabaseFilterDoesNotApplyToObjects()
     {
         var (model, _) = await BuildAsync();
 
-        // "prd" corresponde à base prd_archive e a várias tabelas; só a base conta.
+        // "prd" matches the prd_archive database and several tables; only the database counts.
         model.SetDatabaseFilter("prd");
 
         Assert.Equal(["localhost", "prd_archive", "users", "server-01"], Names(model));
     }
 
     [Fact]
-    public async Task TableFilterSoSeAplicaAObjetos()
+    public async Task TableFilterOnlyAppliesToObjects()
     {
         var (model, _) = await BuildAsync();
 
         model.SetTableFilter("prd");
 
-        // Sessões e bases ficam; tabela, view e procedure filtradas pelo nome.
+        // Sessions and databases stay; table, view and procedure filtered by name.
         Assert.Equal(
             ["localhost", "elmwood", "prd_products", "sp_prd_sync", "v_prd_list", "prd_archive", "test", "server-01", "elmwood2", "prd_products"],
             Names(model));
     }
 
     [Fact]
-    public async Task BasesSemObjetosQueCorrespondamContinuamVisiveis()
+    public async Task DatabasesWithoutMatchingObjectsStayVisible()
     {
         var (model, _) = await BuildAsync();
 
@@ -120,11 +120,11 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task TableFilterComparaSoONomeDoObjetoSemABase()
+    public async Task TableFilterComparesOnlyTheObjectNameWithoutTheDatabase()
     {
         var (model, _) = await BuildAsync();
 
-        // A base chama-se prd_archive, mas a tabela "users" não contém "prd".
+        // The database is called prd_archive, but the "users" table does not contain "prd".
         model.SetTableFilter("prd_archive");
 
         Assert.DoesNotContain("users", Names(model));
@@ -132,7 +132,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task GruposEColunasNuncaSaoEscondidos()
+    public async Task GroupsAndColumnsAreNeverHidden()
     {
         var db = new TreeNode(TreeNodeKind.Database, "shop");
         var group = new TreeNode(TreeNodeKind.Group, "Tables", db);
@@ -148,14 +148,14 @@ public sealed class TreeFilterRulesTests
 
         Assert.Equal(["shop", "Tables"], Names(model));
         Assert.True(model.IsVisible(group));
-        // Uma coluna não é filtrada pelo nome, mas fica escondida com a tabela.
+        // A column is not filtered by name, but it is hidden along with its table.
         Assert.False(model.IsVisible(column));
         model.SetTableFilter("orders");
         Assert.True(model.IsVisible(column));
     }
 
     [Fact]
-    public async Task FiltrosAtuamEmTodasAsSessoes()
+    public async Task FiltersActOnEverySession()
     {
         var (model, _) = await BuildAsync();
 
@@ -165,7 +165,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task SoFavoritosMostraSoObjetosFavoritos()
+    public async Task OnlyFavouritesShowsOnlyFavouriteObjects()
     {
         var (model, _) = await BuildAsync();
 
@@ -175,7 +175,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task FavoritosEFiltroCombinamComoE()
+    public async Task FavouritesAndFilterCombineAsAnd()
     {
         var (model, _) = await BuildAsync();
         var ecm = model.Visible.Single(n => n.Name == "ecm_orders");
@@ -189,7 +189,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task ToggleFavoriteNaoSeAplicaASessoesNemBases()
+    public async Task ToggleFavoriteDoesNotApplyToSessionsOrDatabases()
     {
         var (model, sessions) = await BuildAsync();
 
@@ -201,7 +201,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task BasesExpandidasDepoisDoFiltroSaoFiltradasAoExpandir()
+    public async Task DatabasesExpandedAfterTheFilterAreFilteredOnExpanding()
     {
         var (model, sessions) = await BuildAsync(expandAll: false);
         model.SetTableFilter("^b2b");
@@ -214,7 +214,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task LimparOFiltroRepoeTudo()
+    public async Task ClearingTheFilterRestoresEverything()
     {
         var (model, _) = await BuildAsync();
         var all = Names(model);
@@ -228,14 +228,14 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task RegexInvalidaMostraTudoEReportaUmaVez()
+    public async Task InvalidRegexShowsEverythingAndReportsOnce()
     {
         var (model, _) = await BuildAsync();
         var all = Names(model);
         var errors = new List<string>();
         model.FilterError += (_, e) => errors.Add(e);
 
-        // Enquanto se escreve "(", a árvore mostra tudo.
+        // While "(" is being typed, the tree shows everything.
         model.SetTableFilter("(");
         model.SetTableFilter("(");
 
@@ -244,7 +244,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task PontoEVirgulaEhOrSobreNosDaArvore()
+    public async Task SemicolonIsOrOnTreeNodes()
     {
         var (model, _) = await BuildAsync();
 
@@ -254,7 +254,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task FiltroCaseInsensitiveSobreNosDaArvore()
+    public async Task CaseInsensitiveFilterOnTreeNodes()
     {
         var (model, _) = await BuildAsync();
 

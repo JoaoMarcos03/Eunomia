@@ -8,7 +8,7 @@ using Eunomia.UI.Controls.Grid;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Suíte de teclado e edição do grid (secção 4.4, FAM-G05, FAM-G06, FAM-G08, D10) sobre 1M × 60.</summary>
+/// <summary>Grid keyboard and editing suite (section 4.4, FAM-G05, FAM-G06, FAM-G08, D10) over 1M × 60.</summary>
 public sealed class DataGridBehaviorTests
 {
     private static async Task<(Window Window, DataGridControl Grid, SyntheticRowSource Source)> ShowAsync()
@@ -29,7 +29,7 @@ public sealed class DataGridBehaviorTests
         window.KeyPress(key, modifiers, PhysicalKey.None, null);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task HomeEndEControlHomeEnd()
+    public async Task HomeEndAndControlHomeEnd()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -47,7 +47,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SetasPaginasESelecaoComShift()
+    public async Task ArrowsPagesAndShiftSelection()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -67,7 +67,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CtrlAECtrlI()
+    public async Task CtrlAAndCtrlI()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -79,7 +79,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EnterEditaEnterTerminaEMudarDeLinhaGrava()
+    public async Task EnterEditsEnterEndsAndMovingRowSaves()
     {
         var (window, grid, _) = await ShowAsync();
         Press(window, Key.Right);
@@ -94,10 +94,10 @@ public sealed class DataGridBehaviorTests
         Assert.True(grid.Edits.IsModified(0, 1));
         Assert.Equal("123", grid.GetDisplayText(0, 1));
 
-        // Mudar de coluna na mesma linha não grava.
+        // Moving to another column on the same row does not save.
         Press(window, Key.Right);
         Assert.True(grid.Edits.HasPending);
-        // Mudar de linha grava.
+        // Moving to another row saves.
         Press(window, Key.Down);
         Assert.False(grid.Edits.HasPending);
         Assert.Equal("123", grid.GetDisplayText(0, 1));
@@ -105,7 +105,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task F2EditaEEscCancela()
+    public async Task F2EditsAndEscCancels()
     {
         var (window, grid, _) = await ShowAsync();
         var before = grid.GetDisplayText(0, 2);
@@ -122,7 +122,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task TabEmEdicaoAvancaDeCelula()
+    public async Task TabWhileEditingMovesToTheNextCell()
     {
         var (window, grid, _) = await ShowAsync();
         Press(window, Key.Right);
@@ -139,7 +139,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EscForaDeEdicaoDescartaALinha()
+    public async Task EscOutsideEditingDiscardsTheRow()
     {
         var (window, grid, _) = await ShowAsync();
         var before = grid.GetDisplayText(0, 0);
@@ -156,7 +156,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SetaParaBaixoNaUltimaLinhaInsereLinha()
+    public async Task DownArrowOnTheLastRowInsertsARow()
     {
         var (window, grid, source) = await ShowAsync();
         await source.RequestRangeAsync(999_000, 1000);
@@ -169,14 +169,14 @@ public sealed class DataGridBehaviorTests
         Assert.True(grid.Edits.PendingIsInsert);
         Assert.Equal(DisplayFormatter.NullText, grid.GetDisplayText(1_000_000, 1));
 
-        // Esc descarta a linha nova.
+        // Esc discards the new row.
         Press(window, Key.Escape);
         Assert.Equal(1_000_000, grid.RowCount);
         window.Close();
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PageDownNaUltimaLinhaPedeNext()
+    public async Task PageDownOnTheLastRowRequestsNext()
     {
         var (window, grid, _) = await ShowAsync();
         var requested = 0;
@@ -190,7 +190,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CtrlCCopiaSoACelulaFocadaComValorCompleto()
+    public async Task CtrlCCopiesOnlyTheFocusedCellWithTheFullValue()
     {
         var (window, grid, source) = await ShowAsync();
         var block = await source.GetBlockAsync(0);
@@ -198,7 +198,7 @@ public sealed class DataGridBehaviorTests
         var textColumn = source.Schema.Columns.ToList().FindIndex(c => c.NativeType == "TEXT");
         var truncatedRow = Enumerable.Range(0, block.RowCount).First(r => block.IsTruncated(r, textColumn));
 
-        // Várias linhas selecionadas: copia só a célula focada (D10). Inteiro sem separador.
+        // Several rows selected: copies only the focused cell (D10). Integer without a separator.
         grid.Selection.Focus(1233, 0);
         grid.Selection.Focus(1240, 0, SelectMode.Extend);
         var (text, isNull) = await grid.GetCopyTextAsync();
@@ -206,13 +206,13 @@ public sealed class DataGridBehaviorTests
         Assert.False(isNull);
         Assert.Equal("1,241", grid.GetDisplayText(1240, 0));
 
-        // NULL copia texto vazio e fica marcado.
+        // NULL copies empty text and is flagged.
         grid.Selection.Focus(nullRow, 1);
         (text, isNull) = await grid.GetCopyTextAsync();
         Assert.Equal(string.Empty, text);
         Assert.True(isNull);
 
-        // Texto cortado no grid: Ctrl+C copia o valor completo, sem o sufixo.
+        // Text cut in the grid: Ctrl+C copies the full value, without the suffix.
         grid.Selection.Focus(truncatedRow, textColumn);
         (text, _) = await grid.GetCopyTextAsync();
         Assert.True(text.Length > SyntheticRowSource.TextTruncateLength);
@@ -224,7 +224,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ScrollPorRodaETeclasMantemFocoVisivel()
+    public async Task WheelAndKeyScrollKeepsTheFocusVisible()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -239,7 +239,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CliqueSelecionaCtrlCliqueAlternaShiftCliqueEstende()
+    public async Task ClickSelectsCtrlClickTogglesShiftClickExtends()
     {
         var (window, grid, _) = await ShowAsync();
         var x = grid.CellBounds(0, 1).Center.X;

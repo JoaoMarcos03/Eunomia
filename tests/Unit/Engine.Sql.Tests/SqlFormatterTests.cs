@@ -2,13 +2,13 @@ using Eunomia.Engine.Sql.Formatting;
 
 namespace Eunomia.Engine.Sql.Tests;
 
-/// <summary>Reformat SQL (Ctrl+F8): formatter interno sobre o lexer.</summary>
+/// <summary>Reformat SQL (Ctrl+F8): internal formatter on top of the lexer.</summary>
 public sealed class SqlFormatterTests
 {
     private static string F(string sql) => SqlFormatter.Format(sql).Replace("\r\n", "\n", StringComparison.Ordinal);
 
     [Fact]
-    public void ClausulasEmLinhasEAndOrIndentados()
+    public void ClausesOnLinesAndIndentedAndOr()
     {
         Assert.Equal(
             "SELECT a, COUNT(*) AS n\nFROM t\nWHERE x=1\n\tAND y BETWEEN 1 AND 2\n\tOR z IS NULL\nGROUP BY a\nHAVING n > 1\nORDER BY a DESC\nLIMIT 10",
@@ -16,7 +16,7 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
-    public void JoinsSubqueriesEParentesesSimples()
+    public void JoinsSubqueriesAndPlainParentheses()
     {
         Assert.Equal(
             "SELECT *\nFROM a\nLEFT OUTER JOIN b ON b.id = a.id\nINNER JOIN (\n\tSELECT id, EXTRACT(YEAR FROM d) AS y\n\tFROM c\n\tWHERE IF(p AND q, 1, 0) = 1) x ON x.id = a.id",
@@ -24,7 +24,7 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
-    public void StringsComentariosEInstrucoesSeparadas()
+    public void StringsCommentsAndSplitStatements()
     {
         Assert.Equal(
             "-- head\nSELECT 'from  where', `select`\nFROM t;\n\nUPDATE t\nSET a = 1 /* keep  this */\nWHERE b = 'x\ny';",
@@ -32,7 +32,7 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
-    public void InsertComValuesEOnDuplicateKeyUpdate()
+    public void InsertWithValuesAndOnDuplicateKeyUpdate()
     {
         Assert.Equal(
             "INSERT INTO t (a, b)\nVALUES (1, 'x')\nON DUPLICATE KEY UPDATE b = VALUES(b)",
@@ -40,13 +40,13 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
-    public void EspacosDentroDeParentesesEAntesDeVirgulas()
+    public void SpacesInsideParenthesesAndBeforeCommas()
     {
         Assert.Equal("SELECT (a, b), IFNULL(c, 0)\nFROM t", F("select ( a , b ) ,  ifnull( c , 0 ) from t"));
     }
 
     [Fact]
-    public void AcoesDasChavesEstrangeirasNaoPartemALinha()
+    public void ForeignKeyActionsDoNotBreakTheLine()
     {
         Assert.Equal(
             "ALTER TABLE t ADD FOREIGN KEY (a) REFERENCES p (id) ON DELETE CASCADE ON UPDATE SET NULL",
@@ -55,7 +55,7 @@ public sealed class SqlFormatterTests
     }
 
     [Fact]
-    public void CharacterSetNaoPartaALinha()
+    public void CharacterSetDoesNotBreakTheLine()
     {
         Assert.Equal("ALTER TABLE t CONVERT TO CHARACTER SET utf8mb4", F("alter table t convert to character set utf8mb4"));
     }

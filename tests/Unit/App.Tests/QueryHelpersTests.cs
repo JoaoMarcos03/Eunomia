@@ -5,7 +5,7 @@ using Eunomia.Engine.Sql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Painel de helpers da query tab (anexo C §1.11, §3.9; FAM-Q06).</summary>
+/// <summary>Query tab helpers panel (appendix C §1.11, §3.9; FAM-Q06).</summary>
 public sealed class QueryHelpersTests
 {
     private static readonly DbObjectRef People = new("shop", "shop", "people", DbObjectKind.Table);
@@ -15,7 +15,7 @@ public sealed class QueryHelpersTests
     private static ColumnDefinition Column(string name, string type) => new(name, type, new LogicalType(LogicalTypeKind.Text), true, null, false, false, false, null);
 
     [Fact]
-    public void CincoSeccoesComColunasSnippetsEHistorico()
+    public void FiveSectionsWithColumnsSnippetsAndHistory()
     {
         var today = new DateTime(2026, 10, 6, 15, 0, 0, DateTimeKind.Local);
         var history = new[]
@@ -40,11 +40,11 @@ public sealed class QueryHelpersTests
     }
 
     [Fact]
-    public void InsertAtCursorEGenerate()
+    public void InsertAtCursorAndGenerate()
     {
         Assert.Equal("`select`", QueryHelpers.InsertText(Sql, new HelperItem(HelperKind.Column, "select"), _ => ""));
         Assert.Equal("NOW", QueryHelpers.InsertText(Sql, new HelperItem(HelperKind.Function, "NOW"), _ => ""));
-        Assert.Equal("conteúdo", QueryHelpers.InsertText(Sql, new HelperItem(HelperKind.Snippet, "s", "", "x.sql"), p => p == "x.sql" ? "conteúdo" : ""));
+        Assert.Equal("content", QueryHelpers.InsertText(Sql, new HelperItem(HelperKind.Snippet, "s", "", "x.sql"), p => p == "x.sql" ? "content" : ""));
         Assert.Null(QueryHelpers.InsertText(Sql, new HelperItem(HelperKind.Root, "Snippets"), _ => ""));
 
         var nl = Environment.NewLine;

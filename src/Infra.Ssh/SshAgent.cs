@@ -8,21 +8,21 @@ using Renci.SshNet.Security;
 
 namespace Eunomia.Infra.Ssh;
 
-/// <summary>Transporte de mensagens do protocolo do SSH agent (pedido e resposta, sem o prefixo de tamanho).</summary>
+/// <summary>Message transport for the SSH agent protocol (request and response, without the length prefix).</summary>
 public interface ISshAgentTransport
 {
     byte[] Request(byte[] message);
 }
 
-/// <summary>Uma chave do agent: blob público (com o tipo lá dentro) e comentário.</summary>
+/// <summary>An agent key: public blob (with the type inside) and comment.</summary>
 public sealed record AgentKey(byte[] Blob, string Comment)
 {
     public string KeyType => SshAgentClient.ReadString(Blob, 0, out _);
 }
 
 /// <summary>
-/// Cliente do protocolo do SSH agent (draft-miller-ssh-agent): lista de chaves e pedidos de assinatura. A chave
-/// privada nunca sai do agent (ADR-09, 23.2).
+/// SSH agent protocol client (draft-miller-ssh-agent): key listing and signing requests. The private
+/// key never leaves the agent (ADR-09, 23.2).
 /// </summary>
 public sealed class SshAgentClient(ISshAgentTransport transport)
 {
@@ -52,7 +52,7 @@ public sealed class SshAgentClient(ISshAgentTransport transport)
         return keys;
     }
 
-    /// <summary>Assina <paramref name="data"/>; devolve o blob de assinatura (nome do algoritmo + assinatura).</summary>
+    /// <summary>Signs <paramref name="data"/>; returns the signature blob (algorithm name + signature).</summary>
     public byte[] Sign(byte[] keyBlob, byte[] data, uint flags)
     {
         using var ms = new MemoryStream();
@@ -70,7 +70,7 @@ public sealed class SshAgentClient(ISshAgentTransport transport)
         return ReadBytes(reply, 1, out _);
     }
 
-    /// <summary>Algoritmos SSH.NET para as chaves do agent (RSA oferecida com SHA-2 primeiro).</summary>
+    /// <summary>SSH.NET algorithms for the agent's keys (RSA offered with SHA-2 first).</summary>
     public IReadOnlyList<HostAlgorithm> HostAlgorithms()
     {
         var result = new List<HostAlgorithm>();
@@ -90,7 +90,7 @@ public sealed class SshAgentClient(ISshAgentTransport transport)
         return result;
     }
 
-    /// <summary>Agent disponível nesta máquina: SSH_AUTH_SOCK, o serviço do OpenSSH para Windows, ou o Pageant.</summary>
+    /// <summary>Agent available on this machine: SSH_AUTH_SOCK, the OpenSSH for Windows service, or Pageant.</summary>
     public static SshAgentClient? TryConnect()
     {
         var sock = Environment.GetEnvironmentVariable("SSH_AUTH_SOCK");
@@ -143,7 +143,7 @@ public sealed class SshAgentClient(ISshAgentTransport transport)
     }
 }
 
-/// <summary>Chave do agent vista pelo SSH.NET: a assinatura é pedida ao agent.</summary>
+/// <summary>Agent key as seen by SSH.NET: the signature is requested from the agent.</summary>
 internal sealed class AgentHostAlgorithm(string name, byte[] publicKeyBlob, SshAgentClient agent, uint flags) : HostAlgorithm(name)
 {
     public override byte[] Data => publicKeyBlob;
@@ -154,13 +154,13 @@ internal sealed class AgentHostAlgorithm(string name, byte[] publicKeyBlob, SshA
         throw new NotSupportedException("Agent keys are only used to sign.");
 }
 
-/// <summary>Chaves do agent como fonte de chaves privadas para a autenticação por chave pública do SSH.NET.</summary>
+/// <summary>The agent's keys as a source of private keys for SSH.NET public key authentication.</summary>
 internal sealed class AgentKeySource(IReadOnlyList<HostAlgorithm> algorithms) : IPrivateKeySource
 {
     public IReadOnlyCollection<HostAlgorithm> HostKeyAlgorithms => algorithms;
 }
 
-/// <summary>Agent do OpenSSH: named pipe em Windows (<c>\\.\pipe\…</c>) ou socket Unix (Linux, macOS, Windows 10+).</summary>
+/// <summary>OpenSSH agent: named pipe on Windows (<c>\\.\pipe\…</c>) or Unix socket (Linux, macOS, Windows 10+).</summary>
 public sealed class StreamAgentTransport(string path) : ISshAgentTransport
 {
     public byte[] Request(byte[] message)
@@ -192,8 +192,8 @@ public sealed class StreamAgentTransport(string path) : ISshAgentTransport
 }
 
 /// <summary>
-/// Pageant (PuTTY) pelo protocolo clássico: pedido numa file mapping com nome e <c>WM_COPYDATA</c> para a janela do
-/// Pageant. Só Windows.
+/// Pageant (PuTTY) through the classic protocol: the request in a named file mapping and <c>WM_COPYDATA</c> to the
+/// Pageant window. Windows only.
 /// </summary>
 public sealed partial class PageantTransport : ISshAgentTransport
 {

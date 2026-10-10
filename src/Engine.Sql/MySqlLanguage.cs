@@ -3,9 +3,9 @@ using Eunomia.Engine.Sql.Lexing;
 namespace Eunomia.Engine.Sql;
 
 /// <summary>
-/// Linguagem do MySQL e do MariaDB: palavras de <see cref="MySqlKeywords"/>, lexer <see cref="MySqlLexer"/> e
-/// identificadores entre crases (as crases de dentro duplicadas). No editor, um nome só leva crases quando é palavra
-/// reservada ou tipo, tem caracteres fora de <c>[A-Za-z0-9_$]</c> ou é só dígitos.
+/// The MySQL and MariaDB language: words from <see cref="MySqlKeywords"/>, the <see cref="MySqlLexer"/> lexer and
+/// backticked identifiers (inner backticks doubled). In the editor, a name only gets backticks when it is a reserved
+/// word or a type, has characters outside <c>[A-Za-z0-9_$]</c> or is only digits.
 /// </summary>
 internal sealed class MySqlLanguage : ISqlLanguage
 {

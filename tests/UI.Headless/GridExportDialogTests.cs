@@ -6,11 +6,11 @@ using Eunomia.UI.Features.Transfer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Diálogo Export grid rows (anexo B §1.4; FAM-C04, C05).</summary>
+/// <summary>Export grid rows dialog (appendix B §1.4; FAM-C04, C05).</summary>
 public sealed class GridExportDialogTests
 {
     [AvaloniaFact]
-    public void DefaultsEOpcoesDoClipboardSeparadas()
+    public void DefaultsAndSeparateClipboardOptions()
     {
         var settings = new ExportOptions();
         var dialog = new GridExportDialog(settings, selectedRows: 3, allRows: 1000, focusedColumn: "name", expandFileName: s => s);
@@ -25,7 +25,7 @@ public sealed class GridExportDialogTests
         var boxes = dialog.GetLogicalDescendants().OfType<CheckBox>().ToList();
         Assert.Contains(boxes, b => b.Content as string == "Only focused column (name)" && b.IsEnabled);
 
-        // Save clipboard settings guarda as opções do Copy as, separadas das do diálogo.
+        // Save clipboard settings keeps the Copy as options, apart from the dialog's.
         boxes.Single(b => b.Content as string == "Include column names").IsChecked = false;
         var save = dialog.GetLogicalDescendants().OfType<Button>().Single(b => b.Content as string == "Save clipboard settings");
         save.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));

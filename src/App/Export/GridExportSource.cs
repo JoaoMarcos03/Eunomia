@@ -3,12 +3,12 @@ using Eunomia.Engine.Results;
 namespace Eunomia.App.Export;
 
 /// <summary>
-/// Lê do source as linhas e colunas a exportar (anexo B §1.2): só as linhas carregadas, pela ordem do grid, colunas
-/// visíveis pela ordem visual.
+/// Reads the rows and columns to export from the source (appendix B §1.2): only the loaded rows, in grid order,
+/// visible columns in visual order.
 /// </summary>
 public static class GridExportSource
 {
-    /// <summary>Alguma célula a exportar veio cortada (é preciso reler sem <c>LEFT()</c>).</summary>
+    /// <summary>Some cell to export came cut (it must be read again without <c>LEFT()</c>).</summary>
     public static async Task<bool> HasTruncatedAsync(IRowSource source, IReadOnlyList<long> rows, IReadOnlyList<int> columns, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(source);

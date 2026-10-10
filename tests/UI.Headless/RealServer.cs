@@ -10,7 +10,7 @@ using MySqlConnector;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Shell ligado ao servidor de testes (tests/Integration/Start-TestServer.ps1 ou <c>EUNOMIA_IT_MYSQL</c>).</summary>
+/// <summary>Shell connected to the test server (tests/Integration/Start-TestServer.ps1 or <c>EUNOMIA_IT_MYSQL</c>).</summary>
 internal static class RealServer
 {
     public static string? ConnectionString()
@@ -25,9 +25,9 @@ internal static class RealServer
     }
 
     /// <summary>
-    /// O ficheiro do Start-TestServer.ps1 fica depois de o servidor parar (por exemplo, num reinício). Sem esta
-    /// verificação, os testes tentavam ligar, o diálogo de erro da ligação ficava à espera na UI thread partilhada e a
-    /// corrida inteira parava. Com <c>EUNOMIA_IT_MYSQL</c> (CI) não há verificação: um servidor em baixo tem de falhar.
+    /// The Start-TestServer.ps1 file stays after the server stops (for example, after a restart). Without this
+    /// check, the tests tried to connect, the connection error dialog waited on the shared UI thread and the
+    /// whole run stopped. With <c>EUNOMIA_IT_MYSQL</c> (CI) there is no check: a server that is down has to fail.
     /// </summary>
     private static bool Reachable(string connectionString)
     {
@@ -44,7 +44,7 @@ internal static class RealServer
         }
     }
 
-    /// <summary>Corre os jobs da UI até <paramref name="probe"/> devolver um valor (10 s por omissão).</summary>
+    /// <summary>Runs the UI jobs until <paramref name="probe"/> returns a value (10 s by default).</summary>
     public static async Task<T> WaitAsync<T>(Func<T?> probe, TimeSpan? timeout = null)
         where T : class
     {
@@ -71,7 +71,7 @@ internal static class RealServer
 
     public static string NewDatabaseName(string prefix) => prefix + Guid.NewGuid().ToString("N")[..8];
 
-    /// <summary>Janela principal com uma sessão gravada para o servidor de testes (ainda por ligar).</summary>
+    /// <summary>Main window with a saved session for the test server (not yet connected).</summary>
     public static Shell CreateShell(string connectionString, string databases, AppSettings? settings = null, IAppDatabase? appDatabase = null, uint? color = null, Eunomia.Engine.Transfer.TransferJournal? journal = null)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString);

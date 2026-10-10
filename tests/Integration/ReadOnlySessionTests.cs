@@ -9,7 +9,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Sessões read-only (secção 23.2; Fase 14): o cliente recusa escritas e o servidor também.</summary>
+/// <summary>Read-only sessions (section 23.2; phase 14): the client refuses writes and so does the server.</summary>
 public sealed class ReadOnlySessionTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -60,7 +60,7 @@ public sealed class ReadOnlySessionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task QueryTabLeMasNaoEscreve()
+    public async Task QueryTabReadsButDoesNotWrite()
     {
         TestServer.RequireServer();
         var runner = new QueryRunner(_host);
@@ -77,7 +77,7 @@ public sealed class ReadOnlySessionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GridEDdlTambemSaoRecusados()
+    public async Task GridAndDdlAreRefusedToo()
     {
         TestServer.RequireServer();
         var table = await new MetadataCache(_host, new MetadataOptions()).GetTableAsync(new DbObjectRef(_database, _database, "t", DbObjectKind.Table), Ct);
@@ -92,10 +92,10 @@ public sealed class ReadOnlySessionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OServidorTambemRecusaSemAGuardaDoCliente()
+    public async Task TheServerAlsoRefusesWithoutTheClientGuard()
     {
         TestServer.RequireServer();
-        // Simula uma falha da guarda do cliente: o servidor está em SET SESSION TRANSACTION READ ONLY.
+        // Simulates a failure of the client's guard: the server is in SET SESSION TRANSACTION READ ONLY.
         var error = await Assert.ThrowsAnyAsync<Exception>(() => _host.RunPrimaryAsync(async (h, ct) =>
         {
             var guard = h.Guard;

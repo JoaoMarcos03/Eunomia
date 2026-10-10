@@ -5,11 +5,11 @@ using System.Xml.Linq;
 namespace Eunomia.Architecture.Tests;
 
 /// <summary>
-/// "O core não conhece MySQL" (secção 21; roadmap 2.12): fora do driver (<c>Drivers.MySql</c>) e da camada de linguagem
-/// (<c>Engine.Sql</c>, que tem o lexer e as palavras do MySQL atrás de <c>ISqlLanguage</c>), nenhum projeto usa tipos
-/// <c>MySql*</c> nem o MySqlConnector. O <c>App.Desktop</c> (composition root) escolhe o provider e fica de fora. Lê as
-/// referências de tipos dos assemblies compilados, por isso apanha qualquer uso (nome qualificado, <c>using static</c>,
-/// atributo ou argumento genérico).
+/// "The core does not know MySQL" (section 21; roadmap 2.12): outside the driver (<c>Drivers.MySql</c>) and the language
+/// layer (<c>Engine.Sql</c>, which keeps the MySQL lexer and words behind <c>ISqlLanguage</c>), no project uses <c>MySql*</c>
+/// types or MySqlConnector. <c>App.Desktop</c> (the composition root) chooses the provider and is left out. Reads the type
+/// references of the compiled assemblies, so it catches any use (qualified name, <c>using static</c>, attribute or
+/// generic argument).
 /// </summary>
 public sealed class DialectBoundaryTests
 {
@@ -27,30 +27,30 @@ public sealed class DialectBoundaryTests
 
     [Theory]
     [MemberData(nameof(CheckedProjects))]
-    public void ProjetoNaoUsaTiposDoMySql(string project)
+    public void ProjectDoesNotUseMySqlTypes(string project)
     {
         var (types, assemblies) = References(project);
 
         var mySqlTypes = types.Where(t => t.Name.StartsWith("MySql", StringComparison.Ordinal)).Select(t => $"{t.Namespace}.{t.Name}").ToList();
-        Assert.True(mySqlTypes.Count == 0, $"{project} usa {string.Join(", ", mySqlTypes)}: passar pelo ISqlLanguage ou pelo IDialect");
+        Assert.True(mySqlTypes.Count == 0, $"{project} uses {string.Join(", ", mySqlTypes)}: go through ISqlLanguage or IDialect");
         Assert.DoesNotContain("MySqlConnector", assemblies);
     }
 
     [Fact]
-    public void LeituraEncontraOsTiposDoMySqlNoDriver()
+    public void ReadingFindsTheMySqlTypesInTheDriver()
     {
-        // Controlo positivo: o driver usa o MySqlConnector; se a leitura dos metadados não os visse, o teste acima passava sempre.
+        // Positive control: the driver uses MySqlConnector; if reading the metadata did not see them, the test above would always pass.
         var (types, assemblies) = References("Drivers.MySql");
 
         Assert.Contains(types, t => t.Namespace == "MySqlConnector" && t.Name == "MySqlConnection");
         Assert.Contains("MySqlConnector", assemblies);
     }
 
-    /// <summary>Tipos de outros assemblies que o projeto referencia, e os assemblies que referencia.</summary>
+    /// <summary>Types from other assemblies that the project references, and the assemblies it references.</summary>
     private static (List<(string Namespace, string Name)> Types, List<string> Assemblies) References(string project)
     {
         var path = Path.Combine(AppContext.BaseDirectory, AssemblyName(project) + ".dll");
-        Assert.True(File.Exists(path), $"{project}: falta {path} (acrescentar o projeto às ProjectReference do Architecture.Tests)");
+        Assert.True(File.Exists(path), $"{project}: {path} is missing (add the project to the Architecture.Tests ProjectReference items)");
         using var stream = File.OpenRead(path);
         using var pe = new PEReader(stream);
         var metadata = pe.GetMetadataReader();
@@ -71,7 +71,7 @@ public sealed class DialectBoundaryTests
             .Where(name => File.Exists(Path.Combine(RepoRoot, "src", name, name + ".csproj")))
             .Order(StringComparer.Ordinal);
 
-    /// <summary><c>AssemblyName</c> do projeto, ou o nome do projeto.</summary>
+    /// <summary>The project's <c>AssemblyName</c>, or the project name.</summary>
     private static string AssemblyName(string project)
     {
         var csproj = XDocument.Load(Path.Combine(RepoRoot, "src", project, project + ".csproj"));
@@ -87,6 +87,6 @@ public sealed class DialectBoundaryTests
         {
             dir = dir.Parent;
         }
-        return dir?.FullName ?? throw new InvalidOperationException("Raiz do repo (Eunomia.slnx) não encontrada.");
+        return dir?.FullName ?? throw new InvalidOperationException("Repository root (Eunomia.slnx) not found.");
     }
 }

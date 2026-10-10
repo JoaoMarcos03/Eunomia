@@ -1,48 +1,48 @@
 namespace Eunomia.App.Settings;
 
-/// <summary>Porta das settings globais (secção 21.4). A implementação está em <c>Infra.Settings</c>.</summary>
+/// <summary>Port for the global settings (section 21.4). The implementation is in <c>Infra.Settings</c>.</summary>
 public interface ISettingsStore
 {
-    /// <summary>Lê as settings; devolve os defaults se o ficheiro não existir ou estiver corrompido.</summary>
+    /// <summary>Reads the settings; returns the defaults if the file does not exist or is corrupted.</summary>
     AppSettings Load();
 
-    /// <summary>Grava de forma atómica (ficheiro temporário + rename).</summary>
+    /// <summary>Writes atomically (temporary file + rename).</summary>
     void Save(AppSettings settings);
 }
 
-/// <summary>Tabela de uma sessão, chave do estado por tabela no <c>app.db</c>.</summary>
+/// <summary>A table of a session, the key of the per-table state in <c>app.db</c>.</summary>
 public readonly record struct TableKey(string Session, string Database, string Table);
 
-/// <summary>Uma query executada (helper "Query history", anexo C §1.11).</summary>
+/// <summary>A query that ran ("Query history" helper, appendix C §1.11).</summary>
 public sealed record QueryHistoryEntry(long Id, string Session, string? Database, string Sql, DateTimeOffset ExecutedAt, TimeSpan Duration);
 
 /// <summary>
-/// Porta do <c>app.db</c> (secção 21.4): estado por tabela (colunas ocultas, filtro, sort), filtros recentes,
-/// favoritos e histórico de queries, sem o limite de 1 MB do histórico do HeidiSQL. Thread-safe.
+/// <c>app.db</c> port (section 21.4): per-table state (hidden columns, filter, sort), recent filters,
+/// favourites and query history, without the 1 MB limit of HeidiSQL's history. Thread-safe.
 /// </summary>
 public interface IAppDatabase : IDisposable
 {
     string? GetTableState(TableKey table, string name);
 
-    /// <summary>Grava um valor de estado; <c>null</c> apaga-o.</summary>
+    /// <summary>Saves a state value; <c>null</c> deletes it.</summary>
     void SetTableState(TableKey table, string name, string? value);
 
-    /// <summary>Filtros recentes da tabela, do mais recente para o mais antigo.</summary>
+    /// <summary>Recent filters of the table, from the most recent to the oldest.</summary>
     IReadOnlyList<string> GetRecentFilters(TableKey table);
 
-    /// <summary>Acrescenta (ou sobe para o topo) e corta em <paramref name="max"/> entradas.</summary>
+    /// <summary>Adds (or moves to the top) and trims to <paramref name="max"/> entries.</summary>
     void AddRecentFilter(TableKey table, string filter, int max = 20);
 
     void ClearRecentFilters(TableKey table);
 
-    /// <summary>Favoritos da sessão no formato do HeidiSQL <c>db|schema|nome</c> (FAM-T03).</summary>
+    /// <summary>The session's favourites in HeidiSQL's <c>db|schema|name</c> format (FAM-T03).</summary>
     IReadOnlyList<string> GetFavorites(string session);
 
     void SetFavorite(string session, string path, bool favorite);
 
     long AddHistory(string session, string? database, string sql, DateTimeOffset executedAt, TimeSpan duration);
 
-    /// <summary>Histórico da sessão, do mais recente para o mais antigo.</summary>
+    /// <summary>The session's history, from the most recent to the oldest.</summary>
     IReadOnlyList<QueryHistoryEntry> GetHistory(string session, int limit = 1000);
 
     void DeleteHistory(long id);

@@ -7,19 +7,19 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Idas ao servidor por ação (num servidor remoto cada uma custa a latência inteira): contadas pelas instruções no SQL
-/// log. Abrir uma tabela no Data tab são três (USE da base, definição, SELECT); outra da mesma base, duas; o table
-/// editor pede collations e engines só na primeira tabela e depois só a definição.
+/// Round trips per action (on a remote server each one costs the full latency): counted from the statements in the SQL
+/// log. Opening a table in the Data tab takes three (USE of the database, definition, SELECT); another one from the same
+/// database, two; the table editor asks for collations and engines only for the first table and then only the definition.
 /// </summary>
 public sealed class RoundTripTests
 {
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task UmaIdaPorPassoAoAbrirTabelas()
+    public async Task OneRoundTripPerStepWhenOpeningTables()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_rtt_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
             $"CREATE TABLE `{db}`.parent (id INT PRIMARY KEY, name VARCHAR(20), UNIQUE KEY uq (name)); " +
@@ -36,7 +36,7 @@ public sealed class RoundTripTests
             await model.ExpandAsync(dbNode);
             var host = connector.Open.Single().Host;
 
-            // Instruções SQL enviadas durante uma ação, contadas depois de tudo acalmar (500 ms sem nada novo).
+            // SQL statements sent during an action, counted after everything settles (500 ms with nothing new).
             async Task<List<string>> SqlDuringAsync(Action action, Func<bool> done)
             {
                 await QuietAsync();
@@ -44,7 +44,7 @@ public sealed class RoundTripTests
                 action();
                 await WaitAsync(() => done() ? "ok" : null);
                 await QuietAsync();
-                // O relógio do servidor (a cada 20 s) não conta.
+                // The server clock (every 20 s) does not count.
                 return [.. log.Snapshot().Where(l => l.Number > last && l.Kind == LogLineKind.Sql && !l.Text.Contains("SELECT NOW()", StringComparison.Ordinal)).Select(l => l.Text)];
             }
 
@@ -76,8 +76,8 @@ public sealed class RoundTripTests
                 () => window.DataBrowser?.Table.Ref.Name == "parent" && window.DataGrid.RowCount == 1);
             Assert.True(second.Count == 2, string.Join(" | ", second));
 
-            // O primeiro editor da sessão lê as collations e os engines; espera que acabe (e não só 500 ms sem log: com a
-            // máquina carregada o pedido ainda não tinha saído e a escolha seguinte cancelava-o).
+            // The session's first editor reads the collations and the engines; waits for it to finish (not just 500 ms without a log: with
+            // the machine under load the request had not gone out yet and the next choice cancelled it).
             window.Tabs.SelectedItem = window.Tabs.TableTab;
             await WaitAsync(() => (window.Tabs.TableTab.Content as UI.Features.TableEditor.TableEditorView)?.Design.Name == "parent" ? "ok" : null);
             await QuietAsync();

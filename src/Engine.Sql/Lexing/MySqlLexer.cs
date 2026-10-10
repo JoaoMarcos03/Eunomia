@@ -16,10 +16,10 @@ public enum SqlTokenKind
     Delimiter,
 }
 
-/// <summary>Token dentro de uma linha: posição e comprimento em caracteres.</summary>
+/// <summary>Token within a line: position and length in characters.</summary>
 public readonly record struct SqlToken(int Start, int Length, SqlTokenKind Kind);
 
-/// <summary>Estado no fim de uma linha, para o lexing incremental por linha (secção 16.1).</summary>
+/// <summary>State at the end of a line, for incremental per-line lexing (section 16.1).</summary>
 public enum LexerState : byte
 {
     Normal,
@@ -30,14 +30,14 @@ public enum LexerState : byte
 }
 
 /// <summary>
-/// Lexer MySQL simples e incremental por linha: keywords, tipos, funções, strings (<c>'</c> e <c>"</c>,
-/// com escapes <c>\</c> e aspas duplicadas), identificadores com backticks, números (decimais, expoente,
-/// <c>0x</c>), comentários <c>-- </c> (com espaço ou fim de linha), <c>#</c> e <c>/* */</c>, e variáveis
-/// <c>@x</c> / <c>@@x</c>. Não aloca além da lista de tokens do chamador.
+/// Simple, incremental per-line MySQL lexer: keywords, types, functions, strings (<c>'</c> and <c>"</c>,
+/// with <c>\</c> escapes and doubled quotes), backticked identifiers, numbers (decimals, exponent,
+/// <c>0x</c>), <c>-- </c> comments (with a space or end of line), <c>#</c> and <c>/* */</c>, and
+/// <c>@x</c> / <c>@@x</c> variables. Allocates nothing beyond the caller's token list.
 /// </summary>
 public static class MySqlLexer
 {
-    /// <summary>Tokeniza uma linha a partir do estado deixado pela linha anterior e devolve o estado final.</summary>
+    /// <summary>Tokenises a line from the state left by the previous line and returns the final state.</summary>
     public static LexerState TokenizeLine(ReadOnlySpan<char> line, LexerState state, List<SqlToken> tokens)
     {
         ArgumentNullException.ThrowIfNull(tokens);
@@ -138,7 +138,7 @@ public static class MySqlLexer
         return state;
     }
 
-    /// <summary>Tokeniza um texto completo (várias linhas), útil para testes.</summary>
+    /// <summary>Tokenises a whole text (several lines), useful for tests.</summary>
     public static List<(int Line, SqlToken Token)> Tokenize(string text)
     {
         var result = new List<(int, SqlToken)>();
@@ -166,8 +166,8 @@ public static class MySqlLexer
     };
 
     /// <summary>
-    /// Avança dentro de um comentário de bloco, string ou backtick a partir de <paramref name="i"/>.
-    /// Devolve a posição a seguir ao fecho (ou o fim da linha) e o estado resultante.
+    /// Advances inside a block comment, string or backtick from <paramref name="i"/>.
+    /// Returns the position after the closing (or the end of the line) and the resulting state.
     /// </summary>
     private static int ContinueMultiLine(ReadOnlySpan<char> line, int i, LexerState inside, out LexerState after)
     {
@@ -254,7 +254,7 @@ public static class MySqlLexer
                 }
             }
         }
-        // Em MySQL, "1abc" é um identificador, não um número seguido de texto.
+        // In MySQL, "1abc" is an identifier, not a number followed by text.
         return i < line.Length && IsIdentifierChar(line[i]) ? start : i;
     }
 

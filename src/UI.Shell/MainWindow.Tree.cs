@@ -8,13 +8,13 @@ using Eunomia.UI.Shell.Sessions;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Árvore de bases sobre as sessões reais (Fase 4; FAM-T01–T09): tree style options, refresh (F5, Shift+F5) que
-/// mantém bases e grupos abertos e o objeto focado, favoritos gravados por sessão, estatísticas que chegam em
-/// background, Expand/Collapse all.
+/// Database tree on the real sessions (phase 4; FAM-T01–T09): tree style options, refresh (F5, Shift+F5) that
+/// keeps databases and groups open and the focused object, favourites saved per session, statistics arriving in
+/// the background, Expand/Collapse all.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Tree style option "Doubleclick inserts node text" (secção 4.2). Ligada por omissão.</summary>
+    /// <summary>"Doubleclick inserts node text" tree style option (section 4.2). On by default.</summary>
     public bool DoubleClickInsertsNodeText
     {
         get => _context.Settings.Tree.DoubleClickInsertsNodeText;
@@ -49,7 +49,7 @@ public sealed partial class MainWindow
         });
         Toggle("tree.doubleClickInsertsNodeText", () => DoubleClickInsertsNodeText, v => DoubleClickInsertsNodeText = v);
         c.SetHandler("tree.expandAll", _ => new ValueTask(ExpandAllAsync()), () => _model.Roots.Count > 0);
-        // Collapse all só atua na primeira sessão (anexo D A10).
+        // Collapse all only acts on the first session (appendix D A10).
         c.SetHandler("tree.collapseAll", () => _model.CollapseDescendants(_model.Roots[0]), () => _model.Roots.Count > 0);
         c.SetHandler("view.refresh", _ => new ValueTask(RefreshAsync(fullStatus: false)), () => _tree.Tree.FocusedNode is { Session: not null } || ActiveDiagram() is not null);
         c.SetHandler("view.fullRefresh", _ => new ValueTask(RefreshAsync(fullStatus: true)), () => _tree.Tree.FocusedNode is { Session: not null });
@@ -71,13 +71,13 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// F5 com o foco fora do Data tab: refresh da sessão do nó focado (anexo D A9). Esquece a cache de metadata, relê
-    /// as bases, volta a abrir as bases, grupos e tabelas que estavam abertos e volta a focar o objeto (ou o
-    /// antepassado mais próximo que ainda exista). Shift+F5 pede também as estatísticas das bases que reabre.
+    /// F5 with the focus outside the Data tab: refresh of the focused node's session (appendix D A9). Forgets the metadata cache,
+    /// reads the databases again, reopens the databases, groups and tables that were open and focuses the object again (or its
+    /// closest ancestor that still exists). Shift+F5 also requests the statistics of the databases it reopens.
     /// </summary>
     private async Task RefreshAsync(bool fullStatus)
     {
-        // F5 no tab de diagrama relê o schema dele (SV-16).
+        // F5 in the diagram tab reloads its schema (SV-16).
         if (!fullStatus && ActiveDiagram() is { } diagram)
         {
             await RefreshDiagramAsync(diagram);
@@ -88,7 +88,7 @@ public sealed partial class MainWindow
             LoadDataForFocusedNode(force: true);
             return;
         }
-        // F5 numa lista do Host tab relê só essa lista; na lista do Database tab, os objetos da base (como o HeidiSQL).
+        // F5 in a Host tab list reloads only that list; in the Database tab list, the database's objects (like HeidiSQL).
         if (!fullStatus && ReferenceEquals(_tabs.SelectedItem, _tabs.HostTab) && _hostView is { IsKeyboardFocusWithin: true })
         {
             await RefreshHostAsync();
@@ -113,7 +113,7 @@ public sealed partial class MainWindow
         await ReloadKeepingFocusAsync(sessionNode, focused);
     }
 
-    /// <summary>Tree style options que mudam a forma da árvore: reconstrói todas as sessões a partir da cache (sem idas ao servidor).</summary>
+    /// <summary>Tree style options that change the tree's shape: rebuilds every session from the cache (no round trips).</summary>
     private async Task RebuildTreeLayoutAsync()
     {
         if (_sessionTree is null)
@@ -146,8 +146,8 @@ public sealed partial class MainWindow
                 _sessionTree.ForceStatistics = false;
             }
         }
-        // Se o foco mudou durante o reload (clique, objeto acabado de gravar) e o nó continua na árvore, fica onde está:
-        // repor o caminho antigo levaria o foco para trás.
+        // If the focus changed during the reload (a click, an object just saved) and the node is still in the tree, it stays where it is:
+        // restoring the old path would take the focus backwards.
         if (_tree.Tree.FocusedNode is { } now && !ReferenceEquals(now, focusBefore) && _model.IndexOf(now) >= 0)
         {
             return;
@@ -159,7 +159,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Grava a estrela no <c>app.db</c> logo a seguir ao clique (anexo D A5).</summary>
+    /// <summary>Saves the star in <c>app.db</c> right after the click (appendix D A5).</summary>
     private void OnFavoriteChanged(TreeNode node)
     {
         if (node.Tag is not TreeObjectTag { Object: { } obj } tag || Sessions?.Connector.Find(tag.Session) is not { } open)
@@ -178,14 +178,14 @@ public sealed partial class MainWindow
         _context.AppDatabase?.SetFavorite(open.Id.ToString("D"), path, node.IsFavorite);
     }
 
-    /// <summary>Sessão aberta: favoritos do <c>app.db</c> e avisos da cache de metadata (estatísticas em background).</summary>
+    /// <summary>Opened session: favourites from <c>app.db</c> and metadata cache notifications (statistics in the background).</summary>
     private void AttachTree(OpenSession open, TreeNode sessionNode)
     {
         if (_context.AppDatabase is { } db)
         {
             open.Favorites.UnionWith(db.GetFavorites(open.Id.ToString("D")));
         }
-        // "Show only favorites" volta a off em cada ligação nova (anexo D A5).
+        // "Show only favorites" goes back to off on every new connection (appendix D A5).
         _tree.FavoritesButton.IsChecked = false;
         if (!string.IsNullOrWhiteSpace(open.Definition.HideDatabasePattern))
         {
@@ -195,7 +195,7 @@ public sealed partial class MainWindow
             }
             catch (ArgumentException ex)
             {
-                // A cache ignora o padrão inválido; o HeidiSQL regista e continua.
+                // The cache ignores the invalid pattern; HeidiSQL logs it and carries on.
                 _context.Log.Append(LogCategory.Error, $"Invalid regular expression in \"Hide database pattern\": {ex.Message}");
             }
         }
@@ -224,7 +224,7 @@ public sealed partial class MainWindow
         _tree.Tree.InvalidateVisual();
     }
 
-    /// <summary>Objeto focado: deixa de estar esbatido (anexo D A2); marca a base em <c>USE</c>.</summary>
+    /// <summary>Focused object: no longer dimmed (appendix D A2); marks the database in <c>USE</c>.</summary>
     private void MarkTreeSelection(TreeNode node)
     {
         if (node.Tag is TreeObjectTag tag && Sessions?.Connector.Find(tag.Session) is { } open)
@@ -238,7 +238,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Marcador da base em <c>USE</c> na ligação primária.</summary>
+    /// <summary>Marker of the database in <c>USE</c> on the primary connection.</summary>
     private void UpdateCurrentDatabase(OpenSession open)
     {
         if (!_sessionNodes.TryGetValue(open.Id, out var sessionNode) || sessionNode.Children is null)

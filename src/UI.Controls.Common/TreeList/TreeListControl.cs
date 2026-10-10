@@ -15,9 +15,9 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Controls.Common.TreeList;
 
 /// <summary>
-/// Lista em árvore com colunas, desenhada num só visual (como as listas VirtualStringTree do HeidiSQL: Session
-/// Manager, Host tab, Database tab, helpers). Virtualizada por linha; header com ordenação (clique) e larguras
-/// arrastáveis; cor de fundo por linha; teclado de árvore; pesquisa incremental; rename in-place (F2); drag &amp; drop.
+/// Tree list with columns, drawn in a single visual (like HeidiSQL's VirtualStringTree lists: Session
+/// Manager, Host tab, Database tab, helpers). Virtualised per row; header with sorting (click) and draggable
+/// widths; background colour per row; tree keyboard; incremental search; in-place rename (F2); drag &amp; drop.
 /// </summary>
 public sealed class TreeListControl : Control, Input.IEditTarget
 {
@@ -70,26 +70,26 @@ public sealed class TreeListControl : Control, Input.IEditTarget
 
     public bool ShowHeader { get; set; } = true;
 
-    /// <summary>Grupos (folders) antes dos outros nós em qualquer ordenação ("Folders at top").</summary>
+    /// <summary>Groups (folders) before the other nodes in any sort order ("Folders at top").</summary>
     public bool GroupsFirst { get; set; } = true;
 
-    /// <summary>Permite arrastar nós (o handler de <see cref="DropRequested"/> decide).</summary>
+    /// <summary>Allows dragging nodes (the <see cref="DropRequested"/> handler decides).</summary>
     public bool AllowDrag { get; set; }
 
-    /// <summary>Permite rename in-place com F2.</summary>
+    /// <summary>Allows in-place rename with F2.</summary>
     public bool AllowRename { get; set; }
 
-    /// <summary>Coluna de ordenação (-1 = ordem de inserção).</summary>
+    /// <summary>Sort column (-1 = insertion order).</summary>
     public int SortColumn => _sortColumn;
 
     public bool SortDescending => _sortDescending;
 
     public IReadOnlyList<TreeListNode> Roots => _roots;
 
-    /// <summary>Nós visíveis (achatados), pela ordem de desenho.</summary>
+    /// <summary>Visible (flattened) nodes, in drawing order.</summary>
     public IReadOnlyList<TreeListNode> VisibleNodes => _visible;
 
-    /// <summary>Barras nas colunas numéricas (Preferences › General › Display bars).</summary>
+    /// <summary>Bars on numeric columns (Preferences › General › Display bars).</summary>
     public bool ShowBars
     {
         get => _showBars;
@@ -115,10 +115,10 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         }
     }
 
-    /// <summary>Multi-seleção com Ctrl e Shift (lista de objetos do Database tab, processos do Host tab).</summary>
+    /// <summary>Multi-selection with Ctrl and Shift (Database tab object list, Host tab processes).</summary>
     public bool MultiSelect { get; set; }
 
-    /// <summary>Nós selecionados pela ordem de desenho; sem multi-seleção, o nó focado.</summary>
+    /// <summary>Selected nodes in drawing order; without multi-selection, the focused node.</summary>
     public IReadOnlyList<TreeListNode> SelectedNodes => MultiSelect
         ? _visible.Where(_selected.Contains).ToList()
         : _focused is null ? [] : [_focused];
@@ -135,7 +135,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
 
     public bool CanUndo => false;
 
-    /// <summary>Copy: as colunas visíveis das linhas selecionadas, separadas por tab, uma linha por nó.</summary>
+    /// <summary>Copy: the visible columns of the selected rows, separated by tabs, one line per node.</summary>
     public async Task CopyAsync()
     {
         var visible = Columns.Select((c, i) => (c, i)).Where(x => x.c.Visible).Select(x => x.i).ToList();
@@ -154,7 +154,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
     {
     }
 
-    /// <summary>Seleciona todos os nós visíveis (Ctrl+A).</summary>
+    /// <summary>Selects every visible node (Ctrl+A).</summary>
     public void SelectAll()
     {
         if (!MultiSelect)
@@ -256,21 +256,21 @@ public sealed class TreeListControl : Control, Input.IEditTarget
 
     public event EventHandler? FocusedNodeChanged;
 
-    /// <summary>Duplo clique ou Enter num nó.</summary>
+    /// <summary>Double click or Enter on a node.</summary>
     public event EventHandler<TreeListNode>? NodeActivated;
 
     public event EventHandler<TreeListDropEventArgs>? DropRequested;
 
     public event EventHandler<TreeListRenameEventArgs>? RenameRequested;
 
-    /// <summary>Clique direito no header (menu de colunas).</summary>
+    /// <summary>Right click on the header (columns menu).</summary>
     public event EventHandler<Point>? HeaderContextRequested;
 
     public event EventHandler? ScrollChanged;
 
     public event EventHandler? SortChanged;
 
-    /// <summary>Substitui os nós (mantém o foco se o mesmo <see cref="TreeListNode.Tag"/> continuar presente).</summary>
+    /// <summary>Replaces the nodes (keeps the focus if the same <see cref="TreeListNode.Tag"/> is still there).</summary>
     public void SetRoots(IEnumerable<TreeListNode> roots)
     {
         var selectedTags = _selected.Select(n => n.Tag).Where(t => t is not null).ToHashSet();
@@ -298,7 +298,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         InvalidateVisual();
     }
 
-    /// <summary>Filtro de linhas: nós que passam e os seus antepassados ficam visíveis.</summary>
+    /// <summary>Row filter: matching nodes and their ancestors stay visible.</summary>
     public void SetFilter(Func<TreeListNode, bool>? filter)
     {
         _filter = filter;
@@ -426,13 +426,13 @@ public sealed class TreeListControl : Control, Input.IEditTarget
                 }
                 else if (MultiSelect && _selected.Contains(node))
                 {
-                    // Selecionado sem foco: a cor de seleção sem foco (secção 5.7).
+                    // Selected without focus: the unfocused selection colour (section 5.7).
                     context.FillRectangle(new SolidColorBrush(theme.Color("selection.row")), rowRect);
                     rowText = text;
                 }
                 else if (node.Background is { } rgb)
                 {
-                    // Cor da sessão: tinta suave (a barra com a cor inteira é desenhada a seguir).
+                    // Session colour: a soft tint (the bar with the full colour is drawn next).
                     context.FillRectangle(new SolidColorBrush(Color.FromUInt32(ColorMath.SessionTint(rgb, background.ToUInt32()))), rowRect);
                     rowText = text;
                 }
@@ -539,7 +539,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         }
     }
 
-    /// <summary>Seta de expandir: "›" fechado, "⌄" aberto (como a árvore de bases).</summary>
+    /// <summary>Expand arrow: "›" closed, "⌄" open (like the database tree).</summary>
     private static void DrawExpander(DrawingContext context, Point center, bool expanded, Color color)
     {
         var pen = new Pen(new SolidColorBrush(Color.FromArgb(0xB0, color.R, color.G, color.B)), 1.4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
@@ -582,7 +582,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         return text;
     }
 
-    /// <summary>Texto preto ou branco conforme a luminância da cor de fundo (cores de sessão).</summary>
+    /// <summary>Black or white text depending on the luminance of the background colour (session colours).</summary>
     public static Color ContrastText(uint rgb)
     {
         var r = (rgb >> 16) & 0xFF;
@@ -689,7 +689,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         }
         if (MultiSelect && props.IsRightButtonPressed && _selected.Contains(node))
         {
-            // Botão direito numa linha já selecionada mantém a seleção (para o context menu).
+            // Right click on an already selected row keeps the selection (for the context menu).
             SetFocus(node, select: false);
         }
         else if (MultiSelect)
@@ -862,7 +862,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         {
             return;
         }
-        // Pesquisa incremental na primeira coluna; recomeça depois de 1 s sem teclas.
+        // Incremental search on the first column; starts over after 1 s without keys.
         var now = DateTime.UtcNow;
         _search = now - _lastSearchKey > TimeSpan.FromSeconds(1) ? e.Text : _search + e.Text;
         _lastSearchKey = now;
@@ -983,7 +983,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         }
     }
 
-    /// <summary>Chaves de ordenação: com chave nos dois, compara-as; com chave só num, o vazio fica primeiro.</summary>
+    /// <summary>Sort keys: with a key on both, compares them; with a key on only one, the empty one comes first.</summary>
     private static int? CompareKeys(TreeListNode a, TreeListNode b, int column)
     {
         IComparable? x = null;
@@ -1001,7 +1001,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
         return x.CompareTo(y);
     }
 
-    /// <summary>Números como números, o resto como texto sem maiúsculas.</summary>
+    /// <summary>Numbers as numbers, the rest as case-insensitive text.</summary>
     public static int CompareNatural(string a, string b)
     {
         if (double.TryParse(a, NumberStyles.Float, CultureInfo.CurrentCulture, out var x) && double.TryParse(b, NumberStyles.Float, CultureInfo.CurrentCulture, out var y))
@@ -1045,7 +1045,7 @@ public sealed class TreeListControl : Control, Input.IEditTarget
     private bool Matches(TreeListNode node) => _filter!(node) || node.Children.Any(Matches);
 }
 
-/// <summary><see cref="TreeListControl"/> com scrollbars vertical e horizontal.</summary>
+/// <summary><see cref="TreeListControl"/> with vertical and horizontal scrollbars.</summary>
 public sealed class TreeListView : DockPanel
 {
     private readonly ScrollBar _vertical = new() { Orientation = Orientation.Vertical, AllowAutoHide = false, SmallChange = 1 };

@@ -5,7 +5,7 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>SELECT e label do Data tab (anexo D B2, B3, B6, B7, B8; FAM-G02, G03, G04).</summary>
+/// <summary>Data tab SELECT and label (appendix D B2, B3, B6, B7, B8; FAM-G02, G03, G04).</summary>
 public sealed class DataTabQueryTests
 {
     private static readonly MySqlDialect Dialect = new(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));
@@ -28,7 +28,7 @@ public sealed class DataTabQueryTests
     ];
 
     [Fact]
-    public void ComChaveCortaAsColunasLongasMenosAChave()
+    public void WithAKeyCutsLongColumnsExceptTheKey()
     {
         var table = Table(Columns, new IndexDefinition("PRIMARY", IndexKind.Primary, ["id"]));
 
@@ -43,7 +43,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void SemChaveTrazTudoCompletoComAsterisco()
+    public void WithoutAKeyBringsEverythingCompleteWithAsterisk()
     {
         var select = DataTabQuery.Build(Dialect, Table(Columns), ["name"], null, [], 0, 1000);
 
@@ -53,7 +53,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void UniqueNotNullServeDeChaveEColunasOcultasSaemDoSelect()
+    public void UniqueNotNullServesAsKeyAndHiddenColumnsLeaveTheSelect()
     {
         var columns = new[] { Col("code", "varchar(20)", nullable: false), Col("name", "varchar(50)"), Col("note", "varchar(50)") };
         var table = Table(columns, new IndexDefinition("u_name", IndexKind.Unique, ["name"]), new IndexDefinition("u_code", IndexKind.Unique, ["code"]));
@@ -61,12 +61,12 @@ public sealed class DataTabQueryTests
         var select = DataTabQuery.Build(Dialect, table, ["note", "code"], null, [], 0, 1000);
 
         Assert.Equal(["code"], select.KeyColumns);
-        // A chave oculta continua no SELECT; a coluna oculta que não é chave sai.
+        // The hidden key stays in the SELECT; the hidden column that is not a key goes.
         Assert.Equal("SELECT `code`, `name` FROM `shop`.`products` LIMIT 1000", select.Sql);
     }
 
     [Fact]
-    public void FiltroOrdenacaoEPaginacao()
+    public void FilterSortingAndPaging()
     {
         var table = Table([Col("id", "int(11)", false), Col("name", "varchar(10)")], new IndexDefinition("PRIMARY", IndexKind.Primary, ["id"]));
         IReadOnlyList<DataSort> sort = [new("name", false), new("id", true), new("desaparecida", false)];
@@ -78,17 +78,17 @@ public sealed class DataTabQueryTests
 
     [Theory]
     [InlineData("", null)]
-    [InlineData("  -- só um comentário\n /* e outro */ ", null)]
+    [InlineData("  -- only a comment\n /* and another */ ", null)]
     [InlineData("WHERE", null)]
     [InlineData("where id = 1", "id = 1")]
     [InlineData("WHEREVER = 1", "WHEREVER = 1")]
-    public void NormalizaOFiltro(string text, string? expected)
+    public void NormalisesTheFilter(string text, string? expected)
     {
         Assert.Equal(expected, DataTabQuery.NormalizeFilter(text));
     }
 
     [Fact]
-    public void CliqueNoHeaderAcumulaOrdenacao()
+    public void HeaderClickAccumulatesSorting()
     {
         var sort = DataTabQuery.ToggleSort([], "a", shift: false);
         sort = DataTabQuery.ToggleSort(sort, "b", shift: true);
@@ -101,7 +101,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void FormatosGravadosPorTabela()
+    public void FormatsSavedPerTable()
     {
         IReadOnlyList<DataSort> sort = [new("name", false), new("created_at", true)];
         Assert.Equal("0_name|1_created_at", DataTabQuery.FormatSort(sort));
@@ -111,7 +111,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void VariantesDaLabel()
+    public void LabelVariants()
     {
         var c = CultureInfo.InvariantCulture;
         Assert.Equal("shop.products: 272 rows total (exact)", DataTabQuery.CountLabel("shop", "products", new DataCount(272, false, false, null, false, true), c));

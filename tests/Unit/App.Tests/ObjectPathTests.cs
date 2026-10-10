@@ -3,18 +3,18 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Caminho dos favoritos no formato do HeidiSQL (FAM-T03).</summary>
+/// <summary>Favourites path in HeidiSQL's format (FAM-T03).</summary>
 public sealed class ObjectPathTests
 {
     [Fact]
-    public void MySqlTemSchemaVazio()
+    public void MySqlHasAnEmptySchema()
     {
-        Assert.Equal("loja||clientes", ObjectPath.Of(new DbObjectRef("loja", "loja", "clientes", DbObjectKind.Table)));
+        Assert.Equal("shop||customers", ObjectPath.Of(new DbObjectRef("shop", "shop", "customers", DbObjectKind.Table)));
     }
 
     [Fact]
-    public void SchemaDiferenteDoCatalogFicaNoMeio()
+    public void SchemaDifferentFromTheCatalogGoesInTheMiddle()
     {
-        Assert.Equal("app|public|clientes", ObjectPath.Of(new DbObjectRef("app", "public", "clientes", DbObjectKind.View)));
+        Assert.Equal("app|public|customers", ObjectPath.Of(new DbObjectRef("app", "public", "customers", DbObjectKind.View)));
     }
 }

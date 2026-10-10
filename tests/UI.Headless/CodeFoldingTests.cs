@@ -8,7 +8,7 @@ using Eunomia.UI.Controls.SqlEditor;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Code folding (Query ▸ Code folding; secção 6: só por <c>#region</c>/<c>#endregion</c>).</summary>
+/// <summary>Code folding (Query ▸ Code folding; section 6: only by <c>#region</c>/<c>#endregion</c>).</summary>
 public sealed class CodeFoldingTests
 {
     private static readonly string Nl = Environment.NewLine;
@@ -26,7 +26,7 @@ public sealed class CodeFoldingTests
     private static bool HasMargin(SqlEditorControl editor) => editor.Editor.TextArea.LeftMargins.OfType<FoldingMargin>().Any();
 
     [AvaloniaFact]
-    public void RegioesAninhadasEMarcadoresSoForaDeStringsEComentarios()
+    public void NestedRegionsAndMarkersOnlyOutsideStringsAndComments()
     {
         var text = string.Join(Nl,
             "#region outer",
@@ -54,7 +54,7 @@ public sealed class CodeFoldingTests
     }
 
     [AvaloniaFact]
-    public void SemRegioesOuDesligadoNaoHaMargem()
+    public void WithoutRegionsOrWhenOffThereIsNoMargin()
     {
         var (window, editor) = Open("SELECT 1;" + Nl + "SELECT 2;");
         Assert.Empty(editor.Foldings);
@@ -71,7 +71,7 @@ public sealed class CodeFoldingTests
     }
 
     [AvaloniaFact]
-    public void FoldSelectionEscreveOsMarcadoresDobraENumSoUndo()
+    public void FoldSelectionWritesTheMarkersFoldsAndIsASingleUndo()
     {
         var original = "SELECT 1;" + Nl + "SELECT 2;" + Nl + "SELECT 3;";
         var (window, editor) = Open(original);
@@ -88,7 +88,7 @@ public sealed class CodeFoldingTests
     }
 
     [AvaloniaFact]
-    public void MarcadoresInseridosNaLinhaDoCursor()
+    public void MarkersInsertedOnTheCursorLine()
     {
         var (window, editor) = Open("SELECT 1;" + Nl + "SELECT 2;");
         editor.Editor.CaretOffset = 2;
@@ -105,7 +105,7 @@ public sealed class CodeFoldingTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EscreverRecalculaDepoisDeUmaPausa()
+    public async Task TypingRecomputesAfterAPause()
     {
         var (window, editor) = Open("SELECT 1;");
         editor.Editor.Document.Insert(0, "#region typed" + Nl);
@@ -137,7 +137,7 @@ public sealed class CodeFoldingTests
         editor.Text = text;
         editor.CodeFolding = true;
         Assert.Equal(2, editor.Foldings.Count);
-        // Dobra a primeira região; a segunda fica aberta.
+        // Folds the first region; the second stays open.
         editor.FoldAt(0);
         window.CaptureRenderedFrame();
 
@@ -146,7 +146,7 @@ public sealed class CodeFoldingTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ComandosDoMenuQuery()
+    public async Task QueryMenuCommands()
     {
         var window = new Eunomia.UI.Shell.MainWindow(TestShell.CreateContext());
         window.Show();

@@ -4,20 +4,20 @@ using Eunomia.Engine.Sql.Lexing;
 namespace Eunomia.UI.Controls.SqlEditor;
 
 /// <summary>
-/// Regiões do code folding (Query ▸ Code folding; secção 6 da spec: só por marcadores <c>#region</c>/<c>#endregion</c>,
-/// que no MySQL são comentários e não mudam o SQL): uma linha é marcador quando começa, depois de espaços, por
-/// <c>#region</c> ou <c>#endregion</c> e não está dentro de uma string nem de um comentário de bloco. Os pares fazem-se
-/// por uma pilha (as regiões podem estar umas dentro das outras); um marcador sem par fica de fora.
+/// Code folding regions (Query ▸ Code folding; spec section 6: only by <c>#region</c>/<c>#endregion</c> markers,
+/// which are comments in MySQL and do not change the SQL): a line is a marker when it starts, after whitespace, with
+/// <c>#region</c> or <c>#endregion</c> and is not inside a string or a block comment. Pairs are matched with a stack
+/// (regions can be nested); a marker without a pair is left out.
 /// </summary>
 internal static class RegionFolding
 {
     public const string Start = "#region";
     public const string End = "#endregion";
 
-    /// <summary>Uma região: do <c>#</c> do <c>#region</c> ao fim da linha do <c>#endregion</c>; o nome é a linha do <c>#region</c>.</summary>
+    /// <summary>A region: from the <c>#</c> of the <c>#region</c> to the end of the <c>#endregion</c> line; the name is the <c>#region</c> line.</summary>
     public readonly record struct Region(int StartOffset, int EndOffset, string Name);
 
-    /// <param name="stateAt">Estado do lexer no início de uma linha (1-based).</param>
+    /// <param name="stateAt">Lexer state at the start of a line (1-based).</param>
     public static List<Region> Find(TextDocument document, Func<int, LexerState> stateAt)
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -49,7 +49,7 @@ internal static class RegionFolding
         return regions;
     }
 
-    /// <summary>A linha é o marcador, sozinho ou seguido de espaço e um nome (<c>#regional</c> não conta).</summary>
+    /// <summary>The line is the marker, alone or followed by whitespace and a name (<c>#regional</c> does not count).</summary>
     private static bool IsMarker(ReadOnlySpan<char> line, string marker) =>
         line.StartsWith(marker, StringComparison.OrdinalIgnoreCase) && (line.Length == marker.Length || char.IsWhiteSpace(line[marker.Length]));
 }
