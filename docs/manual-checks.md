@@ -1,75 +1,71 @@
-# Verificações pendentes
+# Manual checks
 
-Atualizado a 9 out 2026 (Fase 14: secção G). Estas verificações não se podem fazer dentro das regras do projeto: precisam do HeidiSQL instalado (os golden files e as comparações), da máquina de referência (as medições), de uma pessoa (testes manuais e beta) ou de material que não está no repo (certificados). Nada aqui bloqueia o desenvolvimento; ficam registadas para quando houver os meios. O estado de cada critério do MVP está em `docs/mvp-criteria.md`.
+Updated on 9 Oct 2026 (phase 14: section G). These checks cannot be done within the project's rules: they need HeidiSQL installed (the golden files and the comparisons), the reference machine (the measurements), a person (manual tests and the beta) or material that is not in the repository (certificates). Nothing here blocks development; they are recorded for when the means exist. The state of each MVP criterion is in `docs/mvp-criteria.md`.
 
-Comandos em PowerShell, na raiz do repositório. Os testes contra servidor precisam do servidor de teste:
+Commands in PowerShell, at the repository root. The tests against a server need the test server:
 
 ```powershell
 powershell -File tests\Integration\Start-TestServer.ps1
 ```
 
-## A. Comparações com o HeidiSQL
+## A. Comparisons with HeidiSQL
 
-Precisam do HeidiSQL 12.x instalado na mesma máquina. Se for instalado, uma sessão do Eunomia pode automatizar as comparações A1–A3 (gerar os ficheiros pela linha de comandos ou à mão uma vez, guardá-los em `tests/Golden/` e compará-los nos testes).
+They need HeidiSQL 12.x installed on the same machine. Once it is installed, comparisons A1–A3 can be automated (generate the files from the command line, or by hand once, keep them in `tests/Golden/` and compare them in the tests).
 
-| # | Verificação | Como | Resultado esperado |
+| # | Check | How | Expected result |
 | --- | --- | --- | --- |
-| A1 | SQL export igual ao do HeidiSQL (FAM-E06; critério 27.3 #3) | Numa base com tabelas, duas views que dependem uma da outra, um trigger, uma procedure e dados com NULL, binário e texto com aspas, fazer Tools › Export database as SQL no HeidiSQL e no Eunomia com as mesmas opções; comparar com `fc /n` ou um diff | Iguais exceto a linha da versão ("HeidiSQL Version" / "Eunomia Version"). O formato foi reconstituído do anexo B: linhas em branco e comentários de bloco são os pontos mais prováveis de diferir |
-| A2 | Os 16 formatos do Copy as / Export grid rows (FAM-C03; 27.3 #3) | Exportar o mesmo resultado (com NULL, datas, números, texto com aspas e quebras de linha) em cada formato nos dois programas, com as opções por omissão | Iguais byte a byte, exceto as diferenças D6 da spec |
-| A3 | Import de settings (FAM-S05) | Exportar as settings de um HeidiSQL 12.21 real com uma password com "ú" e uma sessão SSH; copiar para `tests/Unit/Infra.Settings.Tests/` no lugar do ficheiro de exemplo e correr `dotnet test tests\Unit\Infra.Settings.Tests`. Com o HeidiSQL instalado, abrir o Eunomia sem sessões (pasta portable vazia) e aceitar "Import them now?" no primeiro arranque | Todas as sessões, pastas, atalhos e favoritos importados, pelo ficheiro e pelo registo; a password com "ú" correta |
-| A4 | Baseline do CSV no modo cliente (PR-15) | Importar um CSV de 1 GB no HeidiSQL com "Client parses file contents" e cronometrar | Serve de referência ao modo cliente do Eunomia |
+| A1 | SQL export identical to HeidiSQL's (FAM-E06; criterion 27.3 #3) | On a database with tables, two views that depend on each other, a trigger, a procedure and data with NULL, binary and text with quotes, run Tools › Export database as SQL in HeidiSQL and in Eunomia with the same options; compare with `fc /n` or a diff | Identical except the version line ("HeidiSQL Version" / "Eunomia Version"). The format was reconstructed from appendix B: blank lines and block comments are the most likely places to differ |
+| A2 | The 16 Copy as / Export grid rows formats (FAM-C03; 27.3 #3) | Export the same result (with NULL, dates, numbers, text with quotes and line breaks) in each format in both programs, with the default options | Identical byte for byte, except the spec's D6 differences |
+| A3 | Settings import (FAM-S05) | Export the settings of a real HeidiSQL 12.21 with a password containing "ú" and an SSH session; copy them to `tests/Unit/Infra.Settings.Tests/` in place of the sample file and run `dotnet test tests\Unit\Infra.Settings.Tests`. With HeidiSQL installed, open Eunomia without sessions (an empty portable folder) and accept "Import them now?" on the first start | Every session, folder, shortcut and favourite imported, from the file and from the registry; the password with "ú" correct |
+| A4 | Client-mode CSV baseline (PR-15) | Import a 1 GB CSV in HeidiSQL with "Client parses file contents" and time it | Serves as the reference for Eunomia's client mode |
 
-## B. Medições na máquina de referência
+## B. Measurements on the reference machine
 
-Correr numa máquina calma (sem outras aplicações), com o executável Release/NativeAOT (`powershell -File build\Publish-Portable.ps1`). Os resultados entram em `docs/mvp-criteria.md`.
+Run on a quiet machine (no other applications), with the Release/NativeAOT executable (`powershell -File build\Publish-Portable.ps1`). The results go into `docs/mvp-criteria.md`.
 
-| # | Requisito | Como |
+| # | Requirement | How |
 | --- | --- | --- |
-| B1 | PR-01 (arranque), PR-04 (scroll), PR-16 (memória em repouso), incluindo a 150% de escala do Windows e a frio | `powershell -File bench\Scenarios\Run-All.ps1`; a frio: reiniciar o PC antes da primeira corrida |
-| B2 | PR-13, PR-14, PR-15 com 1 GB e 10 GB, 3 corridas | `$env:EUNOMIA_PERF=1; $env:EUNOMIA_PERF_ROWS=8000000; dotnet test tests\Integration -c Release --filter "FullyQualifiedName~TransferPerformanceTests"` (aumentar as linhas para os 10 GB); precisa do `mysql.exe` e do `mysqldump.exe` do XAMPP ou em `EUNOMIA_MYSQL_BIN` |
-| B3 | PR-02, PR-03, PR-18, PR-19 com a UI real | Usar a aplicação com 10 sessões abertas, queries longas, 2 exports e 1 import; o log de diagnóstico (`%LOCALAPPDATA%\Eunomia\logs\diagnostic.jsonl`) regista cada stall > 250 ms; o B14 automático (`$env:EUNOMIA_PERF=1; dotnet test tests\Integration -c Release --filter "FullyQualifiedName~SoakTests.StressB14"`) só mede o motor |
-| B4 | Soak de 24 h (27.3 #4) | `$env:EUNOMIA_SOAK_MINUTES=1440; dotnet test tests\Integration -c Release --filter "FullyQualifiedName~SoakTests.SoakSemFugasDeMemoria"`; aqui correram 10 min sem fugas |
-| B5 | PR-05, PR-08, PR-12 | PR-08 mediu 1,6 s com 5.000 tabelas no MariaDB 10.4 (acima do alvo nessa versão); repetir no MariaDB 10.6+ e no MySQL 8 |
+| B1 | PR-01 (startup), PR-04 (scroll), PR-16 (idle memory), including at 150% Windows scaling and cold | `powershell -File bench\Scenarios\Run-All.ps1`; cold: restart the PC before the first run |
+| B2 | PR-13, PR-14, PR-15 with 1 GB and 10 GB, 3 runs | `$env:EUNOMIA_PERF=1; $env:EUNOMIA_PERF_ROWS=8000000; dotnet test tests\Integration -c Release --filter "FullyQualifiedName~TransferPerformanceTests"` (raise the rows for 10 GB); needs XAMPP's `mysql.exe` and `mysqldump.exe`, or `EUNOMIA_MYSQL_BIN` |
+| B3 | PR-02, PR-03, PR-18, PR-19 with the real UI | Use the application with 10 open sessions, long queries, 2 exports and 1 import; the diagnostic log (`%LOCALAPPDATA%\Eunomia\logs\diagnostic.jsonl`) records each stall > 250 ms; the automatic B14 (`$env:EUNOMIA_PERF=1; dotnet test tests\Integration -c Release --filter "FullyQualifiedName~SoakTests.StressB14"`) only measures the engine |
+| B4 | 24 h soak (27.3 #4) | `$env:EUNOMIA_SOAK_MINUTES=1440; dotnet test tests\Integration -c Release --filter "FullyQualifiedName~SoakTests.SoakWithoutMemoryLeaks"`; here it ran for 10 min without leaks |
+| B5 | PR-05, PR-08, PR-12 | PR-08 measured 1.6 s with 5,000 tables on MariaDB 10.4 (above the target on that version); repeat on MariaDB 10.6+ and MySQL 8 |
 
-## C. Testes manuais
+## C. Manual tests
 
-| # | Verificação | Como | Resultado esperado |
+| # | Check | How | Expected result |
 | --- | --- | --- | --- |
-| C1 | PR-21 (perda depois de um crash) | Escrever numa query tab, esperar 3 s, escrever mais, matar o `Eunomia.exe` no Gestor de Tarefas e reabrir | O texto até cerca de 2 s antes do kill volta |
-| C2 | SSH com agent | Ligar por SSH com chave no Pageant e depois no agent do OpenSSH | Liga sem pedir a passphrase; no CI só se testa com OpenSSH em Linux |
-| C3 | Acessibilidade | Percorrer o Session Manager, a árvore, o Data tab, uma query tab, os diálogos de export e import e o Schema Visualizer com o Narrator e com o NVDA, só com o teclado | Todos os controlos alcançáveis por teclado e com nome lido. O Avalonia 12.1.3 não tem os padrões UIA de Grid/Table: o grid não é lido célula a célula |
-| C4 | IME, texto e menus (ADR-02) | Escrever com um IME (japonês ou chinês) no editor e no grid; rever o texto dos menus a 100% e 150% | Composição correta; texto nítido |
-| C5 | CSV reais | Importar um CSV do Excel com `;` e números locais e um export com `\N`, nos dois modos | Valores iguais aos do ficheiro |
-| C6 | Splitter com scripts reais | Juntar 100+ scripts reais (dumps, procedures com DELIMITER) em `tests/Unit/Engine.Sql.Tests/` e comparar com a separação esperada | Mesmas instruções que o `mysql` executa |
-| C7 | Marca no Windows e no GitHub | Ver o ícone no Explorador, na barra de tarefas, no Alt+Tab e na barra de título a 100% e 150%; abrir o README no GitHub com o tema claro e o escuro; abrir Issues › New issue | Ícone nítido (os tamanhos ≤ 32 px vêm da variante small); lockup com o texto legível nos dois temas; os formulários Erro e Feedback aparecem e não há issue em branco. Verificado automaticamente só: recursos Win32 do exe, `WM_GETICON` das janelas e uma captura da janela a 100% |
-| C8 | Data tab num servidor remoto lento (feedback da beta, 9 out) | Com a build nova, quem reportou abre uma tabela grande no servidor remoto e, a meio do carregamento, escolhe outra tabela, uma tabela de outra base, o nó da base e corre uma query na mesma sessão; repetir com Show all; percorrer tabelas pequenas com as setas; abrir a maior base do servidor e clicar logo numa tabela | A janela responde sempre; o que se escolheu aparece em 1 a 2 s (o tempo do `KILL QUERY` pela rede), as tabelas pequenas sem atraso, e a tabela da base grande sem esperar pelas estatísticas; sem erros no SQL log |
+| C1 | PR-21 (loss after a crash) | Type in a query tab, wait 3 s, type more, kill `Eunomia.exe` in Task Manager and reopen | The text up to about 2 s before the kill comes back |
+| C2 | SSH with an agent | Connect over SSH with a key in Pageant and then in the OpenSSH agent | Connects without asking for the passphrase; CI only tests OpenSSH on Linux |
+| C3 | Accessibility | Go through the Session Manager, the tree, the Data tab, a query tab, the export and import dialogs and the Schema Visualizer with Narrator and with NVDA, using only the keyboard | Every control reachable by keyboard and with its name read. Avalonia 12.1.3 has no UIA Grid/Table patterns: the grid is not read cell by cell |
+| C4 | IME, text and menus (ADR-02) | Type with an IME (Japanese or Chinese) in the editor and the grid; review the menu text at 100% and 150% | Correct composition; crisp text |
+| C5 | Real CSV files | Import an Excel CSV with `;` and locale numbers, and an export with `\N`, in both modes | Values identical to the file |
+| C6 | Splitter with real scripts | Gather 100+ real scripts (dumps, procedures with DELIMITER) in `tests/Unit/Engine.Sql.Tests/` and compare with the expected split | The same statements that `mysql` runs |
+| C7 | Branding on Windows and GitHub | Look at the icon in Explorer, the taskbar, Alt+Tab and the title bar at 100% and 150%; open the README on GitHub with the light and the dark theme; open Issues › New issue | A crisp icon (sizes ≤ 32 px come from the small variant); the lockup text readable in both themes; the Bug and Feedback forms appear and there is no blank issue. Checked automatically only: the exe's Win32 resources, the windows' `WM_GETICON` and a capture of the window at 100% |
+| C8 | Data tab on a slow remote server (beta feedback, 9 Oct) | With the new build, the reporter opens a large table on the remote server and, halfway through loading, chooses another table, a table in another database, the database node, and runs a query on the same session; repeat with Show all; walk through small tables with the arrow keys; open the server's largest database and click a table straight away | The window always responds; what was chosen shows in 1 to 2 s (the time of `KILL QUERY` over the network), small tables without delay, and the table in the large database without waiting for the statistics; no errors in the SQL log |
 
-## D. Distribuição
+## D. Distribution
 
-| # | O quê | Falta |
+| # | What | Missing |
 | --- | --- | --- |
-| D1 | Instaladores | Windows: MSIX, WiX ou Inno Setup (hoje ZIP portable do `build/Publish-Portable.ps1`); macOS: `.dmg`; Linux: `.deb`/`.rpm` ou Flatpak/AppImage (hoje tar.gz com `install.sh`, do `build/package-unix.sh`) |
-| D2 | Assinatura de código | Certificados (não estão no repo): Authenticode para o `Eunomia.exe`; Apple Developer ID e notarização para o `.app` (hoje assinatura ad-hoc) |
-| D3 | Layout do Schema Visualizer | Se o layout próprio não chegar em schemas reais grandes, vendorizar o MSAGL (MIT) atrás da `IGraphLayout` e comparar com 300 e 1.000 tabelas reais (secção 17.4). Precisa de descarregar o código |
-
-## G. macOS e Linux (Fase 14)
-
-O CI compila, corre os testes (unitários, headless com rendering real, cofres do sistema) e arranca o executável NativeAOT em Linux (xvfb) e macOS; os ecrãs desenhados ficam como artefacto `snapshots-actual-*`. O que precisa de uma pessoa num computador real:
-
-| # | Verificação | Como | Resultado esperado |
-| --- | --- | --- | --- |
-| G1 | Instalação no macOS | Descarregar `Eunomia-<versão>-osx-arm64.zip` (ou `osx-x64` num Mac Intel) do artefacto do CI, mover para Aplicações, abrir com botão direito › Abrir | Abre; o Dock mostra o ícone; o menu da aplicação diz "Eunomia" e "About Eunomia" abre o diálogo |
-| G2 | Keychain | Gravar uma sessão com password, fechar, voltar a abrir e ligar; abrir o Acesso a Porta-chaves | Liga sem pedir a password; há um item "Eunomia (conn/…)" |
-| G3 | Atalhos com ⌘ | ⌘T, ⌘Enter, ⌘C/⌘V no grid, ⌘-clique na árvore e no grid, ⌘Z no editor | Fazem o que o Ctrl faz no Windows |
-| G4 | Linux GNOME (Wayland) e KDE | `eunomia/install.sh` do tar.gz; abrir pelo menu; gravar uma sessão com password | Ícone e atalho no menu; password no GNOME Keyring/KWallet (Seahorse mostra "Eunomia (conn/…)") |
-| G5 | Linux sem keyring nem portal (por exemplo, um WM mínimo) | Arrancar; Open file | Aviso "No system keyring" no SQL log; o Open mostra a caixa para escrever o caminho |
-| G6 | Escala HiDPI | macOS Retina; Linux com escala 150%/200% (GNOME) | Texto nítido, sem cortes nos diálogos |
-| G7 | Leitores de ecrã | VoiceOver (macOS) e Orca (Linux) na árvore, no grid e nos diálogos | Os nomes de automação são lidos |
+| D1 | Installers | Windows: MSIX, WiX or Inno Setup (today a portable ZIP from `build/Publish-Portable.ps1`); macOS: `.dmg`; Linux: `.deb`/`.rpm` or Flatpak/AppImage (today a tar.gz with `install.sh`, from `build/package-unix.sh`) |
+| D2 | Code signing | Certificates (not in the repository): Authenticode for `Eunomia.exe`; Apple Developer ID and notarisation for the `.app` (today ad-hoc signing) |
+| D3 | Schema Visualizer layout | If our own layout is not good enough on large real schemas, vendor MSAGL (MIT) behind `IGraphLayout` and compare with 300 and 1,000 real tables (section 17.4). Needs the code to be downloaded |
 
 ## E. Beta (27.3 #5)
 
-Três utilizadores diários do HeidiSQL usam o Eunomia uma semana no trabalho real e reportam os workflows bloqueados. O guia para eles é `docs/user-guide.md`. A versão para eles é a pre-release [v0.13.1](https://github.com/JoaoMarcos03/Eunomia/releases/tag/v0.13.1) (9 out), com os issue templates Erro e Feedback. O repo é privado: os testers só veem a release e os issues se forem adicionados como colaboradores (ou se o repo passar a público).
+Three daily HeidiSQL users use Eunomia for a week in real work and report the blocked workflows. Their guide is `docs/user-guide.md`. They get a pre-release built by CI, and report through the Bug and Feedback issue templates.
 
-## F. Limpeza
+## G. macOS and Linux (phase 14)
 
-- `git stash@{0}`: corrida de benchmark abortada a 1 out (só `machine.json`). Apagar com `git stash drop`.
+CI builds, runs the tests (unit, headless with real rendering, system vaults) and starts the NativeAOT executable on Linux (xvfb) and macOS; the rendered screens are kept as the `snapshots-actual-*` artifact. What needs a person on a real computer:
+
+| # | Check | How | Expected result |
+| --- | --- | --- | --- |
+| G1 | Installing on macOS | Download `Eunomia-<version>-osx-arm64.zip` (or `osx-x64` on an Intel Mac) from the CI artifact, move it to Applications, open it with right click › Open | It opens; the Dock shows the icon; the application menu says "Eunomia" and "About Eunomia" opens the dialog |
+| G2 | Keychain | Save a session with a password, close, reopen and connect; open Keychain Access | Connects without asking for the password; there is an "Eunomia (conn/…)" item |
+| G3 | ⌘ shortcuts | ⌘T, ⌘Enter, ⌘C/⌘V in the grid, ⌘-click in the tree and the grid, ⌘Z in the editor | They do what Ctrl does on Windows |
+| G4 | Linux GNOME (Wayland) and KDE | `eunomia/install.sh` from the tar.gz; open from the menu; save a session with a password | Icon and shortcut in the menu; the password in GNOME Keyring/KWallet (Seahorse shows "Eunomia (conn/…)") |
+| G5 | Linux without a keyring or portal (for example, a minimal WM) | Start; Open file | A "No system keyring" warning in the SQL log; Open shows the box to type the path |
+| G6 | HiDPI scaling | macOS Retina; Linux at 150%/200% scaling (GNOME) | Crisp text, nothing cut off in the dialogs |
+| G7 | Screen readers | VoiceOver (macOS) and Orca (Linux) on the tree, the grid and the dialogs | The automation names are read |

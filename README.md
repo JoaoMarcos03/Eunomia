@@ -20,8 +20,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="tests/UI.Headless/snapshots/shell-dark.png">
-    <img alt="Eunomia main window: session tree, Data tab with a million-row table, SQL log and status bar" src="tests/UI.Headless/snapshots/shell-light.png" width="880">
+    <source media="(prefers-color-scheme: dark)" srcset="tests/UI.Headless/Snapshots/shell-dark.png">
+    <img alt="Eunomia main window: session tree, Data tab with a million-row table, SQL log and status bar" src="tests/UI.Headless/Snapshots/shell-light.png" width="880">
   </picture>
 </p>
 

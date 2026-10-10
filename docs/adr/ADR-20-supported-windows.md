@@ -1,29 +1,29 @@
-# ADR-20: Windows suportado
+# ADR-20: Supported Windows versions
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Telemetria opt-in de versões
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** Opt-in telemetry of versions
 
-## Opções
+## Options
 
-10 + 11, só 11
+10 + 11, only 11
 
-## Decisão
+## Decision
 
-Windows 10 22H2 e 11, x64
+Windows 10 22H2 and 11, x64
 
-## Razão
+## Reason
 
-Base instalada atual
+The current installed base
 
 ## Trade-offs
 
-Testar dois SOs
+Testing two operating systems
 
-## Risco
+## Risk
 
-Fim de suporte do Windows 10
+End of support for Windows 10
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

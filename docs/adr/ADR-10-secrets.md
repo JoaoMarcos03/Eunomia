@@ -1,29 +1,29 @@
-# ADR-10: Segredos
+# ADR-10: Secrets
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Suporte Linux/macOS
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** Linux/macOS support
 
-## Opções
+## Options
 
-Registo ofuscado, Credential Manager, DPAPI, cofre próprio
+Obfuscated registry, Credential Manager, DPAPI, our own vault
 
-## Decisão
+## Decision
 
-Credential Manager + DPAPI; passphrase no portable
+Credential Manager + DPAPI; a passphrase in portable mode
 
-## Razão
+## Reason
 
-Padrão do Windows
+The Windows standard
 
 ## Trade-offs
 
-Portable pede passphrase
+Portable mode asks for a passphrase
 
-## Risco
+## Risk
 
-Perfis roaming
+Roaming profiles
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

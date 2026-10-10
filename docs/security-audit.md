@@ -1,41 +1,41 @@
-# Auditoria de segurança (9 out 2026)
+# Security audit (9 Oct 2026)
 
-Revisão do código da 1.0.0-beta.1 contra a secção 23 da spec, a pedido do utilizador depois do feedback da beta. Complementa a auditoria do SQL montado da Fase 14 (passo 0 em `docs/progress.md`), que não se repetiu aqui.
+A review of the 1.0.0-beta.1 code against spec section 23, requested after the beta feedback. It complements phase 14's audit of assembled SQL (step 0 in `docs/progress.md`), which was not repeated here.
 
-## Método
+## Method
 
-Leitura do código nos pontos onde dados de fora (servidor, ficheiros, linha de comandos, clipboard) entram ou onde a aplicação escreve para fora (disco, browser, outros programas): ligações e TLS, `LOAD DATA LOCAL`, segredos, logs, histórico, ficheiros temporários, exports, SSH, abertura de URLs e de ficheiros, SQLite local. As afirmações sobre o MySqlConnector 2.6.2 foram confirmadas no próprio pacote, não de memória. `dotnet list package --vulnerable --include-transitive`: nenhum pacote com vulnerabilidades conhecidas.
+Reading the code where outside data (server, files, command line, clipboard) comes in, or where the application writes outwards (disk, browser, other programs): connections and TLS, `LOAD DATA LOCAL`, secrets, logs, history, temporary files, exports, SSH, opening URLs and files, local SQLite. The statements about MySqlConnector 2.6.2 were confirmed in the package itself, not from memory. `dotnet list package --vulnerable --include-transitive`: no package with known vulnerabilities.
 
-## Corrigido
+## Fixed
 
-| # | Problema | Risco | Correção | Teste |
+| # | Problem | Risk | Fix | Test |
 | --- | --- | --- | --- | --- |
-| A1 | Export HTML e XML: nomes de tabela e de coluna (vêm do servidor) dentro de atributos sem escapar a aspa; a query ia para o HTML sem escaping nenhum | Um nome com `"` acrescentava atributos (`onmouseover=…`) a um HTML aberto no browser; uma query com `<` estragava a página | Atributos com `&quot;`; a query com escaping | `GridExporterTests.NomesEValoresHostisNaoSaemDoFormato` |
-| A2 | Export PHP: o nome da tabela entrava cru no nome da variável | Um nome de tabela como `x = system('…'); $y` virava código PHP no ficheiro | Nome de variável só com caracteres válidos | idem |
-| A3 | Export LaTeX: só `_ $ % &` escapados | Um valor `\input{…}` ou `\write18{…}` corria ao compilar o documento | Os dez caracteres especiais escapados | idem |
-| A4 | Histórico de queries guardava `CREATE USER … IDENTIFIED BY '…'` em claro no `app.db` (também o importado do HeidiSQL) | Passwords em disco, ao contrário da regra "só no cofre do sistema" (23.2) | Instruções com passwords não entram no histórico (o SQL log já as mascarava) | `SecretMaskingTests`, `HeidiPreferencesImportTests` |
-| A5 | SSH: uma chave de outro tipo num host já conhecido era tratada como primeiro contacto | Um intermediário podia apresentar outro tipo de chave e só aparecia a pergunta normal | Pergunta com aviso explícito, como o OpenSSH | `SshTests` |
-| A6 | Não se via se a ligação ia cifrada (a spec pede que uma ligação sem verificação fique visível) | Ligações remotas em claro passavam despercebidas | O driver lê a cifra TLS na abertura; aviso no SQL log para servidores remotos sem TLS nem SSH; "Encryption" no tooltip do servidor na status bar | `SessionHostTests`, `LocalHostTests` |
-| A7 | Markdown: `\|` e quebras de linha num valor partiam a tabela | Robustez | Escapados | `GridExporterTests` |
+| A1 | HTML and XML export: table and column names (they come from the server) inside attributes without escaping the quote; the query went into the HTML without any escaping | A name with `"` added attributes (`onmouseover=…`) to an HTML file opened in the browser; a query with `<` broke the page | Attributes with `&quot;`; the query escaped | `GridExporterTests.HostileNamesAndValuesDoNotEscapeTheFormat` |
+| A2 | PHP export: the table name went raw into the variable name | A table name like `x = system('…'); $y` became PHP code in the file | A variable name with valid characters only | same |
+| A3 | LaTeX export: only `_ $ % &` escaped | A value `\input{…}` or `\write18{…}` ran when the document was compiled | The ten special characters escaped | same |
+| A4 | The query history kept `CREATE USER … IDENTIFIED BY '…'` in clear text in `app.db` (also the one imported from HeidiSQL) | Passwords on disk, against the "only in the system vault" rule (23.2) | Statements with passwords do not go into the history (the SQL log already masked them) | `SecretMaskingTests`, `HeidiPreferencesImportTests` |
+| A5 | SSH: a key of another type on an already known host was treated as a first contact | A man in the middle could present another key type and only the normal question appeared | A question with an explicit warning, like OpenSSH | `KnownHostsTests` |
+| A6 | There was no way to see whether the connection was encrypted (the spec asks for an unverified connection to be visible) | Remote connections in clear text went unnoticed | The driver reads the TLS cipher when opening; a warning in the SQL log for remote servers without TLS or SSH; "Encryption" in the server tooltip in the status bar | `SessionHostTests`, `LocalHostTests` |
+| A7 | Markdown: `\|` and line breaks in a value broke the table | Robustness | Escaped | `GridExporterTests` |
 
-## Verificado e em ordem
+## Checked and in order
 
-- **Segredos:** Credential Manager, Keychain e Secret Service; sem cofre, só em memória até fechar (`ResilientSecretStore`); nunca em JSON. O export de settings não leva segredos. A connection string com a password não é guardada (`builder.Password` limpo depois de criar a ligação).
-- **Logs:** SQL log, "Log queries to file" e log de diagnóstico mascaram `IDENTIFIED BY`, `SET PASSWORD`, `PASSWORD()` e connection strings. Os crash reports só têm tipo e stack, sem mensagens.
-- **`LOAD DATA LOCAL`:** só na ligação dedicada do import CSV, fechada no fim. O MySqlConnector 2.6.2 só entrega o stream registado pelo `MySqlBulkLoader` (prefixo `:SOURCE:`) e recusa pedidos de ficheiros por nome quando o servidor não é verificado ("Use SourceStream or SslMode >= VerifyCA"): um servidor malicioso não lê ficheiros do PC.
-- **SSH:** known_hosts próprio, chave mudada bloqueia a ligação; o túnel só escuta em `127.0.0.1`.
-- **Ficheiros:** spill com `DeleteOnClose` e limpeza dos órfãos no arranque; pastas 0700 e ficheiros 0600 em Unix; `.bak` e escrita atómica.
-- **SQLite local:** todas as consultas com parâmetros.
-- **Open URL:** só `http`/`https`, e passa o `AbsoluteUri` normalizado; "Explore folder" com o caminho entre aspas.
-- **SQL montado:** auditado na Fase 14 (literais pelo dialeto, `SafeDdl`, `RowWriter`); as alterações desta auditoria não montam SQL.
+- **Secrets:** Credential Manager, Keychain and Secret Service; without a vault, only in memory until closing (`ResilientSecretStore`); never in JSON. The settings export carries no secrets. The connection string with the password is not kept (`builder.Password` cleared after the connection is created).
+- **Logs:** the SQL log, "Log queries to file" and the diagnostic log mask `IDENTIFIED BY`, `SET PASSWORD`, `PASSWORD()` and connection strings. Crash reports only hold the type and the stack, without messages.
+- **`LOAD DATA LOCAL`:** only on the CSV import's dedicated connection, closed at the end. MySqlConnector 2.6.2 only delivers the stream registered by `MySqlBulkLoader` (the `:SOURCE:` prefix) and refuses requests for files by name when the server is not verified ("Use SourceStream or SslMode >= VerifyCA"): a malicious server cannot read files from the PC.
+- **SSH:** our own known_hosts; a changed key blocks the connection; the tunnel only listens on `127.0.0.1`.
+- **Files:** spill with `DeleteOnClose` and clean-up of orphans on startup; 0700 folders and 0600 files on Unix; `.bak` and atomic writes.
+- **Local SQLite:** every query with parameters.
+- **Open URL:** only `http`/`https`, passing the normalised `AbsoluteUri`; "Explore folder" with the path in quotes.
+- **Assembled SQL:** audited in phase 14 (literals through the dialect, `SafeDdl`, `RowWriter`); the changes in this audit do not assemble SQL.
 
-## Riscos aceites ou por decidir
+## Accepted or open risks
 
-| # | O quê | Porquê fica | O que reduz o risco |
+| # | What | Why it stays | What reduces the risk |
 | --- | --- | --- | --- |
-| R1 | Com o SSL da sessão desligado, o TLS é "Preferred" sem verificar o certificado (decisão provisória da Fase 3; a spec pede verificação por omissão) | Liga como o HeidiSQL a servidores com certificados próprios; verificar por omissão partia a maioria das ligações existentes | O aviso A6 mostra quando não há TLS; para produção, SSL ligado com "Verify CA and hostname" |
-| R2 | `AllowPublicKeyRetrieval=true` | Sem isto, contas `caching_sha2_password` do MySQL 8 sem TLS não ligam; com TLS não é usado | Só pesa sem TLS, onde o A6 já avisa |
-| R3 | CSV para Excel sem proteção contra fórmulas (`=`, `+`, `-`, `@` no início) | Alterar os valores estragava o round trip (reimportar o CSV) e o HeidiSQL também não protege; o Excel atual bloqueia DDE por omissão | Abrir CSV de origem desconhecida com cuidado |
-| R4 | O texto das query tabs (journal de recuperação) fica em disco como foi escrito, passwords incluídas | É o documento do utilizador; mascarar perdia o que escreveu | Pastas do utilizador com permissões próprias |
-| R5 | `-p`/`--password` na linha de comandos fica visível na lista de processos | Compatibilidade com os atalhos do HeidiSQL | Preferir sessões gravadas (password no cofre) |
-| R6 | "Enable cleartext authentication" não tem efeito | O MySqlConnector trata o plugin sozinho quando o servidor o pede e recusa enviar a password em claro sem TLS com certificado verificado (mensagem "requires a secure connection with a verified server certificate to send the password" no pacote): mais seguro do que o HeidiSQL | Nenhum |
+| R1 | With the session's SSL off, TLS is "Preferred" without verifying the certificate (a provisional decision from phase 3; the spec asks for verification by default) | It connects like HeidiSQL to servers with their own certificates; verifying by default broke most existing connections | Warning A6 shows when there is no TLS; for production, SSL on with "Verify CA and hostname" |
+| R2 | `AllowPublicKeyRetrieval=true` | Without it, MySQL 8 `caching_sha2_password` accounts without TLS cannot connect; with TLS it is not used | It only matters without TLS, where A6 already warns |
+| R3 | CSV for Excel without protection against formulas (`=`, `+`, `-`, `@` at the start) | Changing the values broke the round trip (re-importing the CSV), and HeidiSQL does not protect against it either; current Excel blocks DDE by default | Open CSV files of unknown origin with care |
+| R4 | The text of query tabs (recovery journal) stays on disk as typed, passwords included | It is the user's document; masking would lose what they wrote | User folders with their own permissions |
+| R5 | `-p`/`--password` on the command line is visible in the process list | Compatibility with HeidiSQL shortcuts | Prefer saved sessions (password in the vault) |
+| R6 | "Enable cleartext authentication" has no effect | MySqlConnector handles the plugin by itself when the server asks for it, and refuses to send the password in clear text without TLS with a verified certificate (the message "requires a secure connection with a verified server certificate to send the password" in the package): safer than HeidiSQL | None |

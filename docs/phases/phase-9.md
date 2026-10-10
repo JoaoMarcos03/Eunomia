@@ -1,15 +1,15 @@
-# Fase 9: Schema Visualizer
+# Phase 9: Schema Visualizer
 
-**Âmbito (27.1 #25; secção 17):** SV-01 a SV-04, SV-06 a SV-09, SV-10 parcial (esconder, só selecionadas), SV-12 a SV-16 e SV-18; SV-03 com 1:N e 1:1; export só PNG. Tab "Diagram: base" ao lado das query tabs, com a cor da sessão, a cache de metadata e a sintaxe do Table filter. Fora: minimap (SV-05), grupos (SV-11), relações inferidas (SV-17), SVG/PDF.
+**Scope (27.1 #25; section 17):** SV-01 to SV-04, SV-06 to SV-09, SV-10 partial (hide, only selected), SV-12 to SV-16 and SV-18; SV-03 with 1:N and 1:1; PNG export only. A "Diagram: database" tab next to the query tabs, with the session colour, the metadata cache and the Table filter syntax. Out: minimap (SV-05), groups (SV-11), inferred relations (SV-17), SVG/PDF.
 
-**Requisitos:** secção 17.2–17.5; layout de 300 tabelas ≤ 2 s, pan e zoom fluidos com 1.000 nós em LOD; layout fora da UI thread com cancel; nunca fazer layout de 2.000 tabelas por omissão.
+**Requirements:** section 17.2–17.5; layout of 300 tables ≤ 2 s, smooth pan and zoom with 1,000 nodes in LOD; layout off the UI thread with cancellation; never lay out 2,000 tables by default.
 
-**Decisão de partida:** o MSAGL não está na cache do NuGet e não descarrego pacotes nem código sem autorização. O layout em camadas (Sugiyama: ciclos, camadas por caminho mais longo, ordem por baricentro, coordenadas, componentes empacotados) é próprio, atrás de `IGraphLayout`, para poder trocar pelo MSAGL ou ELK se a qualidade não chegar (critério da secção 17.4).
+**Starting decision:** MSAGL is not in the NuGet cache, and no packages or code are downloaded without authorisation. The layered layout (Sugiyama: cycles, layers by longest path, barycentre ordering, coordinates, packed components) is our own, behind `IGraphLayout`, so it can be swapped for MSAGL or ELK if the quality is not good enough (the criterion in section 17.4).
 
-**Ordem de trabalho:**
-1. `UI.Controls.Graph`: modelo (nós com linhas, arestas entre linhas), `IGraphLayout` + `LayeredLayout` com testes (sem sobreposições, esquerda → direita, componentes) e benchmark de 300 e 1.000 tabelas.
-2. Canvas: render de nós e arestas (cores de tipo, ícones PK/UNIQUE/FK, NULL, 1:N e 1:1 em crow's foot), zoom, pan, fit (F), 100% (0), seleção simples e múltipla com realce das relações, arrastar nós com snap opcional, LOD.
-3. `App/Diagram`: modelo a partir do metadata (tabelas, colunas, FKs, cardinalidade), hash do schema, persistência das posições por (sessão, base, hash) com tabelas novas colocadas sem mexer nas outras.
-4. `UI.Features.SchemaVisualizer` e shell: tab de diagrama, pesquisa com a sintaxe do Table filter, esconder e só selecionadas, menu do nó (Data tab, Table editor, Select top 1000, copiar nome), navegação por FK, F5, sync com a árvore e "Show in schema visualizer", export PNG; snapshots e testes headless.
+**Work order:**
+1. `UI.Controls.Graph`: model (nodes with rows, edges between rows), `IGraphLayout` + `LayeredLayout` with tests (no overlaps, left → right, components) and a benchmark with 300 and 1,000 tables.
+2. Canvas: rendering of nodes and edges (type colours, PK/UNIQUE/FK icons, NULL, 1:N and 1:1 in crow's foot), zoom, pan, fit (F), 100% (0), single and multiple selection with the relations highlighted, dragging nodes with optional snap, LOD.
+3. `App/Diagram`: model from the metadata (tables, columns, FKs, cardinality), schema hash, persistence of the positions per (session, database, hash), with new tables placed without moving the others.
+4. `UI.Features.SchemaVisualizer` and the shell: diagram tab, search with the Table filter syntax, hide and only selected, node menu (Data tab, Table editor, Select top 1000, copy name), FK navigation, F5, sync with the tree and "Show in schema visualizer", PNG export; snapshots and headless tests.
 
-**Feito quando:** build e testes verdes; SV do MVP com teste; layout de 300 tabelas ≤ 2 s medido; push.
+**Done when:** build and tests green; the MVP SVs with tests; a 300-table layout ≤ 2 s measured; push.

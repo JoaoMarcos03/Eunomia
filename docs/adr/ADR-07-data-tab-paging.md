@@ -1,29 +1,29 @@
-# ADR-07: Paginação do Data tab
+# ADR-07: Data tab paging
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** —
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** —
 
-## Opções
+## Options
 
 OFFSET, keyset
 
-## Decisão
+## Decision
 
-Keyset por chave, OFFSET sem chave
+Keyset when there is a key, OFFSET without a key
 
-## Razão
+## Reason
 
-Custo linear, estabilidade
+Linear cost, stability
 
 ## Trade-offs
 
-Saltos aleatórios só no que está carregado (igual ao HeidiSQL)
+Random jumps only within what is loaded (same as HeidiSQL)
 
-## Risco
+## Risk
 
-Ordenações sem desempate
+Sort orders without a tie-breaker
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

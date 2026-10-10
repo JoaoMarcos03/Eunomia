@@ -1,29 +1,29 @@
 # ADR-15: Plugins
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Depois da v1
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** After v1
 
-## Opções
+## Options
 
-Nenhum, internos, públicos
+None, internal, public
 
-## Decisão
+## Decision
 
-Interfaces internas; API pública só depois da v1
+Internal interfaces; a public API only after v1
 
-## Razão
+## Reason
 
-Evitar congelar APIs cedo
+Avoid freezing APIs early
 
 ## Trade-offs
 
-Sem extensões de terceiros no início
+No third-party extensions at first
 
-## Risco
+## Risk
 
-Pedidos da comunidade
+Community requests
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

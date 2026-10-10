@@ -1,33 +1,33 @@
-# ADR-18: Motor dos filtros regex
+# ADR-18: Regex filter engine
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Suíte de 40 casos falhar
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** The 40-case suite fails
 
-## Opções
+## Options
 
-Regex .NET backtracking, NonBacktracking, porta do TRegExpr
+.NET backtracking regex, NonBacktracking, a port of TRegExpr
 
-## Decisão
+## Decision
 
-Regex .NET (IgnoreCase, CultureInvariant) com timeout de 50 ms
+.NET regex (IgnoreCase, CultureInvariant) with a 50 ms timeout
 
-## Razão
+## Reason
 
-Suporta lookahead como o TRegExpr; o modo NonBacktracking não suporta
+Supports lookahead like TRegExpr; NonBacktracking mode does not
 
 ## Trade-offs
 
-Pequenas diferenças de sintaxe (ex.: `\d` Unicode em .NET)
+Small syntax differences (e.g. Unicode `\d` in .NET)
 
-## Risco
+## Risk
 
-Divergência em casos raros
+Divergence in rare cases
 
-## Implementação (spike da Fase 1)
+## Implementation (phase 1 spike)
 
-`Engine.Sql/Filters/TreeFilterExpression.cs`, com `RegexOptions.IgnoreCase | CultureInvariant` e timeout de 50 ms. Uma regex inválida e um timeout deixam o nó visível. Testada com 49 casos de regex derivados da 4.3 (`tests/Unit/Engine.Sql.Tests/TreeFilterExpressionTests.cs`) e com as regras por tipo de nó (`tests/Unit/UI.Controls.Tree.Tests`). Os casos ainda não foram validados em runtime no HeidiSQL (Fase 0).
+`Engine.Sql/Filters/TreeFilterExpression.cs`, with `RegexOptions.IgnoreCase | CultureInvariant` and a 50 ms timeout. An invalid regex or a timeout leaves the node visible. Tested with 49 regex cases derived from 4.3 (`tests/Unit/Engine.Sql.Tests/TreeFilterExpressionTests.cs`) and with the rules per node type (`tests/Unit/UI.Controls.Tree.Tests`). The cases have not yet been checked at runtime against HeidiSQL (phase 0).
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

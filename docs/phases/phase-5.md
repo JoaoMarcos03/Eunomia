@@ -1,15 +1,15 @@
-# Fase 5: Data Grid
+# Phase 5: Data Grid
 
-**Âmbito (27.1 #5–#13; 28):** Data tab completo sobre tabelas reais: SELECT gerado (truncagem a 256 com chave, `*` quando possível), sources keyset/offset com Next e Show all (limite configurável e visível, D5), `BlockStore` com orçamento e spill, label com as variantes de contagem, ordenação no servidor acumulada e diálogo Sorting, Columns (v/t), editor WHERE com recent filters, multi column filter, Quick Filter, filter panel regex (grid e listas), persistência por tabela em `app.db`; grid com header "nº nome", ícones de chave, PK a bold, largura automática ≤ 300 px; Ctrl+C/X/V de célula com valor completo e NULL; Copy as nos 16 formatos; Export grid rows.
+**Scope (27.1 #5–#13; 28):** the complete Data tab over real tables: the generated SELECT (truncation to 256 with a key, `*` when possible), keyset/offset sources with Next and Show all (configurable and visible limit, D5), a `BlockStore` with a budget and spill, the label with the count variants, accumulated server-side sorting and the Sorting dialog, Columns (v/t), the WHERE editor with recent filters, the multi column filter, Quick Filter, the regex filter panel (grid and lists), per-table persistence in `app.db`; a grid with "no. name" headers, key icons, PK in bold, automatic width ≤ 300 px; cell Ctrl+C/X/V with the full value and NULL; Copy as in the 16 formats; Export grid rows.
 
-**Requisitos:** FAM-G01–G06, G11–G16 (G15 parcial: Open URL, Follow Foreign Key; BLOB e imagens são 27.2), C01–C06; PR-04, PR-05, PR-09, PR-17; D5, D6, D10.
+**Requirements:** FAM-G01–G06, G11–G16 (G15 partial: Open URL, Follow Foreign Key; BLOBs and images are 27.2), C01–C06; PR-04, PR-05, PR-09, PR-17; D5, D6, D10.
 
-**Ordem de trabalho:**
-1. `App/Data`: gerador do SELECT do Data tab (colunas, truncagem, WHERE, ORDER BY, keyset/offset, contagem) e estado por tabela (`HiddenColumns`, `Filter`, `Sort`, recent filters) em `app.db`; testes.
-2. `Engine.Results`: `TableBrowseSource` (keyset com chave, offset sem chave, Next, Show all até ao limite), orçamento de memória e spill no `BlockStore`; valor completo a pedido; testes contra o servidor.
-3. Data tab (`UI.Features.DataTab`): label, Next, Show all, Sorting (n), Columns (v/t), Filter; header com nº, chave, ▲▼ com posição; clique e Shift+clique; Reset sorting (Alt+S).
-4. Filtros: painel WHERE (F9, Ctrl+W, recent filters, Insert function), multi column filter (F7), Quick Filter com SQL nas captions e Ctrl+Shift+1…6, filter panel regex (500 ms, "x out of y matching. z hidden.") no grid e nas listas.
-5. Clipboard e export: Ctrl+C/X/V (célula, valor completo, NULL), Copy column names, os 16 formatos de Copy as (writers em `App`, D6 corrigido), diálogo Export grid rows.
-6. Testes de teclado e seleção (FAM-G05/G06), snapshots, PR-09 (1.000 linhas ≤ servidor + 100 ms), PR-04/PR-05/PR-17 com os benchmarks existentes.
+**Work order:**
+1. `App/Data`: the Data tab SELECT generator (columns, truncation, WHERE, ORDER BY, keyset/offset, count) and per-table state (`HiddenColumns`, `Filter`, `Sort`, recent filters) in `app.db`; tests.
+2. `Engine.Results`: `TableBrowseSource` (keyset with a key, offset without a key, Next, Show all up to the limit), memory budget and spill in the `BlockStore`; the full value on demand; tests against the server.
+3. Data tab (`UI.Features.DataTab`): label, Next, Show all, Sorting (n), Columns (v/t), Filter; headers with the number, key, ▲▼ with the position; click and Shift+click; Reset sorting (Alt+S).
+4. Filters: the WHERE panel (F9, Ctrl+W, recent filters, Insert function), the multi column filter (F7), Quick Filter with SQL in the captions and Ctrl+Shift+1…6, the regex filter panel (500 ms, "x out of y matching. z hidden.") in the grid and in lists.
+5. Clipboard and export: Ctrl+C/X/V (cell, full value, NULL), Copy column names, the 16 Copy as formats (writers in `App`, D6 fixed), the Export grid rows dialog.
+6. Keyboard and selection tests (FAM-G05/G06), snapshots, PR-09 (1,000 rows ≤ server + 100 ms), PR-04/PR-05/PR-17 with the existing benchmarks.
 
-**Feito quando:** build e testes verdes; Data tab abre tabelas reais com Next/Show all, ordenação, filtros e colunas persistidos por tabela; os 16 formatos testados contra os exemplos da 4.6 (golden files do HeidiSQL ficam para o Marcos); PR-09 medido.
+**Done when:** build and tests green; the Data tab opens real tables with Next/Show all, sorting, filters and columns persisted per table; the 16 formats tested against the 4.6 examples (HeidiSQL golden files are left for the author); PR-09 measured.

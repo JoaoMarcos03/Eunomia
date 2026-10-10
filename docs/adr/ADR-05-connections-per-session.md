@@ -1,29 +1,29 @@
-# ADR-05: Ligações por sessão
+# ADR-05: Connections per session
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Feedback de DBAs
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** Feedback from DBAs
 
-## Opções
+## Options
 
-Uma (HeidiSQL), primária + metadata + jobs
+One (HeidiSQL), primary + metadata + jobs
 
-## Decisão
+## Decision
 
-Primária + metadata + jobs, configurável para uma
+Primary + metadata + jobs, configurable to one
 
-## Razão
+## Reason
 
-Resolve P1/P2 mantendo o estado de sessão (#547)
+Solves P1/P2 while keeping the session state (#547)
 
 ## Trade-offs
 
-Mais ligações no servidor
+More connections on the server
 
-## Risco
+## Risk
 
-`max_connections` baixo
+Low `max_connections`
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

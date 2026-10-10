@@ -1,14 +1,14 @@
-# Fase 7: Edição
+# Phase 7: Editing
 
-**Âmbito (27.1 #14–17 e #20; 28):** edição no Data tab e nos resultados editáveis com gravação no servidor; editores por tipo (texto com popup, ENUM, SET, data/hora com setas por segmento, hex, FK dropdown, função); Insert row, Duplicate (sem e com chaves), Delete com "Delete N row(s)?"; Insert value ▸; Ctrl+X/Ctrl+V no grid; table editor (Basic, Options, Columns, Indexes, Foreign keys, Check constraints, CREATE code, ALTER code); create/drop/empty/rename de tabelas.
+**Scope (27.1 #14–17 and #20; 28):** editing in the Data tab and in editable results, saved to the server; editors per type (text with a popup, ENUM, SET, date/time with arrows per segment, hex, FK dropdown, function); Insert row, Duplicate (with and without keys), Delete with "Delete N row(s)?"; Insert value ▸; Ctrl+X/Ctrl+V in the grid; the table editor (Basic, Options, Columns, Indexes, Foreign keys, Check constraints, CREATE code, ALTER code); create/drop/empty/rename of tables.
 
-**Requisitos:** FAM-G07–G10, E01–E03; D3 (verificação das linhas afetadas); TR-17 (edit buffer por linha, `src/Engine.Execution/Editing`). Anexo D B15–B17; anexo C §5.
+**Requirements:** FAM-G07–G10, E01–E03; D3 (checking the affected rows); TR-17 (per-row edit buffer, `src/Engine.Execution/Editing`). Appendix D B15–B17; appendix C §5.
 
-**Ordem de trabalho:**
-1. `Engine.Execution/Editing`: chave da linha (PK → UNIQUE NOT NULL → todas as colunas), INSERT/UPDATE/DELETE com literais por tipo (NULL, função, números, BIT, binário em hex, datas), `LIMIT 1` sem chave, verificação das linhas afetadas, releitura da linha gravada; round trip por tipo contra o servidor.
-2. Data tab: gravação ao mudar de linha e Ctrl+Enter, Esc, triângulos, erro mantém a linha; Insert/Duplicate/Delete; Ctrl+X/V; Insert value ▸; aviso "sem chave suficiente".
-3. Editores por tipo e popup de texto; FK dropdown e modo função.
-4. Table editor (modelo, ALTER/CREATE, UI com as 8 tabs) e create table; diff de `SHOW CREATE TABLE`.
-5. Resultados editáveis das query tabs (uma tabela com chave); testes, fecho da fase, push.
+**Work order:**
+1. `Engine.Execution/Editing`: the row key (PK → UNIQUE NOT NULL → every column), INSERT/UPDATE/DELETE with literals per type (NULL, function, numbers, BIT, binary in hex, dates), `LIMIT 1` without a key, checking the affected rows, reading the saved row back; a round trip per type against the server.
+2. Data tab: saving on row change and Ctrl+Enter, Esc, triangles, an error keeps the row; Insert/Duplicate/Delete; Ctrl+X/V; Insert value ▸; a "not enough key" warning.
+3. Editors per type and the text popup; FK dropdown and function mode.
+4. Table editor (model, ALTER/CREATE, UI with the 8 tabs) and create table; a `SHOW CREATE TABLE` diff.
+5. Editable results in query tabs (one table with a key); tests, closing the phase, push.
 
-**Feito quando:** build e testes verdes; edição com round trip por tipo nas 4 versões do CI; ALTER gerado com o mesmo efeito (`SHOW CREATE TABLE` igual).
+**Done when:** build and tests green; editing with a round trip per type on the 4 CI versions; the generated ALTER has the same effect (equal `SHOW CREATE TABLE`).

@@ -1,29 +1,29 @@
-# ADR-19: Divergências de UX D9 e D10
+# ADR-19: UX divergences D9 and D10
 
-- **Estado:** Aceite (30 set 2026)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Feedback de utilizadores
+- **Status:** Accepted (30 Sep 2026)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** User feedback
 
-## Opções
+## Options
 
-Manter, mudar, preferência
+Keep, change, preference
 
-## Decisão
+## Decision
 
-**Decidida** (30 set 2026). D9: a query corre na sessão focada, como no HeidiSQL, com indicador da sessão alvo e opção "fixar tab à sessão". D10: igual ao HeidiSQL, sem preferência
+**Decided** (30 Sep 2026). D9: the query runs on the focused session, as in HeidiSQL, with an indicator of the target session and a "pin tab to session" option. D10: the same as HeidiSQL, without a preference
 
-## Razão
+## Reason
 
-Familiaridade
+Familiarity
 
 ## Trade-offs
 
-Indicador novo na tab
+A new indicator on the tab
 
-## Risco
+## Risk
 
-Execução em produção por engano (D9), mitigada pelo indicador
+Running on production by mistake (D9), mitigated by the indicator
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

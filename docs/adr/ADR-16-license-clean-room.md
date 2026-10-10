@@ -1,29 +1,29 @@
-# ADR-16: Licença e clean-room
+# ADR-16: License and clean room
 
-- **Estado:** Pendente (pergunta 1 da secção 20.3); regras provisórias em vigor
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Resposta tua
+- **Status:** Open (question 1 of section 20.3); provisional rules in force
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** The author's answer
 
-## Opções
+## Options
 
-Proprietário clean-room, GPL com reutilização, open-core
+Proprietary clean room, GPL with reuse, open core
 
-## Decisão
+## Decision
 
-**Pendente** (pergunta 1 da 20.3). Até decidir: clean-room (não copiar código do HeidiSQL), copyright todo teu (contribuições só com CLA) e repo privado. Recomendação: open-core, com core GPL-3.0 e edição Enterprise de código fechado
+**Open** (question 1 of 20.3). Until it is decided: clean room (no code copied from HeidiSQL), all copyright held by the author (contributions only with a CLA). Recommendation: open core, with a GPL-3.0 core and a closed-source Enterprise edition
 
-## Razão
+## Reason
 
-Mantém todas as opções abertas; o objetivo é gerar receita
+Keeps every option open
 
 ## Trade-offs
 
-Clean-room custa processo
+A clean room costs process
 
-## Risco
+## Risk
 
-Contaminação por cópia
+Contamination by copying
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

@@ -1,29 +1,29 @@
-# ADR-04: Modelo de processos
+# ADR-04: Process model
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Drivers nativos (ODBC, OCI)
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** Native drivers (ODBC, OCI)
 
-## Opções
+## Options
 
-Um processo, multi-processo por sessão
+One process, one process per session
 
-## Decisão
+## Decision
 
-Um processo com isolamento por sessão + watchdog
+One process with per-session isolation + watchdog
 
-## Razão
+## Reason
 
-Código gerido evita crashes nativos; simplicidade
+Managed code avoids native crashes; simplicity
 
 ## Trade-offs
 
-Um OOM derruba tudo
+An OOM brings everything down
 
-## Risco
+## Risk
 
-Fuga de memória num componente
+A memory leak in one component
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

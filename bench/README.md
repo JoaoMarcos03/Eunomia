@@ -1,60 +1,60 @@
-# Benchmarks do spike (Fase 1)
+# Spike benchmarks (phase 1)
 
-Medições repetíveis dos critérios da secção 20.2 que se podem medir automaticamente. Correm no Windows,
-em PowerShell 5.1 ou 7, a partir da raiz do repo. Os resultados ficam em `bench/results/` (fora do git
-só os artefactos do BenchmarkDotNet; os JSON e o `summary.md` de cada corrida são versionados).
+Repeatable measurements of the section 20.2 criteria that can be measured automatically. They run on Windows,
+in PowerShell 5.1 or 7, from the repository root. The results go into `bench/results/` (only the BenchmarkDotNet
+artifacts are kept out of git; each run's JSON files and `summary.md` are versioned).
 
-## Pré-requisitos
+## Prerequisites
 
-- SDK .NET 10 (`global.json`).
-- NativeAOT: Build Tools do Visual Studio com "Desktop development with C++". Os scripts acrescentam
-  `%ProgramFiles(x86)%\Microsoft Visual Studio\Installer` ao PATH do próprio processo, porque o
-  `findvcvarsall.bat` do ILCompiler chama `vswhere.exe` sem caminho.
-- Não mexer no rato nem pôr outra janela por cima durante o scroll: a janela de benchmark tem de estar visível.
+- .NET 10 SDK (`global.json`).
+- NativeAOT: Visual Studio Build Tools with "Desktop development with C++". The scripts add
+  `%ProgramFiles(x86)%\Microsoft Visual Studio\Installer` to the PATH of their own process, because the
+  ILCompiler's `findvcvarsall.bat` calls `vswhere.exe` without a path.
+- Do not touch the mouse or put another window on top during the scroll: the benchmark window has to be visible.
 
-## Tudo de uma vez
+## Everything at once
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File bench\Scenarios\Run-All.ps1
 ```
 
-Publica o executável NativeAOT (`artifacts\aot\Eunomia.exe`) e o JIT self-contained (`artifacts\jit`),
-corre PR-01, PR-04 e PR-16 com as variantes e escreve `bench\results\<data>-<máquina>\summary.md`.
-Demora ~10 minutos. `-Quick` faz uma versão curta para verificar que tudo corre.
+Publishes the NativeAOT executable (`artifacts\aot\Eunomia.exe`) and the self-contained JIT one (`artifacts\jit`),
+runs PR-01, PR-04 and PR-16 with their variants and writes `bench\results\<date>-<machine>\summary.md`.
+It takes ~10 minutes. `-Quick` runs a short version to check that everything works.
 
-## Um critério de cada vez
+## One criterion at a time
 
-| Critério | Comando | O que mede |
+| Criterion | Command | What it measures |
 | --- | --- | --- |
-| PR-01 arranque | `bench\Scenarios\Measure-Startup.ps1 -Runs 20` | Da criação do processo (hora do kernel) até ao primeiro frame no ecrã com a UI thread livre para input. Mediana das corridas 2..N; a 1.ª é reportada à parte |
-| PR-01 com 2 núcleos | `bench\Scenarios\Measure-Startup.ps1 -Runs 20 -Cores 2` | Igual, com o processo limitado a 2 núcleos físicos desde o arranque (`start /affinity`) |
-| PR-04 scroll | `bench\Scenarios\Measure-Scroll.ps1` | 10 s de scroll programático (roda, página, horizontal) sobre 1M × 60 residentes. Pacing (intervalo entre frames), custo na UI thread e no render thread |
-| PR-04 a 150% (aprox.) | `bench\Scenarios\Measure-Scroll.ps1 -Scale 1.5` | Conteúdo desenhado com escala 1,5 (mesmos pixels por célula que 150%), sem mudar a escala do Windows |
-| PR-04 variantes | `... -Render wgl -TimerResolution 1`, `... -Render software -TimerResolution 1`, `... -Cores 2` | Modo de rendering do Win32 e resolução do timer do Windows |
-| PR-16 memória | `bench\Scenarios\Measure-IdleMemory.ps1 -Seconds 60` | Working set lido de fora do processo após 60 s em repouso com uma sessão aberta e o grid de 1M × 60 |
-| Micro (PR-11, lexer, blocos) | `dotnet run -c Release --project bench/Micro -- --filter *` | BenchmarkDotNet: Table filter sobre 10.000 nós, lexer por linha, construção e formatação de blocos |
+| PR-01 startup | `bench\Scenarios\Measure-Startup.ps1 -Runs 20` | From process creation (kernel time) to the first frame on screen with the UI thread free for input. Median of runs 2..N; the first is reported separately |
+| PR-01 with 2 cores | `bench\Scenarios\Measure-Startup.ps1 -Runs 20 -Cores 2` | The same, with the process limited to 2 physical cores from the start (`start /affinity`) |
+| PR-04 scroll | `bench\Scenarios\Measure-Scroll.ps1` | 10 s of programmatic scrolling (wheel, page, horizontal) over 1M × 60 resident rows. Pacing (interval between frames), cost on the UI thread and on the render thread |
+| PR-04 at 150% (approx.) | `bench\Scenarios\Measure-Scroll.ps1 -Scale 1.5` | Content drawn at a 1.5 scale (the same pixels per cell as 150%), without changing the Windows scale |
+| PR-04 variants | `... -Render wgl -TimerResolution 1`, `... -Render software -TimerResolution 1`, `... -Cores 2` | Win32 rendering mode and the Windows timer resolution |
+| PR-16 memory | `bench\Scenarios\Measure-IdleMemory.ps1 -Seconds 60` | Working set read from outside the process after 60 s idle with a session open and the 1M × 60 grid |
+| Micro (PR-11, lexer, blocks) | `dotnet run -c Release --project bench/Micro -- --filter *` | BenchmarkDotNet: Table filter over 10,000 nodes, the lexer per line, building and formatting blocks |
 
-Os scripts aceitam `-NoPublish` para reutilizar o executável já publicado e `-OutFile` para gravar o JSON.
+The scripts accept `-NoPublish` to reuse the already published executable and `-OutFile` to save the JSON.
 
-## Opções do executável usadas pelos scripts
+## Executable options used by the scripts
 
-`Eunomia.exe` aceita estas opções (só para medir; a configuração por omissão é a do Avalonia):
+`Eunomia.exe` accepts these options (for measuring only; the default configuration is Avalonia's):
 
-| Opção | Efeito |
+| Option | Effect |
 | --- | --- |
-| `--startup-probe <ficheiro> --exit` | Grava os tempos de arranque e as marcas por fase em JSON e fecha |
-| `--ready-file <ficheiro>` | Escreve o ficheiro quando a janela fica interativa |
-| `--bench-scroll <ficheiro> [--seconds N] [--scale F]` | Corre o scroll e grava as estatísticas por frame |
+| `--startup-probe <file> --exit` | Saves the startup times and the per-phase marks as JSON and exits |
+| `--ready-file <file>` | Writes the file when the window becomes interactive |
+| `--bench-scroll <file> [--seconds N] [--scale F]` | Runs the scroll and saves the per-frame statistics |
 | `--render angle\|wgl\|vulkan\|software` | `Win32PlatformOptions.RenderingMode` |
 | `--composition winui\|dcomp\|dxgi\|redirection` | `Win32PlatformOptions.CompositionMode` |
-| `--adapter <texto>` | GPU usada pelo ANGLE/D3D11 (pela descrição) |
-| `--timer-resolution <ms>` | `timeBeginPeriod` para este processo |
-| `--theme light\|dark` | Tema |
-| `--no-markers` | Desliga os marcadores de composição que medem o render thread |
+| `--adapter <text>` | The GPU used by ANGLE/D3D11 (by its description) |
+| `--timer-resolution <ms>` | `timeBeginPeriod` for this process |
+| `--theme light\|dark` | Theme |
+| `--no-markers` | Turns off the composition markers that measure the render thread |
 
-## Limitações
+## Limitations
 
-- Esta máquina não é a máquina de referência da secção 10: os valores são indicativos.
-- O pacing é medido pelos callbacks de animação do Avalonia (um por frame da UI). A confirmação
-  independente com PresentMon fica nas verificações manuais.
-- "Arranque a frio" verdadeiro (depois de reiniciar ou de limpar a standby list) é manual.
+- This machine is not the reference machine from section 10: the values are indicative.
+- Pacing is measured through Avalonia's animation callbacks (one per UI frame). Independent confirmation
+  with PresentMon is left to the manual checks.
+- A true "cold start" (after a restart or clearing the standby list) is manual.

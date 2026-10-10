@@ -1,16 +1,16 @@
-# Fase 3: Connection Manager
+# Phase 3: Connection Manager
 
-**Âmbito (27.1 #1, #2, #23; 28):** Session Manager completo (folders, cores, filtro, New/Save/Delete/Duplicate/Rename, drag & drop, Statistics); segredos no Credential Manager e DPAPI; import de settings do HeidiSQL; driver MySQL/MariaDB (MySqlConnector); TCP, TLS, SSH in-process (password, chave, agent) com known_hosts; startup script; SessionHost com ligações primária, metadata e job, keep-alive, reconnect visível e cancel; várias sessões em simultâneo.
+**Scope (27.1 #1, #2, #23; 28):** the complete Session Manager (folders, colours, filter, New/Save/Delete/Duplicate/Rename, drag and drop, Statistics); secrets in the Credential Manager and DPAPI; import of HeidiSQL settings; the MySQL/MariaDB driver (MySqlConnector); TCP, TLS, in-process SSH (password, key, agent) with known_hosts; startup script; a SessionHost with primary, metadata and job connections, keep-alive, a visible reconnect and cancellation; several sessions at the same time.
 
-**Requisitos:** FAM-S01–S05, S07, S08 (S06 se sobrar tempo); REQ-SES-01/02, REQ-SEC-01, REQ-CON-02…05; PR-06, PR-07, PR-19 (base).
+**Requirements:** FAM-S01–S05, S07, S08 (S06 if time allows); REQ-SES-01/02, REQ-SEC-01, REQ-CON-02…05; PR-06, PR-07, PR-19 (baseline).
 
-**Ordem de trabalho:**
-1. Modelo de sessões em `App` (folders, NetType com os ordinais do HeidiSQL, estatísticas) e persistência em `sessions.json` (`Infra.Settings`).
-2. `Infra.Secrets.Windows`: Credential Manager (`CRED_TYPE_GENERIC`) e DPAPI, atrás da porta `ISecretStore`.
-3. Import do ficheiro de settings do HeidiSQL (`<|||>`, desofuscação, folders, cores, SSH, SSL, atalhos `Shortcut1_*`, favoritos); add-only.
-4. `Drivers.MySql`: provider, dialeto, capabilities, tipos, erros, executor em streaming (RowBlocks), metadata básico; testes de integração contra o MariaDB 10.4 local (`tests/Integration/Start-TestServer.ps1`) e no CI (Linux, MySQL 8 e MariaDB 11).
-5. `Infra.Ssh`: túnel SSH.NET com port forward local, known_hosts próprio, chave, password e agent.
-6. `Engine.Execution`: `SessionHost` (estados da 12.2, primária/metadata/job, filas, keep-alive, reconnect com replay, cancel por `KILL QUERY`, timeout de cliente D8).
-7. `UI.Features.Sessions`: Session Manager e diálogo de login; no shell: arranque com o Session Manager, sessões como raízes da árvore, Disconnect, dropdown de sessões, "Connect to ▸", status bar ligada, Import/Export settings.
+**Work order:**
+1. Session model in `App` (folders, NetType with HeidiSQL's ordinals, statistics) and persistence in `sessions.json` (`Infra.Settings`).
+2. `Infra.Secrets.Windows`: Credential Manager (`CRED_TYPE_GENERIC`) and DPAPI, behind the `ISecretStore` port.
+3. Import of the HeidiSQL settings file (`<|||>`, deobfuscation, folders, colours, SSH, SSL, `Shortcut1_*` shortcuts, favourites); add-only.
+4. `Drivers.MySql`: provider, dialect, capabilities, types, errors, a streaming executor (RowBlocks), basic metadata; integration tests against the local MariaDB 10.4 (`tests/Integration/Start-TestServer.ps1`) and in CI (Linux, MySQL 8 and MariaDB 11).
+5. `Infra.Ssh`: an SSH.NET tunnel with local port forwarding, our own known_hosts, key, password and agent.
+6. `Engine.Execution`: `SessionHost` (the 12.2 states, primary/metadata/job, queues, keep-alive, reconnect with replay, cancellation through `KILL QUERY`, the D8 client timeout).
+7. `UI.Features.Sessions`: Session Manager and login dialog; in the shell: startup with the Session Manager, sessions as tree roots, Disconnect, the sessions dropdown, "Connect to ▸", a connected status bar, Import/Export settings.
 
-**Feito quando:** build e testes verdes; testes de integração passam contra o MariaDB local; import de um ficheiro de settings de exemplo preserva sessões, folders, cores, SSH e SSL; Session Manager com testes headless; reconnect depois de matar a ligação e cancel de um `SLEEP` testados.
+**Done when:** build and tests green; integration tests pass against the local MariaDB; importing a sample settings file keeps sessions, folders, colours, SSH and SSL; the Session Manager has headless tests; reconnecting after killing the connection and cancelling a `SLEEP` are tested.

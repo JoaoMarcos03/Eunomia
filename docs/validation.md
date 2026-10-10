@@ -1,72 +1,72 @@
-# Validação do código
+# Code validation
 
-Validação de 9 out 2026 sobre o `main` em `9ed5669` (1.0.0-beta.1), na máquina do autor (Windows 10 22H2, i7-6700, 16 GB). Os itens por fazer passaram para `docs/roadmap.md` (referência entre parênteses).
+Validation of 9 Oct 2026 on `main` at `9ed5669` (1.0.0-beta.1), on the author's machine (Windows 10 22H2, i7-6700, 16 GB). The open items moved to `docs/roadmap.md` (reference in brackets).
 
-## Resumo
+## Summary
 
-| Verificação | Resultado |
+| Check | Result |
 | --- | --- |
-| Build (Debug, `TreatWarningsAsErrors`, analyzers de AOT e trimming) | 0 warnings, 0 erros |
-| Testes (`dotnet test Eunomia.slnx`, servidor MariaDB 10.4 local) | 1.377 testes: 1.364 passam, 13 ignorados, 0 falham |
-| Testes ignorados | 9 de integração (medições, soak e SSH, que pedem variáveis próprias), 2 do cofre de outros sistemas (Keychain, Secret Service), 2 medições headless (`EUNOMIA_PERF`) |
-| Pacotes com vulnerabilidades conhecidas (`dotnet list package --vulnerable --include-transitive`) | Nenhum |
-| Formatação e estilo (`dotnet format --verify-no-changes` com o `.editorconfig` novo) | Passa, depois de corrigir 1 ficheiro com indentação diferente, 22 ficheiros com `using` fora de ordem e 4 campos que deviam ser `readonly` |
-| Analyzers da Microsoft em `AnalysisMode=Recommended` (não ligado) | 137 avisos em 14 regras (tabela abaixo) |
+| Build (Debug, `TreatWarningsAsErrors`, AOT and trimming analyzers) | 0 warnings, 0 errors |
+| Tests (`dotnet test Eunomia.slnx`, local MariaDB 10.4 server) | 1,377 tests: 1,364 pass, 13 skipped, 0 fail |
+| Skipped tests | 9 integration tests (measurements, soak and SSH, which need their own variables), 2 for other systems' vaults (Keychain, Secret Service), 2 headless measurements (`EUNOMIA_PERF`) |
+| Packages with known vulnerabilities (`dotnet list package --vulnerable --include-transitive`) | None |
+| Formatting and style (`dotnet format --verify-no-changes` with the new `.editorconfig`) | Passes, after fixing 1 file with different indentation, 22 files with `using` directives out of order and 4 fields that should be `readonly` |
+| Microsoft analyzers in `AnalysisMode=Recommended` (not enabled) | 137 warnings in 14 rules (table below) |
 
-O código está em bom estado: estilo muito consistente (LF, UTF-8 sem BOM, sem espaços no fim das linhas, namespaces file-scoped, chavetas sempre, `sealed` por omissão), sem `TODO`/`FIXME`, sem `catch` vazios, 3 supressões de warnings todas justificadas, `ConfigureAwait(false)` nas bibliotecas e regras de dependências entre camadas testadas.
+The code is in good shape: a very consistent style (LF, UTF-8 without BOM, no trailing spaces, file-scoped namespaces, braces always, `sealed` by default), no `TODO`/`FIXME`, no empty `catch` blocks, 3 warning suppressions, all justified, `ConfigureAwait(false)` in the libraries and tested dependency rules between layers.
 
-## Métricas
+## Metrics
 
-| Medida | Valor |
+| Measure | Value |
 | --- | --- |
-| Código de produção (`src/`) | 239 ficheiros C#, ~51.600 linhas, 30 projetos |
-| Testes (`tests/`) | 141 ficheiros C#, ~17.100 linhas, 19 projetos (16 unitários, integração, headless, arquitetura) |
-| Maior projeto | `UI.Shell`: 11.234 linhas (22% do código); o `MainWindow` tem 30 ficheiros parciais (7.675 linhas) |
-| Maiores ficheiros | `DataGridControl.cs` 1.671, `TreeListControl.cs` 1.102, `SqlExportJob.cs` 835, `DatabaseTreeControl.cs` 801, `SqlExportDialog.cs` 799 |
-| `async void` | 6, todos event handlers da UI ou hooks de benchmark |
-| Esperas síncronas | 2 `Wait()` no journal das tabs, só ao fechar a janela (aceitável: não perder o journal) |
-| `catch (Exception …)` | 113, em fronteiras (comandos, jobs, limpeza) |
+| Production code (`src/`) | 239 C# files, ~51,600 lines, 30 projects |
+| Tests (`tests/`) | 141 C# files, ~17,100 lines, 19 projects (16 unit, integration, headless, architecture) |
+| Largest project | `UI.Shell`: 11,234 lines (22% of the code); `MainWindow` has 30 partial files (7,675 lines) |
+| Largest files | `DataGridControl.cs` 1,671, `TreeListControl.cs` 1,102, `SqlExportJob.cs` 835, `DatabaseTreeControl.cs` 801, `SqlExportDialog.cs` 799 |
+| `async void` | 6, all UI event handlers or benchmark hooks |
+| Synchronous waits | 2 `Wait()` calls in the tab journal, only when the window closes (acceptable: the journal is not lost) |
+| `catch (Exception …)` | 113, at boundaries (commands, jobs, clean-up) |
 
-## Pontos fortes
+## Strengths
 
-- Segurança dos dados com testes contra servidores reais (MySQL 8.0/8.4, MariaDB 10.4/10.6/11.4): `DataSafetyTests`, round trip por tipo, ALTER sem perdas, deteção de conflitos, sessões read-only.
-- CI em Windows, Linux e macOS, publish NativeAOT dos 5 alvos com smoke test do executável.
-- Fuzzing determinístico do lexer, splitter e CSV; snapshots headless de todos os ecrãs; testes de arquitetura das camadas.
-- Segredos fora de logs e erros (`SecretMasking`, teste dedicado), cofres do sistema nos três sistemas.
+- Data safety with tests against real servers (MySQL 8.0/8.4, MariaDB 10.4/10.6/11.4): `DataSafetyTests`, round trip per type, lossless ALTER, conflict detection, read-only sessions.
+- CI on Windows, Linux and macOS, NativeAOT publish of the 5 targets with a smoke test of the executable.
+- Deterministic fuzzing of the lexer, splitter and CSV; headless snapshots of every screen; layer architecture tests.
+- Secrets kept out of logs and errors (`SecretMasking`, a dedicated test), system vaults on the three systems.
 
-## Achados
+## Findings
 
-| # | Achado | Onde | Gravidade | Estado |
+| # | Finding | Where | Severity | State |
 | --- | --- | --- | --- | --- |
-| V1 | Com um `%TEMP%\eunomia-it\connection.txt` antigo (servidor parado, por exemplo depois de um reinício), os testes de UI que ligam abriam o diálogo de erro, que ficava à espera na UI thread partilhada: a corrida ficou parada mais de 25 minutos | `tests/UI.Headless/RealServer.cs`, `tests/Integration/TestServer.cs` | Alta (CI local inutilizável) | Corrigido: o ficheiro local só conta se o servidor responder; com `EUNOMIA_IT_MYSQL` (CI) um servidor em baixo continua a falhar. Proteção geral no roadmap (2.4) |
-| V2 | Sem `.editorconfig` nem verificação de formatação e estilo | Raiz, CI | Média | Corrigido: `.editorconfig`, `EnforceCodeStyleInBuild` e `dotnet format --verify-no-changes` no CI |
-| V3 | Sem verificação de vulnerabilidades no CI (secção 23.2 pede-a) | `.github/workflows/ci.yml` | Média | Corrigido (job `qualidade`). SBOM no roadmap (2.5) |
-| V4 | CI com o token com permissões por omissão e sem cancelar corridas antigas | `.github/workflows/ci.yml` | Baixa | Corrigido (`permissions: contents: read`, `concurrency`) |
-| V5 | `MySqlIdentifier` usado fora do driver, num caso com backticks montados à mão | `App/Query/QueryCompletion.cs:154`, `App/Query/QueryHelpers.cs:100-114`, `UI.Shell/MainWindow.Objects.cs:258-268`, `UI.Shell/MainWindow.Query.cs:313` | Média (bloqueia o PostgreSQL; texto inserido no editor, não executado sozinho) | Roadmap (3.1, 2.12) |
-| V6 | Concentração no shell e controlos muito grandes | `UI.Shell` (30 parciais do `MainWindow`), `DataGridControl.cs`, `TreeListControl.cs` | Média (manutenção) | Roadmap (3.2, 3.3) |
-| V7 | Tipos que guardam campos descartáveis sem serem `IDisposable` (CA1001), a rever um a um | `App.Desktop/App.cs:21`, `App/Transfer/CsvImportJob.cs:70`, `UI.Features.Transfer/CsvImportDialog.cs:29`, `UI.Features.Transfer/SqlExportDialog.cs:29`, `UI.Shell/MainWindow.AutoRefresh.cs:14`, `UI.Shell/Views/SqlFileRunWindow.cs:18` | Baixa (janelas libertam ao fechar; confirmar) | Roadmap (2.3) |
-| V8 | Comparações de texto sem `StringComparison` ordinal (CA1309); podem ser intencionais (ordenação para o utilizador) | `App/Sessions/SessionCatalog.cs:325`, `Engine.Results/FilteredRowSource.cs:180`, `UI.Controls.Common/TreeList/TreeListControl.cs:1011` | Baixa | Roadmap (2.3) |
-| V9 | Partes da spec por implementar: tracing com `ActivitySource` e painel Diagnostics (21.5), watchdog (21.6), update check opt-in e SBOM (23.2), cofre por passphrase (23.2) | — | — | Roadmap (4.1, 3.6, 1.5, 2.5, 4.2) |
-| V10 | Acessibilidade: 14 nomes de automação explícitos em 4 ficheiros e o peer do grid; sem teste que o exija em todos os controlos | `src/UI.*` | Média | Roadmap (4.4) |
-| V11 | Sem `CHANGELOG.md`, `CONTRIBUTING.md` nem template de PR; `LICENSE` e `SECURITY.md` dependem da ADR-16 | Raiz | Baixa | Corrigido, exceto licença (roadmap 1.6) |
-| V12 | O histórico do git tem dados reais de clientes desde o primeiro commit (screenshots de referência) | Histórico do git | Processo | Código publicado num repositório novo, com histórico novo e sem os screenshots |
-| V13 | Imagem de serviço sem versão (`linuxserver/openssh-server:latest`) e actions por tag | `.github/workflows/ci.yml` | Baixa | Roadmap (2.7) |
+| V1 | With a stale `%TEMP%\eunomia-it\connection.txt` (server stopped, for example after a restart), the UI tests that connect opened the error dialog, which waited on the shared UI thread: the run hung for more than 25 minutes | `tests/UI.Headless/RealServer.cs`, `tests/Integration/TestServer.cs` | High (local test runs unusable) | Fixed: the local file only counts if the server answers; with `EUNOMIA_IT_MYSQL` (CI) a server that is down still fails. General safeguard in the roadmap (2.4) |
+| V2 | No `.editorconfig` and no formatting or style check | Root, CI | Medium | Fixed: `.editorconfig`, `EnforceCodeStyleInBuild` and `dotnet format --verify-no-changes` in CI |
+| V3 | No vulnerability check in CI (section 23.2 asks for one) | `.github/workflows/ci.yml` | Medium | Fixed (the `quality` job). SBOM in the roadmap (2.5) |
+| V4 | CI with the token's default permissions and without cancelling old runs | `.github/workflows/ci.yml` | Low | Fixed (`permissions: contents: read`, `concurrency`) |
+| V5 | `MySqlIdentifier` used outside the driver, in one case with backticks built by hand | `App/Query/QueryCompletion.cs:154`, `App/Query/QueryHelpers.cs:100-114`, `UI.Shell/MainWindow.Objects.cs:258-268`, `UI.Shell/MainWindow.Query.cs:313` | Medium (blocks PostgreSQL; text inserted in the editor, never run on its own) | Roadmap (3.1, 2.12) |
+| V6 | Concentration in the shell and very large controls | `UI.Shell` (30 `MainWindow` partials), `DataGridControl.cs`, `TreeListControl.cs` | Medium (maintenance) | Roadmap (3.2, 3.3) |
+| V7 | Types that hold disposable fields without being `IDisposable` (CA1001), to be reviewed one by one | `App.Desktop/App.cs:21`, `App/Transfer/CsvImportJob.cs:70`, `UI.Features.Transfer/CsvImportDialog.cs:29`, `UI.Features.Transfer/SqlExportDialog.cs:29`, `UI.Shell/MainWindow.AutoRefresh.cs:14`, `UI.Shell/Views/SqlFileRunWindow.cs:18` | Low (windows release on closing; to be confirmed) | Roadmap (2.3) |
+| V8 | Text comparisons without an ordinal `StringComparison` (CA1309); they may be intentional (sorting for the user) | `App/Sessions/SessionCatalog.cs:325`, `Engine.Results/FilteredRowSource.cs:180`, `UI.Controls.Common/TreeList/TreeListControl.cs:1011` | Low | Roadmap (2.3) |
+| V9 | Parts of the spec not yet implemented: tracing with `ActivitySource` and a Diagnostics panel (21.5), watchdog (21.6), opt-in update check and SBOM (23.2), passphrase vault (23.2) | — | — | Roadmap (4.1, 3.6, 1.5, 2.5, 4.2) |
+| V10 | Accessibility: 14 explicit automation names in 4 files and the grid's peer; no test requiring it on every control | `src/UI.*` | Medium | Roadmap (4.4) |
+| V11 | No `CHANGELOG.md`, `CONTRIBUTING.md` or PR template; `LICENSE` and `SECURITY.md` depend on ADR-16 | Root | Low | Fixed, except the license (roadmap 1.6) |
+| V12 | The original repository's history held reference screenshots that cannot be published | Git history | Process | Code published in a new repository with fresh history and without the screenshots |
+| V13 | An unversioned service image (`linuxserver/openssh-server:latest`) and actions pinned by tag | `.github/workflows/ci.yml` | Low | Roadmap (2.7) |
 
-## Analyzers em `AnalysisMode=Recommended`
+## Analyzers in `AnalysisMode=Recommended`
 
-Medido com `dotnet build --no-incremental -p:AnalysisMode=Recommended -p:TreatWarningsAsErrors=false`. Avisos únicos por regra:
+Measured with `dotnet build --no-incremental -p:AnalysisMode=Recommended -p:TreatWarningsAsErrors=false`. Unique warnings per rule:
 
-| Regra | Avisos | O quê |
+| Rule | Warnings | What |
 | --- | --- | --- |
-| CA1826 | 52 | `First()`/`Last()`/`Count()` do LINQ sobre listas em vez do indexador ou `Count` |
-| CA1859 | 38 | Tipo concreto em vez de interface em membros privados (desempenho) |
-| CA1720 | 17 | Identificadores com nomes de tipos (`Int`, `String`…) |
-| CA1822, CA1001 | 6 cada | Membros que podiam ser `static`; tipos com campos descartáveis (V7) |
-| CA1861, CA1716 | 4 cada | Arrays constantes como argumentos; nomes iguais a palavras reservadas |
-| CA1309 | 3 | Comparação de texto não ordinal (V8) |
-| CA1711, CA1870, CA1865, CA1834, CA1805, CA1513 | 1–2 cada | Sufixos de nomes, `SearchValues`, `char` em vez de `string`, inicializações redundantes, `ThrowIfDisposed` |
+| CA1826 | 52 | LINQ `First()`/`Last()`/`Count()` on lists instead of the indexer or `Count` |
+| CA1859 | 38 | A concrete type instead of an interface on private members (performance) |
+| CA1720 | 17 | Identifiers with type names (`Int`, `String`…) |
+| CA1822, CA1001 | 6 each | Members that could be `static`; types with disposable fields (V7) |
+| CA1861, CA1716 | 4 each | Constant arrays as arguments; names equal to reserved words |
+| CA1309 | 3 | Non-ordinal text comparison (V8) |
+| CA1711, CA1870, CA1865, CA1834, CA1805, CA1513 | 1–2 each | Name suffixes, `SearchValues`, `char` instead of `string`, redundant initialisations, `ThrowIfDisposed` |
 
-## Como repetir
+## How to repeat it
 
 ```bash
 dotnet build Eunomia.slnx
@@ -76,4 +76,4 @@ dotnet list Eunomia.slnx package --vulnerable --include-transitive
 dotnet build Eunomia.slnx --no-incremental -p:AnalysisMode=Recommended -p:TreatWarningsAsErrors=false
 ```
 
-Para os testes com servidor real: `powershell -File tests\Integration\Start-TestServer.ps1` antes do `dotnet test`.
+For the tests with a real server: `powershell -File tests\Integration\Start-TestServer.ps1` before `dotnet test`.

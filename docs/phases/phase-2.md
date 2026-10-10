@@ -1,15 +1,15 @@
-# Fase 2: Application Shell
+# Phase 2: Application Shell
 
-**Âmbito (27.1, transversal; 28):** janela principal com o layout da 5.1; registo de comandos com o inventário do HeidiSQL (anexo C §2) e menus, toolbar e keymap gerados a partir dele (itens futuros visíveis e desativados); temas claro e escuro por tokens; status bar de 7 painéis; SQL log; settings JSON e `app.db`; esqueleto de Preferences com Shortcuts.
+**Scope (27.1, cross-cutting; 28):** the main window with the 5.1 layout; a command registry with HeidiSQL's inventory (appendix C §2), and the menus, toolbar and keymap generated from it (future items visible and disabled); light and dark themes through tokens; a 7-panel status bar; the SQL log; JSON settings and `app.db`; a Preferences skeleton with Shortcuts.
 
-**Requisitos:** FAM-L01, L02, L03, L06, L07, K01 (estrutura: atalhos por omissão, redefinição, conflitos, import do HeidiSQL fica para a Fase 3 com o import de settings).
+**Requirements:** FAM-L01, L02, L03, L06, L07, K01 (structure: default shortcuts, redefinition, conflicts; the HeidiSQL import is left for phase 3 with the settings import).
 
-**Ordem de trabalho:**
-1. Portas de settings em `src/App`; `src/Infra.Settings` com JSON versionado e escrita atómica, e `app.db` (SQLite) com migrações.
-2. Catálogo de comandos: 163 actions + 16 "Copy as" + atalhos de itens de menu; modelo de menus e toolbar pela ordem do anexo C; testes de inventário e de conflitos.
-3. `src/Presentation`: buffer do SQL log (300 linhas, 2.000 caracteres, `/* */`, categorias), estado da status bar, dimensões de painéis.
-4. `src/UI.Shell`: `MainWindow` migrada do `App.Desktop`, menus e toolbar gerados, keymap por contexto de foco, ícones vetoriais próprios, splitters persistidos, Display › Reset panel dimensions, toggles do menu Display.
-5. Tokens de tema (`assets/themes`) aplicados ao shell e aos controlos; Preferences (General, Shortcuts com deteção de conflitos).
-6. Testes headless (menus, teclado, reset de dimensões) e snapshots da janela em claro e escuro.
+**Work order:**
+1. Settings ports in `src/App`; `src/Infra.Settings` with versioned JSON and atomic writes, and `app.db` (SQLite) with migrations.
+2. Command catalogue: 163 actions + 16 "Copy as" + menu item shortcuts; a menu and toolbar model in appendix C's order; inventory and conflict tests.
+3. `src/Presentation`: the SQL log buffer (300 lines, 2,000 characters, `/* */`, categories), the status bar state, panel dimensions.
+4. `src/UI.Shell`: `MainWindow` moved from `App.Desktop`, generated menus and toolbar, a keymap per focus context, our own vector icons, persisted splitters, Display › Reset panel dimensions, the Display menu toggles.
+5. Theme tokens (`assets/themes`) applied to the shell and the controls; Preferences (General, Shortcuts with conflict detection).
+6. Headless tests (menus, keyboard, dimension reset) and window snapshots in light and dark.
 
-**Feito quando:** build e testes verdes; teste de inventário com as 163 actions mapeadas; menus pela ordem do anexo C; snapshot da janela por omissão em claro e escuro; reiniciar repõe as dimensões (teste); atalhos redefiníveis com aviso de conflito e persistidos.
+**Done when:** build and tests green; an inventory test with the 163 actions mapped; menus in appendix C's order; a snapshot of the default window in light and dark; restarting restores the dimensions (test); shortcuts can be redefined, with a conflict warning, and are persisted.

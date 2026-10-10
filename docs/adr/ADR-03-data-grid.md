@@ -1,29 +1,29 @@
 # ADR-03: Data grid
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Aparecer grid gratuito que passe B05/B06
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** A free grid appears that passes B05/B06
 
-## Opções
+## Options
 
-Grid de série, pago, próprio
+Stock grid, paid grid, our own
 
-## Decisão
+## Decision
 
-Próprio
+Our own
 
-## Razão
+## Reason
 
-Nenhum gratuito cumpre; controlo de desempenho
+No free grid meets the requirements; control over performance
 
 ## Trade-offs
 
-Custo XL
+XL cost
 
-## Risco
+## Risk
 
-Atraso na Fase 5
+Delay in phase 5
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.

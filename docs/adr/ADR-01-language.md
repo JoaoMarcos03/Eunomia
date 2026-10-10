@@ -1,29 +1,29 @@
-# ADR-01: Linguagem
+# ADR-01: Language
 
-- **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
-- **Rever quando:** Equipa for C++ forte
+- **Status:** Accepted (phase 0 specification)
+- **Origin:** section 29 of the specification (`docs/spec/specification.md`). This file transcribes the table row, so that every decision has its own ADR (section 22)
+- **Review when:** The team becomes strong in C++
 
-## Opções
+## Options
 
 C#, C++, Rust, Go, JVM, TypeScript
 
-## Decisão
+## Decision
 
 C# / .NET 10 LTS
 
-## Razão
+## Reason
 
-Drivers, segurança de memória, AOT, velocidade de desenvolvimento (secção 18)
+Drivers, memory safety, AOT, development speed (section 18)
 
 ## Trade-offs
 
-Memória base maior que C++
+Higher base memory than C++
 
-## Risco
+## Risk
 
-GC em resultados grandes
+GC on large results
 
-## Requisitos afetados
+## Affected requirements
 
-A ligar aos IDs REQ/FAM/TR (convenção da secção 22) quando começar a fase do roadmap que implementa esta decisão. A secção 29 não faz esse mapeamento.
+To be linked to the REQ/FAM/TR IDs (section 22 convention) when the roadmap phase that implements this decision starts. Section 29 does not provide that mapping.
