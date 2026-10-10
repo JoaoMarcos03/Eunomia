@@ -1,3 +1,4 @@
+using System.Globalization;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Drivers.MySql;
 using Eunomia.Engine.Execution;
@@ -52,7 +53,42 @@ public sealed class DdlComposerTests : IAsyncLifetime
     private Task<TableDefinition> ReadAsync(string name) =>
         new MetadataCache(_host, new MetadataOptions()).GetTableAsync(new DbObjectRef(_database, _database, name, DbObjectKind.Table), Ct);
 
+    private async Task<string?> ScalarAsync(string sql) =>
+        Convert.ToString(await _host.RunPrimaryAsync((h, ct) => h.ExecuteScalarAsync(sql, ct), Ct), CultureInfo.InvariantCulture);
+
     private MySqlDdlComposer Ddl => (MySqlDdlComposer)_host.ServerServices!.Ddl;
+
+    [Fact]
+    public async Task ExpressoesComPlicaEBarraSobrevivemALeitura()
+    {
+        TestServer.RequireServer();
+        // Coluna gerada, default com expressão e CHECK com plica e barra nos literais: o MySQL 8 dá-os escapados no
+        // information_schema (bug #100607); o CREATE feito a partir da leitura tem de dar a mesma tabela.
+        await ExecAsync($"CREATE TABLE `{_database}`.expr (id INT PRIMARY KEY, a VARCHAR(20) NOT NULL DEFAULT 'a', " +
+            @"g VARCHAR(60) AS (CONCAT(a, 'it''s \\ ok')) VIRTUAL, d VARCHAR(20) DEFAULT (CONCAT('x', '''y')), " +
+            "CONSTRAINT no_quote CHECK (a <> 'it''s')) ENGINE=InnoDB");
+        var table = await ReadAsync("expr");
+        var copy = table with
+        {
+            Ref = table.Ref with { Name = "expr_copy" },
+            // No MySQL os nomes dos CHECK são únicos na base.
+            Checks = [.. table.Checks.Select(c => c with { Name = "no_quote_copy" })],
+        };
+        foreach (var sql in Ddl.Create(copy))
+        {
+            await ExecAsync(sql);
+        }
+
+        await ExecAsync($"INSERT INTO `{_database}`.expr (id, a) VALUES (1, 'z')");
+        await ExecAsync($"INSERT INTO `{_database}`.expr_copy (id, a) VALUES (1, 'z')");
+        var original = await ScalarAsync($"SELECT CONCAT_WS('|', g, d) FROM `{_database}`.expr");
+        Assert.Equal(original, await ScalarAsync($"SELECT CONCAT_WS('|', g, d) FROM `{_database}`.expr_copy"));
+        Assert.StartsWith("zit's ", original, StringComparison.Ordinal);
+        Assert.EndsWith("|x'y", original, StringComparison.Ordinal);
+        await Assert.ThrowsAnyAsync<Exception>(() => ExecAsync($"INSERT INTO `{_database}`.expr_copy (id, a) VALUES (2, 'it''s')"));
+        var reread = await ReadAsync("expr_copy");
+        Assert.Equal(Ddl.Create(copy)[0], Ddl.Create(reread with { Ref = copy.Ref })[0]);
+    }
 
     [Fact]
     public async Task LeituraNormalizadaECreateQueReproduzATabela()

@@ -162,7 +162,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
             var extra = r[4] ?? string.Empty;
             var nullable = string.Equals(r[2], "YES", StringComparison.OrdinalIgnoreCase);
             var type = Types.Map(r[1]!) with { Charset = r[6], Collation = r[7] };
-            var generation = r.Length > 8 && !string.IsNullOrEmpty(r[8]) ? r[8] : null;
+            var generation = r.Length > 8 && !string.IsNullOrEmpty(r[8]) ? DictionaryExpression(r[8]!) : null;
             // "DEFAULT_GENERATED" (MySQL 8) é um default com expressão, não uma coluna gerada.
             var generated = generation is not null || IsGeneratedExtra(extra);
             var (defaultSql, defaultIsExpression) = generated ? (null, false) : CanonicalDefault(r[3], extra, nullable, type);
@@ -222,7 +222,7 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
                 Action(c[2])));
         }
 
-        var checkDefinitions = checkRows.Select(r => new CheckDefinition(r[0]!, r[1]!)).ToList();
+        var checkDefinitions = checkRows.Select(r => new CheckDefinition(r[0]!, DictionaryExpression(r[1]!))).ToList();
 
         var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (statusRows.Count > 0)
@@ -296,7 +296,8 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
         }
         if (extra.Contains("DEFAULT_GENERATED", StringComparison.OrdinalIgnoreCase))
         {
-            return (IsFunctionLike(value) ? value : "(" + value + ")", true);
+            var expression = DictionaryExpression(value);
+            return (IsFunctionLike(expression) ? expression : "(" + expression + ")", true);
         }
         if (string.Equals(value, "CURRENT_TIMESTAMP", StringComparison.OrdinalIgnoreCase) && type.Kind is LogicalTypeKind.DateTime)
         {
@@ -328,6 +329,43 @@ public sealed class MySqlMetadataProvider(MySqlConnectionHandle handle) : IMetad
             {
                 sb.Append(inner[i]);
             }
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Uma expressão do <c>information_schema</c> como o servidor a guardou (<see cref="MySqlCapabilities.EscapesDictionaryExpressions"/>).</summary>
+    private string DictionaryExpression(string text) => Capabilities.EscapesDictionaryExpressions ? UnescapeDictionaryText(text) : text;
+
+    /// <summary>
+    /// Desfaz o <c>String::print</c> do MySQL 8: <c>\\</c>, <c>\0</c>, <c>\'</c>, <c>\n</c>, <c>\r</c> e <c>\Z</c>. Esse escape
+    /// põe sempre uma barra antes de cada plica e de cada barra, por isso uma plica sozinha, ou uma barra seguida de outra
+    /// coisa, quer dizer que o texto não vem escapado (servidor com o bug corrigido) e fica como está.
+    /// </summary>
+    internal static string UnescapeDictionaryText(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var sb = new System.Text.StringBuilder(text.Length);
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c == '\'')
+            {
+                return text;
+            }
+            if (c != '\\')
+            {
+                sb.Append(c);
+                continue;
+            }
+            char? original = i + 1 < text.Length
+                ? text[i + 1] switch { '\\' => '\\', '0' => '\0', '\'' => '\'', 'n' => '\n', 'r' => '\r', 'Z' => '\u001A', _ => null }
+                : null;
+            if (original is null)
+            {
+                return text;
+            }
+            sb.Append(original.Value);
+            i++;
         }
         return sb.ToString();
     }

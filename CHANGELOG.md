@@ -35,6 +35,7 @@ Alterações visíveis do Eunomia, no formato [Keep a Changelog](https://keepach
 
 ### Corrigido
 
+- MySQL 8: em tabelas com colunas geradas, defaults com expressão ou CHECK com texto entre plicas, Create new ▸ Table copy falhava com erro de sintaxe e o table editor mostrava essas expressões com barras a mais (o `information_schema` do MySQL 8 dá-as escapadas; bug #100607 do MySQL).
 - Texto com `_` vindo das bases aparecia sem o primeiro `_` em menus e caixas: valores e colunas do Quick Filter, escolha de colunas das listas e do Data tab, ficheiros recentes, índices do table editor, bases do Session Manager, sessões, caixas do Find text on server e valores do editor de SET (o valor gravado já estava certo).
 - Drop de uma tabela ou view logo a seguir a escolhê-la na árvore (ou num servidor lento) já não mostra o erro "Table … doesn't exist".
 - Cancelar um import de CSV no modo servidor a meio do `LOAD DATA` aparecia às vezes como erro em vez de "cancelado".

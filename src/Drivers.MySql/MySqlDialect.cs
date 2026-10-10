@@ -356,6 +356,13 @@ public sealed class MySqlCapabilities(ServerIdentity server) : ICapabilities
 
     /// <summary><c>information_schema.CHECK_CONSTRAINTS</c> existe.</summary>
     public bool HasCheckConstraintsTable => IsMariaDb ? server.Version >= new Version(10, 2, 22) : server.Version >= new Version(8, 0, 16);
+
+    /// <summary>
+    /// O <c>information_schema</c> do MySQL 8 (dicionário de dados) mostra as expressões escapadas por <c>String::print</c>:
+    /// <c>GENERATION_EXPRESSION</c>, o <c>COLUMN_DEFAULT</c> dos defaults com expressão e o <c>CHECK_CLAUSE</c>
+    /// (bug #100607 do MySQL; o <c>SHOW CREATE TABLE</c> tem-nas certas). O MySQL 5.7 e o MariaDB dão-nas tal como são.
+    /// </summary>
+    public bool EscapesDictionaryExpressions => server.Engine == DbEngine.MySql && server.Version >= new Version(8, 0);
 }
 
 /// <summary>Classificação de erros do MySQL/MariaDB (secção 12.5): decide reconnect, retry e mensagens.</summary>
