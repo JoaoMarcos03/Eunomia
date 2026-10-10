@@ -1,6 +1,6 @@
 # Auditoria de segurança (9 out 2026)
 
-Revisão do código da 1.0.0-beta.1 contra a secção 23 da spec, a pedido do utilizador depois do feedback da beta. Complementa a auditoria do SQL montado da Fase 14 (passo 0 em `docs/progresso.md`), que não se repetiu aqui.
+Revisão do código da 1.0.0-beta.1 contra a secção 23 da spec, a pedido do utilizador depois do feedback da beta. Complementa a auditoria do SQL montado da Fase 14 (passo 0 em `docs/progress.md`), que não se repetiu aqui.
 
 ## Método
 

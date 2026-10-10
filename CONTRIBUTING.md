@@ -6,15 +6,15 @@ Regras, padrões de código e processo para quem contribui. Se uma regra colidir
 
 | Documento | Para quê |
 | --- | --- |
-| `docs/progresso.md` | Estado atual, decisões provisórias, o que falta |
+| `docs/progress.md` | Estado atual, decisões provisórias, o que falta |
 | `docs/roadmap.md` | O que vem a seguir, por prioridade |
-| `docs/spec/especificacao-fase-0.md` | Fonte de verdade (~2.000 linhas), com os anexos A–G em `docs/spec/anexos/` |
-| `docs/validacao.md` | Última validação do código (métricas, achados, estado dos testes) |
-| `docs/mvp-criterios.md`, `docs/fases/` | Critérios do MVP; plano de cada fase |
+| `docs/spec/specification.md` | Fonte de verdade (~2.000 linhas), com os anexos A–G em `docs/spec/appendices/` |
+| `docs/validation.md` | Última validação do código (métricas, achados, estado dos testes) |
+| `docs/mvp-criteria.md`, `docs/phases/` | Critérios do MVP; plano de cada fase |
 | `docs/adr/` | Decisões de arquitetura. Uma decisão nova de arquitetura é uma ADR nova |
-| `docs/verificacoes-pendentes.md` | O que não se verifica automaticamente |
-| `docs/utilizador/guia.md` | Guia do utilizador |
-| `docs/desempenho.md`, `docs/auditoria-seguranca.md`, `docs/modelo-ameacas.md` | Desempenho em servidores remotos; auditoria de segurança; modelo de ameaças (rever ao mexer nas áreas da secção 6 dele) |
+| `docs/manual-checks.md` | O que não se verifica automaticamente |
+| `docs/user-guide.md` | Guia do utilizador |
+| `docs/performance.md`, `docs/security-audit.md`, `docs/threat-model.md` | Desempenho em servidores remotos; auditoria de segurança; modelo de ameaças (rever ao mexer nas áreas da secção 6 dele) |
 
 ## 2. Preparar o ambiente
 
@@ -52,7 +52,7 @@ SDK .NET fixado em `global.json`; versões de pacotes em `Directory.Packages.pro
 - Clean-room: não copies código do HeidiSQL (GPL-2.0) nem uses os ícones Icons8. O comportamento necessário está na spec.
 - Confirma cada API na documentação ou no código do pacote, na versão fixada, antes de usar um método ou opção.
 - Pacotes NuGet novos, versões novas e software de terceiros só com acordo do mantenedor.
-- Mudar a arquitetura ou divergir da spec pede uma ADR. Dúvidas menores: a opção mais conservadora, registada em "Decisões provisórias" no `docs/progresso.md`.
+- Mudar a arquitetura ou divergir da spec pede uma ADR. Dúvidas menores: a opção mais conservadora, registada em "Decisões provisórias" no `docs/progress.md`.
 
 ## 4. Segurança dos dados (prioridade máxima)
 
@@ -137,7 +137,7 @@ Seguem as [convenções de C# da Microsoft](https://learn.microsoft.com/dotnet/c
 
 - Um branch por tema (`feat/user-manager`, `fix/grid-conflitos`, `docs/…`); o trabalho entra no `main` por pull request com o CI verde (Windows, Linux, macOS, integração, qualidade e cobertura).
 - Um commit por passo coerente, com build e testes verdes. Mensagens em PT-PT no formato [Conventional Commits](https://www.conventionalcommits.org/): `tipo(âmbito): resumo no imperativo` (≤ 72 caracteres), com corpo a explicar o porquê quando não for óbvio. Tipos: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`. Ex.: `fix(grid): recusar gravar valores cortados`.
-- Antes do PR: `dotnet format Eunomia.slnx --verify-no-changes`, `CHANGELOG.md` e `docs/progresso.md` atualizados.
+- Antes do PR: `dotnet format Eunomia.slnx --verify-no-changes`, `CHANGELOG.md` e `docs/progress.md` atualizados.
 - PRs pequenos e focados, com o template preenchido (o quê, porquê, como foi testado, riscos para dados).
 - Versões em [SemVer](https://semver.org/); `CHANGELOG.md` no formato [Keep a Changelog](https://keepachangelog.com/) atualizado em cada alteração visível.
 - Nunca: `git push --force` no `main`, `--no-verify`, reescrever histórico publicado.
@@ -156,6 +156,6 @@ Quem revê verifica, por esta ordem:
 ## 9. Documentação
 
 - Documentação em PT-PT; termos técnicos em inglês; texto da UI em inglês.
-- No fim de cada passo: `docs/progresso.md` com o passo atual, o que está feito, as decisões tomadas e o que falta. Funcionalidade visível: `docs/utilizador/guia.md`. Item novo para o futuro: `docs/roadmap.md`. O que exige pessoas, hardware ou certificados: `docs/verificacoes-pendentes.md`.
+- No fim de cada passo: `docs/progress.md` com o passo atual, o que está feito, as decisões tomadas e o que falta. Funcionalidade visível: `docs/user-guide.md`. Item novo para o futuro: `docs/roadmap.md`. O que exige pessoas, hardware ou certificados: `docs/manual-checks.md`.
 
 Contribuições externas só com CLA enquanto a licença estiver por decidir (ADR-16).

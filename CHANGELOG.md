@@ -1,6 +1,6 @@
 # Changelog
 
-Alterações visíveis do Eunomia, no formato [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/); as versões seguem [SemVer](https://semver.org/lang/pt-PT/). O detalhe de cada fase está em `docs/progresso.md`.
+Alterações visíveis do Eunomia, no formato [Keep a Changelog](https://keepachangelog.com/pt-PT/1.1.0/); as versões seguem [SemVer](https://semver.org/lang/pt-PT/). O detalhe de cada fase está em `docs/progress.md`.
 
 ## [Por lançar]
 
@@ -11,13 +11,13 @@ Alterações visíveis do Eunomia, no formato [Keep a Changelog](https://keepach
 - Create new ▸ Table copy: copia a estrutura (colunas, índices, chaves estrangeiras escolhidos) e os dados, com filtro WHERE, para uma tabela nova; nunca escreve numa tabela que já existe.
 - Save BLOB to file (menu da célula) e Image preview (Grid view options): o valor completo da célula para um ficheiro, e a imagem da célula focada num painel por baixo da árvore.
 - Tools ▸ Maintenance (também no menu da árvore): Check, Analyze, Checksum, Optimize e Repair com as opções de cada operação, numa ligação de jobs e com o resultado do servidor por tabela; Optimize e Repair pedem confirmação com a sessão e o servidor.
-- `docs/modelo-ameacas.md`: o que se protege, de quem, as fronteiras de confiança e a mitigação de cada ameaça, com o teste que a verifica.
+- `docs/threat-model.md`: o que se protege, de quem, as fronteiras de confiança e a mitigação de cada ameaça, com o teste que a verifica.
 - Teste de contraste dos temas (WCAG 2.1 AA) a partir dos tokens; os pares abaixo do AA ficam registados para decisão (roadmap 4.7).
 - Cobertura de código no CI: unitários em Linux e integração no MySQL 8.4 juntos por projeto (`build/coverage.py`), no resumo do job `cobertura`; um projeto do core abaixo do limiar (`build/coverage-baseline.json`) faz falhar.
 - Leitores de ecrã (NVDA, Narrator, VoiceOver): todos os campos, listas e tabs das janelas e diálogos têm nome acessível (o texto do rótulo), verificado por teste.
 - `.editorconfig` com as convenções de C#; o build falha com desvios às regras obrigatórias (`EnforceCodeStyleInBuild`).
 - Job `qualidade` no CI: `dotnet format --verify-no-changes`, pacotes com vulnerabilidades conhecidas.
-- Template de pull request; `CONTRIBUTING.md` com as regras de arquitetura, segurança dos dados, padrões de código C#, testes e revisão; `docs/validacao.md` com a validação de 9 out 2026.
+- Template de pull request; `CONTRIBUTING.md` com as regras de arquitetura, segurança dos dados, padrões de código C#, testes e revisão; `docs/validation.md` com a validação de 9 out 2026.
 
 ### Alterado
 
@@ -27,11 +27,11 @@ Alterações visíveis do Eunomia, no formato [Keep a Changelog](https://keepach
 
 ### Segurança
 
-- Escapes nos exports HTML, XML, PHP, LaTeX e Markdown; histórico de queries sem instruções com passwords; aviso de chave SSH de outro tipo; a ligação diz se vai cifrada (aviso no SQL log para servidores remotos sem TLS nem SSH). Relatório em `docs/auditoria-seguranca.md`.
+- Escapes nos exports HTML, XML, PHP, LaTeX e Markdown; histórico de queries sem instruções com passwords; aviso de chave SSH de outro tipo; a ligação diz se vai cifrada (aviso no SQL log para servidores remotos sem TLS nem SSH). Relatório em `docs/security-audit.md`.
 
 ### Desempenho
 
-- Servidores remotos: menos idas ao servidor por ação (definição de tabela numa ida, collations e engines uma vez por sessão, `SHOW TRIGGERS`), estatísticas da árvore numa ligação de job. Abrir uma base: 1,1–1,7 s → 0,26 s com 50 ms de latência. Detalhe em `docs/desempenho.md`.
+- Servidores remotos: menos idas ao servidor por ação (definição de tabela numa ida, collations e engines uma vez por sessão, `SHOW TRIGGERS`), estatísticas da árvore numa ligação de job. Abrir uma base: 1,1–1,7 s → 0,26 s com 50 ms de latência. Detalhe em `docs/performance.md`.
 
 ### Corrigido
 
@@ -78,7 +78,7 @@ Alterações visíveis do Eunomia, no formato [Keep a Changelog](https://keepach
 
 ## [0.1.0 – 0.12.0] - até 2026-10-07
 
-- MVP do lado automatizável (fases 1–9 e 12): shell, sessões (TLS, SSH), árvore, data grid, editor SQL, edição, import/export, schema visualizer e hardening. Detalhe em `docs/progresso.md`.
+- MVP do lado automatizável (fases 1–9 e 12): shell, sessões (TLS, SSH), árvore, data grid, editor SQL, edição, import/export, schema visualizer e hardening. Detalhe em `docs/progress.md`.
 
 [Por lançar]: https://github.com/JoaoMarcos03/Eunomia/compare/v0.13.1...HEAD
 [0.13.1]: https://github.com/JoaoMarcos03/Eunomia/releases/tag/v0.13.1

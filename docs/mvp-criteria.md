@@ -1,6 +1,6 @@
 # Estado dos critérios de saída do MVP (secção 27.3)
 
-Atualizado a 8 out 2026, no fecho da Fase 13 (UX e UI). "Automático" = coberto por testes que correm no CI (unitários, headless com snapshots, integração contra MySQL 8.0/8.4 e MariaDB 10.6/11.4). "Pendente X" = precisa do HeidiSQL, da máquina de referência, de uma pessoa ou de material que não está no repo; X é o código da verificação em `docs/verificacoes-pendentes.md`.
+Atualizado a 8 out 2026, no fecho da Fase 13 (UX e UI). "Automático" = coberto por testes que correm no CI (unitários, headless com snapshots, integração contra MySQL 8.0/8.4 e MariaDB 10.6/11.4). "Pendente X" = precisa do HeidiSQL, da máquina de referência, de uma pessoa ou de material que não está no repo; X é o código da verificação em `docs/manual-checks.md`.
 
 ## 1. FAM "Must" das áreas incluídas
 
@@ -102,7 +102,7 @@ Os 16 formatos do Copy as/Export grid rows e o SQL export seguem o código do He
 
 ## 4. Soak e stalls
 
-- Soak automático: `EUNOMIA_SOAK_MINUTES=N` corre o ciclo de queries, metadata, export, Run SQL file e CSV import e falha se a memória gerida crescer mais de 20% + 20 MB. Resultado da corrida curta nesta máquina em `docs/progresso.md`.
+- Soak automático: `EUNOMIA_SOAK_MINUTES=N` corre o ciclo de queries, metadata, export, Run SQL file e CSV import e falha se a memória gerida crescer mais de 20% + 20 MB. Resultado da corrida curta nesta máquina em `docs/progress.md`.
 - As 24 h e a suíte E2E na UI real ficam para a máquina de referência (pendentes B3 e B4).
 
 ## 5. Beta

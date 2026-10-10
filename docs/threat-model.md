@@ -1,6 +1,6 @@
 # Modelo de ameaças
 
-Estado a 9 out 2026 (1.0.0-beta.1; roadmap 4.3). Complementa `docs/auditoria-seguranca.md` (o que foi revisto e corrigido) com o porquê das decisões: o que se protege, de quem, em que fronteiras e com que mitigação. Uma alteração numa das áreas da secção 5 revê a linha correspondente neste documento no mesmo PR.
+Estado a 9 out 2026 (1.0.0-beta.1; roadmap 4.3). Complementa `docs/security-audit.md` (o que foi revisto e corrigido) com o porquê das decisões: o que se protege, de quem, em que fronteiras e com que mitigação. Uma alteração numa das áreas da secção 5 revê a linha correspondente neste documento no mesmo PR.
 
 ## 1. O que se protege
 
@@ -41,7 +41,7 @@ Tudo o que chega do servidor, de ficheiros, do clipboard ou da linha de comandos
 | Escritas nos dados | UPDATE/DELETE que apanha outras linhas; valor cortado ou convertido; escaping que muda com o `sql_mode` | `RowWriter` com chave ou comparação exata e `LIMIT 1`, verificação das linhas afetadas; texto bruto sem perdas (`FormatRaw`); literais iguais em qualquer `sql_mode`; deteção de conflitos; o Copy table nunca escreve numa tabela que já existe (CREATE sem `IF NOT EXISTS`, o INSERT só corre depois dele) | `DataSafetyTests`, `RowWriterTests`, `TableCopyTests` |
 | DDL da aplicação | ALTER que perde colunas ou corta valores; lock de metadata que pára produção; objeto apagado sem substituto | Confirmação das perdas, ALTER em modo estrito, `SafeDdl` com `lock_wait_timeout` curto, `CREATE OR REPLACE` ou reposição do original; OPTIMIZE e REPAIR do Maintenance (reconstroem e bloqueiam a tabela) só depois de confirmar, com a sessão e o servidor | `DdlComposerTests`, `ObjectActionsTests`, `TableMaintenanceTests` |
 | Sessões de produção | Escrita por engano na sessão errada | Sessão read-only imposta pelo servidor e pela `ReadOnlyPolicy` (lista de leituras permitidas); "Ask before running statements that change data"; a sessão e o host em cada pergunta de Drop/Empty/Delete | `ReadOnlySessionTests` |
-| SQL montado com texto de fora | Injeção pelo `INFO` de outra sessão, pelo clipboard ou por nomes de objetos | Identificadores e literais pelo dialeto; EXPLAIN de processos só com uma instrução explicável; filtros com mais de uma instrução recusados | Auditoria da Fase 14 (`docs/progresso.md`) |
+| SQL montado com texto de fora | Injeção pelo `INFO` de outra sessão, pelo clipboard ou por nomes de objetos | Identificadores e literais pelo dialeto; EXPLAIN de processos só com uma instrução explicável; filtros com mais de uma instrução recusados | Auditoria da Fase 14 (`docs/progress.md`) |
 | TLS | Escuta ou alteração do tráfego; servidor falso | Com SSL ligado, verificação do CA e do hostname por omissão; a ligação diz se vai cifrada e avisa nos remotos sem TLS nem SSH | `SessionHostTests` |
 | SSH | Host falso ou chave trocada | `known_hosts` próprio; chave mudada bloqueia, chave de outro tipo pergunta com aviso; túnel só em `127.0.0.1`; agent por pipe/socket do sistema | `KnownHostsTests`, `SshAgentTests`, `SshTunnelTests` |
 | `LOAD DATA LOCAL` | O servidor pede um ficheiro qualquer do PC | Só na ligação dedicada do import CSV, fechada no fim; o MySqlConnector só entrega o stream registado e recusa pedidos por nome sem servidor verificado; o cancel não deixa linhas a meio | `CsvImportTests` |
@@ -54,7 +54,7 @@ Tudo o que chega do servidor, de ficheiros, do clipboard ou da linha de comandos
 
 ## 5. Riscos residuais
 
-Os riscos aceites estão em `docs/auditoria-seguranca.md` (R1–R6: TLS "Preferred" sem verificação com o SSL desligado, `AllowPublicKeyRetrieval`, CSV para Excel sem proteção contra fórmulas, journal das query tabs em claro, password na linha de comandos, cleartext authentication). Acrescentam-se:
+Os riscos aceites estão em `docs/security-audit.md` (R1–R6: TLS "Preferred" sem verificação com o SSL desligado, `AllowPublicKeyRetrieval`, CSV para Excel sem proteção contra fórmulas, journal das query tabs em claro, password na linha de comandos, cleartext authentication). Acrescentam-se:
 
 | # | O quê | Porquê fica | O que reduz o risco |
 | --- | --- | --- | --- |

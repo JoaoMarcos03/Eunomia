@@ -8,7 +8,7 @@
 
 ## Contexto
 
-A secção 19 recomendou Avalonia 12 com grid e árvore próprios e WinForms como plano B, condicionado ao spike da Fase 1 (secção 20.2). O spike implementou a parte A: árvore lazy com 10.000 nós e os filtros da 4.3, grid próprio com 1M × 60, editor AvaloniaEdit e a janela com o layout do HeidiSQL. Mediu os critérios automáticos com scripts repetíveis. Os detalhes estão em `docs/spike/relatorio-fase-1.md` e os dados em `bench/results/20261001-0204-DESKTOP-CQRRFMG/`.
+A secção 19 recomendou Avalonia 12 com grid e árvore próprios e WinForms como plano B, condicionado ao spike da Fase 1 (secção 20.2). O spike implementou a parte A: árvore lazy com 10.000 nós e os filtros da 4.3, grid próprio com 1M × 60, editor AvaloniaEdit e a janela com o layout do HeidiSQL. Mediu os critérios automáticos com scripts repetíveis. Os detalhes estão em `docs/spike/phase-1-report.md` e os dados em `bench/results/20261001-0204-DESKTOP-CQRRFMG/`.
 
 A máquina de medição não é a de referência: Windows 10 22H2, i7-6700 com 4 núcleos e 8 lógicos, 16 GB, duas GPUs (Intel HD 530 e GTX 750 Ti) e dois ecrãs (59 Hz e 60 Hz). Os números são indicativos.
 

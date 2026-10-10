@@ -8,7 +8,7 @@
 
 Cliente de bases de dados para Windows, macOS e Linux, sucessor do HeidiSQL: mesma experiência de utilização, motor novo orientado a performance, estabilidade, concorrência e grandes datasets, e feito para não estragar dados de produção (sessões read-only, avisos de transações abertas, confirmação antes de perder dados). MySQL e MariaDB primeiro; PostgreSQL previsto na arquitetura desde o início.
 
-Estado: **beta 1.0.0-beta.1** (fases 1–9 e 12–15; detalhe em `docs/progresso.md`). Pacotes para Windows (x64), macOS (Apple Silicon e Intel) e Linux (x64 e arm64) gerados pelo CI; versões em [Releases](https://github.com/JoaoMarcos03/Eunomia/releases); guia do utilizador em `docs/utilizador/guia.md`; o que vem a seguir em `docs/roadmap.md`.
+Estado: **beta 1.0.0-beta.1** (fases 1–9 e 12–15; detalhe em `docs/progress.md`). Pacotes para Windows (x64), macOS (Apple Silicon e Intel) e Linux (x64 e arm64) gerados pelo CI; versões em [Releases](https://github.com/JoaoMarcos03/Eunomia/releases); guia do utilizador em `docs/user-guide.md`; o que vem a seguir em `docs/roadmap.md`.
 
 ## Conteúdo
 
@@ -16,12 +16,12 @@ Estado: **beta 1.0.0-beta.1** (fases 1–9 e 12–15; detalhe em `docs/progresso
 | --- | --- |
 | `CONTRIBUTING.md` | Preparação do ambiente, regras de arquitetura e de segurança dos dados, padrões de código, testes e processo |
 | `CHANGELOG.md` | Alterações visíveis por versão |
-| `docs/spec/especificacao-fase-0.md` | Especificação técnica completa (30 secções): inventário do HeidiSQL, requisitos de familiaridade, arquitetura, stack, MVP, roadmap, decisões e riscos |
-| `docs/spec/anexos/` | Anexos A a G: relatórios de investigação em inglês, com permalinks para o código do HeidiSQL no commit `c123ccdb` |
-| `docs/desempenho.md` | Desempenho em servidores remotos: princípios, ligações de uma sessão, números e como medir |
-| `docs/auditoria-seguranca.md` | Auditoria de segurança do código (9 out 2026) |
+| `docs/spec/specification.md` | Especificação técnica completa (30 secções): inventário do HeidiSQL, requisitos de familiaridade, arquitetura, stack, MVP, roadmap, decisões e riscos |
+| `docs/spec/appendices/` | Anexos A a G: relatórios de investigação em inglês, com permalinks para o código do HeidiSQL no commit `c123ccdb` |
+| `docs/performance.md` | Desempenho em servidores remotos: princípios, ligações de uma sessão, números e como medir |
+| `docs/security-audit.md` | Auditoria de segurança do código (9 out 2026) |
 
-A fonte de verdade da especificação é `docs/spec/especificacao-fase-0.md`. A versão original, fora do repositório, fica como snapshot de 30 set 2026, anterior às decisões D9 e D10, e não volta a ser atualizada.
+A fonte de verdade da especificação é `docs/spec/specification.md`. A versão original, fora do repositório, fica como snapshot de 30 set 2026, anterior às decisões D9 e D10, e não volta a ser atualizada.
 
 ## Decisões pendentes
 

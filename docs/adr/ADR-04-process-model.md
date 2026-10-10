@@ -1,7 +1,7 @@
 # ADR-04: Modelo de processos
 
 - **Estado:** Aceite (especificação da Fase 0)
-- **Origem:** secção 29 da especificação (`docs/spec/especificacao-fase-0.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
+- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
 - **Rever quando:** Drivers nativos (ODBC, OCI)
 
 ## Opções

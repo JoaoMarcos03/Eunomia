@@ -10,6 +10,6 @@
 5. 4.3 e 4.5: modelo de ameaças documentado; contraste dos tokens dos temas (WCAG 2.1 AA) verificado por teste.
 6. Funcionalidades 1.x de leitura ou de baixo risco, por ordem de uso: Table tools › Maintenance; Save BLOB e Image preview; Query profile; code folding; histórico pesquisável; paleta de comandos; outras se o tempo der.
 
-**Feito quando:** cada item com testes, build e testes verdes, `docs/progresso.md`, `CHANGELOG.md`, `docs/roadmap.md` e guia atualizados; push para um branch neutro.
+**Feito quando:** cada item com testes, build e testes verdes, `docs/progress.md`, `CHANGELOG.md`, `docs/roadmap.md` e guia atualizados; push para um branch neutro.
 
-**Estado (9 out):** concluída. Feito: 1–5 (4.5 sem os snapshots a 150% e 200%) e, das 1.x, Maintenance, Copy table, Save BLOB to file, Image preview, code folding e a paleta de comandos; a revisão a olho dos snapshots apanhou o `_` perdido nos menus e caixas (corrigido) e o guarda dos diálogos apanhou um erro espúrio depois de um Drop (corrigido). Detalhe em `docs/progresso.md`.
+**Estado (9 out):** concluída. Feito: 1–5 (4.5 sem os snapshots a 150% e 200%) e, das 1.x, Maintenance, Copy table, Save BLOB to file, Image preview, code folding e a paleta de comandos; a revisão a olho dos snapshots apanhou o `_` perdido nos menus e caixas (corrigido) e o guarda dos diálogos apanhou um erro espúrio depois de um Drop (corrigido). Detalhe em `docs/progress.md`.

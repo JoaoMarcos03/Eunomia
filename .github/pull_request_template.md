@@ -15,4 +15,4 @@
 - [ ] `dotnet build Eunomia.slnx` e `dotnet test Eunomia.slnx` verdes; `dotnet format Eunomia.slnx --verify-no-changes` sem alterações
 - [ ] Caminhos de escrita com teste de integração; SQL só pelo dialeto e pelos composers
 - [ ] Ecrãs alterados com snapshot claro e escuro revisto
-- [ ] `CHANGELOG.md`, `docs/progresso.md` e, se visível para o utilizador, `docs/utilizador/guia.md` atualizados
+- [ ] `CHANGELOG.md`, `docs/progress.md` e, se visível para o utilizador, `docs/user-guide.md` atualizados

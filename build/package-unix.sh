@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Pacotes do Eunomia para Linux e macOS (Fase 14), a partir de uma pasta de publish já feita.
 #   Linux: artifacts/Eunomia-<versão>-<rid>.tar.gz com a pasta eunomia/ (executável, bibliotecas nativas, ícone,
-#          eunomia.desktop, install.sh que instala no perfil do utilizador e LEIA-ME.md).
+#          eunomia.desktop, install.sh que instala no perfil do utilizador e README.md).
 #   macOS: artifacts/Eunomia-<versão>-<rid>.zip com Eunomia.app (Info.plist, ícone .icns, assinatura ad-hoc).
-# Sem assinatura nem notarização da Apple (os certificados não estão no repo): ver docs/utilizador/guia.md.
+# Sem assinatura nem notarização da Apple (os certificados não estão no repo): ver docs/user-guide.md.
 #
 # Uso: build/package-unix.sh <rid> <pasta do publish> <versão>
 set -euo pipefail
@@ -31,7 +31,7 @@ linux-*)
     copy_binaries "$app"
     chmod +x "$app/Eunomia"
     cp "$root/assets/brand/png/eunomia-256.png" "$app/eunomia.png"
-    cp "$root/docs/utilizador/guia.md" "$app/LEIA-ME.md"
+    cp "$root/docs/user-guide.md" "$app/README.md"
     cat > "$app/eunomia.desktop" <<'EOF'
 [Desktop Entry]
 Type=Application
@@ -102,11 +102,11 @@ osx-*)
 </dict>
 </plist>
 EOF
-    cp "$root/docs/utilizador/guia.md" "$stage/LEIA-ME.md"
+    cp "$root/docs/user-guide.md" "$stage/README.md"
     # Assinatura ad-hoc: os binários arm64 têm de estar assinados para correr.
     codesign --force --deep --sign - "$app"
     (cd "$stage" && ditto -c -k --keepParent Eunomia.app "$out/$name.zip")
-    (cd "$stage" && zip -q "$out/$name.zip" LEIA-ME.md)
+    (cd "$stage" && zip -q "$out/$name.zip" README.md)
     echo "$out/$name.zip"
     ;;
 *)

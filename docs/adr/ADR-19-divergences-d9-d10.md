@@ -1,7 +1,7 @@
 # ADR-19: Divergências de UX D9 e D10
 
 - **Estado:** Aceite (30 set 2026)
-- **Origem:** secção 29 da especificação (`docs/spec/especificacao-fase-0.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
+- **Origem:** secção 29 da especificação (`docs/spec/specification.md`). Este ficheiro transcreve a linha da tabela, para cada decisão ter a sua ADR (secção 22)
 - **Rever quando:** Feedback de utilizadores
 
 ## Opções

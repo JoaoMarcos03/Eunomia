@@ -1,6 +1,6 @@
 # Verificações pendentes
 
-Atualizado a 9 out 2026 (Fase 14: secção G). Estas verificações não se podem fazer dentro das regras do projeto: precisam do HeidiSQL instalado (os golden files e as comparações), da máquina de referência (as medições), de uma pessoa (testes manuais e beta) ou de material que não está no repo (certificados). Nada aqui bloqueia o desenvolvimento; ficam registadas para quando houver os meios. O estado de cada critério do MVP está em `docs/mvp-criterios.md`.
+Atualizado a 9 out 2026 (Fase 14: secção G). Estas verificações não se podem fazer dentro das regras do projeto: precisam do HeidiSQL instalado (os golden files e as comparações), da máquina de referência (as medições), de uma pessoa (testes manuais e beta) ou de material que não está no repo (certificados). Nada aqui bloqueia o desenvolvimento; ficam registadas para quando houver os meios. O estado de cada critério do MVP está em `docs/mvp-criteria.md`.
 
 Comandos em PowerShell, na raiz do repositório. Os testes contra servidor precisam do servidor de teste:
 
@@ -21,7 +21,7 @@ Precisam do HeidiSQL 12.x instalado na mesma máquina. Se for instalado, uma ses
 
 ## B. Medições na máquina de referência
 
-Correr numa máquina calma (sem outras aplicações), com o executável Release/NativeAOT (`powershell -File build\Publish-Portable.ps1`). Os resultados entram em `docs/mvp-criterios.md`.
+Correr numa máquina calma (sem outras aplicações), com o executável Release/NativeAOT (`powershell -File build\Publish-Portable.ps1`). Os resultados entram em `docs/mvp-criteria.md`.
 
 | # | Requisito | Como |
 | --- | --- | --- |
@@ -68,7 +68,7 @@ O CI compila, corre os testes (unitários, headless com rendering real, cofres d
 
 ## E. Beta (27.3 #5)
 
-Três utilizadores diários do HeidiSQL usam o Eunomia uma semana no trabalho real e reportam os workflows bloqueados. O guia para eles é `docs/utilizador/guia.md`. A versão para eles é a pre-release [v0.13.1](https://github.com/JoaoMarcos03/Eunomia/releases/tag/v0.13.1) (9 out), com os issue templates Erro e Feedback. O repo é privado: os testers só veem a release e os issues se forem adicionados como colaboradores (ou se o repo passar a público).
+Três utilizadores diários do HeidiSQL usam o Eunomia uma semana no trabalho real e reportam os workflows bloqueados. O guia para eles é `docs/user-guide.md`. A versão para eles é a pre-release [v0.13.1](https://github.com/JoaoMarcos03/Eunomia/releases/tag/v0.13.1) (9 out), com os issue templates Erro e Feedback. O repo é privado: os testers só veem a release e os issues se forem adicionados como colaboradores (ou se o repo passar a público).
 
 ## F. Limpeza
 
