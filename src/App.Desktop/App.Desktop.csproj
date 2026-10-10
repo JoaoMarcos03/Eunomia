@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.App.Desktop</RootNamespace>
+    <AssemblyName>Eunomia</AssemblyName>
+    <OutputType>WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Ícone do executável (recurso Win32; o NativeAOT embute-o no Eunomia.exe). -->
+    <ApplicationIcon>..\..\assets\brand\eunomia.ico</ApplicationIcon>
+    <!-- As janelas usam o ícone de UI.Controls.Common (BrandAssets); sem uma segunda cópia como ícone por omissão. -->
+    <AvaloniaIncludeApplicationIconAsWindowIcon>false</AvaloniaIncludeApplicationIconAsWindowIcon>
+    <PublishAot>true</PublishAot>
+    <!-- LibraryImport (P/Invoke gerado em compile time, seguro para AOT) precisa de unsafe. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UI.Shell\UI.Shell.csproj" />
+    <ProjectReference Include="..\Infra.Settings\Infra.Settings.csproj" />
+    <ProjectReference Include="..\Infra.Observability\Infra.Observability.csproj" />
+    <ProjectReference Include="..\Infra.Secrets.Windows\Infra.Secrets.Windows.csproj" />
+    <ProjectReference Include="..\Infra.Secrets.MacOS\Infra.Secrets.MacOS.csproj" />
+    <ProjectReference Include="..\Infra.Secrets.Linux\Infra.Secrets.Linux.csproj" />
+    <ProjectReference Include="..\Infra.Ssh\Infra.Ssh.csproj" />
+    <ProjectReference Include="..\Drivers.MySql\Drivers.MySql.csproj" />
+  </ItemGroup>
+</Project>

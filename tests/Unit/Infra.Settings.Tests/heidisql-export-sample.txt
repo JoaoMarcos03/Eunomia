@@ -1,0 +1,65 @@
+Servers\localhost\Host<|||>1<|||>127.0.0.1
+Servers\localhost\NetType<|||>3<|||>0
+Servers\localhost\User<|||>1<|||>root
+Servers\localhost\Port<|||>1<|||>3306
+Servers\localhost\Password<|||>1<|||>PASSWORD_ANSI
+Servers\localhost\TreeBackground<|||>3<|||>25600
+Servers\localhost\ConnectCount<|||>3<|||>63
+Servers\localhost\LastConnect<|||>1<|||>2026-09-30 18:22:05
+Servers\localhost\SessionCreated<|||>1<|||>2024-01-02 03:04:05
+Servers\localhost\ServerVersionFull<|||>1<|||>10.11.6-MariaDB - mariadb.org binary distribution
+Servers\localhost\FavoriteObjects<|||>1<|||>elmwood||prd_products<}}}>elmwood||b2b_budgets
+Servers\localhost\Comment<|||>1<|||>Linha 1<{{{><}}}>Linha 2
+Servers\localhost\localhost|elmwood|prd_products\Filter<|||>1<|||>id > 3
+Servers\localhost\QueryHistory\x<|||>1<|||>SELECT 1
+Servers\Amberline\Folder<|||>3<|||>1
+Servers\Amberline\StagingAmberline\Host<|||>1<|||>staging.example.com
+Servers\Amberline\StagingAmberline\NetType<|||>3<|||>2
+Servers\Amberline\StagingAmberline\Port<|||>1<|||>3307
+Servers\Amberline\StagingAmberline\TreeBackground<|||>3<|||>6063222
+Servers\Amberline\StagingAmberline\SSHtunnelActive<|||>3<|||>1
+Servers\Amberline\StagingAmberline\SSHtunnelHost<|||>1<|||>bastion.example.com
+Servers\Amberline\StagingAmberline\SSHtunnelHostPort<|||>3<|||>2222
+Servers\Amberline\StagingAmberline\SSHtunnelUser<|||>1<|||>deploy
+Servers\Amberline\StagingAmberline\SSHtunnelPassword<|||>1<|||>PASSWORD_UNICODE
+Servers\Amberline\StagingAmberline\SSHtunnelPrivateKey<|||>1<|||>C:\keys\id_ed25519
+Servers\Amberline\StagingAmberline\SSHtunnelTimeout<|||>3<|||>0
+Servers\Amberline\StagingAmberline\SSL_Active<|||>3<|||>1
+Servers\Amberline\StagingAmberline\SSL_CA<|||>1<|||>C:\certs\ca.pem
+Servers\Amberline\StagingAmberline\SSL_Verification<|||>3<|||>1
+Servers\Amberline\StagingAmberline\Databases<|||>1<|||>elmwood;shop
+Servers\Amberline\StagingAmberline\IgnoreDatabasePattern<|||>1<|||>^tmp_
+Servers\Amberline\Old\Folder<|||>3<|||>1
+Servers\Amberline\Old\PROD_Amberline\Host<|||>1<|||>prod.example.com
+Servers\Amberline\Old\PROD_Amberline\NetType<|||>3<|||>99
+Servers\Amberline\Old\PROD_Amberline\TreeBackground<|||>3<|||>536870911
+Servers\Empty\Folder<|||>3<|||>1
+Shortcut1_actExecuteQuery<|||>3<|||>16397
+Shortcut1_actNewWindow<|||>3<|||>0
+Shortcut1_actRefresh<|||>3<|||>116
+Shortcut1_actDoesNotExist<|||>3<|||>113
+dbtreewidth<|||>3<|||>565
+Servers\localhost\elmwood|b2b_budgets\Sort<|||>1<|||>1_price|0_name
+Servers\localhost\elmwood|b2b_budgets\HiddenColumns<|||>1<|||>notes|blob
+Servers\localhost\elmwood|b2b_budgets\RecentFilters\1<|||>1<|||>price > 10
+Servers\localhost\elmwood|b2b_budgets\RecentFilters\2<|||>1<|||>name LIKE 'a%'
+Servers\localhost\QueryHistory\1<|||>1<|||>2026-09-30 18:22:05|elmwood|12|SELECT * FROM t WHERE a = 'x|y'
+Servers\localhost\QueryHistory\2<|||>1<|||>2026-09-29 10:00:00||5|SELECT NOW()
+Servers\localhost\QueryHistory\3<|||>1<|||>2026-09-29 11:00:00||3|CREATE USER 'app'@'%' IDENTIFIED BY 'S3gr3do'
+AutoReconnect<|||>3<|||>1
+RestoreLastUsedDB<|||>3<|||>0
+LastSessions<|||>1<|||>localhost|Amberline\StagingAmberline|Gone\Session
+LastActiveSession<|||>1<|||>Amberline\StagingAmberline
+DatagridRowsPerStep<|||>3<|||>500
+DataFontName<|||>1<|||>Verdana
+DataFontSize<|||>3<|||>9
+FontName<|||>1<|||>Courier New
+FontSize<|||>3<|||>11
+SingleQueries<|||>3<|||>0
+logsqlnum<|||>3<|||>1000
+LogSQL<|||>3<|||>0
+GridExportEncoding<|||>3<|||>6
+GridExportSelection<|||>3<|||>0
+GridExportSeparator<|||>1<|||>,
+Theme<|||>1<|||>Windows10 Dark
+linha invalida sem delimitadores

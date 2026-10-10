@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Drivers.MySql</RootNamespace>
+    <AssemblyName>Eunomia.Drivers.MySql</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySqlConnector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Drivers.MySql.Tests" />
+  </ItemGroup>
+
+  <!-- Implementa os contratos da secção 14.1; o motor nunca referencia este projeto diretamente (secção 21). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Drivers.Abstractions\Drivers.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

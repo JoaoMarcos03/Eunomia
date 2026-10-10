@@ -1,0 +1,35 @@
+﻿{
+    "metric":  "PR-16",
+    "target":  "working set \u003c= 150 MB apos 60 s idle",
+    "appArgs":  "",
+    "idleSeconds":  60,
+    "runs":  3,
+    "workingSetMB":  {
+                         "median":  97.4,
+                         "max":  98
+                     },
+    "samples":  [
+                    {
+                        "workingSetMB":  97.4,
+                        "privateMB":  118.2,
+                        "peakWorkingSetMB":  99.6,
+                        "threads":  35,
+                        "cpuSeconds":  0.66
+                    },
+                    {
+                        "workingSetMB":  97.1,
+                        "privateMB":  117.9,
+                        "peakWorkingSetMB":  99.2,
+                        "threads":  35,
+                        "cpuSeconds":  0.62
+                    },
+                    {
+                        "workingSetMB":  98,
+                        "privateMB":  118.8,
+                        "peakWorkingSetMB":  99.9,
+                        "threads":  35,
+                        "cpuSeconds":  0.73
+                    }
+                ],
+    "pass":  true
+}

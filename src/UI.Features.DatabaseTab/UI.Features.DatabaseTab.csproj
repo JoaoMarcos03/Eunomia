@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Features.DatabaseTab</RootNamespace>
+    <AssemblyName>Eunomia.UI.Features.DatabaseTab</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="UI.Headless.Tests" />
+  </ItemGroup>
+
+  <!-- Secção 21.1: UI.Features.* -> Presentation, UI.Controls. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />
+  </ItemGroup>
+</Project>

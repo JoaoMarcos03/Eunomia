@@ -1,0 +1,9 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    x:Class="Eunomia.UI.Controls.Common.Brand.BrandResources">
+  <!-- Logo da marca (assets/brand/EunomiaLogo.axaml, gerado fora do repo). Incluído em XAML para ser resolvido em
+       compile time (ResourceInclude em código não é seguro para AOT). -->
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceInclude Source="avares://Eunomia.UI.Controls.Common/Brand/EunomiaLogo.axaml" />
+  </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Infra.Ssh</RootNamespace>
+    <AssemblyName>Eunomia.Infra.Ssh</AssemblyName>
+    <!-- LibraryImport do transporte do Pageant (WM_COPYDATA), só usado em Windows. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SSH.NET" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Infra.Ssh.Tests" />
+  </ItemGroup>
+
+  <!-- Implementa ISshTunnelFactory (Drivers.Abstractions); ADR-09: SSH.NET + agent próprio. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Drivers.Abstractions\Drivers.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

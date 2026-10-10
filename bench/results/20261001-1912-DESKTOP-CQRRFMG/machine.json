@@ -1,0 +1,11 @@
+﻿{
+    "windows":  "Microsoft Windows 10 Pro 10.0.19045 (build 19045)",
+    "cpu":  "Intel(R) Core(TM) i7-6700 CPU @ 3.40GHz",
+    "cores":  4,
+    "logical":  8,
+    "ramGB":  15.9,
+    "gpu":  "Intel(R) HD Graphics 530 + NVIDIA GeForce GTX 750 Ti",
+    "resolution":  "1680x1050 @ 59 Hz + 1920x1080 @ 60 Hz",
+    "scalePercent":  100,
+    "dotnet":  "10.0.401"
+}

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Integration.Tests</RootNamespace>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Testes contra um servidor real (secção 24): EUNOMIA_IT_MYSQL ou tests/Integration/Start-TestServer.ps1. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Drivers.MySql\Drivers.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Engine.Execution\Engine.Execution.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Ssh\Infra.Ssh.csproj" />
+    <ProjectReference Include="..\..\src\App\App.csproj" />
+    <ProjectReference Include="..\..\src\Presentation\Presentation.csproj" />
+  </ItemGroup>
+</Project>

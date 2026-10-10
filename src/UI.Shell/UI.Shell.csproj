@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Shell</RootNamespace>
+    <AssemblyName>Eunomia.UI.Shell</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="UI.Headless.Tests" />
+  </ItemGroup>
+
+  <!-- Janela principal, menus, toolbar, status bar, SQL log e keymap (secção 21.1). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />
+    <ProjectReference Include="..\UI.Controls.Grid\UI.Controls.Grid.csproj" />
+    <ProjectReference Include="..\UI.Controls.Tree\UI.Controls.Tree.csproj" />
+    <ProjectReference Include="..\UI.Controls.SqlEditor\UI.Controls.SqlEditor.csproj" />
+    <ProjectReference Include="..\UI.Features.Sessions\UI.Features.Sessions.csproj" />
+    <ProjectReference Include="..\UI.Features.HostTab\UI.Features.HostTab.csproj" />
+    <ProjectReference Include="..\UI.Features.DatabaseTab\UI.Features.DatabaseTab.csproj" />
+    <ProjectReference Include="..\UI.Features.DataTab\UI.Features.DataTab.csproj" />
+    <ProjectReference Include="..\UI.Features.Transfer\UI.Features.Transfer.csproj" />
+    <ProjectReference Include="..\UI.Features.QueryTab\UI.Features.QueryTab.csproj" />
+    <ProjectReference Include="..\UI.Features.SchemaVisualizer\UI.Features.SchemaVisualizer.csproj" />
+    <ProjectReference Include="..\UI.Features.TableEditor\UI.Features.TableEditor.csproj" />
+  </ItemGroup>
+</Project>

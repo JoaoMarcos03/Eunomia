@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Headless.Tests</RootNamespace>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Avalonia.Headless.XUnit" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Skia" />
+    <PackageReference Include="Avalonia.HarfBuzz" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\UI.Controls.Graph\UI.Controls.Graph.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.Grid\UI.Controls.Grid.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.Tree\UI.Controls.Tree.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.SqlEditor\UI.Controls.SqlEditor.csproj" />
+    <ProjectReference Include="..\..\src\UI.Shell\UI.Shell.csproj" />
+    <ProjectReference Include="..\..\src\Drivers.MySql\Drivers.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Settings\Infra.Settings.csproj" />
+  </ItemGroup>
+</Project>

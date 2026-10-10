@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.App</RootNamespace>
+    <AssemblyName>Eunomia.App</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="App.Tests" />
+    <InternalsVisibleTo Include="Integration.Tests" />
+  </ItemGroup>
+
+  <!-- App: comandos, navegação, jobs e políticas sobre o motor (secção 21: A -> E). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Engine.Execution\Engine.Execution.csproj" />
+    <ProjectReference Include="..\Engine.Metadata\Engine.Metadata.csproj" />
+    <ProjectReference Include="..\Engine.Sql\Engine.Sql.csproj" />
+    <ProjectReference Include="..\Engine.Transfer\Engine.Transfer.csproj" />
+  </ItemGroup>
+</Project>

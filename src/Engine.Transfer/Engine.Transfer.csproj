@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Engine.Transfer</RootNamespace>
+    <AssemblyName>Eunomia.Engine.Transfer</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Engine.Transfer.Tests" />
+  </ItemGroup>
+
+  <!-- Secção 21.1: Engine.Transfer -> Engine.Results, Engine.Sql (pipelines, writers, readers e journal). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Engine.Results\Engine.Results.csproj" />
+    <ProjectReference Include="..\Engine.Sql\Engine.Sql.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,64 @@
+<Solution>
+  <Folder Name="/bench/">
+    <Project Path="bench/Micro/Micro.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/App.Desktop/App.Desktop.csproj" />
+    <Project Path="src/App/App.csproj" />
+    <Project Path="src/Drivers.Abstractions/Drivers.Abstractions.csproj" />
+    <Project Path="src/Drivers.MySql/Drivers.MySql.csproj" />
+    <Project Path="src/Engine.Execution/Engine.Execution.csproj" />
+    <Project Path="src/Engine.Metadata/Engine.Metadata.csproj" />
+    <Project Path="src/Engine.Results/Engine.Results.csproj" />
+    <Project Path="src/Engine.Sql/Engine.Sql.csproj" />
+    <Project Path="src/Engine.Transfer/Engine.Transfer.csproj" />
+    <Project Path="src/Infra.Observability/Infra.Observability.csproj" />
+    <Project Path="src/Infra.Secrets.Linux/Infra.Secrets.Linux.csproj" />
+    <Project Path="src/Infra.Secrets.MacOS/Infra.Secrets.MacOS.csproj" />
+    <Project Path="src/Infra.Secrets.Windows/Infra.Secrets.Windows.csproj" />
+    <Project Path="src/Infra.Settings/Infra.Settings.csproj" />
+    <Project Path="src/Infra.Ssh/Infra.Ssh.csproj" />
+    <Project Path="src/Presentation/Presentation.csproj" />
+    <Project Path="src/UI.Controls.Common/UI.Controls.Common.csproj" />
+    <Project Path="src/UI.Controls.Graph/UI.Controls.Graph.csproj" />
+    <Project Path="src/UI.Controls.Grid/UI.Controls.Grid.csproj" />
+    <Project Path="src/UI.Controls.SqlEditor/UI.Controls.SqlEditor.csproj" />
+    <Project Path="src/UI.Controls.Tree/UI.Controls.Tree.csproj" />
+    <Project Path="src/UI.Features.DatabaseTab/UI.Features.DatabaseTab.csproj" />
+    <Project Path="src/UI.Features.DataTab/UI.Features.DataTab.csproj" />
+    <Project Path="src/UI.Features.HostTab/UI.Features.HostTab.csproj" />
+    <Project Path="src/UI.Features.QueryTab/UI.Features.QueryTab.csproj" />
+    <Project Path="src/UI.Features.TableEditor/UI.Features.TableEditor.csproj" />
+    <Project Path="src/UI.Features.SchemaVisualizer/UI.Features.SchemaVisualizer.csproj" />
+    <Project Path="src/UI.Features.Sessions/UI.Features.Sessions.csproj" />
+    <Project Path="src/UI.Features.Transfer/UI.Features.Transfer.csproj" />
+    <Project Path="src/UI.Shell/UI.Shell.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Integration/Integration.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Architecture/">
+    <Project Path="tests/Architecture/Architecture.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/UI.Headless/">
+    <Project Path="tests/UI.Headless/UI.Headless.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Unit/">
+    <Project Path="tests/Unit/App.Tests/App.Tests.csproj" />
+    <Project Path="tests/Unit/Drivers.Abstractions.Tests/Drivers.Abstractions.Tests.csproj" />
+    <Project Path="tests/Unit/Drivers.MySql.Tests/Drivers.MySql.Tests.csproj" />
+    <Project Path="tests/Unit/Engine.Execution.Tests/Engine.Execution.Tests.csproj" />
+    <Project Path="tests/Unit/Engine.Results.Tests/Engine.Results.Tests.csproj" />
+    <Project Path="tests/Unit/Engine.Sql.Tests/Engine.Sql.Tests.csproj" />
+    <Project Path="tests/Unit/Engine.Transfer.Tests/Engine.Transfer.Tests.csproj" />
+    <Project Path="tests/Unit/Infra.Observability.Tests/Infra.Observability.Tests.csproj" />
+    <Project Path="tests/Unit/Infra.Secrets.Tests/Infra.Secrets.Tests.csproj" />
+    <Project Path="tests/Unit/Infra.Secrets.Windows.Tests/Infra.Secrets.Windows.Tests.csproj" />
+    <Project Path="tests/Unit/Infra.Settings.Tests/Infra.Settings.Tests.csproj" />
+    <Project Path="tests/Unit/Infra.Ssh.Tests/Infra.Ssh.Tests.csproj" />
+    <Project Path="tests/Unit/Presentation.Tests/Presentation.Tests.csproj" />
+    <Project Path="tests/Unit/UI.Controls.Graph.Tests/UI.Controls.Graph.Tests.csproj" />
+    <Project Path="tests/Unit/UI.Controls.Grid.Tests/UI.Controls.Grid.Tests.csproj" />
+    <Project Path="tests/Unit/UI.Controls.Tree.Tests/UI.Controls.Tree.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Architecture.Tests</RootNamespace>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Todos os projetos de src (menos o App.Desktop, o executável): garante que estão compilados e restaurados e que
+       os assemblies ficam ao lado dos testes, para o DialectBoundaryTests os ler. Um projeto novo entra aqui. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\App\App.csproj" />
+    <ProjectReference Include="..\..\src\Drivers.Abstractions\Drivers.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Drivers.MySql\Drivers.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Engine.Execution\Engine.Execution.csproj" />
+    <ProjectReference Include="..\..\src\Engine.Metadata\Engine.Metadata.csproj" />
+    <ProjectReference Include="..\..\src\Engine.Results\Engine.Results.csproj" />
+    <ProjectReference Include="..\..\src\Engine.Sql\Engine.Sql.csproj" />
+    <ProjectReference Include="..\..\src\Engine.Transfer\Engine.Transfer.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Observability\Infra.Observability.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Secrets.Linux\Infra.Secrets.Linux.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Secrets.MacOS\Infra.Secrets.MacOS.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Secrets.Windows\Infra.Secrets.Windows.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Settings\Infra.Settings.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Ssh\Infra.Ssh.csproj" />
+    <ProjectReference Include="..\..\src\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.Common\UI.Controls.Common.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.Graph\UI.Controls.Graph.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.Grid\UI.Controls.Grid.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.SqlEditor\UI.Controls.SqlEditor.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.Tree\UI.Controls.Tree.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.DataTab\UI.Features.DataTab.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.DatabaseTab\UI.Features.DatabaseTab.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.HostTab\UI.Features.HostTab.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.QueryTab\UI.Features.QueryTab.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.SchemaVisualizer\UI.Features.SchemaVisualizer.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.Sessions\UI.Features.Sessions.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.TableEditor\UI.Features.TableEditor.csproj" />
+    <ProjectReference Include="..\..\src\UI.Features.Transfer\UI.Features.Transfer.csproj" />
+    <ProjectReference Include="..\..\src\UI.Shell\UI.Shell.csproj" />
+  </ItemGroup>
+</Project>

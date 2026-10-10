@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.App.Tests</RootNamespace>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\App\App.csproj" />
+    <ProjectReference Include="..\..\..\src\Drivers.MySql\Drivers.MySql.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="heidisql-actions.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

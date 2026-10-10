@@ -1,0 +1,59 @@
+name: Feedback
+description: Sugestões, coisas que estranhaste ao vir do HeidiSQL, o que falta ou o que podia ser mais simples.
+title: "[Feedback] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado pelo feedback. Se algo não funciona ou a aplicação fechou, usa antes o formulário **Erro**.
+
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do Eunomia
+      description: Em Help › About, ou no título da janela.
+      placeholder: "0.13.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Sessões e ligação (Session Manager, SSH)
+        - Árvore de objetos
+        - Data tab e grid
+        - Query tab e editor SQL
+        - Table editor
+        - Import e export
+        - Schema visualizer
+        - Aspeto (tema, ícones, tamanhos)
+        - Desempenho
+        - Outra
+    validations:
+      required: true
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: O teu feedback
+      description: O que fizeste, o que esperavas e o que sugeres. Uma captura de ecrã ajuda muito.
+    validations:
+      required: true
+
+  - type: textarea
+    id: heidisql
+    attributes:
+      label: Como é no HeidiSQL
+      description: Se vens do HeidiSQL, como funciona lá e o que estranhaste aqui.
+
+  - type: dropdown
+    id: impacto
+    attributes:
+      label: Quanto te afeta
+      options:
+        - Impede-me de trocar o HeidiSQL pelo Eunomia
+        - Incomoda no dia a dia
+        - Seria bom ter

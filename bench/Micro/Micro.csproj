@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Bench.Micro</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <!-- BenchmarkDotNet usa reflection e nunca corre em AOT: os analyzers de AOT/trim não se aplicam aqui. -->
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+    <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Engine.Results\Engine.Results.csproj" />
+    <ProjectReference Include="..\..\src\Engine.Sql\Engine.Sql.csproj" />
+    <ProjectReference Include="..\..\src\UI.Controls.Tree\UI.Controls.Tree.csproj" />
+  </ItemGroup>
+</Project>

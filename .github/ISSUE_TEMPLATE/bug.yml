@@ -1,0 +1,115 @@
+name: Erro
+description: Algo não funciona, funciona mal ou a aplicação fechou.
+title: "[Erro] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por testar o Eunomia. Quanto mais exatos forem os passos, mais depressa o erro se resolve.
+        **Não coles passwords, dados de clientes nem SQL com dados sensíveis.**
+
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do Eunomia
+      description: Em Help › About, ou no título da janela (por exemplo `0.13.1`).
+      placeholder: "0.13.1"
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Versão do Windows
+      description: "Win+R, `winver`, Enter: copia a linha \"Versão ... (Compilação do SO ...)\"."
+      placeholder: "Windows 11 Pro 24H2 (compilação 26100.2314)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: escala
+    attributes:
+      label: Escala do ecrã
+      description: Definições › Sistema › Ecrã › Escala. Se usas vários monitores, a do monitor onde estava a janela.
+      options:
+        - "100%"
+        - "125%"
+        - "150%"
+        - "175%"
+        - "200% ou mais"
+        - "Outra / não sei"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: servidor
+    attributes:
+      label: Servidor
+      options:
+        - MySQL
+        - MariaDB
+        - Outro (Percona, Aurora, TiDB…)
+        - Não se aplica (o erro não depende do servidor)
+    validations:
+      required: true
+
+  - type: input
+    id: servidor-versao
+    attributes:
+      label: Versão do servidor
+      description: "Aparece na status bar depois de ligar, ou com `SELECT VERSION();`."
+      placeholder: "8.0.36 / 10.11.6-MariaDB"
+
+  - type: dropdown
+    id: ligacao
+    attributes:
+      label: Tipo de ligação
+      options:
+        - Local (mesma máquina)
+        - Rede (TCP/IP direto)
+        - Túnel SSH
+        - Não se aplica
+
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir
+      description: Um passo por linha, a partir do arranque da aplicação.
+      placeholder: |
+        1. Abrir a sessão "local"
+        2. Clicar na tabela `clientes`
+        3. Abrir o tab Data
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que esperavas que acontecesse
+    validations:
+      required: true
+
+  - type: textarea
+    id: obtido
+    attributes:
+      label: O que aconteceu
+      description: Mensagem de erro (texto exato), o que apareceu no SQL log e, se ajudar, uma captura de ecrã (podes colar a imagem aqui).
+    validations:
+      required: true
+
+  - type: textarea
+    id: crash
+    attributes:
+      label: Crash report (se existir)
+      description: |
+        Se a aplicação fechou ou mostrou um erro inesperado, abre `%LOCALAPPDATA%\Eunomia\logs` (Win+R, cola o caminho, Enter)
+        e arrasta para aqui o `crash-*.json` mais recente (ou um ZIP com ele). Na versão portable fica em `data\logs`, ao lado do `Eunomia.exe`.
+        O ficheiro não leva SQL, valores, hostnames nem utilizadores.
+
+  - type: textarea
+    id: notas
+    attributes:
+      label: Mais alguma coisa
+      description: Acontece sempre ou só às vezes? Funcionava numa versão anterior? Como faz o HeidiSQL no mesmo caso?

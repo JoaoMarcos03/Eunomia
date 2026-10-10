@@ -1,0 +1,70 @@
+# Benchmarks (secção 22: bench.yml; secção 26). Correm à mão ou uma vez por semana, não em cada PR:
+# os runners partilhados não são a máquina de referência e os números servem só para tendência.
+# PR-04 (scroll) não corre aqui: precisa de um ecrã real com vsync (ver bench/README.md).
+name: bench
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  AVALONIA_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  micro:
+    name: BenchmarkDotNet (bench/Micro)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Micro benchmarks
+        run: dotnet run -c Release --project bench/Micro -- --filter * --artifacts BenchmarkDotNet.Artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-micro
+          path: BenchmarkDotNet.Artifacts/results/
+
+  startup:
+    name: Arranque NativeAOT (PR-01) e memória (PR-16)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    # A janela precisa de uma sessão de desktop; nos runners alojados isso não é garantido.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publish NativeAOT
+        shell: pwsh
+        run: |
+          . ./bench/Scenarios/Common.ps1
+          Publish-Eunomia
+
+      - name: PR-01
+        shell: pwsh
+        run: ./bench/Scenarios/Measure-Startup.ps1 -Runs 10 -NoPublish -OutFile startup.json
+
+      - name: PR-16
+        shell: pwsh
+        run: ./bench/Scenarios/Measure-IdleMemory.ps1 -Seconds 60 -Runs 1 -NoPublish -OutFile memory.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-startup-memory
+          path: |
+            startup.json
+            memory.json
+          if-no-files-found: ignore

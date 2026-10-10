@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Controls.Tree</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Engine.Sql\Engine.Sql.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />
+  </ItemGroup>
+</Project>

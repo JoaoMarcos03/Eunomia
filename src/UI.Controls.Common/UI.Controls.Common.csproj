@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Controls.Common</RootNamespace>
+    <AssemblyName>Eunomia.UI.Controls.Common</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <!-- Tokens de tema (secção 21.7: temas são dados, sem código), embebidos a partir de assets/themes. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\themes\*.json" LogicalName="Eunomia.Themes.%(Filename).json" />
+  </ItemGroup>
+
+  <!-- Marca (assets/brand): ícone das janelas e logo, em avares://Eunomia.UI.Controls.Common/Brand/. -->
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\assets\brand\eunomia.ico" Link="Brand\eunomia.ico" />
+    <AvaloniaXaml Include="..\..\assets\brand\EunomiaLogo.axaml" Link="Brand\EunomiaLogo.axaml" />
+  </ItemGroup>
+</Project>

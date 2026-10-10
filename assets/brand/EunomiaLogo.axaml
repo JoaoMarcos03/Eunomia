@@ -1,0 +1,39 @@
+<!-- Logo do Eunomia (símbolo) como DrawingImage vetorial.
+     Fonte: assets/brand/eunomia-mark.svg (viewBox 0 0 256 256). Gerado a partir do SVG; não editar à mão.
+     Uso: <Image Source="{StaticResource EunomiaLogo}" Width="64" Height="64" /> -->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <DrawingImage x:Key="EunomiaLogo">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Geometry="M0,0 H256 V256 H0 Z" Brush="Transparent" />
+        <GeometryDrawing Geometry="M72,16 H184 A56,56 0 0 1 240,72 V184 A56,56 0 0 1 184,240 H72 A56,56 0 0 1 16,184 V72 A56,56 0 0 1 72,16 Z">
+          <GeometryDrawing.Brush>
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+              <GradientStop Offset="0" Color="#3B1E5E" />
+              <GradientStop Offset="1" Color="#160B26" />
+            </LinearGradientBrush>
+          </GeometryDrawing.Brush>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#E05FB0" Geometry="M 128 104 L 128 184 L 58.7 144 Z" />
+        <GeometryDrawing Brush="#B44C93" Geometry="M 128 104 L 197.3 144 L 128 184 Z" />
+        <GeometryDrawing Brush="#C2338F" Geometry="M 58.7 144 L 128 184 L 58.7 166 Z" />
+        <GeometryDrawing Brush="#9D2A7A" Geometry="M 128 184 L 128 206 L 58.7 166 Z" />
+        <GeometryDrawing Brush="#5B22C9" Geometry="M 128 184 L 197.3 144 L 197.3 166 Z" />
+        <GeometryDrawing Brush="#4D1DA7" Geometry="M 128 184 L 197.3 166 L 128 206 Z" />
+        <GeometryDrawing Brush="#FF7D93" Geometry="M 128 72 L 128 152 L 58.7 112 Z" />
+        <GeometryDrawing Brush="#CD647D" Geometry="M 128 72 L 197.3 112 L 128 152 Z" />
+        <GeometryDrawing Brush="#FF4D6D" Geometry="M 58.7 112 L 128 152 L 58.7 134 Z" />
+        <GeometryDrawing Brush="#CD3E5F" Geometry="M 128 152 L 128 174 L 58.7 134 Z" />
+        <GeometryDrawing Brush="#C2338F" Geometry="M 128 152 L 197.3 112 L 197.3 134 Z" />
+        <GeometryDrawing Brush="#9D2A7A" Geometry="M 128 152 L 197.3 134 L 128 174 Z" />
+        <GeometryDrawing Brush="#FFB36B" Geometry="M 128 40 L 128 120 L 58.7 80 Z" />
+        <GeometryDrawing Brush="#CD8E5E" Geometry="M 128 40 L 197.3 80 L 128 120 Z" />
+        <GeometryDrawing Brush="#FF8A3D" Geometry="M 58.7 80 L 128 120 L 58.7 102 Z" />
+        <GeometryDrawing Brush="#CD6E3A" Geometry="M 128 120 L 128 142 L 58.7 102 Z" />
+        <GeometryDrawing Brush="#FF4D6D" Geometry="M 128 120 L 197.3 80 L 197.3 102 Z" />
+        <GeometryDrawing Brush="#CD3E5F" Geometry="M 128 120 L 197.3 102 L 128 142 Z" />
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+</ResourceDictionary>

@@ -1,0 +1,23 @@
+﻿{
+    "metric":  "PR-01",
+    "target":  "interativo \u003c= 1000 ms",
+    "mode":  "NativeAOT",
+    "cores":  "todos",
+    "appArgs":  "",
+    "runs":  20,
+    "firstMs":  3029.2,
+    "medianMs":  498.5,
+    "p95Ms":  842.6,
+    "minMs":  475.7,
+    "maxMs":  847,
+    "lastMarksMs":  {
+                        "main":  16.2,
+                        "app-initialize":  282.1,
+                        "framework-ready":  283,
+                        "window-created":  315.6,
+                        "window-opened":  366.7,
+                        "first-frame":  367,
+                        "interactive":  478.8
+                    },
+    "pass":  true
+}

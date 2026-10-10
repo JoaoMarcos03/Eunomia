@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Controls.Graph</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="UI.Controls.Graph.Tests" />
+    <InternalsVisibleTo Include="UI.Headless.Tests" />
+  </ItemGroup>
+
+  <!-- Secção 21.1: UI.Controls.* -> Avalonia (e o design system comum). -->
+  <ItemGroup>
+    <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />
+  </ItemGroup>
+</Project>

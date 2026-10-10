@@ -1,0 +1,115 @@
+﻿{
+    "metric":  "PR-04",
+    "target":  "frame p95 \u003c= 16.7 ms (max UI/render thread) e pacing p95 \u003c= 18.3 ms",
+    "scale":  1,
+    "cores":  "todos",
+    "render":  "wgl",
+    "timerResolution":  "1 ms",
+    "refreshHz":  60,
+    "appFps":  61.8,
+    "adapter":  "n/a",
+    "nativeAot":  true,
+    "frames":  619,
+    "idlePacingMs":  {
+                         "count":  115,
+                         "p50":  16.06,
+                         "p95":  16.869,
+                         "p99":  17.78,
+                         "max":  18.0105,
+                         "mean":  16.108067826086963
+                     },
+    "framePacingMs":  {
+                          "count":  618,
+                          "p50":  16.116,
+                          "p95":  16.807,
+                          "p99":  17.42,
+                          "max":  23.2415,
+                          "mean":  16.167783656957933
+                      },
+    "uiThreadMs":  {
+                       "count":  619,
+                       "p50":  0.431,
+                       "p95":  1.545,
+                       "p99":  9.405,
+                       "max":  21.2401,
+                       "mean":  0.9341484652665597
+                   },
+    "gridRenderMs":  {
+                         "count":  619,
+                         "p50":  0.374,
+                         "p95":  1.473,
+                         "p99":  9.363,
+                         "max":  21.1257,
+                         "mean":  0.8770163166397421
+                     },
+    "renderThreadMs":  {
+                           "count":  638,
+                           "p50":  0.686,
+                           "p95":  1.851,
+                           "p99":  9.726,
+                           "max":  21.4737,
+                           "mean":  1.1225261755485896
+                       },
+    "droppedFrames":  0,
+    "textLayouts":  45444,
+    "gc":  "gen0 29, gen1 13, gen2 3, 152.2 MB alocados",
+    "viewportRows":  31,
+    "phases":  {
+                   "wheel":  {
+                                 "intervalMs":  {
+                                                    "count":  248,
+                                                    "p50":  16.078,
+                                                    "p95":  16.724,
+                                                    "p99":  17.085,
+                                                    "max":  17.5643,
+                                                    "mean":  16.098791935483874
+                                                },
+                                 "uiMs":  {
+                                              "count":  249,
+                                              "p50":  0.354,
+                                              "p95":  0.506,
+                                              "p99":  1.452,
+                                              "max":  9.1981,
+                                              "mean":  0.42653293172690787
+                                          }
+                             },
+                   "page":  {
+                                "intervalMs":  {
+                                                   "count":  184,
+                                                   "p50":  16.135,
+                                                   "p95":  16.929,
+                                                   "p99":  18.036,
+                                                   "max":  23.2415,
+                                                   "mean":  16.219949456521732
+                                               },
+                                "uiMs":  {
+                                             "count":  185,
+                                             "p50":  1.084,
+                                             "p95":  7.389,
+                                             "p99":  15.011,
+                                             "max":  21.2401,
+                                             "mean":  1.8593735135135139
+                                         }
+                            },
+                   "horizontal":  {
+                                      "intervalMs":  {
+                                                         "count":  184,
+                                                         "p50":  16.183,
+                                                         "p95":  16.801,
+                                                         "p99":  17.041,
+                                                         "max":  17.6618,
+                                                         "mean":  16.21247608695652
+                                                     },
+                                      "uiMs":  {
+                                                   "count":  185,
+                                                   "p50":  0.411,
+                                                   "p95":  1.086,
+                                                   "p99":  5.389,
+                                                   "max":  16.401,
+                                                   "mean":  0.6921464864864867
+                                               }
+                                  }
+               },
+    "frameP95Ms":  1.85,
+    "pass":  true
+}

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Engine.Metadata</RootNamespace>
+    <AssemblyName>Eunomia.Engine.Metadata</AssemblyName>
+  </PropertyGroup>
+
+  <!-- Cache de metadata por sessão (secção 21.1: Engine.Metadata -> Drivers.Abstractions; usa o SessionHost). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Engine.Execution\Engine.Execution.csproj" />
+  </ItemGroup>
+</Project>

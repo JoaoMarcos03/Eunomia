@@ -1,0 +1,23 @@
+﻿{
+    "metric":  "PR-01",
+    "target":  "interativo \u003c= 1000 ms",
+    "mode":  "JIT (self-contained)",
+    "cores":  "todos",
+    "appArgs":  "",
+    "runs":  10,
+    "firstMs":  5863.1,
+    "medianMs":  2041.6,
+    "p95Ms":  2063.4,
+    "minMs":  2017.5,
+    "maxMs":  2066.9,
+    "lastMarksMs":  {
+                        "main":  130.4,
+                        "app-initialize":  635.1,
+                        "framework-ready":  706.5,
+                        "window-created":  1327.5,
+                        "window-opened":  1666.1,
+                        "first-frame":  1676.4,
+                        "interactive":  2058.2
+                    },
+    "pass":  false
+}

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Drivers.Abstractions</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Os resultados chegam como RowBlock (secção 14.1); Engine.Results não tem dependências, por isso não há ciclo. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Engine.Results\Engine.Results.csproj" />
+  </ItemGroup>
+</Project>

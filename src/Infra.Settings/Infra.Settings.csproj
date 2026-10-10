@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Infra.Settings</RootNamespace>
+    <AssemblyName>Eunomia.Infra.Settings</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
+  <!-- Implementa as portas de settings definidas em App (secção 21: Infra implementa portas de App/Engine). -->
+  <ItemGroup>
+    <ProjectReference Include="..\App\App.csproj" />
+  </ItemGroup>
+</Project>

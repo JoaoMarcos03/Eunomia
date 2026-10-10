@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Infra.Observability</RootNamespace>
+    <AssemblyName>Eunomia.Infra.Observability</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Infra.Observability.Tests" />
+  </ItemGroup>
+
+  <!-- Implementa IDiagnosticLog (App); secção 21.5: log de diagnóstico e crash reports. -->
+  <ItemGroup>
+    <ProjectReference Include="..\App\App.csproj" />
+  </ItemGroup>
+</Project>

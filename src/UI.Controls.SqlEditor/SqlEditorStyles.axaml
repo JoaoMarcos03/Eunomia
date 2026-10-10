@@ -1,0 +1,6 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Eunomia.UI.Controls.SqlEditor.SqlEditorStyles">
+  <!-- Incluído em XAML para ser resolvido em compile time (StyleInclude em código não é seguro para AOT). -->
+  <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+</Styles>

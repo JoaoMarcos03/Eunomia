@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Controls.Grid</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="UI.Headless.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Engine.Results\Engine.Results.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />
+  </ItemGroup>
+</Project>

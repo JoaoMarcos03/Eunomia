@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.UI.Features.Sessions</RootNamespace>
+    <AssemblyName>Eunomia.UI.Features.Sessions</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="UI.Headless.Tests" />
+  </ItemGroup>
+
+  <!-- Session Manager e diálogo de login (secção 21.1: UI.Features.* -> Presentation, UI.Controls). -->
+  <ItemGroup>
+    <ProjectReference Include="..\Presentation\Presentation.csproj" />
+    <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />
+  </ItemGroup>
+</Project>

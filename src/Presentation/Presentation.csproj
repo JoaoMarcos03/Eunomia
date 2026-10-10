@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Presentation</RootNamespace>
+    <AssemblyName>Eunomia.Presentation</AssemblyName>
+  </PropertyGroup>
+
+  <!-- View models e stores sem Avalonia (testáveis sem UI); dependem de App (secção 21). -->
+  <ItemGroup>
+    <ProjectReference Include="..\App\App.csproj" />
+  </ItemGroup>
+</Project>

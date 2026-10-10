@@ -1,0 +1,21 @@
+﻿{
+    "metric":  "PR-16",
+    "target":  "working set \u003c= 150 MB apos 60 s idle",
+    "appArgs":  "--render wgl",
+    "idleSeconds":  60,
+    "runs":  1,
+    "workingSetMB":  {
+                         "median":  124.7,
+                         "max":  124.7
+                     },
+    "samples":  [
+                    {
+                        "workingSetMB":  124.7,
+                        "privateMB":  170.8,
+                        "peakWorkingSetMB":  125.7,
+                        "threads":  13,
+                        "cpuSeconds":  0.62
+                    }
+                ],
+    "pass":  true
+}
