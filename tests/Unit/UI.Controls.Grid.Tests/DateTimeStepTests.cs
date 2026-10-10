@@ -1,6 +1,6 @@
 namespace Eunomia.UI.Controls.Grid.Tests;
 
-/// <summary>↑/↓ no segmento do cursor do editor de data e hora (anexo D B15, <c>TDateTimeEditorLink</c>).</summary>
+/// <summary>↑/↓ on the cursor segment of the date and time editor (appendix D B15, <c>TDateTimeEditorLink</c>).</summary>
 public sealed class DateTimeStepTests
 {
     [Theory]

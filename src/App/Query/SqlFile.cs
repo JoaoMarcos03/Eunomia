@@ -4,25 +4,25 @@ using Eunomia.App.Export;
 namespace Eunomia.App.Query;
 
 /// <summary>
-/// Ficheiros SQL das query tabs (anexo C §4.3; secção 4.7): codificações do Load (com "Auto detect (may fail)"),
-/// leitura e escrita, os 20 recentes e o limite de 5 MiB a partir do qual o Load pergunta.
+/// SQL files of the query tabs (appendix C §4.3; section 4.7): Load encodings (with "Auto detect (may fail)"),
+/// reading and writing, the 20 recent files and the 5 MiB limit above which Load asks.
 /// </summary>
 public static class SqlFile
 {
     public const string AutoDetect = "Auto detect (may fail)";
 
-    /// <summary>Ficheiros maiores perguntam antes de entrar no editor.</summary>
+    /// <summary>Larger files ask before going into the editor.</summary>
     public const long LargeFileBytes = 5L * 1024 * 1024;
 
     /// <summary><c>SQLFile0..19</c>.</summary>
     public const int MaxRecent = 20;
 
-    /// <summary>Codificações do Load: a deteção automática e as do Save (sem UTF-7).</summary>
+    /// <summary>Load encodings: automatic detection and the Save ones (no UTF-7).</summary>
     public static IReadOnlyList<string> LoadEncodings { get; } = [AutoDetect, .. ExportFile.Encodings];
 
     /// <summary>
-    /// Texto do ficheiro. Na deteção automática: BOM de UTF-8 ou UTF-16, senão UTF-8 se os bytes forem UTF-8 válido,
-    /// senão ANSI. Devolve também a codificação usada (a que o Save volta a usar).
+    /// File text. With automatic detection: UTF-8 or UTF-16 BOM, otherwise UTF-8 if the bytes are valid UTF-8,
+    /// otherwise ANSI. Also returns the encoding used (the one Save uses again).
     /// </summary>
     public static (string Text, string Encoding) Decode(byte[] bytes, string encoding)
     {
@@ -70,7 +70,7 @@ public static class SqlFile
         }
     }
 
-    /// <summary>Lista dos recentes com <paramref name="path"/> no topo (sem repetidos, até 20).</summary>
+    /// <summary>Recent list with <paramref name="path"/> on top (no duplicates, up to 20).</summary>
     public static List<string> AddRecent(IEnumerable<string> recent, string path)
     {
         ArgumentNullException.ThrowIfNull(recent);

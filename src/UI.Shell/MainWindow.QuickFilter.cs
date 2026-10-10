@@ -13,9 +13,9 @@ using ColumnDefinition = Eunomia.Drivers.Abstractions.ColumnDefinition;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Quick Filter do Data grid (Fase 5; anexo D B10; FAM-G13): captions com o SQL real calculado quando o menu abre, valores
-/// da coluna focada nas linhas selecionadas, valor pedido, clipboard (&lt; 1 KB), "More values" e Remove filter. Escolher
-/// com Shift junta com AND ao filtro atual. O painel do filtro abre e o filtro aplica-se logo.
+/// Data grid Quick Filter (phase 5; appendix D B10; FAM-G13): captions with the real SQL computed when the menu opens, values
+/// of the focused column in the selected rows, a typed value, clipboard (&lt; 1 KB), "More values" and Remove filter. Choosing
+/// with Shift joins it to the current filter with AND. The filter panel opens and the filter applies right away.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -93,7 +93,7 @@ public sealed partial class MainWindow
     private IDialect? DialectOf() =>
         _dataTarget is { } target ? Sessions?.Connector.Find(target.Session)?.Host.ServerServices?.Dialect : null;
 
-    /// <summary>Coluna focada no Data grid (definição da tabela e índice no source completo).</summary>
+    /// <summary>Column focused in the Data grid (table definition and index in the full source).</summary>
     private (ColumnDefinition Column, int Inner)? QuickColumn()
     {
         if (_browser is not { } browser || DataGrid.Source is not ProjectedRowSource projected || DialectOf() is null
@@ -109,8 +109,8 @@ public sealed partial class MainWindow
     private string? CaptionOf(string id) => _quickFilterSql.GetValueOrDefault(id) is { } sql ? DataFilters.Caption(sql) : null;
 
     /// <summary>
-    /// Calcula o SQL dos itens com os valores da coluna focada em todas as linhas selecionadas (até 1 KB) e lê o
-    /// clipboard; com o menu, pede também os 50 valores mais frequentes.
+    /// Computes the items' SQL with the values of the focused column in every selected row (up to 1 KB) and reads the
+    /// clipboard; with the menu, it also requests the 50 most frequent values.
     /// </summary>
     private void PrepareQuickFilters(bool loadMoreValues)
     {
@@ -147,7 +147,7 @@ public sealed partial class MainWindow
         _ui.Refresh();
     }
 
-    /// <summary>Linhas selecionadas (com a focada), por ordem.</summary>
+    /// <summary>Selected rows (including the focused one), in order.</summary>
     private IEnumerable<long> SelectedRows()
     {
         var selection = DataGrid.Selection;
@@ -183,7 +183,7 @@ public sealed partial class MainWindow
         _ui.Refresh();
     }
 
-    /// <summary>"More values": recusado em tabelas acima de 2 GB (10 GB se a coluna tiver índice), como no HeidiSQL.</summary>
+    /// <summary>"More values": refused on tables over 2 GB (10 GB if the column has an index), as in HeidiSQL.</summary>
     private async Task LoadMoreValuesAsync(TableBrowser browser, ColumnDefinition column)
     {
         _moreValues = [new MenuItem { Header = "Loading ...", IsEnabled = false }];
@@ -243,7 +243,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Aplica um Quick Filter: com Shift junta ao filtro atual com AND; o painel abre com o filtro novo.</summary>
+    /// <summary>Applies a Quick Filter: with Shift it joins the current filter with AND; the panel opens with the new filter.</summary>
     private void ApplyQuickFilter(string sql, bool and)
     {
         var filter = and && _browser is { } browser ? DataFilters.Combine(browser.Options.Filter, sql) : sql;

@@ -8,10 +8,10 @@ using Eunomia.UI.Controls.Common.TreeList;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Filter panel inferior (Ctrl+Alt+F; anexo D B11; FAM-G14): regex local, sem maiúsculas, sobre as linhas carregadas da
-/// lista ativa (Data grid, result tab da query tab, listas do Host e do Database tab), 500 ms depois da última tecla. O texto fica guardado por
-/// lista; "x out of y matching. z hidden."; regex inválida vai para o log e mostra tudo; o Data grid limpa-o a cada
-/// recarga.
+/// Bottom filter panel (Ctrl+Alt+F; appendix D B11; FAM-G14): local case-insensitive regex over the loaded rows of the
+/// active list (Data grid, query tab result tab, Host and Database tab lists), 500 ms after the last key. The text is kept per
+/// list; "x out of y matching. z hidden."; an invalid regex goes to the log and shows everything; the Data grid clears it on
+/// every reload.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -22,10 +22,10 @@ public sealed partial class MainWindow
     private CancellationTokenSource? _localFilterScan;
     private object? _localFilterTarget;
 
-    /// <summary>O Data grid mostra uma vista filtrada pelo filtro local (limpar repõe a fonte inteira).</summary>
+    /// <summary>The Data grid shows a view filtered by the local filter (clearing it restores the whole source).</summary>
     private bool _dataGridFiltered;
 
-    /// <summary>Lista onde se escreveu por último na caixa (a que o temporizador de 500 ms filtra).</summary>
+    /// <summary>List last typed into in the box (the one the 500 ms timer filters).</summary>
     private object? _localFilterTyped;
 
     private void InitLocalFilter()
@@ -34,7 +34,7 @@ public sealed partial class MainWindow
         _localFilterTimer.Tick += (_, _) =>
         {
             _localFilterTimer.Stop();
-            // Só na lista onde se escreveu: mudar de tab a meio dos 500 ms não reaplica o filtro da lista seguinte.
+            // Only on the list that was typed into: switching tab within the 500 ms does not apply the filter to the next list.
             if (ReferenceEquals(LocalFilterTarget(), _localFilterTyped))
             {
                 _ = ApplyLocalFilterAsync();
@@ -42,9 +42,9 @@ public sealed partial class MainWindow
         };
         _filterBox.TextChanged += (_, _) =>
         {
-            // O TextChanged do Avalonia chega depois da mudança (assíncrono): um texto posto pelo código (troca de lista,
-            // recarga do Data grid) já está guardado e não volta a aplicar o filtro. Antes, 500 ms depois de abrir o Data
-            // tab ou de recarregar, o filtro vazio repunha a fonte do grid e o foco e o scroll voltavam à primeira linha.
+            // Avalonia's TextChanged arrives after the change (asynchronously): text set by code (list switch, Data grid
+            // reload) is already stored and does not apply the filter again. Before, 500 ms after opening the Data tab
+            // or reloading, the empty filter reset the grid's source and the focus and scroll went back to the first row.
             var text = _filterBox.Text ?? string.Empty;
             var target = LocalFilterTarget();
             if (target is null || string.Equals(_localFilterTexts.GetValueOrDefault(target) ?? string.Empty, text, StringComparison.Ordinal))
@@ -59,7 +59,7 @@ public sealed partial class MainWindow
         _tabs.SelectionChanged += (_, _) => SyncLocalFilterBox();
     }
 
-    /// <summary>Lista que o filter panel filtra agora (chave do texto guardado), ou <c>null</c>.</summary>
+    /// <summary>List the filter panel filters now (key of the stored text), or <c>null</c>.</summary>
     private object? LocalFilterTarget()
     {
         if (ReferenceEquals(_tabs.SelectedItem, _tabs.DataTab))
@@ -77,7 +77,7 @@ public sealed partial class MainWindow
         return ActiveResultView;
     }
 
-    /// <summary>Mudou a lista ativa: a caixa mostra o texto guardado dessa lista.</summary>
+    /// <summary>The active list changed: the box shows that list's stored text.</summary>
     private void SyncLocalFilterBox()
     {
         var target = LocalFilterTarget();
@@ -90,7 +90,7 @@ public sealed partial class MainWindow
         _filterInfo.Text = string.Empty;
     }
 
-    /// <summary>O Data grid recarregou: o filtro local é limpo (anexo D B11).</summary>
+    /// <summary>The Data grid reloaded: the local filter is cleared (appendix D B11).</summary>
     private void ResetDataGridFilter()
     {
         _localFilterTexts.Remove(DataGridFilterKey);
@@ -182,7 +182,7 @@ public sealed partial class MainWindow
                 _localFilterScan = scan;
                 if (regex is null)
                 {
-                    // Sem filtro aplicado, nada a repor: SetSource levava o foco e o scroll para a primeira linha.
+                    // With no filter applied, nothing to restore: SetSource took the focus and the scroll to the first row.
                     if (_dataGridFiltered)
                     {
                         DataGrid.SetSource(new ProjectedRowSource(source, _dataVisibleColumns));

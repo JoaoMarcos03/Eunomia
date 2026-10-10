@@ -3,7 +3,7 @@ using Eunomia.UI.Controls.Graph.Layout;
 
 namespace Eunomia.UI.Controls.Graph.Tests;
 
-/// <summary>Layout em camadas (SV-09; secção 17.5): sem sobreposições, esquerda → direita, componentes, tempo.</summary>
+/// <summary>Layered layout (SV-09; section 17.5): no overlaps, left → right, components, time.</summary>
 public sealed class LayeredLayoutTests
 {
     private static readonly LayeredLayout Layout = new();
@@ -26,7 +26,7 @@ public sealed class LayeredLayoutTests
     public void CadeiaDaEsquerdaParaADireitaSemSobreposicoes()
     {
         LayoutSize[] sizes = [new(120, 80), new(100, 200), new(140, 60), new(120, 120)];
-        // 0 → 1 → 2, 0 → 3: o pai fica à esquerda dos filhos.
+        // 0 → 1 → 2, 0 → 3: the parent stays to the left of its children.
         LayoutEdge[] edges = [new(0, 1), new(1, 2), new(0, 3)];
         var points = Layout.Layout(sizes, edges, CancellationToken.None);
 
@@ -58,7 +58,7 @@ public sealed class LayeredLayoutTests
         var points = Layout.Layout(sizes, edges, CancellationToken.None);
 
         AssertNoOverlap(points, sizes);
-        // Os isolados (6–11) ficam abaixo dos componentes ligados.
+        // The isolated ones (6–11) go below the connected components.
         var bottomOfComponents = Enumerable.Range(0, 6).Max(i => points[i].Y + sizes[i].Height);
         Assert.All(Enumerable.Range(6, 6), i => Assert.True(points[i].Y >= bottomOfComponents));
     }
@@ -69,7 +69,7 @@ public sealed class LayeredLayoutTests
         LayoutSize[] sizes = [new(100, 300), new(100, 60)];
         var points = Layout.Layout(sizes, [new LayoutEdge(0, 1)], CancellationToken.None);
 
-        // O centro do filho alinha com o centro do pai.
+        // The child's centre aligns with the parent's centre.
         Assert.Equal(points[0].Y + 150, points[1].Y + 30, 1);
     }
 
@@ -94,11 +94,11 @@ public sealed class LayeredLayoutTests
 
         AssertNoOverlap(points, sizes);
         TestContext.Current.TestOutputHelper?.WriteLine($"{tables} tabelas, {edges.Length} FKs: {clock.ElapsedMilliseconds} ms");
-        // Secção 17.5: 300 tabelas ≤ 2 s (com folga para máquinas lentas e Debug, 1.000 também).
+        // Section 17.5: 300 tables ≤ 2 s (with room for slow machines and Debug, 1,000 too).
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(tables <= 300 ? 2 : 6), $"{clock.ElapsedMilliseconds} ms");
     }
 
-    /// <summary>Esquema sintético: tabelas com 3 a 30 colunas, ~1,3 FKs por tabela para tabelas anteriores, alguns isolados.</summary>
+    /// <summary>Synthetic schema: tables with 3 to 30 columns, ~1.3 FKs per table to earlier tables, some isolated.</summary>
     internal static (LayoutSize[] Sizes, LayoutEdge[] Edges) Schema(int tables, int seed)
     {
         var random = new Random(seed);
@@ -113,7 +113,7 @@ public sealed class LayeredLayoutTests
             var fks = random.Next(0, 3);
             for (var f = 0; f < fks; f++)
             {
-                // Pais mais prováveis entre as tabelas "centrais" (as primeiras).
+                // Parents more likely among the "central" tables (the first ones).
                 var parent = (int)(Math.Pow(random.NextDouble(), 2) * t);
                 edges.Add(new LayoutEdge(parent, t));
             }

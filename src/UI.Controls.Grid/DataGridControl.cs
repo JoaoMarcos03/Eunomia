@@ -16,18 +16,18 @@ using Eunomia.UI.Controls.Common.Input;
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Data grid próprio (secção 15): desenhado célula a célula sobre um único elemento visual, com
-/// virtualização de linhas e colunas, sem objetos por linha. Seleção por linhas + célula focada,
-/// edição in-place com um <see cref="TextBox"/> sobre a célula (IME e acessibilidade do controlo de texto),
-/// keymap da secção 4.4, coluna <c>#</c> fixa, header "nº nome" com ícone de chave, cores por tipo,
-/// <c>(NULL)</c>, PK a bold, números à direita, Ctrl+C da célula focada (D10).
+/// Eunomia's own data grid (section 15): drawn cell by cell on a single visual element, with row and column
+/// virtualisation, no per-row objects. Row selection + a focused cell, in-place editing with a
+/// <see cref="TextBox"/> over the cell (IME and the text control's accessibility), the section 4.4 keymap, a fixed
+/// <c>#</c> column, a "no. name" header with a key icon, colours by type, <c>(NULL)</c>, PK in bold, numbers aligned
+/// right, Ctrl+C of the focused cell (D10).
 /// </summary>
 public sealed partial class DataGridControl : Control, IEditTarget
 {
     public const double CellPadding = 4;
     public const int RowNumberColumn = 4095;
 
-    /// <summary>Colunas de bloco já em memória que um frame pode formatar na hora (o resto vem do prefetch em background).</summary>
+    /// <summary>Block columns already in memory that a frame may format on the spot (the rest comes from the background prefetch).</summary>
     private const int SyncFormatBudget = 24;
 
     private static readonly TimeSpan SearchReset = TimeSpan.FromSeconds(1);
@@ -97,7 +97,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     public CultureInfo Culture { get; set; } = CultureInfo.CurrentCulture;
 
-    /// <summary>Nome da fonte do grid (<c>font.grid</c>: Tahoma 8 pt; Preferences › Grid formatting).</summary>
+    /// <summary>Grid font name (<c>font.grid</c>: Tahoma 8 pt; Preferences › Grid formatting).</summary>
     public string FontFamilyName
     {
         get => _fontFamilyName;
@@ -116,10 +116,10 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     private string _fontFamilyName = "Tahoma";
 
-    /// <summary>Largura máxima das colunas no ajuste automático (Preferences › Grid formatting › Maximum column width).</summary>
+    /// <summary>Maximum column width for automatic sizing (Preferences › Grid formatting › Maximum column width).</summary>
     public double MaxAutoColumnWidth { get; set; } = GridColumns.MaxAutoWidth;
 
-    /// <summary>Tamanho da fonte em DIPs (8 pt = 10,67 px). Ctrl+roda faz zoom.</summary>
+    /// <summary>Font size in DIPs (8 pt = 10.67 px). Ctrl+wheel zooms.</summary>
     public double FontSize
     {
         get => _fontSize;
@@ -135,12 +135,12 @@ public sealed partial class DataGridControl : Control, IEditTarget
         }
     }
 
-    /// <summary>Altura de linha fixa: altura do texto + 7 px, como o HeidiSQL (18 px com Tahoma 8 pt).</summary>
+    /// <summary>Fixed row height: text height + 7 px, like HeidiSQL (18 px with Tahoma 8 pt).</summary>
     public double RowHeight => Math.Ceiling(_fontSize) + 7;
 
     public double HeaderHeight => RowHeight;
 
-    /// <summary>Cor da sessão em ARGB, fundo da coluna <c>#</c>. 0 = cor do tema.</summary>
+    /// <summary>Session colour in ARGB, background of the <c>#</c> column. 0 = theme colour.</summary>
     public uint SessionColor
     {
         get => _sessionColor;
@@ -158,7 +158,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     public long SourceRows => _source?.RowCount.Count ?? 0;
 
-    /// <summary>Linhas do source mais linhas novas.</summary>
+    /// <summary>Source rows plus new rows.</summary>
     public long RowCount => SourceRows + Edits.InsertedRows;
 
     public long TopRow
@@ -205,65 +205,65 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     public bool IsEditing => _editor is not null;
 
-    /// <summary>Texto do editor in-place aberto (para testes).</summary>
+    /// <summary>Text of the open in-place editor (for tests).</summary>
     public TextBox? Editor => _editor as TextBox;
 
-    /// <summary>Controlo do editor aberto (texto, lista, SET, data/hora).</summary>
+    /// <summary>Control of the open editor (text, list, SET, date/time).</summary>
     public Control? EditorControl => _editor;
 
     /// <summary>
-    /// Editor por célula (FAM-G07): recebe a linha, a coluna e o valor atual; <c>null</c> = texto simples. Texto com 256
-    /// caracteres ou mais, ou com quebras de linha, abre o editor em janela (<see cref="PopupEditRequested"/>).
+    /// Per-cell editor (FAM-G07): receives the row, the column and the current value; <c>null</c> = plain text. Text with 256
+    /// characters or more, or with line breaks, opens the window editor (<see cref="PopupEditRequested"/>).
     /// </summary>
     public Func<long, int, string?, Task<GridCellEditor?>>? EditorProvider { get; set; }
 
-    /// <summary>Pedido do editor em janela (texto longo, "…", binário): quem usa o grid mostra-o e põe o valor.</summary>
+    /// <summary>Request for the window editor (long text, "…", binary): the grid's user shows it and sets the value.</summary>
     public event EventHandler<GridPopupEditEventArgs>? PopupEditRequested;
 
-    /// <summary>Tempo de UI thread gasto no último <see cref="Render"/> (para benchmarks).</summary>
+    /// <summary>UI thread time spent in the last <see cref="Render"/> (for benchmarks).</summary>
     public TimeSpan LastRenderTime { get; private set; }
 
-    /// <summary><see cref="Stopwatch.GetTimestamp"/> no fim do último <see cref="Render"/> (para benchmarks).</summary>
+    /// <summary><see cref="Stopwatch.GetTimestamp"/> at the end of the last <see cref="Render"/> (for benchmarks).</summary>
     public long LastRenderEndTimestamp { get; private set; }
 
-    /// <summary>Textos de célula preparados desde o início (para benchmarks).</summary>
+    /// <summary>Cell texts prepared since the start (for benchmarks).</summary>
     public long TextLayoutsCreated => _textCache.Created;
 
-    /// <summary>Destes, quantos precisaram de shaping completo (<c>TextLayout</c>).</summary>
+    /// <summary>Of those, how many needed full shaping (<c>TextLayout</c>).</summary>
     public long TextLayoutsShaped => _textCache.CreatedWithShaping;
 
-    /// <summary>Scroll livre com o botão do meio (para testes).</summary>
+    /// <summary>Free scroll with the middle button (for tests).</summary>
     public GridAutoScroll AutoScroll => _autoScroll;
 
     public event EventHandler? ScrollChanged;
 
     public event EventHandler? StatusChanged;
 
-    /// <summary>PgDn na última linha: pedido de "Next" (mais linhas), como no Data tab do HeidiSQL.</summary>
+    /// <summary>PgDn on the last row: a request for "Next" (more rows), as in HeidiSQL's Data tab.</summary>
     public event EventHandler? NextPageRequested;
 
-    /// <summary>Largura automática em curso (a de <see cref="SetSource"/> ou da chegada das primeiras linhas).</summary>
+    /// <summary>Automatic sizing in progress (the one from <see cref="SetSource"/> or from the arrival of the first rows).</summary>
     public Task PendingAutoSize { get; private set; } = Task.CompletedTask;
 
-    /// <summary>Ctrl+End (última linha): no Data tab, pedido de "Show all".</summary>
+    /// <summary>Ctrl+End (last row): in the Data tab, a request for "Show all".</summary>
     public event EventHandler? LastRowRequested;
 
-    /// <summary>Sem edição nem linhas novas (resultado sem chave suficiente, ou sem tabela de origem).</summary>
+    /// <summary>No editing and no new rows (a result without a sufficient key, or without a source table).</summary>
     public bool IsReadOnly { get; set; }
 
     /// <summary>
-    /// Grava a linha pendente no servidor (FAM-G08): devolve se gravou. Sem handler, a gravação fica só no edit buffer.
-    /// Uma falha mantém a linha alterada (triângulos) e o foco volta a ela.
+    /// Saves the pending row to the server (FAM-G08): returns whether it saved. Without a handler, the save stays in the edit
+    /// buffer only. A failure keeps the row changed (triangles) and the focus goes back to it.
     /// </summary>
     public Func<GridRowCommit, Task<GridCommitResult>>? CommitHandler { get; set; }
 
-    /// <summary>Uma gravação está a correr (a edição espera por ela).</summary>
+    /// <summary>A save is running (editing waits for it).</summary>
     public bool IsCommitting { get; private set; }
 
-    /// <summary>Tentativa de editar um grid só de leitura (quem usa o grid explica porquê).</summary>
+    /// <summary>Attempt to edit a read-only grid (the grid's user explains why).</summary>
     public event EventHandler? EditRefused;
 
-    /// <summary>Grava a linha pendente (Ctrl+Enter, mudar de linha, clique em espaço vazio).</summary>
+    /// <summary>Saves the pending row (Ctrl+Enter, moving to another row, click on empty space).</summary>
     public async Task<bool> CommitPendingAsync()
     {
         if (!Edits.HasPending)
@@ -301,21 +301,21 @@ public sealed partial class DataGridControl : Control, IEditTarget
         }
         else if (!ok && Edits.PendingRow == commit.Row && Selection.FocusedRow != commit.Row)
         {
-            // A linha fica alterada e o foco volta a ela (como o HeidiSQL).
+            // The row stays changed and the focus goes back to it (like HeidiSQL).
             FocusCell(commit.Row, Math.Max(0, Selection.FocusedColumn));
         }
         InvalidateVisual();
         return ok;
     }
 
-    /// <summary>Post (Ctrl+Enter): fecha o editor guardando o valor e grava a linha.</summary>
+    /// <summary>Post (Ctrl+Enter): closes the editor keeping the value and saves the row.</summary>
     public Task<bool> PostAsync()
     {
         EndEdit(commit: true);
         return CommitPendingAsync();
     }
 
-    /// <summary>Cancel editing (Esc): fecha o editor sem guardar; sem editor aberto, descarta as alterações da linha.</summary>
+    /// <summary>Cancel editing (Esc): closes the editor without keeping the value; with no editor open, discards the row's changes.</summary>
     public void CancelEditing()
     {
         if (IsEditing)
@@ -329,8 +329,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
     }
 
     /// <summary>
-    /// Linha nova no fim com <paramref name="values"/> (Insert row, Duplicate row), depois de gravar a pendente; devolve o
-    /// índice ou -1.
+    /// New row at the end with <paramref name="values"/> (Insert row, Duplicate row), after saving the pending one; returns
+    /// the index or -1.
     /// </summary>
     public async Task<long> InsertRowAsync(IReadOnlyDictionary<int, CellValue>? values = null)
     {
@@ -360,7 +360,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         return row;
     }
 
-    /// <summary>Põe um valor numa célula (Insert value ▸, Ctrl+V, Ctrl+X), gravando antes a linha pendente de outra linha.</summary>
+    /// <summary>Puts a value in a cell (Insert value ▸, Ctrl+V, Ctrl+X), saving the pending row of another row first.</summary>
     public async Task<bool> SetCellValueAsync(long row, int column, CellValue value)
     {
         if (_source is null || row < 0 || row >= RowCount || column < 0 || column >= Columns.Count)
@@ -382,17 +382,17 @@ public sealed partial class DataGridControl : Control, IEditTarget
         return true;
     }
 
-    /// <summary>Clique esquerdo num header (fora da margem de redimensionar), com os modificadores.</summary>
+    /// <summary>Left click on a header (outside the resize margin), with the modifiers.</summary>
     public event EventHandler<GridHeaderEventArgs>? HeaderClicked;
 
-    /// <summary>Clique direito num header (menu das colunas no Data tab).</summary>
+    /// <summary>Right click on a header (columns menu in the Data tab).</summary>
     public event EventHandler<GridHeaderEventArgs>? HeaderContextRequested;
 
     private IReadOnlyDictionary<int, GridSortIndicator> _sortIndicators = new Dictionary<int, GridSortIndicator>();
 
     /// <summary>
-    /// Indicadores de ordenação por coluna: ▲ ou ▼ e a posição no ORDER BY em superscript (¹²³…⁹, ⁺ a partir da 10.ª),
-    /// como no HeidiSQL (anexo D B7).
+    /// Sort indicators per column: ▲ or ▼ and the position in the ORDER BY as a superscript (¹²³…⁹, ⁺ from the 10th on),
+    /// as in HeidiSQL (appendix D B7).
     /// </summary>
     public IReadOnlyDictionary<int, GridSortIndicator> SortIndicators
     {
@@ -404,7 +404,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         }
     }
 
-    /// <summary>Liga o grid a um source. A formatação de display usa <see cref="Culture"/>.</summary>
+    /// <summary>Binds the grid to a source. Display formatting uses <see cref="Culture"/>.</summary>
     public void SetSource(IRowSource source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -440,8 +440,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
     }
 
     /// <summary>
-    /// Largura automática (secção 4.4): máximo entre header e até 100 linhas à volta de <paramref name="aroundRow"/>,
-    /// limitada a 300 px. As medições correm em background.
+    /// Automatic width (section 4.4): the maximum of the header and up to 100 rows around <paramref name="aroundRow"/>,
+    /// capped at 300 px. Measuring runs in the background.
     /// </summary>
     public async Task AutoSizeColumnsAsync(long aroundRow)
     {
@@ -496,7 +496,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         ScrollChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Retângulo da célula em coordenadas do controlo (pode estar fora do viewport).</summary>
+    /// <summary>Cell rectangle in control coordinates (may be outside the viewport).</summary>
     public Rect CellBounds(long row, int column)
     {
         var x = RowNumberWidth + Columns.OffsetOf(column) - _scrollX;
@@ -505,9 +505,9 @@ public sealed partial class DataGridControl : Control, IEditTarget
     }
 
     /// <summary>
-    /// Valor de uma célula do source para editar e copiar, sem perdas (<see cref="DisplayFormatter.FormatRaw"/>): nunca o
-    /// texto de display (separadores da cultura, binário cortado), que gravado de volta mudaria o valor. Com um
-    /// <see cref="IFullValueSource"/>, as células cortadas no SELECT vêm completas do servidor.
+    /// Value of a source cell for editing and copying, lossless (<see cref="DisplayFormatter.FormatRaw"/>): never the
+    /// display text (culture separators, cut binary), which saved back would change the value. With an
+    /// <see cref="IFullValueSource"/>, cells cut in the SELECT come complete from the server.
     /// </summary>
     public async ValueTask<string?> GetRawTextAsync(long row, int column)
     {
@@ -523,7 +523,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         return DisplayFormatter.FormatRaw(block, (int)(row - block.FirstRow), column);
     }
 
-    /// <summary>Texto de display de uma célula, se estiver disponível sem I/O (para testes e acessibilidade).</summary>
+    /// <summary>Display text of a cell, if it is available without I/O (for tests and accessibility).</summary>
     public string? GetDisplayText(long row, int column)
     {
         if (Edits.TryGetValue(row, column, out var edited))
@@ -544,7 +544,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
             : null;
     }
 
-    /// <summary>Executa um comando do keymap (também usado por testes e benchmarks).</summary>
+    /// <summary>Runs a keymap command (also used by tests and benchmarks).</summary>
     public bool Execute(GridCommand command)
     {
         if (_source is null)
@@ -605,7 +605,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
                 MoveTo(0, column, SelectMode.Replace);
                 return true;
             case GridCommand.LastRow:
-                // No Data tab, Ctrl+End é também "Show all" (anexo D B3): quem usa o grid carrega o resto.
+                // In the Data tab, Ctrl+End is also "Show all" (appendix D B3): the grid's user loads the rest.
                 LastRowRequested?.Invoke(this, EventArgs.Empty);
                 MoveTo(last, column, SelectMode.Replace);
                 return true;
@@ -684,8 +684,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
     }
 
     /// <summary>
-    /// Texto que Ctrl+C põe no clipboard (secção 4.6): valor completo da célula focada, inteiros sem
-    /// separador, NULL como texto vazio, sem caracteres NUL. Devolve também se o valor era NULL.
+    /// Text Ctrl+C puts on the clipboard (section 4.6): the full value of the focused cell, integers without a
+    /// separator, NULL as empty text, without NUL characters. Also returns whether the value was NULL.
     /// </summary>
     public async Task<(string Text, bool IsNull)> GetCopyTextAsync()
     {
@@ -711,7 +711,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         return value is null ? (string.Empty, true) : (value.Replace("\0", string.Empty, StringComparison.Ordinal), false);
     }
 
-    /// <summary>A última cópia foi um NULL (o HeidiSQL usa isto para colar NULL).</summary>
+    /// <summary>The last copy was a NULL (HeidiSQL uses this to paste NULL).</summary>
     public static bool ClipboardIsNull => _clipboardIsNull;
 
     public async Task CopyFocusedCellAsync()
@@ -727,7 +727,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     public Task BeginEditAsync() => BeginEditAsync(null);
 
-    /// <summary>Abre o editor da célula focada; <paramref name="editor"/> força um (SQL function, sem FK lookup).</summary>
+    /// <summary>Opens the editor of the focused cell; <paramref name="editor"/> forces one (SQL function, no FK lookup).</summary>
     public async Task BeginEditAsync(GridCellEditor? editor)
     {
         if (_source is null || IsEditing || IsCommitting || Selection.FocusedRow < 0)
@@ -785,7 +785,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         _editor = spec.Create(value, _fontSize, new FontFamily(FontFamilyName));
         _editor.LostFocus += (_, _) =>
         {
-            // Uma lista aberta tem o foco no popup dela; o editor só fecha quando o foco sai mesmo.
+            // An open list has the focus in its popup; the editor only closes when the focus really leaves.
             if (_editor is not null && !_editor.IsKeyboardFocusWithin && _editor is not ComboBox { IsDropDownOpen: true })
             {
                 EndEdit(commit: true);
@@ -797,7 +797,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         _editor.Focus();
     }
 
-    /// <summary>Fecha o editor in-place; com <paramref name="commit"/>, guarda o valor no edit buffer.</summary>
+    /// <summary>Closes the in-place editor; with <paramref name="commit"/>, keeps the value in the edit buffer.</summary>
     public void EndEdit(bool commit)
     {
         if (_editor is null)
@@ -924,12 +924,12 @@ public sealed partial class DataGridControl : Control, IEditTarget
                     else if (TryGetFormatted(block, c, out var texts))
                     {
                         text = texts[local];
-                        // O formatter devolve a própria constante para NULL; um valor de texto "(NULL)" é outra instância.
+                        // The formatter returns its own constant for NULL; a "(NULL)" text value is another instance.
                         isNull = ReferenceEquals(text, DisplayFormatter.NullText);
                     }
                     else
                     {
-                        continue; // Placeholder: sem dados ainda, a célula fica vazia até o bloco chegar.
+                        continue; // Placeholder: no data yet, the cell stays empty until the block arrives.
                     }
 
                     if (text.Length > 0)
@@ -946,7 +946,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
                 }
             }
 
-            // Linhas de grelha: uma por linha e uma por coluna.
+            // Grid lines: one per row and one per column.
             var right = Math.Min(bounds.Width, dataLeft + Columns.TotalWidth - _scrollX);
             for (var row = _topRow; row <= lastRow; row++)
             {
@@ -977,7 +977,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         base.OnKeyDown(e);
         if (_autoScroll.IsActive)
         {
-            // Qualquer tecla termina o scroll livre (Esc incluído), como no Windows.
+            // Any key ends the free scroll (Esc included), as on Windows.
             StopAutoScroll(null);
             e.Handled = true;
             return;
@@ -1000,7 +1000,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         {
             return;
         }
-        // Pesquisa incremental na coluna focada, nos blocos já em memória.
+        // Incremental search on the focused column, in the blocks already in memory.
         var now = DateTime.UtcNow;
         _search = now - _lastSearch > SearchReset ? e.Text : _search + e.Text;
         _lastSearch = now;
@@ -1025,7 +1025,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         var point = e.GetCurrentPoint(this);
         if (_autoScroll.IsActive)
         {
-            // Com o scroll livre ativo, qualquer clique só o termina.
+            // With free scroll active, any click just ends it.
             StopAutoScroll(e.Pointer);
             e.Handled = true;
             return;
@@ -1045,13 +1045,13 @@ public sealed partial class DataGridControl : Control, IEditTarget
         {
             if (pos.Y < HeaderHeight)
             {
-                // Botão direito no header: menu das colunas (anexo D B7).
+                // Right button on the header: columns menu (appendix D B7).
                 var headerColumn = Columns.ColumnAt(pos.X - RowNumberWidth + _scrollX);
                 HeaderContextRequested?.Invoke(this, new GridHeaderEventArgs(headerColumn, e.KeyModifiers));
                 e.Handled = true;
                 return;
             }
-            // Botão direito numa célula: foca-a (mantém a seleção se a linha já estava selecionada) e deixa abrir o menu.
+            // Right button on a cell: focuses it (keeps the selection if the row was already selected) and lets the menu open.
             var rightColumn = Columns.ColumnAt(pos.X - RowNumberWidth + _scrollX);
             var rightRow = _topRow + (long)((pos.Y - HeaderHeight) / RowHeight);
             if (rightRow < RowCount && rightColumn >= 0 && pos.X >= RowNumberWidth)
@@ -1084,7 +1084,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
             }
             else if (pos.X >= RowNumberWidth && Columns.ColumnAt(pos.X - RowNumberWidth + _scrollX) is var headerColumn and >= 0)
             {
-                // Clique no header: quem usa o grid decide (ordenação no servidor no Data tab, anexo D B7).
+                // Click on the header: the grid's user decides (server-side sorting in the Data tab, appendix D B7).
                 HeaderClicked?.Invoke(this, new GridHeaderEventArgs(headerColumn, e.KeyModifiers));
             }
             e.Handled = true;
@@ -1100,7 +1100,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         var row = _topRow + (long)((pos.Y - HeaderHeight) / RowHeight);
         if (row >= RowCount || column < 0 || pos.X < RowNumberWidth)
         {
-            // Clique em espaço vazio grava a linha pendente (secção 4.4).
+            // Click on empty space saves the pending row (section 4.4).
             _ = CommitPendingAsync();
             e.Handled = true;
             return;
@@ -1141,11 +1141,11 @@ public sealed partial class DataGridControl : Control, IEditTarget
         base.OnPointerReleased(e);
         if (_autoScroll.IsActive && e.InitialPressMouseButton == MouseButton.Middle)
         {
-            // Carregar e arrastar: larga e para. Carregar e largar sem mexer: fica ativo até ao próximo clique.
+            // Press and drag: stops on release. Press and release without moving: stays active until the next click.
             if (_autoScroll.Release())
             {
-                // Fica ativo. O Avalonia larga a captura depois deste evento; volta-se a capturar a seguir,
-                // para receber os movimentos mesmo fora do grid.
+                // Stays active. Avalonia releases the capture after this event; it is captured again right after,
+                // to receive the moves even outside the grid.
                 var pointer = e.Pointer;
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -1172,8 +1172,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
     protected override void OnLostFocus(FocusChangedEventArgs e)
     {
         base.OnLostFocus(e);
-        // Mudar de janela ou de controlo termina o scroll livre (a captura do ponteiro não serve de sinal:
-        // o Avalonia larga-a sempre que se solta o botão).
+        // Switching window or control ends the free scroll (pointer capture is no use as a signal:
+        // Avalonia releases it whenever the button is released).
         if (_autoScroll.IsActive && !IsKeyboardFocusWithin)
         {
             StopAutoScroll(null);
@@ -1190,7 +1190,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         }
         else if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
-            // Alt+roda muda de linha.
+            // Alt+wheel changes row.
             MoveTo(Selection.FocusedRow - (long)Math.Round(notches), Selection.FocusedColumn, SelectMode.Replace);
         }
         else if (e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.Delta.X != 0)
@@ -1230,7 +1230,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         InvalidateVisual();
     }
 
-    /// <summary>Um passo do scroll livre por frame, com o tempo real entre frames.</summary>
+    /// <summary>One free-scroll step per frame, with the real time between frames.</summary>
     private void OnAutoScrollFrame(TimeSpan now)
     {
         if (!_autoScroll.IsActive)
@@ -1243,7 +1243,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         TopLevel.GetTopLevel(this)?.RequestAnimationFrame(OnAutoScrollFrame);
     }
 
-    /// <summary>Aplica <paramref name="seconds"/> de scroll livre (público para testes).</summary>
+    /// <summary>Applies <paramref name="seconds"/> of free scroll (public for tests).</summary>
     public void ApplyAutoScroll(double seconds)
     {
         var (rows, pixels) = _autoScroll.Step(seconds, RowHeight);
@@ -1259,7 +1259,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     private void DrawAutoScrollMarker(DrawingContext context)
     {
-        // Marcador da origem: círculo com quatro setas (desenho próprio).
+        // Origin marker: a circle with four arrows (our own drawing).
         var (x, y) = _autoScroll.Origin;
         var p = _palette;
         var pen = new ImmutablePen(p.HeaderText, 1);
@@ -1291,7 +1291,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
             return;
         }
         var command = Keymap.Resolve(e.Key, e.KeyModifiers, GridKeyContext.Editing);
-        // Uma lista aberta trata as teclas dela; editores com setas usam ↑/↓.
+        // An open list handles its own keys; editors with arrows use ↑/↓.
         if (_editor is ComboBox { IsDropDownOpen: true }
             || (_editorSpec?.UsesArrows == true && command is GridCommand.MoveUp or GridCommand.MoveDown))
         {
@@ -1315,7 +1315,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         EnsureVisible(row, Selection.FocusedColumn);
     }
 
-    /// <summary>Gravação ao mudar de linha (FAM-G08); se falhar, o foco volta à linha alterada.</summary>
+    /// <summary>Save when moving to another row (FAM-G08); if it fails, the focus goes back to the changed row.</summary>
     private void CommitIfOtherRow(long row)
     {
         if (Edits.HasPending && Edits.PendingRow != row)
@@ -1324,7 +1324,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         }
     }
 
-    /// <summary>Foca uma célula e mostra-a (Find no grid).</summary>
+    /// <summary>Focuses a cell and shows it (Find in the grid).</summary>
     public void FocusCell(long row, int column)
     {
         Selection.Focus(row, column);
@@ -1375,7 +1375,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         return false;
     }
 
-    /// <summary>Pede ao source o visível + 2 ecrãs acima e abaixo (secção 11.3) e a formatação das colunas visíveis.</summary>
+    /// <summary>Asks the source for the visible area + 2 screens above and below (section 11.3) and for formatting the visible columns.</summary>
     private void Prefetch(long firstRow, long lastRow, int firstColumn, int lastColumn)
     {
         if (_source is null || _cells is null || lastRow < firstRow)
@@ -1385,7 +1385,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         var screen = Math.Max(1, lastRow - firstRow + 1);
         var inside = firstRow >= _prefetchFrom && lastRow <= _prefetchTo
             && firstColumn >= _prefetchFirstColumn && lastColumn <= _prefetchLastColumn;
-        // Refaz o pedido quando o visível se aproxima a menos de um ecrã da borda da janela pedida.
+        // Requests again when the visible area gets within one screen of the edge of the requested window.
         var nearEdge = (firstRow - _prefetchFrom < screen && _prefetchFrom > 0)
             || (_prefetchTo - lastRow < screen && _prefetchTo < SourceRows - 1);
         if (inside && !nearEdge)
@@ -1423,8 +1423,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
             _invalidatePosted = false;
             if (_source is { } source && source.RowCount.Count != _lastRowCount)
             {
-                // Linhas novas em streaming (Next, Show all, query): a scrollbar, a coluna # e, na primeira chegada, as
-                // larguras automáticas e o foco acompanham.
+                // New rows streaming in (Next, Show all, query): the scrollbar, the # column and, on the first arrival, the
+                // automatic widths and the focus follow.
                 var first = _lastRowCount == 0;
                 _lastRowCount = source.RowCount.Count;
                 UpdateRowNumberWidth();
@@ -1483,7 +1483,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         var area = new Rect(0, HeaderHeight, RowNumberWidth, Math.Max(0, bounds.Height - HeaderHeight));
         if (_sessionBrush is { } session)
         {
-            // Cor da sessão: tinta suave na coluna # e uma barra com a cor inteira à esquerda.
+            // Session colour: a soft tint on the # column and a bar with the full colour on the left.
             context.FillRectangle(new ImmutableSolidColorBrush(Common.Theming.ColorMath.SessionTint(_sessionColor, p.RowNumberArgb)), area);
             context.FillRectangle(session, new Rect(0, HeaderHeight, 3, area.Height));
         }
@@ -1504,7 +1504,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     private void DrawModifiedMarker(DrawingContext context, double x, double y)
     {
-        // Triângulo vermelho no canto superior esquerdo (secção 5.6).
+        // Red triangle in the top-left corner (section 5.6).
         var geometry = new StreamGeometry();
         using (var g = geometry.Open())
         {
@@ -1518,7 +1518,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     private void DrawKeyIcon(DrawingContext context, Point origin)
     {
-        // Chave simples desenhada (ícone próprio, não Icons8): argola + haste.
+        // Simple drawn key (our own icon, not Icons8): ring + shaft.
         var brush = _palette.KeyIcon;
         var pen = new ImmutablePen(brush, 1.5);
         context.DrawEllipse(null, pen, new Rect(origin.X, origin.Y, 6, 6));
@@ -1569,7 +1569,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     private static readonly string[] Superscripts = ["¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"];
 
-    /// <summary>▲ ou ▼ com a posição em superscript; ⁺ a partir da 10.ª coluna.</summary>
+    /// <summary>▲ or ▼ with the position as a superscript; ⁺ from the 10th column on.</summary>
     private Avalonia.Media.TextFormatting.TextLayout SortGlyph(GridSortIndicator indicator)
     {
         var text = (indicator.Descending ? "▼" : "▲") + (indicator.Position >= 1 && indicator.Position <= 9 ? Superscripts[indicator.Position - 1] : "⁺");
@@ -1659,7 +1659,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         double MaxWidth);
 }
 
-/// <summary>Clique num header do grid: coluna (-1 fora das colunas) e modificadores.</summary>
+/// <summary>Click on a grid header: column (-1 outside the columns) and modifiers.</summary>
 public sealed class GridHeaderEventArgs(int column, KeyModifiers modifiers) : EventArgs
 {
     public int Column { get; } = column;
@@ -1667,5 +1667,5 @@ public sealed class GridHeaderEventArgs(int column, KeyModifiers modifiers) : Ev
     public KeyModifiers Modifiers { get; } = modifiers;
 }
 
-/// <summary>Ordenação de uma coluna no header: direção e posição (1 = primeira) no ORDER BY.</summary>
+/// <summary>Sorting of a column in the header: direction and position (1 = first) in the ORDER BY.</summary>
 public readonly record struct GridSortIndicator(bool Descending, int Position);

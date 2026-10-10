@@ -10,8 +10,8 @@ using Eunomia.UI.Features.Transfer;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Tools › Import CSV file (Fase 8; FAM-E07): o diálogo com a base e a tabela focadas na árvore já escolhidas, e o
-/// <see cref="CsvImportJob"/> na sessão ativa. O SQL log regista o resultado.
+/// Tools › Import CSV file (phase 8; FAM-E07): the dialog with the database and table focused in the tree already chosen,
+/// and the <see cref="CsvImportJob"/> on the active session. The SQL log records the result.
 /// </summary>
 public sealed partial class MainWindow
 {

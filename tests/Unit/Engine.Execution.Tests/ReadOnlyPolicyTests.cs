@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Execution.Tests;
 
-/// <summary>O que uma sessão read-only deixa enviar (secção 23.2; Fase 14): lista de permitidos.</summary>
+/// <summary>What a read-only session lets through (section 23.2; phase 14): an allow list.</summary>
 public sealed class ReadOnlyPolicyTests
 {
     [Theory]

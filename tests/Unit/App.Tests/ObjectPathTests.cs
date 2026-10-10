@@ -3,7 +3,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Caminho dos favoritos no formato do HeidiSQL (FAM-T03).</summary>
+/// <summary>Favourites path in HeidiSQL's format (FAM-T03).</summary>
 public sealed class ObjectPathTests
 {
     [Fact]

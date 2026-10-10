@@ -12,7 +12,7 @@
     <InternalsVisibleTo Include="UI.Headless.Tests" />
   </ItemGroup>
 
-  <!-- Secção 21.1: UI.Controls.* -> Avalonia (e o design system comum). -->
+  <!-- Section 21.1: UI.Controls.* -> Avalonia (and the shared design system). -->
   <ItemGroup>
     <ProjectReference Include="..\UI.Controls.Common\UI.Controls.Common.csproj" />
   </ItemGroup>

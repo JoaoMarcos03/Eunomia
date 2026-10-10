@@ -6,11 +6,11 @@ using Avalonia.Platform;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Snapshots visuais (secção 25.1): compara o frame com a baseline PNG em <c>tests/UI.Headless/Snapshots</c>.
-/// Tolerância: um pixel conta como diferente se algum canal diferir mais de <see cref="ChannelTolerance"/>;
-/// o teste falha se mais de <see cref="MaxDifferentRatio"/> dos pixels forem diferentes (o rendering de texto
-/// pode variar ligeiramente entre máquinas). Com <c>EUNOMIA_UPDATE_SNAPSHOTS=1</c> as baselines são regravadas.
-/// Em caso de falha, o PNG obtido fica em <c>bin/.../snapshots-actual/</c>.
+/// Visual snapshots (section 25.1): compares the frame with the PNG baseline in <c>tests/UI.Headless/Snapshots</c>.
+/// Tolerance: a pixel counts as different if any channel differs by more than <see cref="ChannelTolerance"/>;
+/// the test fails if more than <see cref="MaxDifferentRatio"/> of the pixels differ (text rendering
+/// may vary slightly between machines). With <c>EUNOMIA_UPDATE_SNAPSHOTS=1</c> the baselines are written again.
+/// On failure, the actual PNG is kept in <c>bin/.../snapshots-actual/</c>.
 /// </summary>
 internal static class Snapshot
 {
@@ -25,8 +25,8 @@ internal static class Snapshot
         var png = Encode(frame);
         var baselinePath = Path.Combine(Directory, name + ".png");
 
-        // As baselines são do Windows (Segoe UI); noutros sistemas as fontes mudam o texto pixel a pixel. Aí o ecrã é
-        // desenhado na mesma (apanha exceções e layouts partidos) e o PNG fica em snapshots-actual/<sistema> para rever.
+        // The baselines are Windows' (Segoe UI); on other systems the fonts change the text pixel by pixel. There the screen is
+        // drawn anyway (catching exceptions and broken layouts) and the PNG goes to snapshots-actual/<system> for review.
         if (!OperatingSystem.IsWindows())
         {
             var platformDir = Path.Combine(AppContext.BaseDirectory, "snapshots-actual", OperatingSystem.IsMacOS() ? "macos" : "linux");
@@ -44,7 +44,7 @@ internal static class Snapshot
 
         Assert.True(File.Exists(baselinePath), $"Falta a baseline {baselinePath}. Gerar com EUNOMIA_UPDATE_SNAPSHOTS=1 e rever o PNG antes do commit.");
 
-        // As duas imagens passam pelo mesmo descodificador PNG, para terem o mesmo formato de pixel.
+        // Both images go through the same PNG decoder, so they have the same pixel format.
         var (actualPixels, actualSize) = Decode(png);
         var (expectedPixels, expectedSize) = Decode(File.ReadAllBytes(baselinePath));
         var different = 0;

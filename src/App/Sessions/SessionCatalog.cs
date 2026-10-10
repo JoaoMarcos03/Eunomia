@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace Eunomia.App.Sessions;
 
-/// <summary>Nó da lista do Session Manager: folder ou sessão.</summary>
+/// <summary>Node of the Session Manager list: folder or session.</summary>
 public sealed class SessionTreeNode
 {
     public SessionTreeNode(string name, IReadOnlyList<string> folderPath, SessionDefinition? session)
@@ -14,24 +14,24 @@ public sealed class SessionTreeNode
 
     public string Name { get; }
 
-    /// <summary>Caminho do folder onde o nó está (para um folder, o caminho do pai).</summary>
+    /// <summary>Path of the folder the node is in (for a folder, the parent's path).</summary>
     public IReadOnlyList<string> FolderPath { get; }
 
     public SessionDefinition? Session { get; }
 
     public bool IsFolder => Session is null;
 
-    /// <summary>Caminho completo do folder (só para folders).</summary>
+    /// <summary>Full path of the folder (folders only).</summary>
     public IReadOnlyList<string> OwnPath => [.. FolderPath, Name];
 
     public List<SessionTreeNode> Children { get; } = [];
 }
 
 /// <summary>
-/// Sessões e folders do Session Manager (FAM-S01, S03; anexo A §1.3–1.5), com as regras do HeidiSQL: nomes únicos
-/// entre irmãos sem distinguir maiúsculas (o registo do Windows não distingue, por isso um rename só de
-/// maiúsculas é recusado), <c>\</c> passa a <c>-</c>, novos nós chamam-se <c>Unnamed</c>, <c>Unnamed-1</c>…, folders
-/// sem ordenação manual. Persistido por <see cref="ISessionStore"/>.
+/// Sessions and folders of the Session Manager (FAM-S01, S03; appendix A §1.3–1.5), with HeidiSQL's rules: names unique
+/// among siblings, case-insensitively (the Windows registry is case-insensitive, so a rename that only changes the
+/// case is refused), <c>\</c> becomes <c>-</c>, new nodes are called <c>Unnamed</c>, <c>Unnamed-1</c>…, folders
+/// without manual ordering. Persisted through <see cref="ISessionStore"/>.
 /// </summary>
 public sealed class SessionCatalog
 {
@@ -41,7 +41,7 @@ public sealed class SessionCatalog
 
     public List<SessionDefinition> Sessions { get; set; } = [];
 
-    /// <summary>Folders explícitos (também os vazios); os que têm sessões existem implicitamente.</summary>
+    /// <summary>Explicit folders (empty ones too); those with sessions exist implicitly.</summary>
     public List<List<string>> Folders { get; set; } = [];
 
     public SessionDefinition? Find(Guid id) => Sessions.FirstOrDefault(s => s.Id == id);
@@ -49,7 +49,7 @@ public sealed class SessionCatalog
     public SessionDefinition? FindByPath(string path) =>
         Sessions.FirstOrDefault(s => string.Equals(s.Path, path, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Todos os folders (explícitos e implícitos), sem repetidos.</summary>
+    /// <summary>Every folder (explicit and implicit), without duplicates.</summary>
     public IReadOnlyList<IReadOnlyList<string>> AllFolders()
     {
         var result = new List<IReadOnlyList<string>>();
@@ -77,12 +77,12 @@ public sealed class SessionCatalog
 
     public bool FolderExists(IReadOnlyList<string> path) => path.Count == 0 || AllFolders().Any(f => SamePath(f, path));
 
-    /// <summary>Nomes dos filhos diretos de um folder (sessões e subfolders).</summary>
+    /// <summary>Names of a folder's direct children (sessions and subfolders).</summary>
     public IEnumerable<string> ChildNames(IReadOnlyList<string> folder) =>
         Sessions.Where(s => SamePath(s.Folder, folder)).Select(s => s.Name)
             .Concat(AllFolders().Where(f => f.Count == folder.Count + 1 && IsPrefix(folder, f)).Select(f => f[^1]));
 
-    /// <summary>Primeiro nome livre: <c>Unnamed</c>, <c>Unnamed-1</c>, <c>Unnamed-2</c>…</summary>
+    /// <summary>First free name: <c>Unnamed</c>, <c>Unnamed-1</c>, <c>Unnamed-2</c>…</summary>
     public string UniqueName(IReadOnlyList<string> folder, string baseName = "Unnamed")
     {
         var names = ChildNames(folder).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -100,7 +100,7 @@ public sealed class SessionCatalog
         }
     }
 
-    /// <summary>New › Session (gravada logo, como no HeidiSQL).</summary>
+    /// <summary>New › Session (saved right away, as in HeidiSQL).</summary>
     public SessionDefinition CreateSession(IReadOnlyList<string> folder, DateTimeOffset now)
     {
         var session = new SessionDefinition { Name = UniqueName(folder), Folder = [.. folder] };
@@ -117,10 +117,10 @@ public sealed class SessionCatalog
         return path;
     }
 
-    /// <summary>Nome válido para gravar: <c>\</c> passa a <c>-</c> (issue #682 do HeidiSQL), espaços aparados.</summary>
+    /// <summary>Valid name to save: <c>\</c> becomes <c>-</c> (HeidiSQL issue #682), spaces trimmed.</summary>
     public static string NormalizeName(string name) => name.Replace('\\', '-').Trim();
 
-    /// <summary>Rename de uma sessão. Devolve o erro a mostrar, ou <c>null</c> se correu bem.</summary>
+    /// <summary>Renames a session. Returns the error to show, or <c>null</c> if it went well.</summary>
     public string? RenameSession(SessionDefinition session, string newName)
     {
         var name = NormalizeName(newName);
@@ -142,7 +142,7 @@ public sealed class SessionCatalog
         return null;
     }
 
-    /// <summary>Rename de um folder: muda o caminho de todas as sessões e subfolders.</summary>
+    /// <summary>Renames a folder: changes the path of every session and subfolder.</summary>
     public string? RenameFolder(IReadOnlyList<string> path, string newName)
     {
         var name = NormalizeName(newName);
@@ -167,7 +167,7 @@ public sealed class SessionCatalog
     }
 
     /// <summary>
-    /// Drag &amp; drop: move uma sessão para um folder. Recusa largar no folder onde já está e nomes repetidos.
+    /// Drag &amp; drop: moves a session to a folder. Refuses dropping it on the folder it is already in, and duplicate names.
     /// </summary>
     public string? MoveSession(SessionDefinition session, IReadOnlyList<string> target)
     {
@@ -183,7 +183,7 @@ public sealed class SessionCatalog
         return null;
     }
 
-    /// <summary>Move um folder; recusa o próprio pai, ele mesmo e os seus descendentes.</summary>
+    /// <summary>Moves a folder; refuses its own parent, itself and its descendants.</summary>
     public string? MoveFolder(IReadOnlyList<string> path, IReadOnlyList<string> target)
     {
         var parent = path.Take(path.Count - 1).ToList();
@@ -199,10 +199,10 @@ public sealed class SessionCatalog
         return null;
     }
 
-    /// <summary>Delete de uma sessão.</summary>
+    /// <summary>Deletes a session.</summary>
     public void DeleteSession(SessionDefinition session) => Sessions.Remove(session);
 
-    /// <summary>Delete de um folder: apaga todas as sessões lá dentro (devolvidas para limpar as credenciais).</summary>
+    /// <summary>Deletes a folder: deletes every session inside it (returned so their credentials can be cleaned up).</summary>
     public IReadOnlyList<SessionDefinition> DeleteFolder(IReadOnlyList<string> path)
     {
         var removed = Sessions.Where(s => IsPrefix(path, s.Folder)).ToList();
@@ -211,7 +211,7 @@ public sealed class SessionCatalog
         return removed;
     }
 
-    /// <summary>Duplicate / save as (F12): cópia dos valores com outro nome e outro id, no mesmo folder.</summary>
+    /// <summary>Duplicate / save as (F12): a copy of the values with another name and another id, in the same folder.</summary>
     public SessionDefinition Duplicate(SessionDefinition values, string newName, DateTimeOffset now)
     {
         var copy = values.Clone();
@@ -228,8 +228,8 @@ public sealed class SessionCatalog
     }
 
     /// <summary>
-    /// Árvore para a lista: folders e sessões ordenados pelo nome (natural, sem maiúsculas), com "Folders at top"
-    /// a pôr os folders antes das sessões.
+    /// Tree for the list: folders and sessions sorted by name (natural, case-insensitive), with "Folders at top"
+    /// putting folders before sessions.
     /// </summary>
     public IReadOnlyList<SessionTreeNode> BuildTree(bool foldersAtTop = true)
     {
@@ -251,8 +251,8 @@ public sealed class SessionCatalog
     }
 
     /// <summary>
-    /// Filtro da lista (anexo A §1.4): regex sem maiúsculas sobre o texto de todas as colunas das sessões; os
-    /// folders pais das sessões que passam ficam visíveis. Regex inválida = sem filtro.
+    /// List filter (appendix A §1.4): case-insensitive regex over the text of every column of the sessions; the
+    /// parent folders of matching sessions stay visible. An invalid regex = no filter.
     /// </summary>
     public static Func<SessionDefinition, bool> CreateFilter(string text)
     {
@@ -272,7 +272,7 @@ public sealed class SessionCatalog
         return s => ColumnTexts(s).Any(t => t.Length > 0 && regex.IsMatch(t));
     }
 
-    /// <summary>Texto das colunas da lista: Session name, Host, Port, User, Version, Last connect, Counter, Comment.</summary>
+    /// <summary>Text of the list columns: Session name, Host, Port, User, Version, Last connect, Counter, Comment.</summary>
     public static IEnumerable<string> ColumnTexts(SessionDefinition s)
     {
         yield return s.Name;
@@ -288,7 +288,7 @@ public sealed class SessionCatalog
     public static bool SamePath(IReadOnlyList<string> a, IReadOnlyList<string> b) =>
         a.Count == b.Count && a.Zip(b).All(p => string.Equals(p.First, p.Second, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary><paramref name="prefix"/> é <paramref name="path"/> ou um antepassado dele.</summary>
+    /// <summary><paramref name="prefix"/> is <paramref name="path"/> or one of its ancestors.</summary>
     public static bool IsPrefix(IReadOnlyList<string> prefix, IReadOnlyList<string> path) =>
         prefix.Count <= path.Count && prefix.Zip(path).All(p => string.Equals(p.First, p.Second, StringComparison.OrdinalIgnoreCase));
 
@@ -331,7 +331,7 @@ public sealed class SessionCatalog
     }
 }
 
-/// <summary>Porta de persistência das sessões (<c>sessions.json</c>, secção 21.4).</summary>
+/// <summary>Session persistence port (<c>sessions.json</c>, section 21.4).</summary>
 public interface ISessionStore
 {
     SessionCatalog Load();

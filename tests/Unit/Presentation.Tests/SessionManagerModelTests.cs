@@ -4,7 +4,7 @@ using Eunomia.Presentation.Sessions;
 
 namespace Eunomia.Presentation.Tests;
 
-/// <summary>Regras do Session Manager (anexo A §1.5): Save só com alterações, regra da password, gravação imediata.</summary>
+/// <summary>Session Manager rules (appendix A §1.5): Save only with changes, the password rule, immediate saving.</summary>
 public sealed class SessionManagerModelTests
 {
     private sealed class MemoryStore : ISessionStore

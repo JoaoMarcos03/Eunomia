@@ -7,7 +7,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Gravação de linhas editadas no grid contra o servidor (Fase 7; anexo D B15; D3; FAM-G08, G09).</summary>
+/// <summary>Saving rows edited in the grid against the server (phase 7; appendix D B15; D3; FAM-G08, G09).</summary>
 public sealed class RowWriterTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -65,7 +65,7 @@ public sealed class RowWriterTests : IAsyncLifetime
         var table = await TableAsync("typed");
         var writer = new RowWriter(_host);
 
-        // INSERT só com as colunas alteradas; o auto incremento vem do LAST_INSERT_ID().
+        // INSERT with only the changed columns; the auto-increment comes from LAST_INSERT_ID().
         var inserted = await writer.WriteAsync(table, new RowChange(RowChangeKind.Insert, Values(), Values(
             ("i", "-7"), ("d", "1234.5"), ("f", "0.25"), ("b", "0101"), ("bin", "0xCAFE"), ("dt", "2026-10-06 12:34:56.789"),
             ("t", "it's \\ \"ok\"\nnova linha"), ("e", "b"), ("s", "x,y"), ("j", "{\"a\": 1}"))), Ct);
@@ -76,7 +76,7 @@ public sealed class RowWriterTests : IAsyncLifetime
         Assert.Equal("-7|1234.500|0.25|5|cafe|2026-10-06 12:34:56.789|it's \\ \"ok\"\nnova linha|b|x,y",
             await ScalarAsync($"SELECT CONCAT_WS('|', i, d, f, b + 0, LOWER(HEX(bin)), dt, t, e, s) {row}"));
 
-        // UPDATE pela chave, com NULL e com uma função.
+        // UPDATE by key, with NULL and with a function.
         var original = Values(("id", id));
         await writer.WriteAsync(table, new RowChange(RowChangeKind.Update, original, new Dictionary<string, CellLiteral>
         {
@@ -85,11 +85,11 @@ public sealed class RowWriterTests : IAsyncLifetime
         }), Ct);
         Assert.Equal("NULL|2000-01-02 00:00:00.000", await ScalarAsync($"SELECT CONCAT_WS('|', IFNULL(t, 'NULL'), dt) {row}"));
 
-        // UPDATE sem mudar valores: o servidor conta 0 linhas, mas a linha existe.
+        // UPDATE without changing values: the server counts 0 rows, but the row exists.
         var same = await writer.WriteAsync(table, new RowChange(RowChangeKind.Update, original, Values(("i", "-7"))), Ct);
         Assert.Equal(1, same.AffectedRows);
 
-        // DELETE; repetir dá o erro das 0 linhas.
+        // DELETE; repeating it gives the 0 rows error.
         Assert.Equal(1, (await writer.WriteAsync(table, new RowChange(RowChangeKind.Delete, original, Values()), Ct)).AffectedRows);
         var error = await Assert.ThrowsAsync<RowWriteException>(() => writer.WriteAsync(table, new RowChange(RowChangeKind.Delete, original, Values()), Ct));
         Assert.StartsWith("The DELETE affected 0 rows, but 1 was expected.", error.Message, StringComparison.Ordinal);
@@ -103,11 +103,11 @@ public sealed class RowWriterTests : IAsyncLifetime
         Assert.False(RowKey.Of(table).IsUnique);
         var writer = new RowWriter(_host);
 
-        // Duas linhas iguais: o UPDATE muda só uma (LIMIT 1).
+        // Two identical rows: the UPDATE changes only one (LIMIT 1).
         await writer.WriteAsync(table, new RowChange(RowChangeKind.Update, Values(("a", "1"), ("b", "x")), Values(("b", "y"))), Ct);
         Assert.Equal("x,y", await ScalarAsync($"SELECT GROUP_CONCAT(b ORDER BY b) FROM `{_database}`.loose WHERE a = 1"));
 
-        // NULL no WHERE com IS NULL.
+        // NULL in the WHERE with IS NULL.
         await writer.WriteAsync(table, new RowChange(RowChangeKind.Delete, Values(("a", "2"), ("b", null)), Values()), Ct);
         Assert.Equal(2L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.loose"), System.Globalization.CultureInfo.InvariantCulture));
     }

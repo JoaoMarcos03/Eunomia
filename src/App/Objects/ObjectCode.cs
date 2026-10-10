@@ -5,13 +5,13 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.App.Objects;
 
 /// <summary>
-/// Editor por código de views, procedures, functions, triggers e events (Fase 13, versão simplificada dos editores do
-/// anexo C §5): o utilizador edita o <c>CREATE</c>; gravar substitui o objeto sem o deixar desaparecer (ver
-/// <see cref="SaveAsync"/>). "Create new ▸" começa por um modelo.
+/// Code editor for views, procedures, functions, triggers and events (phase 13, a simplified version of the editors in
+/// appendix C §5): the user edits the <c>CREATE</c>; saving replaces the object without letting it disappear (see
+/// <see cref="SaveAsync"/>). "Create new ▸" starts from a template.
 /// </summary>
 public static partial class ObjectCode
 {
-    /// <summary>Palavra-chave SQL do tipo (<c>VIEW</c>, <c>PROCEDURE</c>, ...).</summary>
+    /// <summary>SQL keyword of the kind (<c>VIEW</c>, <c>PROCEDURE</c>, ...).</summary>
     public static string Keyword(DbObjectKind kind) => kind switch
     {
         DbObjectKind.View => "VIEW",
@@ -22,11 +22,11 @@ public static partial class ObjectCode
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Only views, routines, triggers and events are edited as code."),
     };
 
-    /// <summary>Tipos que se editam como código.</summary>
+    /// <summary>Kinds edited as code.</summary>
     public static bool IsCodeObject(DbObjectKind kind) =>
         kind is DbObjectKind.View or DbObjectKind.Procedure or DbObjectKind.Function or DbObjectKind.Trigger or DbObjectKind.Event;
 
-    /// <summary>Modelo do "Create new ▸" (um trigger usa a tabela focada, se houver).</summary>
+    /// <summary>"Create new ▸" template (a trigger uses the focused table, if any).</summary>
     public static string Template(DbObjectKind kind, IDialect dialect, string? table = null)
     {
         ArgumentNullException.ThrowIfNull(dialect);
@@ -42,8 +42,8 @@ public static partial class ObjectCode
     }
 
     /// <summary>
-    /// Tipo e nome do objeto que o <c>CREATE</c> cria (sem a base, se vier qualificado); <c>null</c> se o texto não
-    /// começar por um <c>CREATE</c> de view, rotina, trigger ou event.
+    /// Kind and name of the object the <c>CREATE</c> creates (without the database, if it is qualified); <c>null</c> if the
+    /// text does not start with a <c>CREATE</c> of a view, routine, trigger or event.
     /// </summary>
     public static (DbObjectKind Kind, string Name)? Parse(string code)
     {
@@ -66,12 +66,13 @@ public static partial class ObjectCode
     }
 
     /// <summary>
-    /// Grava sem nunca deixar a base sem o objeto (Fase 14): <c>USE</c> da base e, num objeto que já existe com o mesmo
-    /// nome, <c>CREATE OR REPLACE</c> (views em MySQL e MariaDB; rotinas, triggers e events no MariaDB 10.1.4+), que é uma
-    /// só instrução; no MySQL, rotinas validam-se primeiro com um nome temporário. Nos outros casos (triggers e events no
-    /// MySQL, nome mudado): <c>DROP … IF EXISTS</c> e o <c>CREATE</c> novo; se este falhar, o original volta com
-    /// <paramref name="originalCode"/>. Se nem o original voltar (por exemplo, um <c>DEFINER</c> que o utilizador não pode
-    /// usar), o código original fica num ficheiro em <paramref name="recoveryDirectory"/> e o erro di-lo.
+    /// Saves without ever leaving the database without the object (phase 14): <c>USE</c> of the database and, for an object
+    /// that already exists with the same name, <c>CREATE OR REPLACE</c> (views on MySQL and MariaDB; routines, triggers and
+    /// events on MariaDB 10.1.4+), which is a single statement; on MySQL, routines are first validated under a temporary
+    /// name. In the other cases (triggers and events on MySQL, a changed name): <c>DROP … IF EXISTS</c> and the new
+    /// <c>CREATE</c>; if that fails, the original comes back with <paramref name="originalCode"/>. If not even the original
+    /// comes back (for example, a <c>DEFINER</c> the user cannot use), the original code is written to a file in
+    /// <paramref name="recoveryDirectory"/> and the error says so.
     /// </summary>
     public static async Task SaveAsync(OpenSession session, string database, DbObjectRef? original, string? originalCode, string code, CancellationToken cancellationToken, string? recoveryDirectory = null)
     {
@@ -95,8 +96,8 @@ public static partial class ObjectCode
         }
         if (sameObject && original.Kind is DbObjectKind.Procedure or DbObjectKind.Function)
         {
-            // Rotinas não correm sozinhas: criar uma cópia com outro nome valida o código (sintaxe, DEFINER, privilégios)
-            // antes de largar a original.
+            // Routines do not run on their own: creating a copy under another name validates the code (syntax, DEFINER,
+            // privileges) before dropping the original.
             var temp = "eunomia_check_" + Guid.NewGuid().ToString("N")[..12];
             await RunAsync(session, WithName(code, dialect.QuoteIdentifier(temp)), cancellationToken).ConfigureAwait(false);
             await RunAsync(session, $"DROP {Keyword(original.Kind)} IF EXISTS {dialect.QualifiedName(original with { Name = temp })}", CancellationToken.None).ConfigureAwait(false);
@@ -108,7 +109,7 @@ public static partial class ObjectCode
         }
         catch (Exception failure) when (originalCode is { Length: > 0 })
         {
-            // Qualquer falha (erro do servidor, ligação, cancel) deixa o objeto antigo de volta antes de seguir.
+            // Any failure (server error, connection, cancel) puts the old object back before moving on.
             try
             {
                 await RunAsync(session, originalCode, CancellationToken.None).ConfigureAwait(false);
@@ -124,7 +125,7 @@ public static partial class ObjectCode
         }
     }
 
-    /// <summary>Grava o código de um objeto que não voltou a ser criado; devolve o caminho, ou <c>null</c> sem pasta.</summary>
+    /// <summary>Writes the code of an object that was not created again; returns the path, or <c>null</c> without a folder.</summary>
     private static string? SaveRecovery(string? directory, string database, DbObjectRef obj, string code)
     {
         if (string.IsNullOrEmpty(directory))
@@ -145,7 +146,7 @@ public static partial class ObjectCode
         }
     }
 
-    /// <summary>O <c>CREATE</c> com <c>OR REPLACE</c> (se ainda não tiver).</summary>
+    /// <summary>The <c>CREATE</c> with <c>OR REPLACE</c> (if it does not have it yet).</summary>
     public static string WithOrReplace(string code)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -161,7 +162,7 @@ public static partial class ObjectCode
             : string.Concat(code.AsSpan(0, at + "CREATE".Length), " OR REPLACE", after);
     }
 
-    /// <summary>O <c>CREATE</c> com outro nome (o mesmo esquema, se vier qualificado).</summary>
+    /// <summary>The <c>CREATE</c> with another name (the same schema, if it is qualified).</summary>
     public static string WithName(string code, string quotedName)
     {
         ArgumentNullException.ThrowIfNull(code);
@@ -170,7 +171,7 @@ public static partial class ObjectCode
         {
             return code;
         }
-        // O padrão está ancorado no início: procura-se no texto a partir do CREATE.
+        // The pattern is anchored at the start: the text is searched from the CREATE on.
         var match = CreatePattern().Match(code[at..]);
         if (!match.Success)
         {
@@ -180,7 +181,7 @@ public static partial class ObjectCode
         return string.Concat(code.AsSpan(0, at + name.Index), quotedName, code.AsSpan(at + name.Index + name.Length));
     }
 
-    /// <summary>Posição do <c>CREATE</c> depois dos comentários iniciais, ou -1.</summary>
+    /// <summary>Position of the <c>CREATE</c> after the leading comments, or -1.</summary>
     private static int CreateKeywordIndex(string code)
     {
         var stripped = StripLeadingComments(code);

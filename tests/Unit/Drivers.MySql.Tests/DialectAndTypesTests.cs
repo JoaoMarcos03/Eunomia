@@ -30,7 +30,7 @@ public sealed class DialectAndTypesTests
 
         Assert.Equal("`we``ird`", d.QuoteIdentifier("we`ird"));
         Assert.Equal("`db`.`t`", d.QualifiedName(new DbObjectRef("db", "db", "t", DbObjectKind.Table)));
-        // Literais de expressão: iguais com e sem NO_BACKSLASH_ESCAPES (aspas duplicadas; barras, NUL e Ctrl+Z em hex).
+        // Expression literals: the same with and without NO_BACKSLASH_ESCAPES (doubled quotes; backslashes, NUL and Ctrl+Z as hex).
         Assert.Equal("'it''s a\nb'", d.StringLiteral("it's a\nb"));
         Assert.Equal("_utf8mb4 X'69742773205C2061'", d.StringLiteral(@"it's \ a"));
         Assert.Equal("_utf8mb4 X'61005A1A'", d.StringLiteral("a\0Z\u001A"));
@@ -38,7 +38,7 @@ public sealed class DialectAndTypesTests
         Assert.Equal("_utf8 X'5C'", new MySqlDialect(MySqlConnectionFactory.ParseIdentity("5.1.73", null)).StringLiteral("\\"));
         Assert.Equal("''", d.StringLiteral(string.Empty));
 
-        // Literais simples (COMMENT, SHOW LIKE, HELP): o escaping do modo da ligação.
+        // Simple literals (COMMENT, SHOW LIKE, HELP): the escaping of the connection's mode.
         Assert.Equal(@"'it''s \\ a'", d.PlainStringLiteral(@"it's \ a"));
         Assert.Equal(@"'it''s \ a'", new MySqlDialect(Maria, noBackslashEscapes: true).PlainStringLiteral(@"it's \ a"));
         Assert.Equal("'sem barras'", d.PlainStringLiteral("sem barras"));
@@ -58,7 +58,7 @@ public sealed class DialectAndTypesTests
         Assert.Equal("USE `shop`", d.ChangeDatabase("shop"));
         Assert.Equal("RENAME TABLE `db`.`a` TO `db`.`b`", d.Rename(new DbObjectRef("db", "db", "a", DbObjectKind.Table), "b"));
         Assert.Equal(@"SHOW TABLE STATUS FROM `db` LIKE 'my\\_t'", d.EstimatedCount(new DbObjectRef("db", "db", "my_t", DbObjectKind.Table)));
-        // Com NO_BACKSLASH_ESCAPES o LIKE não tem escape: compara-se o nome.
+        // With NO_BACKSLASH_ESCAPES the LIKE has no escape: the name is compared.
         Assert.Equal("SHOW TABLE STATUS FROM `db` WHERE `Name` = 'my_t'",
             new MySqlDialect(MySql8, noBackslashEscapes: true).EstimatedCount(new DbObjectRef("db", "db", "my_t", DbObjectKind.Table)));
     }

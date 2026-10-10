@@ -1,12 +1,12 @@
 namespace Eunomia.UI.Controls.Tree;
 
-/// <summary>Níveis da árvore de bases (secção 4.2).</summary>
+/// <summary>Levels of the database tree (section 4.2).</summary>
 public enum TreeNodeKind
 {
     Session,
     Database,
 
-    /// <summary>Grupo opcional (Tables, Views, ...) quando "Group objects by type" está ligado.</summary>
+    /// <summary>Optional group (Tables, Views, ...) when "Group objects by type" is on.</summary>
     Group,
     Table,
     View,
@@ -16,11 +16,11 @@ public enum TreeNodeKind
     Event,
     Column,
 
-    /// <summary>Nó "a carregar…" enquanto os filhos são pedidos.</summary>
+    /// <summary>"Loading…" node while the children are requested.</summary>
     Placeholder,
 }
 
-/// <summary>Ícone de um nó de coluna: a primeira chave que a contém, ou campo simples (anexo D, A2).</summary>
+/// <summary>Icon of a column node: the first key that contains it, or a plain field (appendix D, A2).</summary>
 public enum ColumnKeyMarker
 {
     None,
@@ -32,8 +32,8 @@ public enum ColumnKeyMarker
 }
 
 /// <summary>
-/// Nó da árvore. Os filhos são carregados quando o nó é expandido pela primeira vez (lazy);
-/// <see cref="Children"/> é <c>null</c> até lá.
+/// Tree node. Children are loaded when the node is expanded for the first time (lazy);
+/// <see cref="Children"/> is <c>null</c> until then.
 /// </summary>
 public sealed class TreeNode
 {
@@ -52,10 +52,10 @@ public sealed class TreeNode
 
     public TreeNodeKind Kind { get; }
 
-    /// <summary>Texto da coluna 0: o nome do objeto, sem o nome da base. É o texto comparado pelos filtros.</summary>
+    /// <summary>Column 0 text: the object's name, without the database name. It is the text the filters compare.</summary>
     public string Name { get; }
 
-    /// <summary>Texto desenhado: nos grupos, "Tables (12)" quando os filhos já existem (anexo D, A1).</summary>
+    /// <summary>Drawn text: for groups, "Tables (12)" when the children already exist (appendix D, A1).</summary>
     public string DisplayText => Kind == TreeNodeKind.Group && !IsLoading && Children is { } children
         ? $"{Name} ({children.Count})"
         : Name;
@@ -66,37 +66,37 @@ public sealed class TreeNode
 
     public int Depth { get; }
 
-    /// <summary>Dados da aplicação associados ao nó (id da sessão, referência do objeto).</summary>
+    /// <summary>Application data attached to the node (session id, object reference).</summary>
     public object? Tag { get; init; }
 
     /// <summary>
-    /// Ícone esbatido (secção 5.7): sessão sem ligação, base ainda sem cache, objeto ainda não selecionado nesta sessão,
-    /// grupo vazio.
+    /// Dimmed icon (section 5.7): session without a connection, database not cached yet, object not yet selected in this
+    /// session, empty group.
     /// </summary>
     public bool IsGhosted { get; set; }
 
-    /// <summary>Base em <c>USE</c> na ligação primária: marcador no ícone (anexo D, A2).</summary>
+    /// <summary>Database in <c>USE</c> on the primary connection: a marker on the icon (appendix D, A2).</summary>
     public bool IsCurrent { get; set; }
 
-    /// <summary>Engine da tabela quando tem overlay (MEMORY, CSV, FEDERATED, ARIA, ...); <c>null</c> nas restantes.</summary>
+    /// <summary>Table engine when it has an overlay (MEMORY, CSV, FEDERATED, ARIA, ...); <c>null</c> for the rest.</summary>
     public string? EngineOverlay { get; set; }
 
-    /// <summary>Tipo dos objetos de um grupo (o ícone do grupo é o do tipo).</summary>
+    /// <summary>Kind of the objects in a group (the group's icon is the kind's).</summary>
     public TreeNodeKind GroupOf { get; init; } = TreeNodeKind.Group;
 
-    /// <summary>Colunas: chave que dá o ícone.</summary>
+    /// <summary>Columns: the key that gives the icon.</summary>
     public ColumnKeyMarker KeyMarker { get; init; }
 
-    /// <summary>Colunas: categoria do tipo para a cor do texto (as cores do grid); -1 = cor normal.</summary>
+    /// <summary>Columns: type category for the text colour (the grid colours); -1 = normal colour.</summary>
     public int TextCategory { get; init; } = -1;
 
-    /// <summary>Cor da sessão em ARGB (só nos nós de sessão). 0 = sem cor.</summary>
+    /// <summary>Session colour in ARGB (session nodes only). 0 = no colour.</summary>
     public uint SessionColor { get; init; }
 
-    /// <summary>Tamanho em bytes (tabelas: Data_length + Index_length). Bases e sessões: soma (ver <see cref="TreeModel.UpdateSizes"/>).</summary>
+    /// <summary>Size in bytes (tables: Data_length + Index_length). Databases and sessions: the sum (see <see cref="TreeModel.UpdateSizes"/>).</summary>
     public long? SizeBytes { get; set; }
 
-    /// <summary>Base: os tamanhos dos objetos já chegaram (a soma aparece mesmo que dê 0).</summary>
+    /// <summary>Database: the objects' sizes have arrived (the sum shows even if it is 0).</summary>
     public bool ChildSizesKnown { get; set; }
 
     public bool IsFavorite { get; set; }
@@ -105,10 +105,10 @@ public sealed class TreeNode
 
     public bool IsLoading { get; internal set; }
 
-    /// <summary>Tem filhos por carregar (tabelas com "Columns below tables in tree").</summary>
+    /// <summary>Has children still to load (tables with "Columns below tables in tree").</summary>
     public bool MayHaveChildren { get; init; }
 
-    /// <summary>Pode ter filhos (mostra o botão de expandir mesmo antes de carregar).</summary>
+    /// <summary>May have children (shows the expand button even before loading).</summary>
     public bool CanExpand => Kind is TreeNodeKind.Session or TreeNodeKind.Database
         || (Kind == TreeNodeKind.Group && Children is not { Count: 0 })
         || (MayHaveChildren && Children is not { Count: 0 })
@@ -119,7 +119,7 @@ public sealed class TreeNode
     public bool IsObject => Kind is TreeNodeKind.Table or TreeNodeKind.View or TreeNodeKind.Procedure
         or TreeNodeKind.Function or TreeNodeKind.Trigger or TreeNodeKind.Event;
 
-    /// <summary>Base a que o nó pertence (o próprio nó, se for base).</summary>
+    /// <summary>Database the node belongs to (the node itself, if it is a database).</summary>
     public TreeNode? Database
     {
         get
@@ -135,13 +135,13 @@ public sealed class TreeNode
         }
     }
 
-    /// <summary>Define os filhos já conhecidos (grupos montados com os objetos da base).</summary>
+    /// <summary>Sets the children already known (groups built with the database's objects).</summary>
     public void SetChildren(IReadOnlyList<TreeNode> children) => Children = children;
 
     public override string ToString() => $"{Kind} {Name}";
 }
 
-/// <summary>Fornece os filhos de um nó (no produto: <c>SHOW DATABASES</c>, <c>SHOW TABLE STATUS</c>, ...).</summary>
+/// <summary>Provides the children of a node (in the product: <c>SHOW DATABASES</c>, <c>SHOW TABLE STATUS</c>, ...).</summary>
 public interface ITreeDataProvider
 {
     Task<IReadOnlyList<TreeNode>> LoadChildrenAsync(TreeNode parent, CancellationToken cancellationToken);

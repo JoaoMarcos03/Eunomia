@@ -7,7 +7,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>SessionHost contra um servidor real (secção 12; REQ-CON-03/04/05; FAM-S07).</summary>
+/// <summary>SessionHost against a real server (section 12; REQ-CON-03/04/05; FAM-S07).</summary>
 public sealed class SessionHostTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -54,7 +54,7 @@ public sealed class SessionHostTests
         Assert.NotEqual(primaryId, metadataId);
         Assert.Equal(primaryId, host.PrimaryConnectionId);
         Assert.NotNull(host.Server);
-        // A cifra TLS vem na mesma ida ao servidor da versão; no loopback, sem TLS, não há aviso.
+        // The TLS cipher comes in the same round trip as the version; on loopback, without TLS, there is no warning.
         Assert.NotNull(host.Encryption);
         Assert.DoesNotContain(log.Lines, l => l.Message.Contains("not encrypted", StringComparison.Ordinal));
         Assert.Contains(SessionState.Connecting, states);
@@ -100,7 +100,7 @@ public sealed class SessionHostTests
             await other.ExecuteNonQueryAsync($"KILL {killed}", Ct);
         }
 
-        // Uma query do utilizador nunca é repetida sozinha: falha com "connection lost" e a sessão religa.
+        // A user query is never retried on its own: it fails with "connection lost" and the session reconnects.
         await Assert.ThrowsAsync<SessionConnectionLostException>(() => ScalarAsync(host, "SELECT 1"));
         var deadline = Stopwatch.StartNew();
         while (host.State != SessionState.Ready && deadline.Elapsed < TimeSpan.FromSeconds(10))

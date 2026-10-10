@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Eunomia.Infra.Settings.HeidiImport;
 
-/// <summary>Um valor do ficheiro de settings do HeidiSQL: caminho da chave, nome, tipo (1 = texto, 3 = inteiro) e valor.</summary>
+/// <summary>A value of the HeidiSQL settings file: key path, name, type (1 = text, 3 = integer) and value.</summary>
 public sealed record HeidiValue(IReadOnlyList<string> KeyPath, string Name, int Type, string Value)
 {
     public int? AsInt() => int.TryParse(Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null;
@@ -12,9 +12,9 @@ public sealed record HeidiValue(IReadOnlyList<string> KeyPath, string Name, int 
 }
 
 /// <summary>
-/// Leitura tolerante do ficheiro de settings exportado pelo HeidiSQL (anexo A §1.8, REQ-SES-02): uma linha por
-/// valor no formato <c>&lt;caminho&gt;\&lt;Nome&gt;&lt;|||&gt;&lt;tipo&gt;&lt;|||&gt;&lt;valor&gt;</c>, CR e LF dentro dos valores
-/// codificados como <c>&lt;{{{&gt;</c> e <c>&lt;}}}&gt;</c>. Linhas inválidas são contadas e ignoradas.
+/// Tolerant reading of the settings file exported by HeidiSQL (appendix A §1.8, REQ-SES-02): one line per
+/// value in the format <c>&lt;path&gt;\&lt;Name&gt;&lt;|||&gt;&lt;type&gt;&lt;|||&gt;&lt;value&gt;</c>, with CR and LF inside values
+/// encoded as <c>&lt;{{{&gt;</c> and <c>&lt;}}}&gt;</c>. Invalid lines are counted and ignored.
 /// </summary>
 public sealed class HeidiSettingsFile
 {
@@ -54,10 +54,10 @@ public sealed class HeidiSettingsFile
 }
 
 /// <summary>
-/// Passwords do HeidiSQL (anexo A §7): ofuscação reversível, um "sal" de 1 a 9 somado a cada carácter e escrito em
-/// hex, com o dígito do sal no fim. Variante ANSI: 2 dígitos hex por carácter, soma acima de 255 dá a volta
-/// subtraindo 255. Variante Unicode (algum carácter acima de 255): 4 dígitos por carácter, módulo 65536, e um
-/// <c>0</c> final a marcar a variante.
+/// HeidiSQL passwords (appendix A §7): reversible obfuscation, a "salt" from 1 to 9 added to each character and written
+/// in hex, with the salt digit at the end. ANSI variant: 2 hex digits per character, a sum above 255 wraps around by
+/// subtracting 255. Unicode variant (some character above 255): 4 digits per character, modulo 65536, and a trailing
+/// <c>0</c> marking the variant.
 /// </summary>
 public static class HeidiPassword
 {
@@ -67,8 +67,8 @@ public static class HeidiPassword
         {
             return string.Empty;
         }
-        // Unicode: 4n dígitos + sal + "0" (comprimento par); ANSI: 2n dígitos + sal (ímpar). Um valor que dá 0
-        // depois de tirar o sal só pode vir de um carácter que deu a volta (ÿ + sal - 255 = sal).
+        // Unicode: 4n digits + salt + "0" (even length); ANSI: 2n digits + salt (odd). A value that gives 0
+        // after removing the salt can only come from a character that wrapped around (ÿ + salt - 255 = salt).
         var unicode = encoded.Length >= 2 && encoded.Length % 2 == 0 && encoded[^1] == '0' && (encoded.Length - 2) % 4 == 0;
         var saltChar = unicode ? encoded[^2] : encoded[^1];
         if (!char.IsAsciiDigit(saltChar))
@@ -95,7 +95,7 @@ public static class HeidiPassword
         return sb.ToString();
     }
 
-    /// <summary>Inverso de <see cref="Decrypt"/> (para testes e para o export compatível).</summary>
+    /// <summary>The inverse of <see cref="Decrypt"/> (for tests and for the compatible export).</summary>
     public static string Encrypt(string password, int salt)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(salt, 1);

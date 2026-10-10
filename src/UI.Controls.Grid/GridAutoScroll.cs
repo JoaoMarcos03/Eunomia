@@ -1,21 +1,21 @@
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Scroll livre com o botão do meio (autoscroll do Windows), pedido pelo utilizador a 1 out 2026 (não está
-/// na spec). O botão do meio fixa uma origem; a velocidade, em qualquer direção (incluindo diagonal),
-/// cresce com a distância do rato à origem, com uma zona morta à volta. Dois modos, como no Windows:
-/// carregar e largar sem mexer fica ativo até ao próximo clique ou tecla; carregar e arrastar para quando
-/// se larga o botão. Sem estado de UI: o controlo chama <see cref="Step"/> em cada frame.
+/// Free scroll with the middle button (Windows autoscroll), requested by the author on 1 Oct 2026 (it is not
+/// in the spec). The middle button sets an origin; the speed, in any direction (diagonal included),
+/// grows with the mouse's distance from the origin, with a dead zone around it. Two modes, as on Windows:
+/// press and release without moving stays active until the next click or key; press and drag stops when
+/// the button is released. No UI state: the control calls <see cref="Step"/> on every frame.
 /// </summary>
 public sealed class GridAutoScroll
 {
-    /// <summary>Raio da zona morta em DIPs: dentro dela não há scroll.</summary>
+    /// <summary>Dead zone radius in DIPs: no scrolling inside it.</summary>
     public const double DeadZone = 12;
 
-    /// <summary>Velocidade por DIP de distância fora da zona morta, em DIPs por segundo.</summary>
+    /// <summary>Speed per DIP of distance outside the dead zone, in DIPs per second.</summary>
     public const double SpeedPerDip = 9;
 
-    /// <summary>Velocidade máxima em DIPs por segundo (~ 300 linhas/s com linhas de 18 px).</summary>
+    /// <summary>Maximum speed in DIPs per second (~ 300 rows/s with 18 px rows).</summary>
     public const double MaxSpeed = 6000;
 
     private double _originX;
@@ -27,10 +27,10 @@ public sealed class GridAutoScroll
 
     public bool IsActive { get; private set; }
 
-    /// <summary>Origem do scroll (onde se desenha o marcador), em coordenadas do controlo.</summary>
+    /// <summary>Scroll origin (where the marker is drawn), in control coordinates.</summary>
     public (double X, double Y) Origin => (_originX, _originY);
 
-    /// <summary>Botão do meio carregado: ativa o scroll com origem no ponteiro.</summary>
+    /// <summary>Middle button pressed: activates scrolling with the origin at the pointer.</summary>
     public void Start(double x, double y)
     {
         IsActive = true;
@@ -51,8 +51,8 @@ public sealed class GridAutoScroll
     }
 
     /// <summary>
-    /// Botão do meio largado. Se o rato foi arrastado para fora da zona morta, o scroll para;
-    /// se não, fica ativo até <see cref="Stop"/>. Devolve se continua ativo.
+    /// Middle button released. If the mouse was dragged out of the dead zone, scrolling stops;
+    /// otherwise, it stays active until <see cref="Stop"/>. Returns whether it is still active.
     /// </summary>
     public bool Release()
     {
@@ -65,12 +65,12 @@ public sealed class GridAutoScroll
 
     public void Stop() => IsActive = false;
 
-    /// <summary>Velocidade atual em DIPs por segundo (x para a direita, y para baixo).</summary>
+    /// <summary>Current speed in DIPs per second (x to the right, y downwards).</summary>
     public (double X, double Y) Velocity => (Speed(_pointerX - _originX), Speed(_pointerY - _originY));
 
     /// <summary>
-    /// Avança <paramref name="seconds"/>. Devolve as linhas e os DIPs horizontais a deslocar neste frame;
-    /// o resto fracionário fica para o frame seguinte, para o scroll lento não se perder.
+    /// Advances <paramref name="seconds"/>. Returns the rows and horizontal DIPs to move in this frame;
+    /// the fractional remainder is kept for the next frame, so slow scrolling is not lost.
     /// </summary>
     public (long Rows, double Pixels) Step(double seconds, double rowHeight)
     {
@@ -81,7 +81,7 @@ public sealed class GridAutoScroll
         var (vx, vy) = Velocity;
         var pixels = vx * seconds;
         _restY += vy * seconds / rowHeight;
-        // Tolerância para a soma de frações (120 × 1/120 dá 0,9999…) não perder a linha.
+        // Tolerance so the sum of fractions (120 × 1/120 gives 0.9999…) does not lose the row.
         var rows = (long)Math.Truncate(_restY + (Math.Sign(_restY) * 1e-9));
         _restY -= rows;
         return (rows, pixels);

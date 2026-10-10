@@ -11,11 +11,11 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// PR-13 (SQL export vs <c>mysqldump --single-transaction --quick</c>), PR-14 (Run SQL file vs <c>mysql &lt; ficheiro</c>)
-/// e PR-15 (CSV import vs <c>LOAD DATA LOCAL INFILE</c> pelo cliente <c>mysql</c>), com os binários do XAMPP. Só com
-/// <c>EUNOMIA_PERF=1</c>, em Release (<c>dotnet test -c Release</c>: em Debug o nosso código não é otimizado);
-/// <c>EUNOMIA_PERF_ROWS</c> muda o tamanho (500.000 linhas por omissão, ~70 MB de dump). Valores
-/// indicativos: esta máquina não é a de referência e os datasets de 1 e 10 GB ficam para o Marcos.
+/// PR-13 (SQL export vs <c>mysqldump --single-transaction --quick</c>), PR-14 (Run SQL file vs <c>mysql &lt; file</c>)
+/// and PR-15 (CSV import vs <c>LOAD DATA LOCAL INFILE</c> through the <c>mysql</c> client), with XAMPP's binaries. Only with
+/// <c>EUNOMIA_PERF=1</c>, in Release (<c>dotnet test -c Release</c>: in Debug our code is not optimised);
+/// <c>EUNOMIA_PERF_ROWS</c> changes the size (500,000 rows by default, ~70 MB of dump). Indicative
+/// values: this machine is not the reference one, and the 1 and 10 GB datasets are left for the reference machine.
 /// </summary>
 public sealed class TransferPerformanceTests : IAsyncLifetime
 {
@@ -82,7 +82,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         await ExecAsync("DROP DATABASE IF EXISTS `eunomia_perf_src`");
         await ExecAsync("CREATE DATABASE `eunomia_perf_src` CHARACTER SET utf8mb4");
         await ExecAsync("CREATE TABLE `eunomia_perf_src`.big (id INT PRIMARY KEY, a INT, b VARCHAR(64), c DATETIME, d DECIMAL(10,2), e TEXT) ENGINE=InnoDB");
-        // Em blocos de 100.000 (5 produtos de 10 dígitos; sem CTE recursivo, que tem limites diferentes em MySQL e MariaDB).
+        // In blocks of 100,000 (5 products of 10 digits; no recursive CTE, which has different limits on MySQL and MariaDB).
         const string digits = "(SELECT 0 d UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)";
         for (var start = 0; start < Rows; start += 100_000)
         {
@@ -123,7 +123,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
 
     private string Connection => string.Create(CultureInfo.InvariantCulture, $"-h {_builder.Server} -P {_builder.Port} -u {_builder.UserID}");
 
-    /// <summary>Pico do working set do processo durante <paramref name="work"/> (amostras a cada 20 ms), em MB acima do início.</summary>
+    /// <summary>Peak working set of the process during <paramref name="work"/> (samples every 20 ms), in MB above the start.</summary>
     private static async Task<(TimeSpan Elapsed, double PeakMb)> MeasureAsync(Func<Task> work)
     {
         using var process = Process.GetCurrentProcess();
@@ -172,11 +172,11 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         var ours = Path.Combine(_directory, "ours.sql");
         var theirs = Path.Combine(_directory, "mysqldump.sql");
 
-        // PR-13: export (estrutura e dados, snapshot consistente, INSERT de 1 MB como o net_buffer_length do mysqldump).
+        // PR-13: export (structure and data, consistent snapshot, 1 MB INSERTs like mysqldump's net_buffer_length).
         var exportOurs = new List<TimeSpan>();
         var exportTheirs = new List<TimeSpan>();
         double exportPeak = 0;
-        // A primeira corrida (-1) aquece o JIT, o servidor e a cache do disco e não conta.
+        // The first run (-1) warms up the JIT, the server and the disk cache and does not count.
         for (var run = -1; run < Runs; run++)
         {
             var request = new SqlExportRequest
@@ -206,11 +206,11 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         Report(string.Create(CultureInfo.InvariantCulture,
             $"PR-13: {Rows} linhas; Eunomia {Median(exportOurs).TotalSeconds:F2} s ({oursMb:F0} MB, {oursMb / Median(exportOurs).TotalSeconds:F1} MB/s, pico +{exportPeak:F0} MB); mysqldump {Median(exportTheirs).TotalSeconds:F2} s ({theirsMb:F0} MB, {theirsMb / Median(exportTheirs).TotalSeconds:F1} MB/s); débito relativo {pr13 * 100:F0}%; corridas {All(exportOurs)} vs {All(exportTheirs)}"));
 
-        // PR-14: o mesmo ficheiro (o do mysqldump) pelo mysql e pelo Run SQL file.
+        // PR-14: the same file (the mysqldump one) through mysql and through Run SQL file.
         var importOurs = new List<TimeSpan>();
         var importTheirs = new List<TimeSpan>();
         double importPeak = 0;
-        // A primeira corrida (-1) aquece o JIT, o servidor e a cache do disco e não conta.
+        // The first run (-1) warms up the JIT, the server and the disk cache and does not count.
         for (var run = -1; run < Runs; run++)
         {
             await ExecAsync("DROP DATABASE IF EXISTS `eunomia_perf_dst`");
@@ -239,7 +239,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         Report(string.Create(CultureInfo.InvariantCulture,
             $"PR-14: Eunomia {Median(importOurs).TotalSeconds:F2} s (pico +{importPeak:F0} MB); mysql < ficheiro {Median(importTheirs).TotalSeconds:F2} s; débito relativo {pr14 * 100:F0}%; corridas {All(importOurs)} vs {All(importTheirs)}"));
 
-        // PR-15: CSV com os separadores do HeidiSQL; LOAD DATA LOCAL pelo cliente mysql, pelo modo servidor e pelo modo cliente.
+        // PR-15: CSV with HeidiSQL's separators; LOAD DATA LOCAL through the mysql client, through server mode and through client mode.
         var csv = Path.Combine(_directory, "big.csv");
         await using (var writer = new StreamWriter(csv, false, new UTF8Encoding(false), 1024 * 1024))
         {
@@ -259,7 +259,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         var csvClient = new List<TimeSpan>();
         double csvPeak = 0;
         var load = "LOAD DATA LOCAL INFILE '" + csv.Replace("\\", "/", StringComparison.Ordinal) + "' REPLACE INTO TABLE big CHARACTER SET utf8mb4 FIELDS TERMINATED BY ';' OPTIONALLY ENCLOSED BY '\\\"' ESCAPED BY '\\\"' LINES TERMINATED BY '\\r\\n' IGNORE 1 LINES";
-        // A primeira corrida (-1) aquece o JIT, o servidor e a cache do disco e não conta.
+        // The first run (-1) warms up the JIT, the server and the disk cache and does not count.
         for (var run = -1; run < Runs; run++)
         {
             await ExecAsync("TRUNCATE TABLE `eunomia_perf_dst`.big");

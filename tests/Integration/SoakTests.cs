@@ -14,12 +14,12 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// Soak (Fase 12; critério 27.3 #4) e stress B14 ao nível do motor. Soak: com <c>EUNOMIA_SOAK_MINUTES=N</c>, um ciclo
-/// de queries com resultados, metadata (refresh), SQL export, Run SQL file e CSV import numa sessão durante N minutos,
-/// com a memória gerida e o working set medidos a cada 30 s; a memória do fim não pode passar a do início em mais de
-/// 20% + 20 MB. B14 (com <c>EUNOMIA_PERF=1</c>): 10 sessões, 5 queries longas, 2 exports e 1 import ao mesmo tempo, e
-/// pedidos curtos nas ligações de metadata a medir a latência (o "utilizador a navegar"). Resultados em
-/// <c>%TEMP%\eunomia-it\soak.txt</c>. As 24 h e a latência de input na UI real ficam para a máquina de referência.
+/// Soak (phase 12; criterion 27.3 #4) and B14 stress at engine level. Soak: with <c>EUNOMIA_SOAK_MINUTES=N</c>, a cycle
+/// of queries with results, metadata (refresh), SQL export, Run SQL file and CSV import on one session for N minutes,
+/// with managed memory and the working set measured every 30 s; the final memory may not exceed the initial one by more than
+/// 20% + 20 MB. B14 (with <c>EUNOMIA_PERF=1</c>): 10 sessions, 5 long queries, 2 exports and 1 import at the same time, and
+/// short requests on the metadata connections measuring the latency (the "user browsing"). Results in
+/// <c>%TEMP%\eunomia-it\soak.txt</c>. The 24 h run and the input latency in the real UI are left for the reference machine.
 /// </summary>
 public sealed class SoakTests : IAsyncLifetime
 {
@@ -91,10 +91,10 @@ public sealed class SoakTests : IAsyncLifetime
         File.AppendAllText(Path.Combine(Path.GetTempPath(), "eunomia-it", "soak.txt"), DateTime.Now.ToString("s", CultureInfo.InvariantCulture) + " " + line + Environment.NewLine);
     }
 
-    /// <summary>Uma volta do ciclo do soak.</summary>
+    /// <summary>One round of the soak cycle.</summary>
     private async Task CycleAsync(SessionHost host, MetadataCache cache, int round)
     {
-        // Query tab: resultados materializados e libertados, como ao fechar a tab.
+        // Query tab: results materialised and released, as when closing the tab.
         var runner = new QueryRunner(host);
         var results = new List<QueryResult>();
         runner.ResultCompleted += (_, r) => results.Add(r);
@@ -105,12 +105,12 @@ public sealed class SoakTests : IAsyncLifetime
             r.Source.Dispose();
         }
 
-        // Árvore e Database tab: refresh da base e das tabelas.
+        // Tree and Database tab: refresh of the database and the tables.
         cache.Invalidate(_database);
         await cache.GetObjectsAsync(_database, Ct);
         await cache.GetTableAsync(new DbObjectRef(_database, _database, "t", DbObjectKind.Table), Ct);
 
-        // Export para o clipboard, Run SQL file e CSV import (cliente e servidor alternados).
+        // Export to the clipboard, Run SQL file and CSV import (client and server alternating).
         var objects = (await cache.GetObjectsAsync(_database, Ct)).Objects.Where(o => o.Ref.Name == "t").ToList();
         await new SqlExportJob(host, new SqlExportRequest
         {
@@ -168,7 +168,7 @@ public sealed class SoakTests : IAsyncLifetime
             }
         }
         var third = Math.Max(1, samples.Count / 3);
-        // A primeira amostra (aquecimento: JIT, pools) não conta.
+        // The first sample (warm-up: JIT, pools) does not count.
         var start = samples.Skip(1).Take(third).ToList();
         var end = samples.TakeLast(third).ToList();
         var startManaged = start.Count == 0 ? samples[0].Managed : start.Average(s => s.Managed);
@@ -231,7 +231,7 @@ public sealed class SoakTests : IAsyncLifetime
         File.WriteAllText(script, sb.ToString());
         heavy.Add(Guard(() => new SqlFileJob(_hosts[7], new SqlFileRequest { Path = script, Database = _database }).RunAsync(null, Ct)));
 
-        // O "utilizador a navegar": pedidos curtos nas ligações de metadata de todas as sessões enquanto o resto corre.
+        // The "user browsing": short requests on the metadata connections of every session while the rest runs.
         var latencies = new List<double>();
         var all = Task.WhenAll(heavy);
         var round = 0;

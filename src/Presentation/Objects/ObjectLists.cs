@@ -4,10 +4,10 @@ using Eunomia.Engine.Metadata;
 
 namespace Eunomia.Presentation.Objects;
 
-/// <summary>Coluna de uma lista do Host ou do Database tab: cabeçalho, largura por omissão e visibilidade inicial.</summary>
+/// <summary>Column of a Host or Database tab list: header, default width and initial visibility.</summary>
 public sealed record ListColumn(string Header, double Width, bool VisibleByDefault = true, bool Numeric = false, bool Bars = false);
 
-/// <summary>Uma base na lista Databases do Host tab (secção 4.9). Os valores vêm da cache; sem cache, ficam vazios.</summary>
+/// <summary>A database in the Host tab's Databases list (section 4.9). Values come from the cache; without a cache, they stay empty.</summary>
 public sealed record HostDatabaseRow(
     string Name,
     long? Size,
@@ -19,14 +19,14 @@ public sealed record HostDatabaseRow(
     public int? CountOf(DbObjectKind kind) => Counts is null ? null : Counts.GetValueOrDefault(kind);
 }
 
-/// <summary>Lista Databases do Host tab (anexo C §1.8): colunas e linhas a partir da cache de metadata.</summary>
+/// <summary>Host tab Databases list (appendix C §1.8): columns and rows from the metadata cache.</summary>
 public static class HostDatabases
 {
-    /// <summary>Tipos pela ordem das colunas Tables, Views, Functions, Procedures, Triggers, Events.</summary>
+    /// <summary>Kinds in the order of the Tables, Views, Functions, Procedures, Triggers, Events columns.</summary>
     public static readonly IReadOnlyList<DbObjectKind> CountKinds =
         [DbObjectKind.Table, DbObjectKind.View, DbObjectKind.Function, DbObjectKind.Procedure, DbObjectKind.Trigger, DbObjectKind.Event];
 
-    /// <summary>Barras nas colunas numéricas 1, 2 e 4–9.</summary>
+    /// <summary>Bars on numeric columns 1, 2 and 4–9.</summary>
     public static readonly IReadOnlyList<ListColumn> Columns =
     [
         new("Database", 150),
@@ -77,10 +77,10 @@ public static class HostDatabases
     }
 }
 
-/// <summary>Lista de objetos do Database tab (<c>ListTables</c>, anexo C §1.8).</summary>
+/// <summary>Database tab object list (<c>ListTables</c>, appendix C §1.8).</summary>
 public static class DatabaseObjectList
 {
-    /// <summary>Visíveis por omissão: Name, Rows, Size, Created, Updated, Engine, Comment, Type; as 11 seguintes ocultas.</summary>
+    /// <summary>Visible by default: Name, Rows, Size, Created, Updated, Engine, Comment, Type; the next 11 hidden.</summary>
     public static readonly IReadOnlyList<ListColumn> Columns =
     [
         new("Name", 120),
@@ -104,7 +104,7 @@ public static class DatabaseObjectList
         new("Create options", 120, false),
     ];
 
-    /// <summary>Campo do <c>SHOW TABLE STATUS</c> de cada coluna oculta, pela ordem de <see cref="Columns"/> a partir de "Version".</summary>
+    /// <summary><c>SHOW TABLE STATUS</c> field of each hidden column, in <see cref="Columns"/> order from "Version" on.</summary>
     private static readonly string[] StatusFields =
         ["Version", "Row_format", "Avg_row_length", "Max_data_length", "Index_length", "Data_free", "Auto_increment", "Check_time", "Collation", "Checksum", "Create_options"];
 
@@ -118,7 +118,7 @@ public static class DatabaseObjectList
         _ => "Table",
     };
 
-    /// <summary>Valor bruto de uma célula (número, data ou texto), para formatar e ordenar.</summary>
+    /// <summary>Raw value of a cell (number, date or text), to format and sort.</summary>
     public static object? Value(DbObjectInfo obj, int column)
     {
         ArgumentNullException.ThrowIfNull(obj);
@@ -148,7 +148,7 @@ public static class DatabaseObjectList
         }
     }
 
-    /// <summary>Painel 0 da status bar (anexo C §1.6): <c>db: 12 objects (10 tables, 2 views)</c>.</summary>
+    /// <summary>Status bar panel 0 (appendix C §1.6): <c>db: 12 objects (10 tables, 2 views)</c>.</summary>
     public static string StatusText(string database, IReadOnlyList<DbObjectInfo> objects)
     {
         ArgumentNullException.ThrowIfNull(objects);
@@ -170,7 +170,7 @@ public static class DatabaseObjectList
     }
 }
 
-/// <summary>Lista Processes do Host tab: id (ordenado descendente), User, Host, DB, Command, Time (com barras), State, Info.</summary>
+/// <summary>Host tab Processes list: id (sorted descending), User, Host, DB, Command, Time (with bars), State, Info.</summary>
 public static class ProcessList
 {
     public static readonly IReadOnlyList<ListColumn> Columns =
@@ -185,7 +185,7 @@ public static class ProcessList
         new("Info", 182),
     ];
 
-    /// <summary>"Kill N Process(es)?": os ids a matar, sem os da própria sessão.</summary>
+    /// <summary>"Kill N Process(es)?": the ids to kill, without the session's own.</summary>
     public static IReadOnlyList<long> ToKill(IEnumerable<long> selected, IEnumerable<long?> ownConnections)
     {
         ArgumentNullException.ThrowIfNull(selected);
@@ -195,14 +195,14 @@ public static class ProcessList
     }
 }
 
-/// <summary>Uma variável do Host tab › Variables (secção 4.9): valor da sessão e valor global.</summary>
+/// <summary>A variable in Host tab › Variables (section 4.9): session value and global value.</summary>
 public sealed record HostVariableRow(string Name, string? Session, string? Global)
 {
-    /// <summary>Valor da sessão diferente do global: a célula Session fica destacada (BlanchedAlmond no HeidiSQL).</summary>
+    /// <summary>Session value differs from the global one: the Session cell is highlighted (BlanchedAlmond in HeidiSQL).</summary>
     public bool Differs => Session is not null && Global is not null && !string.Equals(Session, Global, StringComparison.Ordinal);
 }
 
-/// <summary>Host tab › Variables: <c>SHOW SESSION VARIABLES</c> e <c>SHOW GLOBAL VARIABLES</c> lado a lado, por nome.</summary>
+/// <summary>Host tab › Variables: <c>SHOW SESSION VARIABLES</c> and <c>SHOW GLOBAL VARIABLES</c> side by side, by name.</summary>
 public static class HostVariables
 {
     public static readonly IReadOnlyList<ListColumn> Columns = [new("Variable", 160), new("Session", 200), new("Global", 312)];
@@ -228,10 +228,10 @@ public static class HostVariables
     }
 }
 
-/// <summary>Uma linha do Host tab › Status: valor e médias por hora e por segundo desde o arranque do servidor.</summary>
+/// <summary>A row of Host tab › Status: value and per-hour and per-second averages since the server started.</summary>
 public sealed record HostStatusRow(string Name, string Value, double? PerHour, double? PerSecond);
 
-/// <summary>Host tab › Status (<c>SHOW GLOBAL STATUS</c>): as médias usam o <c>Uptime</c> do servidor.</summary>
+/// <summary>Host tab › Status (<c>SHOW GLOBAL STATUS</c>): the averages use the server's <c>Uptime</c>.</summary>
 public static class HostStatus
 {
     public static readonly IReadOnlyList<ListColumn> Columns =
@@ -253,12 +253,12 @@ public static class HostStatus
         && double.TryParse(u.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) ? seconds : 0;
 }
 
-/// <summary>Uma linha do Host tab › Command-Statistics: um contador <c>Com_*</c>.</summary>
+/// <summary>A row of Host tab › Command-Statistics: a <c>Com_*</c> counter.</summary>
 public sealed record CommandStatisticsRow(string Command, long Count, double? PerHour, double? PerSecond, double Percentage);
 
 /// <summary>
-/// Host tab › Command-Statistics: os contadores <c>Com_*</c> do <c>SHOW GLOBAL STATUS</c> ("Com_alter_table" → "Alter
-/// table"), com médias pelo <c>Uptime</c> e a percentagem sobre o total de todos os contadores.
+/// Host tab › Command-Statistics: the <c>Com_*</c> counters of <c>SHOW GLOBAL STATUS</c> ("Com_alter_table" → "Alter
+/// table"), with averages over <c>Uptime</c> and the percentage of the total of all counters.
 /// </summary>
 public static class CommandStatistics
 {

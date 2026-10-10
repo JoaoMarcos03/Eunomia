@@ -1,12 +1,12 @@
 namespace Eunomia.Engine.Execution;
 
-/// <summary>Efeito de uma instrução na transação da ligação (secção 14.5).</summary>
+/// <summary>Effect of a statement on the connection's transaction (section 14.5).</summary>
 public enum TransactionEffect
 {
-    /// <summary>Leitura ou instrução sem efeito na transação.</summary>
+    /// <summary>A read or a statement with no effect on the transaction.</summary>
     None,
 
-    /// <summary>Pode mudar dados (INSERT, UPDATE, DELETE, REPLACE, LOAD DATA, CALL).</summary>
+    /// <summary>May change data (INSERT, UPDATE, DELETE, REPLACE, LOAD DATA, CALL).</summary>
     Change,
 
     /// <summary><c>BEGIN</c>, <c>START TRANSACTION</c>, <c>XA START</c>.</summary>
@@ -15,28 +15,28 @@ public enum TransactionEffect
     /// <summary><c>COMMIT</c>, <c>XA COMMIT</c>.</summary>
     Commit,
 
-    /// <summary><c>ROLLBACK</c> (não para um savepoint), <c>XA ROLLBACK</c>.</summary>
+    /// <summary><c>ROLLBACK</c> (not to a savepoint), <c>XA ROLLBACK</c>.</summary>
     Rollback,
 
-    /// <summary><c>COMMIT AND CHAIN</c> / <c>ROLLBACK AND CHAIN</c>: acaba e abre outra logo.</summary>
+    /// <summary><c>COMMIT AND CHAIN</c> / <c>ROLLBACK AND CHAIN</c>: ends and opens another one right away.</summary>
     EndAndChain,
 
-    /// <summary>DDL e afins: o servidor faz commit implícito antes de correr.</summary>
+    /// <summary>DDL and the like: the server commits implicitly before running it.</summary>
     ImplicitCommit,
 
     /// <summary><c>SET autocommit = 0</c>.</summary>
     AutocommitOff,
 
-    /// <summary><c>SET autocommit = 1</c> (faz commit do que estiver aberto).</summary>
+    /// <summary><c>SET autocommit = 1</c> (commits whatever is open).</summary>
     AutocommitOn,
 }
 
 /// <summary>
-/// Estado da transação da ligação primária (secção 14.5: "a status bar mostra transação aberta"), seguido pelas
-/// instruções que a ligação envia, porque o driver não expõe o <c>SERVER_STATUS_IN_TRANS</c>. Conta como aberta depois de
-/// <c>BEGIN</c>/<c>START TRANSACTION</c>, ou de qualquer instrução com <c>autocommit = 0</c>, até ao <c>COMMIT</c>,
-/// <c>ROLLBACK</c>, DDL (commit implícito) ou à ligação cair. É uma aproximação: um <c>COMMIT</c> dentro de uma rotina não
-/// se vê; por isso a UI fala em transação "provavelmente" aberta só onde isso importa (fechar, religar).
+/// Transaction state of the primary connection (section 14.5: "the status bar shows an open transaction"), tracked from the
+/// statements the connection sends, because the driver does not expose <c>SERVER_STATUS_IN_TRANS</c>. Counts as open after
+/// <c>BEGIN</c>/<c>START TRANSACTION</c>, or after any statement with <c>autocommit = 0</c>, until <c>COMMIT</c>,
+/// <c>ROLLBACK</c>, DDL (implicit commit) or the connection dropping. It is an approximation: a <c>COMMIT</c> inside a routine
+/// is not seen; that is why the UI speaks of a "probably" open transaction only where it matters (closing, reconnecting).
 /// </summary>
 public sealed class TransactionTracker
 {
@@ -57,10 +57,10 @@ public sealed class TransactionTracker
     private bool _active;
     private bool _changes;
 
-    /// <summary>O estado mudou (pode vir de qualquer thread).</summary>
+    /// <summary>The state changed (may come from any thread).</summary>
     public event EventHandler? Changed;
 
-    /// <summary>Há uma transação aberta (explícita, ou implícita com <c>autocommit = 0</c>).</summary>
+    /// <summary>There is an open transaction (explicit, or implicit with <c>autocommit = 0</c>).</summary>
     public bool IsOpen
     {
         get
@@ -72,7 +72,7 @@ public sealed class TransactionTracker
         }
     }
 
-    /// <summary>A transação aberta já teve instruções que mudam dados (perdem-se num rollback).</summary>
+    /// <summary>The open transaction already had statements that change data (lost on a rollback).</summary>
     public bool HasChanges
     {
         get
@@ -95,7 +95,7 @@ public sealed class TransactionTracker
         }
     }
 
-    /// <summary>Atualiza o estado com uma instrução que a ligação enviou (várias, se o texto tiver mais do que uma).</summary>
+    /// <summary>Updates the state with a statement the connection sent (several, if the text has more than one).</summary>
     public void Observe(IEnumerable<string> statements)
     {
         ArgumentNullException.ThrowIfNull(statements);
@@ -114,8 +114,8 @@ public sealed class TransactionTracker
     }
 
     /// <summary>
-    /// A ligação caiu ou foi reaberta, ou o servidor desfez a transação (deadlock): nada fica aberto e o autocommit volta
-    /// ao valor por omissão do servidor (ligado). Devolve se havia uma transação com alterações (perdidas).
+    /// The connection dropped or was reopened, or the server rolled the transaction back (deadlock): nothing stays open and
+    /// autocommit goes back to the server default (on). Returns whether there was a transaction with (lost) changes.
     /// </summary>
     public bool Reset()
     {
@@ -134,7 +134,7 @@ public sealed class TransactionTracker
         return lost;
     }
 
-    /// <summary>Deadlock (o servidor desfaz a transação inteira) ou outro rollback do lado do servidor; o autocommit fica.</summary>
+    /// <summary>Deadlock (the server rolls back the whole transaction) or another server-side rollback; autocommit stays.</summary>
     public bool RolledBackByServer()
     {
         bool lost;
@@ -153,7 +153,7 @@ public sealed class TransactionTracker
         switch (effect)
         {
             case TransactionEffect.Begin:
-                // Um BEGIN com uma transação aberta faz commit dela primeiro.
+                // A BEGIN with an open transaction commits it first.
                 _explicit = true;
                 _active = false;
                 _changes = false;
@@ -193,7 +193,7 @@ public sealed class TransactionTracker
         return before != (_explicit, _active, _autocommitOff, _changes);
     }
 
-    /// <summary>Efeito de uma instrução, pelas primeiras palavras (comentários e espaços à frente ignorados).</summary>
+    /// <summary>Effect of a statement, from its first words (leading comments and whitespace ignored).</summary>
     public static TransactionEffect Classify(string statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
@@ -208,7 +208,7 @@ public sealed class TransactionTracker
         switch (first)
         {
             case "BEGIN":
-                // BEGIN NOT ATOMIC é um bloco composto do MariaDB, não uma transação.
+                // BEGIN NOT ATOMIC is a MariaDB compound block, not a transaction.
                 return second is "" or "WORK" ? TransactionEffect.Begin : TransactionEffect.None;
             case "START":
                 return second == "TRANSACTION" ? TransactionEffect.Begin : TransactionEffect.ImplicitCommit;
@@ -239,7 +239,7 @@ public sealed class TransactionTracker
             case "LOAD":
                 return second is "DATA" or "XML" ? TransactionEffect.Change : TransactionEffect.ImplicitCommit;
             case "WITH":
-                // CTE seguida de UPDATE/DELETE (MySQL 8): procura-se a palavra no texto.
+                // CTE followed by UPDATE/DELETE (MySQL 8): the word is searched for in the text.
                 var upper = statement.ToUpperInvariant();
                 return upper.Contains("UPDATE ", StringComparison.Ordinal) || upper.Contains("DELETE ", StringComparison.Ordinal) || upper.Contains("INSERT ", StringComparison.Ordinal)
                     ? TransactionEffect.Change
@@ -253,7 +253,7 @@ public sealed class TransactionTracker
         }
     }
 
-    /// <summary><c>SET [SESSION|LOCAL|@@[session.]]autocommit = 0|1|ON|OFF</c>, também no meio de outras atribuições.</summary>
+    /// <summary><c>SET [SESSION|LOCAL|@@[session.]]autocommit = 0|1|ON|OFF</c>, also among other assignments.</summary>
     private static TransactionEffect? Autocommit(string statement)
     {
         var text = statement.ToUpperInvariant();
@@ -289,7 +289,7 @@ public sealed class TransactionTracker
         };
     }
 
-    /// <summary>Primeiras palavras da instrução, sem comentários (os <c>/*! … */</c> contam como código).</summary>
+    /// <summary>First words of the statement, without comments (<c>/*! … */</c> ones count as code).</summary>
     private static List<string> Words(string text, int max)
     {
         var words = new List<string>(max);
@@ -310,7 +310,7 @@ public sealed class TransactionTracker
             {
                 if (i + 2 < text.Length && text[i + 2] == '!')
                 {
-                    // Comentário executável: salta o "/*!" e a versão e lê o que está dentro.
+                    // Executable comment: skips the "/*!" and the version and reads what is inside.
                     i += 3;
                     while (i < text.Length && char.IsAsciiDigit(text[i]))
                     {
@@ -334,7 +334,7 @@ public sealed class TransactionTracker
             }
             else
             {
-                // Outro símbolo (aspas, operadores): o resto não conta para as primeiras palavras.
+                // Another symbol (quotes, operators): the rest does not count for the first words.
                 break;
             }
         }

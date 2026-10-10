@@ -5,7 +5,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Modelo do Schema Visualizer a partir do metadata e persistência do layout (Fase 9; SV-01–SV-03, SV-12).</summary>
+/// <summary>Schema Visualizer model from the metadata, and layout persistence (phase 9; SV-01–SV-03, SV-12).</summary>
 public sealed class SchemaDiagramTests
 {
     private static ColumnDefinition Column(string name, string type, LogicalTypeKind kind, bool nullable = false) =>
@@ -42,7 +42,7 @@ public sealed class SchemaDiagramTests
         Assert.True(diagram.Tables[1].Columns[1].ForeignKey);
         Assert.Equal(TypeCategory.Temporal, diagram.Tables[1].Columns[2].Category);
 
-        // A FK para outra base fica de fora; a do perfil é 1:1 (as colunas da FK são a chave primária).
+        // The FK to another database is left out; the profile one is 1:1 (the FK columns are the primary key).
         Assert.Equal(2, diagram.Relations.Count);
         var cliente = diagram.Relations.Single(r => r.Name == "fk_cliente");
         Assert.False(cliente.OneToOne);

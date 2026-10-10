@@ -7,13 +7,13 @@ using Eunomia.UI.Shell.Sessions;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Maintenance (Tools ▸ Maintenance e popupDB; anexo B §2.2): o diálogo na base focada, com os objetos escolhidos na
-/// árvore ou na lista do Database tab; cada operação corre numa ligação de jobs. OPTIMIZE e REPAIR perguntam antes, com a
-/// sessão e o servidor, como as outras ações que mexem em tabelas.
+/// Maintenance (Tools ▸ Maintenance and popupDB; appendix B §2.2): the dialog on the focused database, with the objects chosen
+/// in the tree or in the Database tab list; each operation runs on a jobs connection. OPTIMIZE and REPAIR ask first, with the
+/// session and the server, like the other actions that touch tables.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Diálogo aberto (testes).</summary>
+    /// <summary>Open dialog (tests).</summary>
     internal MaintenanceDialog? MaintenanceWindow { get; private set; }
 
     private void InitMaintenance()

@@ -8,12 +8,12 @@
     <PackageReference Include="Avalonia" />
   </ItemGroup>
 
-  <!-- Tokens de tema (secção 21.7: temas são dados, sem código), embebidos a partir de assets/themes. -->
+  <!-- Theme tokens (section 21.7: themes are data, no code), embedded from assets/themes. -->
   <ItemGroup>
     <EmbeddedResource Include="..\..\assets\themes\*.json" LogicalName="Eunomia.Themes.%(Filename).json" />
   </ItemGroup>
 
-  <!-- Marca (assets/brand): ícone das janelas e logo, em avares://Eunomia.UI.Controls.Common/Brand/. -->
+  <!-- Brand (assets/brand): window icon and logo, at avares://Eunomia.UI.Controls.Common/Brand/. -->
   <ItemGroup>
     <AvaloniaResource Include="..\..\assets\brand\eunomia.ico" Link="Brand\eunomia.ico" />
     <AvaloniaXaml Include="..\..\assets\brand\EunomiaLogo.axaml" Link="Brand\EunomiaLogo.axaml" />

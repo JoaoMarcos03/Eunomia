@@ -2,10 +2,10 @@ using Eunomia.Engine.Sql.Completion;
 
 namespace Eunomia.Engine.Sql.Tests;
 
-/// <summary>Contexto do autocomplete A (anexo C §4.2; FAM-Q05).</summary>
+/// <summary>Context of autocomplete A (appendix C §4.2; FAM-Q05).</summary>
 public sealed class CompletionContextTests
 {
-    /// <summary>Analisa com o cursor no lugar de <c>|</c>.</summary>
+    /// <summary>Analyses with the cursor in place of <c>|</c>.</summary>
     private static CompletionContext At(string textWithCaret)
     {
         var caret = textWithCaret.IndexOf('|', StringComparison.Ordinal);

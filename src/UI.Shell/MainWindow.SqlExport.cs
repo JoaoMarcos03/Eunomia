@@ -8,8 +8,8 @@ using Eunomia.UI.Features.Transfer;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Tools › Export database as SQL (Fase 8; FAM-E06): o diálogo com a base ou o objeto focado na árvore já marcado, e o
-/// job nas ligações de job da sessão. O clipboard recebe o texto no fim; o SQL log regista o resultado.
+/// Tools › Export database as SQL (phase 8; FAM-E06): the dialog with the database or the object focused in the tree already
+/// checked, and the job on the session's job connections. The clipboard gets the text at the end; the SQL log records the result.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -49,7 +49,7 @@ public sealed partial class MainWindow
     private async Task<SqlExportResult> RunSqlExportAsync(OpenSession open, SqlExportRequest request, IProgress<SqlExportProgress> progress, CancellationToken cancellationToken)
     {
         var job = new SqlExportJob(open.Host, request with { Host = open.Definition.Host, AppVersion = ShellContext.Version });
-        // Fora da UI thread: a escrita do ficheiro é síncrona dentro do job.
+        // Off the UI thread: writing the file is synchronous inside the job.
         var result = await Task.Run(() => job.RunAsync(progress, cancellationToken), CancellationToken.None);
         if (result.ClipboardText is { } text && Clipboard is { } clipboard)
         {

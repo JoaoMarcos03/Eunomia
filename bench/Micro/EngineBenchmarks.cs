@@ -7,7 +7,7 @@ using Eunomia.Engine.Sql.Lexing;
 
 namespace Eunomia.Bench.Micro;
 
-/// <summary>Custo de produzir um bloco de 1.024 × 60 e de formatar colunas para display (secções 11 e 15.2).</summary>
+/// <summary>Cost of producing a 1,024 × 60 block and of formatting columns for display (sections 11 and 15.2).</summary>
 [MemoryDiagnoser]
 public class RowBlockBenchmarks
 {
@@ -31,7 +31,7 @@ public class RowBlockBenchmarks
     public string[] FormatText() => _formatter.FormatColumn(_block, 6);
 }
 
-/// <summary>Lexer MySQL por linha (secção 16.2: microssegundos por linha).</summary>
+/// <summary>Per-line MySQL lexer (section 16.2: microseconds per line).</summary>
 [MemoryDiagnoser]
 public class LexerBenchmarks
 {

@@ -40,7 +40,7 @@ public sealed class ContractTests
         Assert.Null(new DbObjectInfo(table).SizeBytes);
     }
 
-    /// <summary>Executor falso: mostra a ordem dos eventos que um driver tem de emitir.</summary>
+    /// <summary>Fake executor: shows the order of the events a driver must emit.</summary>
     private sealed class FakeExecutor(SyntheticRowSource source) : IQueryExecutor
     {
         public async IAsyncEnumerable<ResultEvent> ExecuteAsync(SqlBatch batch, ExecuteOptions options, [EnumeratorCancellation] CancellationToken cancellationToken)

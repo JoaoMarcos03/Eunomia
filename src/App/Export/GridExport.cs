@@ -5,7 +5,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.App.Export;
 
-/// <summary>Os 16 formatos do "Copy as" e do "Export grid rows", pela ordem e com os nomes do HeidiSQL (anexo B §1.1).</summary>
+/// <summary>The 16 formats of "Copy as" and "Export grid rows", in HeidiSQL's order and with its names (appendix B §1.1).</summary>
 public enum GridExportFormat
 {
     ExcelCsv,
@@ -26,7 +26,7 @@ public enum GridExportFormat
     JsonLines,
 }
 
-/// <summary>Uma coluna exportada: nome do header, tipo do resultado e, quando se sabe, a definição na tabela.</summary>
+/// <summary>An exported column: header name, result type and, when known, the table definition.</summary>
 public sealed record GridExportColumn(string Name, ColumnInfo Info, ColumnDefinition? Definition = null)
 {
     public bool IsNumeric => Info.IsNumeric;
@@ -41,8 +41,8 @@ public sealed record GridExportColumn(string Name, ColumnInfo Info, ColumnDefini
 }
 
 /// <summary>
-/// Linhas a exportar, já como texto bruto: números sem separadores, datas como o servidor as dá, binário em hex
-/// minúsculo (<c>0x…</c>), <c>null</c> para NULL. A ordem é a do grid (anexo B §1.2).
+/// Rows to export, already as raw text: numbers without separators, dates as the server gives them, binary as
+/// lowercase hex (<c>0x…</c>), <c>null</c> for NULL. The order is the grid's (appendix B §1.2).
 /// </summary>
 public sealed record GridExportData(
     IReadOnlyList<GridExportColumn> Columns,
@@ -50,7 +50,7 @@ public sealed record GridExportData(
     string TableName,
     IReadOnlyList<string> KeyColumns);
 
-/// <summary>Opções do diálogo (ou as do clipboard, <c>GridExportClp*</c>, no Copy as). Defaults do HeidiSQL (anexo B §1.4).</summary>
+/// <summary>Dialog options (or the clipboard ones, <c>GridExportClp*</c>, for Copy as). HeidiSQL defaults (appendix B §1.4).</summary>
 public sealed record GridExportOptions
 {
     public bool IncludeColumnNames { get; init; } = true;
@@ -59,7 +59,7 @@ public sealed record GridExportOptions
 
     public bool RemoveLinebreaks { get; init; }
 
-    /// <summary>Delimited text: separador, encloser e terminador com <c>\t \n \r \0 \b \Z \\</c>.</summary>
+    /// <summary>Delimited text: separator, encloser and terminator with <c>\t \n \r \0 \b \Z \\</c>.</summary>
     public string Separator { get; init; } = ";";
 
     public string Encloser { get; init; } = string.Empty;
@@ -68,28 +68,28 @@ public sealed record GridExportOptions
 
     public string NullValue { get; init; } = @"\N";
 
-    /// <summary>Saída para o clipboard (Excel CSV usa TAB; PHP sem <c>&lt;?php</c>).</summary>
+    /// <summary>Output to the clipboard (Excel CSV uses TAB; PHP without <c>&lt;?php</c>).</summary>
     public bool ToClipboard { get; init; } = true;
 
-    /// <summary>Query incluída (HTML, XML, Markdown, JSON).</summary>
+    /// <summary>Include the query (HTML, XML, Markdown, JSON).</summary>
     public string? Query { get; init; }
 
-    /// <summary>Separador decimal dos números em Excel CSV, HTML e Markdown.</summary>
+    /// <summary>Decimal separator of numbers in Excel CSV, HTML and Markdown.</summary>
     public CultureInfo Culture { get; init; } = CultureInfo.CurrentCulture;
 
-    /// <summary>Nome e versão no HTML ("generated … by …").</summary>
+    /// <summary>Name and version in the HTML ("generated … by …").</summary>
     public string Generator { get; init; } = "Eunomia";
 
     public DateTime Now { get; init; } = DateTime.Now;
 
-    /// <summary>Indentação com espaços em vez de tabs ("Tabs to spaces").</summary>
+    /// <summary>Indent with spaces instead of tabs ("Tabs to spaces").</summary>
     public string Indent { get; init; } = "\t";
 }
 
-/// <summary>Valores de células para exportar (anexo B §1.2).</summary>
+/// <summary>Cell values to export (appendix B §1.2).</summary>
 public static class GridExportValues
 {
-    /// <summary>Texto bruto de uma célula: binário em hex minúsculo (<c>asLowercaseHex</c>), NUL trocados por espaços.</summary>
+    /// <summary>Raw text of a cell: binary as lowercase hex (<c>asLowercaseHex</c>), NULs replaced by spaces.</summary>
     public static string? Text(RowBlock block, int row, int column, bool blobAsText = false)
     {
         ArgumentNullException.ThrowIfNull(block);
@@ -107,7 +107,7 @@ public static class GridExportValues
             }
             return bytes.Length == 0 ? string.Empty : "0x" + Convert.ToHexStringLower(bytes);
         }
-        // Sem perdas: DOUBLE com todos os dígitos, BIT em bits, texto sem o sufixo de cortado.
+        // Lossless: DOUBLE with every digit, BIT in bits, text without the cut suffix.
         var text = DisplayFormatter.FormatRaw(block, row, column) ?? string.Empty;
         return text.Replace('\0', ' ');
     }

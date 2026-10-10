@@ -4,14 +4,14 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// SQL help (F1, Help › SQL help): a janela de ajuda do servidor da sessão ativa, aberta no termo onde está o cursor do
-/// editor focado (ou nas categorias). Uma só janela: F1 com ela aberta procura o termo novo nela.
+/// SQL help (F1, Help › SQL help): the help window of the active session's server, opened on the term under the cursor of
+/// the focused editor (or on the categories). A single window: F1 with it open looks up the new term in it.
 /// </summary>
 public sealed partial class MainWindow
 {
     private SqlHelpWindow? _sqlHelp;
 
-    /// <summary>Janela de ajuda aberta (testes).</summary>
+    /// <summary>Open help window (tests).</summary>
     internal SqlHelpWindow? SqlHelp => _sqlHelp;
 
     private void InitSqlHelp()
@@ -41,8 +41,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Palavra onde está o cursor (letras, dígitos e <c>_</c>) do editor SQL focado ou, sem foco num editor, do editor
-    /// da query tab ativa; <c>null</c> sem palavra.
+    /// Word under the cursor (letters, digits and <c>_</c>) of the focused SQL editor or, with no editor focused, of the
+    /// active query tab's editor; <c>null</c> without a word.
     /// </summary>
     private string? WordAtCaret()
     {

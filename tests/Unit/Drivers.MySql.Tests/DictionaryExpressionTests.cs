@@ -2,13 +2,13 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.Drivers.MySql.Tests;
 
-/// <summary>Expressões do <c>information_schema</c> do MySQL 8, escapadas por <c>String::print</c> (bug #100607 do MySQL).</summary>
+/// <summary>MySQL 8 <c>information_schema</c> expressions, escaped by <c>String::print</c> (MySQL bug #100607).</summary>
 public sealed class DictionaryExpressionTests
 {
     [Theory]
-    // O exemplo do bug: concat com um literal.
+    // The bug's example: concat with a literal.
     [InlineData(@"concat(`a`,_utf8mb4\'-\')", "concat(`a`,_utf8mb4'-')")]
-    // Plica e barra dentro do literal, como o servidor as escreve (it's \ ok).
+    // A quote and a backslash inside the literal, as the server writes them (it's \ ok).
     [InlineData(@"concat(`a`,_utf8mb4\'it\\\'s \\\\ ok\')", @"concat(`a`,_utf8mb4'it\'s \\ ok')")]
     [InlineData(@"(`s` <> _utf8mb4\'x\')", "(`s` <> _utf8mb4'x')")]
     [InlineData(@"\0\n\r\Z", "\0\n\r\u001A")]
@@ -19,10 +19,10 @@ public sealed class DictionaryExpressionTests
         Assert.Equal(expected, MySqlMetadataProvider.UnescapeDictionaryText(escaped));
 
     [Theory]
-    // Uma plica sem barra: o servidor já não escapa (bug corrigido); o texto fica como está.
+    // A quote without a backslash: the server no longer escapes (bug fixed); the text stays as it is.
     [InlineData("concat(`a`,_utf8mb4'-')")]
     [InlineData(@"concat(`a`,_utf8mb4'it\'s')")]
-    // Barra seguida de algo que o String::print nunca escreve, ou no fim.
+    // A backslash followed by something String::print never writes, or at the end.
     [InlineData(@"`a\b`")]
     [InlineData(@"`a`\")]
     public void TextoQueNaoVemEscapadoFicaComoEsta(string text) =>

@@ -7,7 +7,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Transação aberta na UI (secção 14.5; Fase 14): status bar e pergunta ao desligar e ao fechar.</summary>
+/// <summary>Open transaction in the UI (section 14.5; phase 14): status bar and the question on disconnecting and closing.</summary>
 public sealed class TransactionUiTests
 {
     private static async Task<long> CountAsync(string cs, string sql)
@@ -45,14 +45,14 @@ public sealed class TransactionUiTests
             var status = window.GetLogicalDescendants().OfType<Eunomia.UI.Shell.Views.StatusBarView>().Single();
             Assert.Equal("Uncommitted changes", status.PanelText(2));
 
-            // Cancel: a sessão fica ligada e a transação aberta.
+            // Cancel: the session stays connected and the transaction open.
             var open = Assert.Single(context.Sessions!.Connector.Open);
             await window.DisconnectAsync(open);
             Assert.Single(questions);
             Assert.Single(context.Sessions.Connector.Open);
             Assert.Equal(0, await CountAsync(cs, $"SELECT COUNT(*) FROM `{db}`.t"));
 
-            // Yes: COMMIT (desligar a última sessão abriria o Session Manager, por isso a sessão fecha-se à parte).
+            // Yes: COMMIT (disconnecting the last session would open the Session Manager, so the session is closed separately).
             answer = MessageDialogResult.Yes;
             Assert.True(await window.ResolveOpenTransactionAsync(open));
             Assert.Equal(2, questions.Count);

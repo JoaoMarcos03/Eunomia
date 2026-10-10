@@ -12,12 +12,12 @@ using Eunomia.UI.Features.HostTab;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Snapshots da Fase 4: árvore com grupos, colunas e estados (anexo D A1, A2) e as listas do Host e do Database tab
-/// (secção 4.9), com dados fixos e cultura invariante.
+/// Phase 4 snapshots: the tree with groups, columns and states (appendix D A1, A2) and the Host and Database tab lists
+/// (section 4.9), with fixed data and invariant culture.
 /// </summary>
 public sealed class TreeAndListsSnapshotTests
 {
-    /// <summary>Árvore montada à mão: uma sessão com grupos e colunas, outra sessão inativa.</summary>
+    /// <summary>Tree built by hand: one session with groups and columns, another inactive session.</summary>
     private sealed class FixedProvider : ITreeDataProvider
     {
         public Task<IReadOnlyList<TreeNode>> LoadChildrenAsync(TreeNode parent, CancellationToken cancellationToken)

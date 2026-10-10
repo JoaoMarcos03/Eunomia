@@ -3,8 +3,8 @@ using System.Globalization;
 namespace Eunomia.Engine.Results.Tests;
 
 /// <summary>
-/// Texto bruto sem perdas (Fase 14): o que se edita, copia, duplica, exporta e põe num WHERE tem de voltar ao mesmo
-/// valor no servidor, em qualquer cultura.
+/// Lossless raw text (phase 14): what is edited, copied, duplicated, exported and put in a WHERE must come back to the same
+/// value on the server, in any culture.
 /// </summary>
 public sealed class RawTextTests
 {
@@ -50,12 +50,12 @@ public sealed class RawTextTests
         Assert.Equal("0.1", DisplayFormatter.FormatRaw(block, 0, 1));
         Assert.Equal("0.0001", DisplayFormatter.FormatRaw(block, 1, 0));
         Assert.Equal(-2.5e-8f, float.Parse(DisplayFormatter.FormatRaw(block, 1, 1)!, CultureInfo.InvariantCulture));
-        // BIT em dígitos binários com a largura da coluna: o DML lê "00001010" como b'00001010' (10), não como 2.
+        // BIT as binary digits with the column width: the DML reads "00001010" as b'00001010' (10), not as 2.
         Assert.Equal("00001010", DisplayFormatter.FormatRaw(block, 0, 2));
         Assert.Equal("101", DisplayFormatter.FormatRaw(block, 0, 6));
         Assert.Equal("12345678.9012", DisplayFormatter.FormatRaw(block, 0, 3));
         Assert.Null(DisplayFormatter.FormatRaw(block, 1, 3));
-        // Binário completo (o display mostra só 256 bytes).
+        // Full binary (the display shows only 256 bytes).
         Assert.Equal("0x" + Convert.ToHexString(Blob), DisplayFormatter.FormatRaw(block, 0, 4));
         Assert.Equal("0x", DisplayFormatter.FormatRaw(block, 1, 4));
         Assert.Equal("1234567", DisplayFormatter.FormatRaw(block, 0, 5));

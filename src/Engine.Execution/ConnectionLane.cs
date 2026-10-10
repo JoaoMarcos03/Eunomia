@@ -4,10 +4,10 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.Engine.Execution;
 
 /// <summary>
-/// Uma ligação da sessão com a sua fila (secção 12.3): o protocolo só aceita um comando de cada vez, por isso o
-/// trabalho é serializado aqui, por prioridade. Abre a ligação a pedido, deteta ligação perdida (pelo classificador
-/// do driver), reabre e repete uma vez o trabalho que o permite (metadata); queries do utilizador nunca são
-/// repetidas sozinhas.
+/// A session connection with its queue (section 12.3): the protocol only accepts one command at a time, so work is
+/// serialised here, by priority. Opens the connection on demand, detects a lost connection (through the driver's
+/// classifier), reopens it and retries once the work that allows it (metadata); user queries are never
+/// retried on their own.
 /// </summary>
 internal sealed class ConnectionLane : IAsyncDisposable
 {
@@ -61,28 +61,28 @@ internal sealed class ConnectionLane : IAsyncDisposable
 
     public bool HasPendingWork => _queues.Any(q => q.Reader.Count > 0);
 
-    /// <summary>Base em uso nesta ligação (reposta com <c>USE</c> depois de religar).</summary>
+    /// <summary>Database in use on this connection (restored with <c>USE</c> after reconnecting).</summary>
     public string? Database { get; set; }
 
     public DateTimeOffset LastActivity => new(Interlocked.Read(ref _lastActivityTicks), TimeSpan.Zero);
 
-    /// <summary>A ligação caiu (antes de qualquer reabertura).</summary>
+    /// <summary>The connection dropped (before any reopening).</summary>
     public event Action<ConnectionLane, DbError, Exception>? ConnectionLost;
 
-    /// <summary>A ligação foi reaberta depois de ter caído.</summary>
+    /// <summary>The connection was reopened after dropping.</summary>
     public event Action<ConnectionLane>? Reopened;
 
-    /// <summary>Instrução enviada pela ligação (todas, mesmo as que não vão para o log).</summary>
+    /// <summary>Statement sent through the connection (all of them, even those that do not go to the log).</summary>
     public event Action<ConnectionLane, string>? Issued;
 
-    /// <summary>A operação em curso mudou (o SessionHost passa a Busy e volta a Ready).</summary>
+    /// <summary>The operation in progress changed (the SessionHost moves to Busy and back to Ready).</summary>
     public event Action<ConnectionLane, bool>? BusyChanged;
 
     /// <summary>
-    /// Põe o trabalho na fila. Cancelado por quem pediu enquanto espera, não corre; já a correr, com
-    /// <paramref name="abandonGrace"/> ainda tem esse tempo para acabar antes de o comando ser cancelado no servidor (o
-    /// resultado é descartado na mesma). Cancelar uma leitura curta com <c>KILL QUERY</c> abre outra ligação e custa mais
-    /// do que deixá-la acabar. O Esc (<see cref="CancelCurrent"/>) e o fecho cancelam logo.
+    /// Queues the work. Cancelled by the caller while waiting, it does not run; already running, with
+    /// <paramref name="abandonGrace"/> it still has that much time to finish before the command is cancelled on the server
+    /// (the result is discarded anyway). Cancelling a short read with <c>KILL QUERY</c> opens another connection and costs
+    /// more than letting it finish. Esc (<see cref="CancelCurrent"/>) and closing cancel immediately.
     /// </summary>
     public Task<T> RunAsync<T>(
         Func<IDbConnectionHandle, CancellationToken, Task<T>> work,
@@ -101,10 +101,10 @@ internal sealed class ConnectionLane : IAsyncDisposable
         return item.Task;
     }
 
-    /// <summary>Cancela a operação em curso (o driver manda <c>KILL QUERY</c>, secção 12.4).</summary>
+    /// <summary>Cancels the operation in progress (the driver sends <c>KILL QUERY</c>, section 12.4).</summary>
     public void CancelCurrent() => Volatile.Read(ref _current)?.Cancel();
 
-    /// <summary>Abre já (ligar a sessão); devolve a ligação aberta.</summary>
+    /// <summary>Opens now (connecting the session); returns the open connection.</summary>
     public Task<IDbConnectionHandle> OpenNowAsync(CancellationToken cancellationToken) =>
         RunAsync((h, _) => Task.FromResult(h), WorkPriority.Visible, SessionLogCategory.InternalSql, retryAfterReconnect: false, cancellationToken);
 
@@ -173,7 +173,7 @@ internal sealed class ConnectionLane : IAsyncDisposable
                 item.Dispose();
             }
         }
-        // Trabalho que ficou na fila ao fechar.
+        // Work left in the queue at closing.
         foreach (var q in _queues)
         {
             while (q.Reader.TryRead(out var left))
@@ -266,7 +266,7 @@ internal sealed class ConnectionLane : IAsyncDisposable
             {
                 await handle.DisposeAsync().ConfigureAwait(false);
             }
-#pragma warning disable CA1031 // Fechar uma ligação já partida não pode falhar a operação.
+#pragma warning disable CA1031 // Closing an already broken connection cannot fail the operation.
             catch (Exception)
 #pragma warning restore CA1031
             {
@@ -276,10 +276,10 @@ internal sealed class ConnectionLane : IAsyncDisposable
 
     private abstract class WorkItem : IDisposable
     {
-        /// <summary>O resultado deixou de interessar (quem pediu, Esc, fecho).</summary>
+        /// <summary>The result is no longer of interest (the caller, Esc, closing).</summary>
         private readonly CancellationTokenSource _cts;
 
-        /// <summary>O que a operação recebe: cancela o comando no servidor.</summary>
+        /// <summary>What the operation receives: cancels the command on the server.</summary>
         private readonly CancellationTokenSource _work = new();
         private readonly CancellationTokenRegistration _abandoned;
         private readonly CancellationTokenRegistration _closing;
@@ -301,7 +301,7 @@ internal sealed class ConnectionLane : IAsyncDisposable
 
         protected CancellationToken WorkToken => _work.Token;
 
-        /// <summary>Esc: o resultado não interessa e o comando é cancelado já.</summary>
+        /// <summary>Esc: the result is of no interest and the command is cancelled now.</summary>
         public void Cancel()
         {
             try
@@ -364,8 +364,8 @@ internal sealed class ConnectionLane : IAsyncDisposable
             var result = await work(handle, WorkToken).ConfigureAwait(false);
             if (Token.IsCancellationRequested)
             {
-                // Cancelado e o servidor respondeu sem erro (no MySQL, um SLEEP() interrompido devolve 1; o MariaDB dá o
-                // erro 1317): o resultado é descartado, como em qualquer cancelamento.
+                // Cancelled and the server answered without an error (on MySQL an interrupted SLEEP() returns 1; MariaDB gives
+                // error 1317): the result is discarded, as with any cancellation.
                 SetCanceled();
                 return;
             }

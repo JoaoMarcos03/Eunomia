@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>Eunomia.Bench.Micro</RootNamespace>
     <OutputType>Exe</OutputType>
-    <!-- BenchmarkDotNet usa reflection e nunca corre em AOT: os analyzers de AOT/trim não se aplicam aqui. -->
+    <!-- BenchmarkDotNet uses reflection and never runs under AOT: the AOT/trim analyzers do not apply here. -->
     <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
     <EnableAotAnalyzer>false</EnableAotAnalyzer>
     <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>

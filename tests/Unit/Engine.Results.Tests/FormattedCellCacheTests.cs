@@ -74,7 +74,7 @@ public sealed class FormattedCellCacheTests
             }
         }
 
-        // Mantém só as 64 entradas mais recentes quando o orçamento é ultrapassado.
+        // Keeps only the 64 most recent entries when the budget is exceeded.
         Assert.False(cache.TryGet(0, 0, false, out _));
         Assert.True(cache.TryGet(3, 59, false, out _));
     }

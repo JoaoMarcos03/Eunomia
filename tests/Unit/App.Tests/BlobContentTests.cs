@@ -2,7 +2,7 @@ using Eunomia.App.Data;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Save BLOB to file e Image preview: bytes da célula, formato pelos magic bytes e nome sugerido.</summary>
+/// <summary>Save BLOB to file and Image preview: the cell's bytes, the format by its magic bytes and the suggested name.</summary>
 public sealed class BlobContentTests
 {
     private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00];

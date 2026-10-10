@@ -14,12 +14,12 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Maintenance (Tools ▸ Maintenance; anexo B §2.2): o diálogo com serviços falsos e o fluxo contra o servidor.</summary>
+/// <summary>Maintenance (Tools ▸ Maintenance; appendix B §2.2): the dialog with fake services and the flow against the server.</summary>
 public sealed class MaintenanceDialogTests
 {
     private static readonly MySqlDialect Dialect = new(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));
 
-    /// <summary>Base "shop" com duas tabelas, uma view e uma rotina; "people" escolhida na árvore.</summary>
+    /// <summary>Database "shop" with two tables, a view and a routine; "people" chosen in the tree.</summary>
     internal static MaintenanceServices Fake(Func<MaintenanceOperation, DbObjectRef, MaintenanceOptions, CancellationToken, Task<IReadOnlyList<MaintenanceMessage>>>? run = null,
         bool confirm = true, List<string>? questions = null) => new(
         ["shop", "test"],
@@ -65,7 +65,7 @@ public sealed class MaintenanceDialogTests
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var dialog = await OpenAsync(Fake());
 
-        // Nomes com "_" aparecem inteiros (o AccessText tirava o primeiro "_").
+        // Names with "_" show whole (AccessText removed the first "_").
         Assert.Equal(["people", "orders", "v_people"], dialog.ObjectBoxes.Select(b => ((TextBlock)b.Content!).Text));
         Assert.Equal([true, false, false], dialog.ObjectBoxes.Select(b => b.IsChecked == true));
         Assert.StartsWith("1 selected objects, size: ", dialog.SelectionText, StringComparison.Ordinal);
@@ -233,9 +233,9 @@ public sealed class MaintenanceDialogTests
             var people = await WaitAsync(() => dbNode.Children?.FirstOrDefault(n => n.Name == "people"));
             window.Tree.Tree.FocusedNode = people;
 
-            // O teste conduz o diálogo modal.
+            // The test drives the modal dialog.
             UnexpectedDialogGuardAttribute.Allow(typeof(MaintenanceDialog));
-            // O comando só acaba quando o diálogo modal fecha.
+            // The command only finishes when the modal dialog closes.
             var command = context.Commands.ExecuteAsync("tools.maintenance").AsTask();
             var dialog = await WaitAsync(() => window.MaintenanceWindow is { ObjectBoxes.Count: 2 } d ? d : null);
             Assert.Equal(["people"], dialog.ObjectBoxes.Where(b => b.IsChecked == true).Select(b => (string)b.Tag!));

@@ -29,7 +29,7 @@ public sealed class KnownHostsTests : IDisposable
         store.Trust("Bastion.example.com", 22, "ssh-ed25519", key);
         Assert.Equal(HostKeyCheck.Match, store.Check("bastion.example.com", 22, "ssh-ed25519", key));
         Assert.Equal(HostKeyCheck.Mismatch, store.Check("bastion.example.com", 22, "ssh-ed25519", other));
-        // Outro tipo de chave num host conhecido não é um primeiro contacto: pede confirmação com aviso.
+        // Another key type on a known host is not a first contact: asks for confirmation with a warning.
         Assert.Equal(HostKeyCheck.OtherTypeKnown, store.Check("bastion.example.com", 22, "ssh-rsa", key));
         Assert.Equal(HostKeyCheck.Unknown, store.Check("bastion.example.com", 2222, "ssh-ed25519", key));
 
@@ -59,7 +59,7 @@ public sealed class KnownHostsTests : IDisposable
 
 public sealed class SshAgentTests
 {
-    /// <summary>Agent falso: responde com duas chaves e regista os pedidos de assinatura.</summary>
+    /// <summary>Fake agent: answers with two keys and records the signing requests.</summary>
     private sealed class FakeAgent : ISshAgentTransport
     {
         public List<byte[]> Requests { get; } = [];

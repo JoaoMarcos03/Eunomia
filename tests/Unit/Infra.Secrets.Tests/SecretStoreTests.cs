@@ -5,8 +5,8 @@ using Eunomia.Infra.Secrets.MacOS;
 namespace Eunomia.Infra.Secrets.Tests;
 
 /// <summary>
-/// Cofres de segredos em macOS e Linux e o recurso em memória (Fase 14). Os testes do Keychain e do Secret Service
-/// correm só no sistema certo e ficam "skipped" quando o cofre não está disponível (por exemplo, um runner sem keyring).
+/// Secret vaults on macOS and Linux and the in-memory fallback (phase 14). The Keychain and Secret Service tests
+/// only run on the right system and are skipped when the vault is not available (for example, a runner without a keyring).
 /// </summary>
 public sealed class SecretStoreTests
 {
@@ -77,7 +77,7 @@ public sealed class SecretStoreTests
         try
         {
             Assert.Equal("primeira", store.Get(key));
-            // Substituir, com caracteres fora do ASCII e aspas.
+            // Replacing, with non-ASCII characters and quotes.
             store.Set(key, "pá\"ss'wörd 🔑");
             Assert.Equal("pá\"ss'wörd 🔑", store.Get(key));
             store.Set(key, string.Empty);
@@ -88,7 +88,7 @@ public sealed class SecretStoreTests
             store.Delete(key);
         }
         Assert.Null(store.Get(key));
-        // Apagar o que não existe não é erro.
+        // Deleting what does not exist is not an error.
         store.Delete(key);
     }
 

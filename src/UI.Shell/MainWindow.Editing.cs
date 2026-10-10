@@ -12,17 +12,17 @@ using Eunomia.UI.Controls.Grid;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Edição no Data tab (anexo D B15–B17; FAM-G08, G09; D3): a linha alterada grava-se ao mudar de linha, com Ctrl+Enter
-/// ou ao clicar fora (UPDATE/INSERT pela chave, verificação das linhas afetadas e releitura da linha); um erro mantém a
-/// linha alterada. Insert row, Duplicate row (sem e com chaves), Delete selected row(s) com "Delete N row(s)?", NULL
-/// (Ctrl+Shift+N). Sem chave suficiente no resultado, o grid fica só de leitura e diz porquê.
+/// Editing in the Data tab (appendix D B15–B17; FAM-G08, G09; D3): the changed row is saved when moving to another row, with
+/// Ctrl+Enter or when clicking outside (UPDATE/INSERT by key, check of the affected rows and reading the row back); an error
+/// keeps the row changed. Insert row, Duplicate row (without and with keys), Delete selected row(s) with "Delete N row(s)?",
+/// NULL (Ctrl+Shift+N). Without a sufficient key in the result, the grid stays read-only and says why.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Mensagem do HeidiSQL (<c>MSG_NOGRIDEDITING</c>).</summary>
+    /// <summary>HeidiSQL's message (<c>MSG_NOGRIDEDITING</c>).</summary>
     public const string NoKeyMessage = "Selected columns don't contain a sufficient set of key columns to allow editing. Please select primary or unique key columns, or all columns.";
 
-    /// <summary>Sessão read-only (secção 23.2): o grid não edita e diz porquê.</summary>
+    /// <summary>Read-only session (section 23.2): the grid does not edit and says why.</summary>
     private static string ReadOnlyMessage(OpenSession session) =>
         $"Session \"{session.Name}\" is read-only. Turn off \"Read-only session\" in the Session Manager (Advanced) to edit data.";
 
@@ -30,10 +30,10 @@ public sealed partial class MainWindow
     private readonly Dictionary<Guid, TimeSpan> _serverClockOffsets = [];
     private IReadOnlyDictionary<string, string> _insertValues = new Dictionary<string, string>();
 
-    /// <summary>Substitui o diálogo de erro da edição (testes).</summary>
+    /// <summary>Replaces the editing error dialog (tests).</summary>
     internal Action<string>? EditErrorOverride { get; set; }
 
-    /// <summary>Substitui o editor em janela (testes): o pedido → o valor novo ou <c>null</c>.</summary>
+    /// <summary>Replaces the window editor (tests): the request → the new value or <c>null</c>.</summary>
     internal Func<GridPopupEditEventArgs, string?>? PopupEditorOverride { get; set; }
 
     private void InitEditing()
@@ -53,7 +53,7 @@ public sealed partial class MainWindow
         c.SetHandler("grid.sqlFunction", _ => new ValueTask(FocusedGrid()!.BeginEditAsync(FunctionEditor())), () => FocusedGrid() is { IsReadOnly: false, Selection.FocusedRow: >= 0 });
         c.SetHandler("grid.editWithoutLookup", _ => new ValueTask(FocusedGrid()!.BeginEditAsync(new TextCellEditor())), () => FocusedGrid() is { IsReadOnly: false, Selection.FocusedRow: >= 0 });
 
-        // Insert value ▸: a caption mostra o valor; os valores refazem-se quando o menu do grid abre.
+        // Insert value ▸: the caption shows the value; the values are rebuilt when the grid menu opens.
         RefreshInsertValues();
         if (DataGrid.ContextMenu is { } menu)
         {
@@ -72,14 +72,14 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Valores do Insert value ▸ com o relógio do servidor da sessão do Data tab (desvio medido pela status bar).</summary>
+    /// <summary>Insert value ▸ values with the server clock of the Data tab's session (offset measured by the status bar).</summary>
     internal void RefreshInsertValues()
     {
         var offset = _browserSession is { } s && _serverClockOffsets.TryGetValue(s.Id, out var o) ? o : TimeSpan.Zero;
         _insertValues = App.Data.InsertValueItems.Compute(DateTime.Now + offset, DateTime.Now, DateTime.UtcNow, Guid.NewGuid());
     }
 
-    /// <summary>Default literal da coluna focada no Data tab ("Default value: x").</summary>
+    /// <summary>Literal default of the column focused in the Data tab ("Default value: x").</summary>
     private string? FocusedDefault()
     {
         if (_browser is not { } browser || DataGrid.Source is not { } source || DataGrid.Selection.FocusedColumn is var c && (c < 0 || c >= source.Schema.Count))
@@ -92,13 +92,13 @@ public sealed partial class MainWindow
             : null;
     }
 
-    /// <summary>Insert value ▸ SQL function (Ctrl+F2): lista das funções com texto livre; o valor vai como expressão.</summary>
+    /// <summary>Insert value ▸ SQL function (Ctrl+F2): list of the functions with free text; the value goes as an expression.</summary>
     private ChoiceCellEditor FunctionEditor() =>
         new([.. (ActiveSession?.Language ?? SqlLanguages.Default).Functions.Order(StringComparer.OrdinalIgnoreCase).Select(f => (f + "()", f + "()"))], allowText: true, isFunction: true);
 
     /// <summary>
-    /// Editor por coluna no Data tab (anexo D B15): lista da chave estrangeira, ENUM e booleanos em lista, SET em
-    /// caixas, datas e horas com setas, binário em hex na janela; o resto em texto.
+    /// Per-column editor in the Data tab (appendix D B15): foreign key list, ENUM and booleans as a list, SET as
+    /// check boxes, dates and times with arrows, binary as hex in the window; the rest as text.
     /// </summary>
     private async Task<GridCellEditor?> DataEditorAsync(long row, int column, string? value)
     {
@@ -137,7 +137,7 @@ public sealed partial class MainWindow
         };
     }
 
-    /// <summary>Editor em janela (texto longo ou com quebras de linha, "…", binário): o valor novo vai para a célula.</summary>
+    /// <summary>Window editor (long text or text with line breaks, "…", binary): the new value goes into the cell.</summary>
     private async Task PopupEditAsync(DataGridControl grid, GridPopupEditEventArgs request)
     {
         var name = grid.Source is { } source && request.Column < source.Schema.Count ? source.Schema[request.Column].Name : string.Empty;
@@ -182,11 +182,11 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>O Data tab é editável quando o SELECT tem as colunas que identificam a linha (anexo D B15, <c>CheckEditable</c>).</summary>
+    /// <summary>The Data tab is editable when the SELECT has the columns that identify the row (appendix D B15, <c>CheckEditable</c>).</summary>
     private static bool IsEditable(TableBrowser browser) =>
         RowKey.Of(browser.Table).Columns.All(k => browser.Select.Columns.Contains(k.Name, StringComparer.OrdinalIgnoreCase));
 
-    /// <summary>Linha do browser por trás de uma linha do grid (o filtro local muda os índices); <c>null</c> numa linha nova.</summary>
+    /// <summary>Browser row behind a grid row (the local filter changes the indexes); <c>null</c> for a new row.</summary>
     private long? SourceRowOf(long gridRow)
     {
         if (gridRow >= DataGrid.SourceRows)
@@ -199,7 +199,7 @@ public sealed partial class MainWindow
     private int GridColumnOf(string name) =>
         DataGrid.Source is { } source ? source.Schema.Columns.ToList().FindIndex(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)) : -1;
 
-    /// <summary>Valor atual de uma coluna numa linha: o gravado por cima do source, senão o do browser (completo).</summary>
+    /// <summary>Current value of a column in a row: the saved one on top of the source, otherwise the browser's (complete).</summary>
     private async Task<CellLiteral> CurrentValueAsync(TableBrowser browser, long gridRow, string column)
     {
         var gridColumn = GridColumnOf(column);
@@ -215,7 +215,7 @@ public sealed partial class MainWindow
         return new CellLiteral(await browser.GetFullTextAsync(sourceRow, index));
     }
 
-    /// <summary>Valores originais das colunas que identificam a linha (para o WHERE).</summary>
+    /// <summary>Original values of the columns that identify the row (for the WHERE).</summary>
     private async Task<Dictionary<string, CellLiteral>> OriginalKeyAsync(TableBrowser browser, long gridRow)
     {
         var original = new Dictionary<string, CellLiteral>(StringComparer.OrdinalIgnoreCase);
@@ -227,8 +227,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Grava; se a linha mudou no servidor desde que foi lida (<see cref="RowConflictException"/>), pergunta se sobrescreve.
-    /// Devolve <c>null</c> se o utilizador não quiser (a linha fica por gravar no grid).
+    /// Saves; if the row changed on the server since it was read (<see cref="RowConflictException"/>), asks whether to overwrite.
+    /// Returns <c>null</c> if the user does not want to (the row stays unsaved in the grid).
     /// </summary>
     private async Task<RowWriteResult?> WriteWithConflictCheckAsync(RowWriter writer, TableDefinition table, RowChange change)
     {
@@ -244,7 +244,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Grava a linha pendente do Data tab no servidor e devolve os valores relidos para o grid.</summary>
+    /// <summary>Saves the Data tab's pending row to the server and returns the values read back for the grid.</summary>
     private async Task<GridCommitResult> CommitDataRowAsync(GridRowCommit commit)
     {
         if (_browser is not { } browser || _browserSession is not { } session || DataGrid.Source is not { } gridSource)
@@ -266,7 +266,7 @@ public sealed partial class MainWindow
         try
         {
             var original = commit.IsInsert ? new Dictionary<string, CellLiteral>() : await OriginalKeyAsync(browser, commit.Row);
-            // Valores lidos das colunas alteradas: se o servidor já tiver outros, outra sessão gravou entretanto.
+            // Values read from the changed columns: if the server already has others, another session saved in the meantime.
             var expected = new Dictionary<string, CellLiteral>(StringComparer.OrdinalIgnoreCase);
             if (!commit.IsInsert)
             {
@@ -309,8 +309,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Insert row (Ins) ou Duplicate row (Ctrl+Ins, sem as colunas da chave primária; "with keys" copia-as também): uma
-    /// linha nova no fim do grid, que só é gravada quando tiver alterações.
+    /// Insert row (Ins) or Duplicate row (Ctrl+Ins, without the primary key columns; "with keys" copies them too): a
+    /// new row at the end of the grid, only saved when it has changes.
     /// </summary>
     private async Task InsertDataRowAsync(bool duplicate, bool withKeys)
     {
@@ -337,7 +337,7 @@ public sealed partial class MainWindow
         await DataGrid.InsertRowAsync(values);
     }
 
-    /// <summary>Delete selected row(s) (Ctrl+Del): "Delete N row(s)?", um DELETE por linha e recarregar o Data tab.</summary>
+    /// <summary>Delete selected row(s) (Ctrl+Del): "Delete N row(s)?", one DELETE per row, then the Data tab reloads.</summary>
     private async Task DeleteDataRowsAsync()
     {
         if (_browser is not { } browser || _browserSession is not { } session)
@@ -352,7 +352,7 @@ public sealed partial class MainWindow
         {
             return;
         }
-        // Uma linha nova por gravar só se descarta.
+        // A new unsaved row is just discarded.
         if (grid.Edits.HasPending && grid.Edits.PendingIsInsert && rows.Remove(grid.Edits.PendingRow))
         {
             grid.CancelEditing();
@@ -361,7 +361,7 @@ public sealed partial class MainWindow
         var deleted = 0;
         try
         {
-            // Primeiro as chaves de todas as linhas (podem precisar do servidor), depois os DELETE numa transação própria.
+            // First the keys of every row (they may need the server), then the DELETEs in a transaction of their own.
             var originals = new List<IReadOnlyDictionary<string, CellLiteral>>();
             foreach (var row in rows.Where(r => r < grid.SourceRows || grid.Edits.TryGetCommitted(r, 0, out _)))
             {
@@ -369,7 +369,7 @@ public sealed partial class MainWindow
             }
             _context.Status.Busy = string.Create(CultureInfo.InvariantCulture, $"Deleting {originals.Count} row(s) ...");
             var progress = new Progress<int>(done => _context.Status.Progress = (double)done / Math.Max(1, originals.Count));
-            // Uma transação do utilizador aberta pode ficar com parte das linhas apagadas: recarrega-se na mesma.
+            // An open user transaction may be left with part of the rows deleted: it reloads anyway.
             deleted = originals.Count;
             await writer.DeleteRowsAsync(browser.Table, originals, progress, CancellationToken.None);
         }

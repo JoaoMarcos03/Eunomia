@@ -7,17 +7,17 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.App.Sessions;
 
-/// <summary>Credenciais pedidas no momento de ligar ("Prompt for credentials" ou password não gravada).</summary>
+/// <summary>Credentials asked for at connection time ("Prompt for credentials" or a password that is not saved).</summary>
 public sealed record LoginCredentials(string User, string Password);
 
-/// <summary>Uma sessão aberta: a definição gravada (cópia do momento de abrir) e o SessionHost.</summary>
+/// <summary>An open session: the saved definition (a copy from when it opened) and the SessionHost.</summary>
 public sealed class OpenSession(SessionDefinition definition, SessionHost host)
 {
     public SessionDefinition Definition { get; } = definition;
 
     public SessionHost Host { get; } = host;
 
-    /// <summary>Cache de metadata da sessão (bases, objetos, tabelas).</summary>
+    /// <summary>The session's metadata cache (databases, objects, tables).</summary>
     public Eunomia.Engine.Metadata.MetadataCache Metadata { get; } = new(host, new Eunomia.Engine.Metadata.MetadataOptions
     {
         FullTableStatus = definition.FullTableStatus,
@@ -25,22 +25,22 @@ public sealed class OpenSession(SessionDefinition definition, SessionHost host)
         HideDatabasePattern = definition.HideDatabasePattern,
     });
 
-    /// <summary>Objetos já selecionados nesta sessão (os outros aparecem esbatidos na árvore, anexo D A2).</summary>
+    /// <summary>Objects already selected in this session (the others show dimmed in the tree, appendix D A2).</summary>
     public HashSet<string> SelectedObjects { get; } = new(StringComparer.Ordinal);
 
-    /// <summary>Favoritos da sessão (caminhos <see cref="ObjectPath.Of"/>), carregados do <c>app.db</c> ao abrir.</summary>
+    /// <summary>The session's favourites (<see cref="ObjectPath.Of"/> paths), loaded from <c>app.db</c> on opening.</summary>
     public HashSet<string> Favorites { get; } = new(StringComparer.Ordinal);
 
     public Guid Id => Definition.Id;
 
     public string Name => Definition.Path;
 
-    /// <summary>Cor da sessão (FAM-S02) em 0xRRGGBB, ou <c>null</c>.</summary>
+    /// <summary>Session colour (FAM-S02) as 0xRRGGBB, or <c>null</c>.</summary>
     public uint? Color => Definition.Color;
 
     /// <summary>
-    /// Linguagem SQL do motor da sessão (nomes inseridos no editor, palavras e funções, realce); antes de ligar, a do
-    /// MySQL (todos os tipos de ligação são da família MySQL).
+    /// SQL language of the session's engine (names inserted in the editor, keywords and functions, highlighting); before
+    /// connecting, MySQL's (every connection type belongs to the MySQL family).
     /// </summary>
     public ISqlLanguage Language => Host.ServerServices?.Server.Engine switch
     {
@@ -50,9 +50,9 @@ public sealed class OpenSession(SessionDefinition definition, SessionHost host)
 }
 
 /// <summary>
-/// Liga sessões gravadas ao motor (FAM-S07): converte a definição do Session Manager para o SessionHost, resolve
-/// segredos no momento de abrir (cofre, ou credenciais pedidas que só vivem em memória), atualiza as estatísticas
-/// (FAM-S08) e mantém a lista de sessões abertas. Várias sessões abertas ao mesmo tempo, isoladas.
+/// Connects saved sessions to the engine (FAM-S07): converts the Session Manager definition for the SessionHost, resolves
+/// secrets at opening time (vault, or credentials asked for that only live in memory), updates the statistics
+/// (FAM-S08) and keeps the list of open sessions. Several sessions open at the same time, isolated from each other.
 /// </summary>
 public sealed class SessionConnector(
     IDbProvider provider,
@@ -83,7 +83,7 @@ public sealed class SessionConnector(
 
     public OpenSession? Find(Guid id) => Open.FirstOrDefault(s => s.Id == id);
 
-    /// <summary>A sessão precisa de credenciais antes de ligar (o diálogo de login do HeidiSQL).</summary>
+    /// <summary>The session needs credentials before connecting (HeidiSQL's login dialog).</summary>
     public bool NeedsCredentials(SessionDefinition session)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -94,8 +94,8 @@ public sealed class SessionConnector(
     }
 
     /// <summary>
-    /// Liga. Se já estiver aberta, devolve a existente (como o "Connect to" do HeidiSQL, que só foca o nó).
-    /// Erros (incluindo <see cref="SshHostKeyException"/>) chegam ao chamador; a estatística de falhas sobe.
+    /// Connects. If it is already open, returns the existing one (like HeidiSQL's "Connect to", which only focuses the node).
+    /// Errors (including <see cref="SshHostKeyException"/>) reach the caller; the failure statistic goes up.
     /// </summary>
     public async Task<OpenSession> ConnectAsync(SessionDefinition session, LoginCredentials? credentials, CancellationToken cancellationToken)
     {
@@ -152,8 +152,8 @@ public sealed class SessionConnector(
     }
 
     /// <summary>
-    /// Liga só para listar as bases (dropdown do campo Databases, anexo A §6): ligação única e temporária, sem entrar na
-    /// lista de sessões abertas nem nas estatísticas.
+    /// Connects only to list the databases (drop-down of the Databases field, appendix A §6): a single temporary connection,
+    /// left out of the list of open sessions and of the statistics.
     /// </summary>
     public async Task<IReadOnlyList<string>> ListDatabasesAsync(SessionDefinition session, LoginCredentials? credentials, CancellationToken cancellationToken)
     {
@@ -213,7 +213,7 @@ public sealed class SessionConnector(
     private ValueTask<string> ResolveSecretAsync(SecretReference reference, CancellationToken cancellationToken) =>
         ValueTask.FromResult(_prompted.Get(reference.Key) ?? secrets.Get(reference.Key) ?? string.Empty);
 
-    /// <summary>Definição do Session Manager → parâmetros do SessionHost (TLS, SSH, timeouts, replay).</summary>
+    /// <summary>Session Manager definition → SessionHost parameters (TLS, SSH, timeouts, replay).</summary>
     public SessionConnectionSettings ToSettings(SessionDefinition s)
     {
         ArgumentNullException.ThrowIfNull(s);
@@ -272,7 +272,7 @@ public sealed class SessionConnector(
         };
     }
 
-    /// <summary>"Use own client time zone": desvio atual do Windows (como o HeidiSQL, sem seguir a mudança de hora).</summary>
+    /// <summary>"Use own client time zone": the current Windows offset (like HeidiSQL, without following daylight saving changes).</summary>
     public static string LocalOffset(TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(clock);

@@ -14,12 +14,12 @@ using Eunomia.UI.Controls.Common.TreeList;
 
 namespace Eunomia.UI.Features.Transfer;
 
-/// <summary>O que o diálogo Maintenance precisa da sessão.</summary>
-/// <param name="Selected">Objetos já escolhidos na árvore ou na lista (os outros ficam sem a caixa); vazio: todos.</param>
-/// <param name="LoadObjects">Tabelas e views da base, com os tamanhos se já forem conhecidos.</param>
-/// <param name="OptionsOf">Opções que cada operação aceita (as caixas ativas).</param>
-/// <param name="Confirm">Pergunta (OK/Cancel) com o diálogo como dono, antes de OPTIMIZE e REPAIR.</param>
-/// <param name="Run">Corre a operação num objeto, numa ligação de jobs.</param>
+/// <summary>What the Maintenance dialog needs from the session.</summary>
+/// <param name="Selected">Objects already chosen in the tree or the list (the others stay unchecked); empty: all of them.</param>
+/// <param name="LoadObjects">Tables and views of the database, with their sizes if already known.</param>
+/// <param name="OptionsOf">Options each operation accepts (the enabled boxes).</param>
+/// <param name="Confirm">Question (OK/Cancel) owned by the dialog, before OPTIMIZE and REPAIR.</param>
+/// <param name="Run">Runs the operation on an object, on a jobs connection.</param>
 public sealed record MaintenanceServices(
     IReadOnlyList<string> Databases,
     string? Database,
@@ -30,9 +30,10 @@ public sealed record MaintenanceServices(
     Func<MaintenanceOperation, DbObjectRef, MaintenanceOptions, CancellationToken, Task<IReadOnlyList<MaintenanceMessage>>> Run);
 
 /// <summary>
-/// Maintenance (Tools ▸ Maintenance e popupDB; anexo B §2.2, o tab "Maintenance" do Table tools): base e objetos com
-/// caixas à esquerda, operação e opções à direita, e em baixo as linhas do servidor por objeto (erros e notas com as cores
-/// do SQL log) e "N selected objects, size: X". Enquanto corre, Close passa a Cancel e pára depois do objeto em curso.
+/// Maintenance (Tools ▸ Maintenance and popupDB; appendix B §2.2, the "Maintenance" tab of Table tools): database and objects
+/// with check boxes on the left, operation and options on the right, and at the bottom the server's rows per object (errors
+/// and notes in the SQL log colours) and "N selected objects, size: X". While it runs, Close becomes Cancel and stops after the
+/// object in progress.
 /// </summary>
 public sealed class MaintenanceDialog : Window
 {
@@ -123,7 +124,7 @@ public sealed class MaintenanceDialog : Window
         list.Columns.Add(new TreeListColumn("Op", 80));
         list.Columns.Add(new TreeListColumn("Msg_type", 80));
         list.Columns.Add(new TreeListColumn("Msg_text", 360));
-        // Pela ordem do servidor (as linhas de uma tabela seguem-se); um clique no cabeçalho ordena.
+        // In the server's order (the rows of a table follow each other); a click on the header sorts.
         list.SortBy(-1, descending: false);
         _results.Named("Results");
 
@@ -160,17 +161,17 @@ public sealed class MaintenanceDialog : Window
         _database.SelectedItem = services.Database is { } db && services.Databases.Contains(db) ? db : services.Databases.FirstOrDefault();
         Closing += (_, _) =>
         {
-            // Fechar a meio pára depois do objeto em curso (o servidor acaba a instrução que já recebeu).
+            // Closing halfway stops after the object in progress (the server finishes the statement it already received).
             _run?.Cancel();
         };
     }
 
-    /// <summary>Objetos da base com a caixa (testes).</summary>
+    /// <summary>The database's objects with their check boxes (tests).</summary>
     public IReadOnlyList<CheckBox> ObjectBoxes => _objects.Children.OfType<CheckBox>().ToList();
 
     public ComboBox OperationBox => _operation;
 
-    /// <summary>Caixa de uma opção (testes).</summary>
+    /// <summary>Check box of an option (tests).</summary>
     public CheckBox OptionBox(MaintenanceOptions option) => _options[option];
 
     public TreeListControl Results => _results.List;
@@ -183,7 +184,7 @@ public sealed class MaintenanceDialog : Window
 
     private MaintenanceOperation Operation => (MaintenanceOperation)Math.Max(0, _operation.SelectedIndex);
 
-    /// <summary>Tabelas e views da base escolhida; as já escolhidas na árvore ficam com a caixa (senão, todas).</summary>
+    /// <summary>Tables and views of the chosen database; those already chosen in the tree come checked (otherwise, all of them).</summary>
     public async Task LoadObjectsAsync()
     {
         _objects.Children.Clear();
@@ -227,7 +228,7 @@ public sealed class MaintenanceDialog : Window
         UpdateSelection();
     }
 
-    /// <summary>Execute: a operação em cada objeto escolhido, por ordem; Close (Cancel) pára depois do objeto em curso.</summary>
+    /// <summary>Execute: the operation on each chosen object, in order; Close (Cancel) stops after the object in progress.</summary>
     public async Task ExecuteAsync()
     {
         if (_run is not null || _database.SelectedItem is not string db)
@@ -272,7 +273,7 @@ public sealed class MaintenanceDialog : Window
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException)
                 {
-                    // Um erro num objeto não pára os outros (anexo B §2.1); fica numa linha a vermelho.
+                    // An error on one object does not stop the others (appendix B §2.1); it shows as a red row.
                     messages = [new MaintenanceMessage(db + "." + table.Name, TableMaintenance.Caption(operation).ToLowerInvariant(), "error", ex.Message)];
                 }
                 foreach (var message in messages)
@@ -305,7 +306,7 @@ public sealed class MaintenanceDialog : Window
     private MaintenanceOptions ReadOptions() =>
         _options.Where(o => o.Value.IsEnabled && o.Value.IsChecked == true).Aggregate(MaintenanceOptions.None, (all, o) => all | o.Key);
 
-    /// <summary>As caixas que a operação aceita ficam ativas; as outras ficam cinzentas (anexo B §2.2).</summary>
+    /// <summary>The boxes the operation accepts are enabled; the others are greyed out (appendix B §2.2).</summary>
     private void UpdateOptions()
     {
         var allowed = _services.OptionsOf(Operation);

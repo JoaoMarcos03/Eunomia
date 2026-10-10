@@ -6,8 +6,8 @@ using Avalonia.VisualTree;
 namespace Eunomia.UI.Controls.Common.Input;
 
 /// <summary>
-/// Marca um controlo com o contexto de comandos onde o foco está (secção 21.2: "grid", "editor", "filterPanel"…).
-/// O keymap junta os contextos do elemento focado até à janela, do mais interior para o mais exterior.
+/// Tags a control with the command context the focus is in (section 21.2: "grid", "editor", "filterPanel"…).
+/// The keymap gathers the contexts from the focused element up to the window, from the innermost to the outermost.
 /// </summary>
 public sealed class CommandScope
 {
@@ -22,7 +22,7 @@ public sealed class CommandScope
 
     public static void SetContext(Control control, string? value) => control.SetValue(ContextProperty, value);
 
-    /// <summary>Contextos a partir do elemento focado, do mais interior para o mais exterior, sem repetidos.</summary>
+    /// <summary>Contexts from the focused element, from the innermost to the outermost, without duplicates.</summary>
     public static IReadOnlyList<string> ContextsOf(IInputElement? focused)
     {
         var result = new List<string>();
@@ -38,8 +38,8 @@ public sealed class CommandScope
 }
 
 /// <summary>
-/// Alvo dos comandos do menu Edit (Copy, Cut, Paste, Select all, Undo…). O HeidiSQL encaminha estas actions para o
-/// controlo focado; aqui cada controlo próprio implementa a interface e o shell procura-a a partir do foco.
+/// Target of the Edit menu commands (Copy, Cut, Paste, Select all, Undo…). HeidiSQL routes these actions to the
+/// focused control; here each of our controls implements the interface and the shell looks for it from the focus.
 /// </summary>
 public interface IEditTarget
 {
@@ -64,7 +64,7 @@ public interface IEditTarget
     void Undo();
 }
 
-/// <summary>Procura o alvo de edição a partir do elemento focado (o próprio, um adaptador ou um ancestral).</summary>
+/// <summary>Looks for the edit target from the focused element (itself, an adapter or an ancestor).</summary>
 public static class EditTargets
 {
     public static IEditTarget? Find(IInputElement? focused)

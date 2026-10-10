@@ -4,7 +4,7 @@ using Eunomia.Engine.Execution;
 
 namespace Eunomia.App.Objects;
 
-/// <summary>Uma linha do resultado do servidor: tabela, operação, tipo (<c>status</c>, <c>error</c>, <c>info</c>, <c>note</c>, <c>warning</c>) e texto.</summary>
+/// <summary>A row of the server's result: table, operation, type (<c>status</c>, <c>error</c>, <c>info</c>, <c>note</c>, <c>warning</c>) and text.</summary>
 public sealed record MaintenanceMessage(string Table, string Operation, string Type, string Text)
 {
     public bool IsError => string.Equals(Type, "error", StringComparison.OrdinalIgnoreCase);
@@ -13,16 +13,16 @@ public sealed record MaintenanceMessage(string Table, string Operation, string T
 }
 
 /// <summary>
-/// Maintenance (Tools ▸ Maintenance e popupDB; anexo B §2.2): uma instrução por tabela ou view, numa ligação de jobs (a
-/// árvore e as query tabs continuam livres), com o resultado do servidor linha a linha. As outras espécies de objetos são
-/// saltadas. OPTIMIZE e REPAIR reconstroem a tabela e bloqueiam-na enquanto correm: pedem confirmação antes.
+/// Maintenance (Tools ▸ Maintenance and popupDB; appendix B §2.2): one statement per table or view, on a jobs connection
+/// (the tree and the query tabs stay free), with the server's result row by row. Other kinds of objects are
+/// skipped. OPTIMIZE and REPAIR rebuild the table and lock it while they run: they ask for confirmation first.
 /// </summary>
 public static class TableMaintenance
 {
-    /// <summary>Operações que reconstroem as tabelas (pergunta antes de correr).</summary>
+    /// <summary>Operations that rebuild the tables (ask before running).</summary>
     public static bool Rebuilds(MaintenanceOperation operation) => operation is MaintenanceOperation.Optimize or MaintenanceOperation.Repair;
 
-    /// <summary>Texto da operação como no HeidiSQL ("Check", "Checksum", …).</summary>
+    /// <summary>Operation text as in HeidiSQL ("Check", "Checksum", …).</summary>
     public static string Caption(MaintenanceOperation operation) => operation switch
     {
         MaintenanceOperation.Check => "Check",
@@ -33,7 +33,7 @@ public static class TableMaintenance
         _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null),
     };
 
-    /// <summary>Pergunta antes de OPTIMIZE e REPAIR (a sessão é acrescentada por quem pergunta).</summary>
+    /// <summary>Question before OPTIMIZE and REPAIR (the session is added by the caller).</summary>
     public static string Question(MaintenanceOperation operation, int tables, MaintenanceOptions options)
     {
         var text = string.Create(CultureInfo.InvariantCulture,
@@ -45,7 +45,7 @@ public static class TableMaintenance
         return text;
     }
 
-    /// <summary>Corre a operação numa tabela ou view e devolve as linhas do servidor.</summary>
+    /// <summary>Runs the operation on a table or view and returns the server's rows.</summary>
     public static async Task<IReadOnlyList<MaintenanceMessage>> RunAsync(SessionHost host, MaintenanceOperation operation, DbObjectRef table,
         MaintenanceOptions options, CancellationToken cancellationToken)
     {
@@ -66,8 +66,8 @@ public static class TableMaintenance
     }
 
     /// <summary>
-    /// Uma linha do servidor: <c>Table, Op, Msg_type, Msg_text</c> no CHECK, ANALYZE, OPTIMIZE e REPAIR; <c>Table, Checksum</c>
-    /// no CHECKSUM (NULL quando a tabela não existe).
+    /// A server row: <c>Table, Op, Msg_type, Msg_text</c> for CHECK, ANALYZE, OPTIMIZE and REPAIR; <c>Table, Checksum</c>
+    /// for CHECKSUM (NULL when the table does not exist).
     /// </summary>
     internal static MaintenanceMessage ToMessage(DbObjectRef table, string operation, IReadOnlyList<string?> row) => row.Count switch
     {

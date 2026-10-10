@@ -5,10 +5,10 @@ using Eunomia.App.Settings;
 namespace Eunomia.Infra.Settings;
 
 /// <summary>
-/// Settings globais em JSON (secção 21.4). Lê com tolerância: ficheiro ausente dá os defaults; ficheiro corrompido
-/// é guardado ao lado com o sufixo <c>.corrupt-&lt;data&gt;</c> e as settings voltam da versão anterior
-/// (<c>.bak</c>, gravada em cada Save) ou, sem ela, dos defaults, para a aplicação arrancar sempre. Campos desconhecidos
-/// (de uma versão mais nova) são ignorados.
+/// Global settings in JSON (section 21.4). Reads tolerantly: a missing file gives the defaults; a corrupted file
+/// is kept next to it with the <c>.corrupt-&lt;date&gt;</c> suffix and the settings come back from the previous version
+/// (<c>.bak</c>, written on every Save) or, without it, from the defaults, so the application always starts. Unknown fields
+/// (from a newer version) are ignored.
 /// </summary>
 public sealed class JsonSettingsStore(string path, TimeProvider? clock = null) : ISettingsStore
 {
@@ -16,7 +16,7 @@ public sealed class JsonSettingsStore(string path, TimeProvider? clock = null) :
 
     public string Path { get; } = path;
 
-    /// <summary>Último ficheiro corrompido posto de lado por <see cref="Load"/>, para avisar o utilizador.</summary>
+    /// <summary>Last corrupted file set aside by <see cref="Load"/>, to warn the user.</summary>
     public string? LastCorruptBackup { get; private set; }
 
     public AppSettings Load()
@@ -36,7 +36,7 @@ public sealed class JsonSettingsStore(string path, TimeProvider? clock = null) :
             var backup = $"{Path}.corrupt-{_clock.GetUtcNow():yyyyMMddHHmmss}";
             File.Move(Path, backup, overwrite: true);
             LastCorruptBackup = backup;
-            // A versão anterior (gravada ao lado em cada Save) evita perder as preferências todas.
+            // The previous version (written next to it on every Save) avoids losing all the preferences.
             try
             {
                 if (File.Exists(Path + ".bak") && JsonSerializer.Deserialize(File.ReadAllBytes(Path + ".bak"), SettingsJsonContext.Default.AppSettings) is { } previous)
@@ -60,12 +60,12 @@ public sealed class JsonSettingsStore(string path, TimeProvider? clock = null) :
     }
 }
 
-/// <summary>Passos de migração entre versões do formato (vazio enquanto só existe a versão 1).</summary>
+/// <summary>Migration steps between format versions (empty while only version 1 exists).</summary>
 public static class SettingsMigrations
 {
     public static AppSettings Upgrade(AppSettings settings)
     {
-        // Versões futuras: if (settings.Version < 2) { ...; settings.Version = 2; }
+        // Future versions: if (settings.Version < 2) { ...; settings.Version = 2; }
         settings.Shortcuts ??= [];
         settings.MainWindow ??= new WindowGeometry();
         settings.Panels ??= new PanelLayout();
@@ -83,7 +83,7 @@ public static class SettingsMigrations
     }
 }
 
-/// <summary>Serialização gerada em compile time (segura para NativeAOT e trimming).</summary>
+/// <summary>Serialisation generated at compile time (safe for NativeAOT and trimming).</summary>
 [JsonSourceGenerationOptions(
     WriteIndented = true,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

@@ -227,7 +227,7 @@ public sealed class GridKeymapTests
     [Fact]
     public void CtrlInsertNaoEhCopy()
     {
-        // No HeidiSQL Ctrl+Ins duplica a linha (FAM-G09); não pode ficar como Copy.
+        // In HeidiSQL Ctrl+Ins duplicates the row (FAM-G09); it must not stay as Copy.
         Assert.Equal(GridCommand.None, Map.Resolve(Key.Insert, KeyModifiers.Control, GridKeyContext.Navigation));
     }
 

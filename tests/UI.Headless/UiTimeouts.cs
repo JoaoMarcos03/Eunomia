@@ -1,15 +1,15 @@
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Timeout de cada teste headless assíncrono (roadmap 2.4; <c>Timeout</c> do <c>[AvaloniaFact]</c>): um teste que fica à
-/// espera de algo que nunca chega falha sozinho em vez de pendurar a corrida. <c>TestHarnessTests</c> exige-o nos
-/// testes novos.
+/// Timeout of each asynchronous headless test (roadmap 2.4; <c>Timeout</c> of <c>[AvaloniaFact]</c>): a test that waits
+/// for something that never comes fails on its own instead of hanging the run. <c>TestHarnessTests</c> requires it on
+/// new tests.
 /// </summary>
 internal static class UiTimeouts
 {
-    /// <summary>Testes do dia a dia: o mais lento leva ~6 s no Windows em Debug; os runners do CI são várias vezes mais lentos.</summary>
+    /// <summary>Everyday tests: the slowest takes ~6 s on Windows in Debug; the CI runners are several times slower.</summary>
     public const int Default = 120_000;
 
-    /// <summary>Medições com <c>EUNOMIA_PERF=1</c> (milhares de tabelas, rede lenta simulada).</summary>
+    /// <summary>Measurements with <c>EUNOMIA_PERF=1</c> (thousands of tables, simulated slow network).</summary>
     public const int Measurement = 1_800_000;
 }

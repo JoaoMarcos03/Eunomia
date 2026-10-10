@@ -16,17 +16,17 @@ public enum HelperKind
     HistoryItem,
 }
 
-/// <summary>Um nó do painel de helpers: texto, segunda coluna e o que representa (coluna, snippet, entrada do histórico).</summary>
+/// <summary>A node of the helpers panel: text, second column and what it represents (column, snippet, history entry).</summary>
 public sealed record HelperItem(HelperKind Kind, string Text, string Attribute = "", object? Payload = null)
 {
     public IReadOnlyList<HelperItem> Children { get; init; } = [];
 }
 
 /// <summary>
-/// Painel de helpers da query tab (anexo C §1.11, §3.9; FAM-Q06): "Columns in tbl", "SQL functions", "SQL keywords",
-/// "Snippets" e "Query history" (dias, o mais recente primeiro, com "today"/"yesterday"; entradas <c>hh:nn: sql</c> e a
-/// duração). "Query profile" e "Bind parameters" ficam para depois do MVP (secção 27.2). Também gera
-/// SELECT/INSERT/UPDATE/DELETE para as colunas escolhidas.
+/// Query tab helpers panel (appendix C §1.11, §3.9; FAM-Q06): "Columns in tbl", "SQL functions", "SQL keywords",
+/// "Snippets" and "Query history" (days, most recent first, with "today"/"yesterday"; entries <c>hh:nn: sql</c> and the
+/// duration). "Query profile" and "Bind parameters" come after the MVP (section 27.2). It also generates
+/// SELECT/INSERT/UPDATE/DELETE for the chosen columns.
 /// </summary>
 public static class QueryHelpers
 {
@@ -36,10 +36,10 @@ public static class QueryHelpers
     public const int SnippetsRoot = 3;
     public const int HistoryRoot = 4;
 
-    /// <param name="language">Linguagem da sessão da tab (funções e palavras-chave).</param>
-    /// <param name="table">Tabela ou view selecionada na árvore (null: sem colunas).</param>
-    /// <param name="snippets">Caminhos dos ficheiros <c>.sql</c> da pasta dos snippets.</param>
-    /// <param name="today">Data local de hoje (para "today"/"yesterday").</param>
+    /// <param name="language">Language of the tab's session (functions and keywords).</param>
+    /// <param name="table">Table or view selected in the tree (null: no columns).</param>
+    /// <param name="snippets">Paths of the <c>.sql</c> files in the snippets folder.</param>
+    /// <param name="today">Today's local date (for "today"/"yesterday").</param>
     public static IReadOnlyList<HelperItem> Build(ISqlLanguage language, DbObjectRef? table, IReadOnlyList<ColumnDefinition>? columns,
         IEnumerable<string> snippets, IEnumerable<QueryHistoryEntry> history, DateTime today)
     {
@@ -91,7 +91,7 @@ public static class QueryHelpers
             entry);
     }
 
-    /// <summary>Texto que "Insert at cursor" (ou o duplo clique) insere: o nome, o SQL do histórico ou o snippet.</summary>
+    /// <summary>Text that "Insert at cursor" (or a double click) inserts: the name, the history SQL or the snippet.</summary>
     public static string? InsertText(ISqlLanguage language, HelperItem item, Func<string, string> readSnippet)
     {
         ArgumentNullException.ThrowIfNull(language);
@@ -107,7 +107,7 @@ public static class QueryHelpers
         };
     }
 
-    /// <summary>Generate SELECT/INSERT/UPDATE/DELETE para as colunas escolhidas (todas, se nenhuma).</summary>
+    /// <summary>Generate SELECT/INSERT/UPDATE/DELETE for the chosen columns (all of them, if none).</summary>
     public static string Generate(ISqlLanguage language, string kind, DbObjectRef table, IReadOnlyList<string> columns)
     {
         ArgumentNullException.ThrowIfNull(language);
@@ -126,13 +126,13 @@ public static class QueryHelpers
         };
     }
 
-    /// <summary>Pasta dos snippets: a das settings, senão <c>Documents\Eunomia\Snippets</c>.</summary>
+    /// <summary>Snippets folder: the one in the settings, otherwise <c>Documents\Eunomia\Snippets</c>.</summary>
     public static string SnippetsDirectory(string? configured) =>
         !string.IsNullOrWhiteSpace(configured)
             ? configured
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Eunomia", "Snippets");
 
-    /// <summary>Nome de ficheiro válido para um snippet (sem caracteres proibidos, com <c>.sql</c>).</summary>
+    /// <summary>Valid file name for a snippet (without forbidden characters, with <c>.sql</c>).</summary>
     public static string SnippetFileName(string name)
     {
         ArgumentNullException.ThrowIfNull(name);

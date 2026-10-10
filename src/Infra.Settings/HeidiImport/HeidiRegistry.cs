@@ -5,24 +5,24 @@ using Microsoft.Win32;
 namespace Eunomia.Infra.Settings.HeidiImport;
 
 /// <summary>
-/// Settings do HeidiSQL instalado neste computador (Fase 13): o HeidiSQL guarda-as em <c>HKCU\Software\HeidiSQL</c>, com a
-/// mesma árvore que o ficheiro exportado (subchaves = caminho, valores de texto = tipo 1, DWORD = tipo 3). Ler o
-/// registo dá o mesmo <see cref="HeidiSettingsFile"/> que o import do ficheiro, sem o utilizador ter de exportar
-/// primeiro.
+/// Settings of the HeidiSQL installed on this computer (phase 13): HeidiSQL keeps them in <c>HKCU\Software\HeidiSQL</c>, with
+/// the same tree as the exported file (subkeys = path, text values = type 1, DWORD = type 3). Reading the
+/// registry gives the same <see cref="HeidiSettingsFile"/> as the file import, without the user having to export
+/// first.
 /// </summary>
 [SupportedOSPlatform("windows")]
 public static class HeidiRegistry
 {
     public const string DefaultKey = @"Software\HeidiSQL";
 
-    /// <summary>Há pelo menos uma sessão do HeidiSQL (subchave de <c>Servers</c>) neste utilizador.</summary>
+    /// <summary>There is at least one HeidiSQL session (a subkey of <c>Servers</c>) for this user.</summary>
     public static bool HasSessions(string keyPath = DefaultKey)
     {
         using var servers = Registry.CurrentUser.OpenSubKey(keyPath + @"\Servers");
         return servers is not null && servers.SubKeyCount > 0;
     }
 
-    /// <summary>Os valores da chave do HeidiSQL, ou <c>null</c> se não existir.</summary>
+    /// <summary>The values of the HeidiSQL key, or <c>null</c> if it does not exist.</summary>
     public static HeidiSettingsFile? Read(string keyPath = DefaultKey)
     {
         using var root = Registry.CurrentUser.OpenSubKey(keyPath);

@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 namespace Eunomia.App.Desktop;
 
 /// <summary>
-/// Informação de composição do DWM (<c>DwmGetCompositionTimingInfo</c> com hwnd nulo, Windows 8+,
-/// existe no Windows 10). No benchmark só se usa a taxa de refresh: no Windows 10 desta máquina os
-/// contadores de frames globais não avançam.
+/// DWM composition information (<c>DwmGetCompositionTimingInfo</c> with a null hwnd, Windows 8+,
+/// present on Windows 10). The benchmark only uses the refresh rate: on this machine's Windows 10 the
+/// global frame counters do not advance.
 /// </summary>
 internal static partial class DwmTiming
 {
@@ -16,7 +16,7 @@ internal static partial class DwmTiming
         public uint Denominator;
     }
 
-    // DWM_TIMING_INFO (dwmapi.h), campos até cFramesDropped; o tamanho total é o da estrutura completa.
+    // DWM_TIMING_INFO (dwmapi.h), fields up to cFramesDropped; the total size is that of the full structure.
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct TimingInfo
     {
@@ -65,7 +65,7 @@ internal static partial class DwmTiming
     [LibraryImport("dwmapi.dll")]
     private static partial int DwmGetCompositionTimingInfo(IntPtr hwnd, ref TimingInfo info);
 
-    /// <summary>(frames compostos, refreshes, taxa de refresh em Hz) ou <c>null</c> se a chamada falhar.</summary>
+    /// <summary>(composed frames, refreshes, refresh rate in Hz) or <c>null</c> if the call fails.</summary>
     public static (ulong Frames, ulong Refreshes, double RefreshHz)? Sample()
     {
         var info = new TimingInfo { cbSize = (uint)Marshal.SizeOf<TimingInfo>() };

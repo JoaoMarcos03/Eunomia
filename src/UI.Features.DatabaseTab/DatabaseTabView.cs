@@ -6,9 +6,9 @@ using Eunomia.UI.Controls.Common.TreeList;
 namespace Eunomia.UI.Features.DatabaseTab;
 
 /// <summary>
-/// Database tab (secção 4.9; anexo C §1.8): lista dos objetos da base com Name, Rows, Size, Created, Updated, Engine,
-/// Comment e Type visíveis e 11 colunas ocultas (menu do cabeçalho), multi-seleção, rename in-place com F2 e Enter ou
-/// duplo clique para abrir o objeto. A lista ordena pelo nome por omissão, como a árvore.
+/// Database tab (section 4.9; appendix C §1.8): list of the database's objects with Name, Rows, Size, Created, Updated, Engine,
+/// Comment and Type visible and 11 hidden columns (header menu), multi-selection, in-place rename with F2, and Enter or
+/// double click to open the object. The list sorts by name by default, like the tree.
 /// </summary>
 public sealed class DatabaseTabView : DockPanel
 {
@@ -50,12 +50,12 @@ public sealed class DatabaseTabView : DockPanel
 
     public TreeListControl List => _view.List;
 
-    /// <summary>Base mostrada (ou <c>null</c> antes da primeira).</summary>
+    /// <summary>Database shown (or <c>null</c> before the first one).</summary>
     public string? Database { get; private set; }
 
     public IReadOnlyList<DbObjectInfo> Objects { get; private set; } = [];
 
-    /// <summary>Objetos selecionados pela ordem da lista.</summary>
+    /// <summary>Selected objects in list order.</summary>
     public IReadOnlyList<DbObjectInfo> SelectedObjects
     {
         get
@@ -65,13 +65,13 @@ public sealed class DatabaseTabView : DockPanel
         }
     }
 
-    /// <summary>Enter ou duplo clique: abre o objeto.</summary>
+    /// <summary>Enter or double click: opens the object.</summary>
     public event EventHandler<DbObjectInfo>? ObjectActivated;
 
-    /// <summary>Uma coluna foi mostrada ou escondida (para gravar).</summary>
+    /// <summary>A column was shown or hidden (to save it).</summary>
     public event EventHandler? ColumnsChanged;
 
-    /// <summary>Cabeçalhos das colunas visíveis.</summary>
+    /// <summary>Headers of the visible columns.</summary>
     public IReadOnlyList<string> VisibleColumns
     {
         get => List.Columns.Where(c => c.Visible).Select(c => c.Header).ToList();
@@ -86,7 +86,7 @@ public sealed class DatabaseTabView : DockPanel
         }
     }
 
-    /// <summary>Mostra os objetos de uma base; mantém a seleção quando é a mesma base.</summary>
+    /// <summary>Shows the objects of a database; keeps the selection when it is the same database.</summary>
     public void Show(string database, IReadOnlyList<DbObjectInfo> objects)
     {
         ArgumentNullException.ThrowIfNull(objects);
@@ -119,7 +119,7 @@ public sealed class DatabaseTabView : DockPanel
         List.SetRoots(nodes);
     }
 
-    /// <summary>Seleciona e foca o objeto com este nome (a árvore focou um objeto da mesma base).</summary>
+    /// <summary>Selects and focuses the object with this name (the tree focused an object of the same database).</summary>
     public void Focus(DbObjectRef obj)
     {
         ArgumentNullException.ThrowIfNull(obj);

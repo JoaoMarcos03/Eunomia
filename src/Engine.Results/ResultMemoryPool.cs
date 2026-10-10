@@ -1,10 +1,10 @@
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Orçamento global dos resultados (secção 11.3, PR-17: 1 GB por omissão, configurável): os resultados que o usam
-/// dizem quanto têm em memória; acima do orçamento, os maiores despejam blocos para o spill (os menos usados e fora do
-/// intervalo que o grid mostra) até o total voltar a caber. Sem pasta de spill, um resultado não consegue despejar e
-/// fica como está. Thread-safe.
+/// Global budget for results (section 11.3, PR-17: 1 GB by default, configurable): the results that use it report how
+/// much they hold in memory; above the budget, the largest ones spill blocks (the least used, outside the range the
+/// grid shows) until the total fits again. Without a spill folder, a result cannot spill and stays
+/// as it is. Thread-safe.
 /// </summary>
 public sealed class ResultMemoryPool(long budgetBytes = ResultMemoryPool.DefaultBudgetBytes)
 {
@@ -17,7 +17,7 @@ public sealed class ResultMemoryPool(long budgetBytes = ResultMemoryPool.Default
 
     public long BudgetBytes { get; set; } = budgetBytes;
 
-    /// <summary>Bytes em memória de todos os resultados registados.</summary>
+    /// <summary>Bytes in memory of every registered result.</summary>
     public long TotalBytes => Interlocked.Read(ref _total);
 
     internal void Register(MaterializedRowSource source)
@@ -40,14 +40,14 @@ public sealed class ResultMemoryPool(long budgetBytes = ResultMemoryPool.Default
         Interlocked.Add(ref _total, -resident);
     }
 
-    /// <summary>Um resultado mudou de tamanho; acima do orçamento, despeja nos maiores.</summary>
+    /// <summary>A result changed size; above the budget, the largest ones spill.</summary>
     internal void Changed(long delta)
     {
         if (Interlocked.Add(ref _total, delta) <= BudgetBytes || delta <= 0)
         {
             return;
         }
-        // Um só a despejar de cada vez; o despejo volta a chamar Changed com deltas negativos.
+        // Only one spilling at a time; spilling calls Changed again with negative deltas.
         if (Interlocked.CompareExchange(ref _trimming, 1, 0) != 0)
         {
             return;

@@ -13,9 +13,9 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Editor de célula em janela (anexo D B15, <c>texteditor.pas</c>): texto com quebra de linhas opcional e a linha de
-/// estado "N characters (max: M), L lines, cursor at y:x"; Ctrl+Enter aplica, Esc cancela, fechar com alterações
-/// pergunta "Apply modifications?". Em binário, o texto é hex (<c>0x…</c>) e só aceita dígitos hexadecimais.
+/// Window cell editor (appendix D B15, <c>texteditor.pas</c>): text with optional word wrap and the status line
+/// "N characters (max: M), L lines, cursor at y:x"; Ctrl+Enter applies, Esc cancels, closing with changes
+/// asks "Apply modifications?". For binary, the text is hex (<c>0x…</c>) and only accepts hexadecimal digits.
 /// </summary>
 public sealed partial class TextEditorWindow : Window
 {
@@ -115,14 +115,14 @@ public sealed partial class TextEditorWindow : Window
         UpdateStatus();
     }
 
-    /// <summary>Texto atual (testes).</summary>
+    /// <summary>Current text (tests).</summary>
     public string Text
     {
         get => _text.Text ?? string.Empty;
         set => _text.Text = value;
     }
 
-    /// <summary>Texto da linha de estado (testes).</summary>
+    /// <summary>Status line text (tests).</summary>
     public string Status => _status.Text ?? string.Empty;
 
     private void UpdateStatus()

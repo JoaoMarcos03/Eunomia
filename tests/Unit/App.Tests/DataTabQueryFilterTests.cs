@@ -3,7 +3,7 @@ using Eunomia.App.Objects;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Correções da auditoria da Fase 14: filtros com uma só condição e nomes com vírgulas no table editor.</summary>
+/// <summary>Fixes from the phase 14 audit: filters with a single condition and names with commas in the table editor.</summary>
 public sealed class DataTabQueryFilterTests
 {
     [Theory]

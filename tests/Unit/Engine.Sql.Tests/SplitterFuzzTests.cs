@@ -5,10 +5,10 @@ using Eunomia.Engine.Sql.Splitting;
 namespace Eunomia.Engine.Sql.Tests;
 
 /// <summary>
-/// Fuzzing determinístico do splitter (Fase 14): scripts aleatórios feitos de pedaços difíceis (aspas com escapes,
-/// comentários de todos os tipos, <c>DELIMITER</c>, ponto e vírgula dentro de strings, texto por acabar, Unicode fora do
-/// BMP). O Run SQL file lê em blocos de 1 MB e retoma a meio: a divisão não pode depender de onde caem os blocos nem de
-/// onde se retoma, senão uma instrução partida ia para o servidor.
+/// Deterministic fuzzing of the splitter (phase 14): random scripts made of hard pieces (quotes with escapes,
+/// comments of every kind, <c>DELIMITER</c>, semicolons inside strings, unfinished text, Unicode outside the
+/// BMP). Run SQL file reads in 1 MB blocks and resumes midway: the split must not depend on where the blocks fall or on
+/// where it resumes, otherwise a broken statement would go to the server.
 /// </summary>
 public sealed class SplitterFuzzTests
 {
@@ -58,10 +58,10 @@ public sealed class SplitterFuzzTests
             var pieces = Stream(text, new Random(run));
             Assert.Equal(whole.Select(s => (s.Text, s.Start, s.End, s.Line, s.Delimiter)), pieces.Select(s => (s.Text, s.Start, s.End, s.Line, s.Delimiter)));
 
-            // O splitter do editor dá as mesmas instruções (o Run SQL file e as query tabs enviam o mesmo).
+            // The editor's splitter gives the same statements (Run SQL file and the query tabs send the same thing).
             Assert.Equal(SqlSplitter.Split(text).Select(s => s.Text), whole.Select(s => s.Text));
 
-            // Posições dentro do texto, por ordem, e a instrução está lá.
+            // Positions within the text, in order, and the statement is there.
             long previous = 0;
             foreach (var s in whole)
             {
@@ -84,7 +84,7 @@ public sealed class SplitterFuzzTests
             var whole = Stream(text, chunks: null);
             for (var k = 0; k < whole.Count; k++)
             {
-                // Retoma pelo ponto gravado no journal depois da instrução k (com o delimitador em vigor).
+                // Resumes from the point saved in the journal after statement k (with the delimiter in effect).
                 var resumed = Stream(text, new Random(run + k), whole[k].Next);
                 Assert.Equal(whole.Skip(k + 1).Select(s => (s.Text, s.Start, s.Delimiter)), resumed.Select(s => (s.Text, s.Start, s.Delimiter)));
             }
@@ -104,7 +104,7 @@ public sealed class SplitterFuzzTests
                 lines.Add(line.Length);
             }
             var tokens = MySqlLexer.Tokenize(text);
-            // Tokens dentro da linha deles, por ordem e sem sobreposições.
+            // Tokens within their own line, in order and without overlaps.
             var last = (Line: -1, End: 0);
             foreach (var (line, token) in tokens)
             {

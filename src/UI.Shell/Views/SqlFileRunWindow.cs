@@ -10,10 +10,10 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Progresso do Run SQL file (anexo B §4.2: o <c>IProgressDialog</c> do HeidiSQL): "Importing file X", "Processing
-/// query #N (E Errors)", "Position in file: a / b. Affected rows: n.", barra pelos bytes de todos os ficheiros, tempo e
-/// estimativa. Não é modal: a sessão continua usável, o job corre numa ligação de job. Cancel pára o job; parado por
-/// erro ou cancel, Resume retoma no ponto guardado no journal.
+/// Run SQL file progress (appendix B §4.2: HeidiSQL's <c>IProgressDialog</c>): "Importing file X", "Processing
+/// query #N (E Errors)", "Position in file: a / b. Affected rows: n.", a bar by the bytes of all the files, time and
+/// estimate. Not modal: the session stays usable, the job runs on a job connection. Cancel stops the job; stopped by
+/// an error or a cancel, Resume continues from the point saved in the journal.
 /// </summary>
 public sealed class SqlFileRunWindow : Window
 {
@@ -68,12 +68,12 @@ public sealed class SqlFileRunWindow : Window
         Content = panel;
     }
 
-    /// <summary>O job em curso pára com este token (um novo a cada ficheiro ou retoma).</summary>
+    /// <summary>The job in progress stops with this token (a new one for each file or resume).</summary>
     public CancellationToken Token => _cts.Token;
 
     public bool Running { get; private set; }
 
-    /// <summary>Resume foi pedido (o shell corre a retoma e volta a chamar <see cref="Start"/>).</summary>
+    /// <summary>Resume was requested (the shell runs the resume and calls <see cref="Start"/> again).</summary>
     public event EventHandler? ResumeRequested;
 
     internal string Line1 => _line1.Text ?? string.Empty;
@@ -84,7 +84,7 @@ public sealed class SqlFileRunWindow : Window
 
     internal Button CancelButton => _cancel;
 
-    /// <summary>Começa um ficheiro; <paramref name="doneBytes"/> são os bytes dos ficheiros anteriores.</summary>
+    /// <summary>Starts a file; <paramref name="doneBytes"/> are the bytes of the previous files.</summary>
     public void Start(string path, long doneBytes)
     {
         if (_cts.IsCancellationRequested)
@@ -115,7 +115,7 @@ public sealed class SqlFileRunWindow : Window
         _time.Text = string.Create(c, $"Elapsed {elapsed:hh\\:mm\\:ss}, remaining about {eta:hh\\:mm\\:ss}");
     }
 
-    /// <summary>Fim: a mensagem final; Resume aparece quando o job ficou parado com journal.</summary>
+    /// <summary>End: the final message; Resume shows when the job was left stopped with a journal.</summary>
     public void Finish(string message, bool canResume)
     {
         Running = false;

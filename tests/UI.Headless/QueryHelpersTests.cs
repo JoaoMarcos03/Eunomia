@@ -8,7 +8,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Painel de helpers: secções, filtro, Insert at cursor, snippets e histórico (anexo C §1.11, §3.9; FAM-Q06, Q09).</summary>
+/// <summary>Helpers panel: sections, filter, Insert at cursor, snippets and history (appendix C §1.11, §3.9; FAM-Q06, Q09).</summary>
 public sealed class QueryHelpersPanelTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-qh-" + Guid.NewGuid().ToString("N")[..8]);
@@ -35,7 +35,7 @@ public sealed class QueryHelpersPanelTests : IDisposable
         var helpers = Assert.IsType<QueryHelpersView>(view.Helpers);
         Assert.Equal(["Columns", "SQL functions", "SQL keywords", "Snippets", "Query history"], helpers.Tree.Roots.Select(r => r[0]));
 
-        // Filtro: só as funções que contêm o texto, com a raiz aberta.
+        // Filter: only the functions that contain the text, with the root open.
         helpers.Filter.Text = "concat_w";
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         var functions = helpers.Tree.Roots[QueryHelpers.FunctionsRoot];
@@ -43,7 +43,7 @@ public sealed class QueryHelpersPanelTests : IDisposable
         var match = Assert.Single(helpers.Tree.VisibleNodes, n => n.Depth == 1);
         Assert.Equal("CONCAT_WS", match[0]);
 
-        // Insert at cursor (o mesmo que o duplo clique).
+        // Insert at cursor (the same as double click).
         view.Editor.Text = "SELECT ";
         view.Editor.Editor.CaretOffset = 7;
         helpers.Tree.FocusedNode = match;
@@ -52,7 +52,7 @@ public sealed class QueryHelpersPanelTests : IDisposable
         helpers.Filter.Text = string.Empty;
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();
 
-        // Save as snippet: ficheiro na pasta, aparece no painel; Insert at cursor insere o conteúdo; Delete pergunta.
+        // Save as snippet: a file in the folder, shows in the panel; Insert at cursor inserts the content; Delete asks.
         window.SnippetNameOverride = (_, _) => "meu/snippet";
         Assert.True(await commands.ExecuteAsync("query.saveSnippet"));
         var file = Path.Combine(settings.Query.SnippetsDirectory, "meu_snippet.sql");
@@ -68,7 +68,7 @@ public sealed class QueryHelpersPanelTests : IDisposable
         Assert.False(File.Exists(file));
         Assert.Empty(helpers.Tree.Roots[QueryHelpers.SnippetsRoot].Children);
 
-        // Snippets ▸ e recentes no dropdown do Load.
+        // Snippets ▸ and recent files in the Load drop-down.
         Assert.IsType<Avalonia.Controls.MenuItem>(window.LoadSqlItems()[0]);
         window.Close();
     }

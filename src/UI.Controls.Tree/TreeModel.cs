@@ -3,16 +3,16 @@ using Eunomia.Engine.Sql.Filters;
 namespace Eunomia.UI.Controls.Tree;
 
 /// <summary>
-/// Modelo da árvore de bases: nós lazy, lista achatada de nós visíveis (secção 15.3) e a semântica
-/// do Database filter e do Table filter (secção 4.3):
+/// Database tree model: lazy nodes, a flattened list of visible nodes (section 15.3) and the semantics
+/// of the Database filter and the Table filter (section 4.3):
 /// <list type="bullet">
-/// <item>o Database filter só se aplica a nós de base; esconder uma base esconde os filhos;</item>
-/// <item>o Table filter só se aplica a tabelas, views, procedures, functions, triggers e events;
-/// sessões, grupos e colunas nunca são escondidos, e bases sem objetos que correspondam continuam visíveis;</item>
-/// <item>com "Show only favorites", um objeto só aparece se corresponder ao Table filter e for favorito;</item>
-/// <item>os filtros atuam em todas as sessões e em nós carregados depois (ao expandir).</item>
+/// <item>the Database filter only applies to database nodes; hiding a database hides its children;</item>
+/// <item>the Table filter only applies to tables, views, procedures, functions, triggers and events;
+/// sessions, groups and columns are never hidden, and databases without matching objects stay visible;</item>
+/// <item>with "Show only favorites", an object only shows if it matches the Table filter and is a favourite;</item>
+/// <item>the filters act on every session and on nodes loaded later (on expanding).</item>
 /// </list>
-/// Não é thread-safe: usar na UI thread.
+/// Not thread-safe: use it on the UI thread.
 /// </summary>
 public sealed class TreeModel
 {
@@ -35,7 +35,7 @@ public sealed class TreeModel
 
     public IReadOnlyList<TreeNode> Roots => _roots;
 
-    /// <summary>Acrescenta uma raiz (sessão aberta, FAM-S07).</summary>
+    /// <summary>Adds a root (an opened session, FAM-S07).</summary>
     public void AddRoot(TreeNode root)
     {
         ArgumentNullException.ThrowIfNull(root);
@@ -43,7 +43,7 @@ public sealed class TreeModel
         Rebuild();
     }
 
-    /// <summary>Retira uma raiz (Disconnect).</summary>
+    /// <summary>Removes a root (Disconnect).</summary>
     public void RemoveRoot(TreeNode root)
     {
         if (_roots.Remove(root))
@@ -53,9 +53,9 @@ public sealed class TreeModel
     }
 
     /// <summary>
-    /// Refresh (F5, anexo D A9): esquece os filhos carregados do nó e volta a pedi-los se estava expandido, voltando a
-    /// expandir os descendentes que estavam expandidos (bases, grupos, tabelas com colunas) e que ainda existem. Um
-    /// descendente que falhe a carregar fica fechado e vai para <see cref="LoadFailed"/>. Devolve quando acabar.
+    /// Refresh (F5, appendix D A9): forgets the node's loaded children and requests them again if it was expanded, expanding
+    /// again the descendants that were expanded (databases, groups, tables with columns) and that still exist. A
+    /// descendant that fails to load stays closed and goes to <see cref="LoadFailed"/>. Returns when finished.
     /// </summary>
     public async Task ReloadAsync(TreeNode node, CancellationToken cancellationToken = default)
     {
@@ -118,7 +118,7 @@ public sealed class TreeModel
         }
     }
 
-    /// <summary>Caminho de um nó desde a raiz (tipo e nome de cada nível), para o encontrar depois de um refresh.</summary>
+    /// <summary>Path of a node from the root (kind and name of each level), to find it again after a refresh.</summary>
     public static IReadOnlyList<(TreeNodeKind Kind, string Name)> PathOf(TreeNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -131,8 +131,8 @@ public sealed class TreeModel
     }
 
     /// <summary>
-    /// O nó carregado mais fundo ao longo de <paramref name="path"/>. Os grupos são transparentes (o objeto é
-    /// encontrado com e sem "Group objects by type"). <c>null</c> se nem a raiz existir.
+    /// The deepest loaded node along <paramref name="path"/>. Groups are transparent (the object is
+    /// found with and without "Group objects by type"). <c>null</c> if not even the root exists.
     /// </summary>
     public TreeNode? FindDeepest(IReadOnlyList<(TreeNodeKind Kind, string Name)> path)
     {
@@ -180,7 +180,7 @@ public sealed class TreeModel
         return null;
     }
 
-    /// <summary>Expande os antepassados já carregados de um nó, para ele ficar visível.</summary>
+    /// <summary>Expands the already loaded ancestors of a node, so it becomes visible.</summary>
     public void Reveal(TreeNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -199,7 +199,7 @@ public sealed class TreeModel
         }
     }
 
-    /// <summary>Collapse all (anexo D A10): fecha todos os descendentes do nó; o próprio nó fica aberto.</summary>
+    /// <summary>Collapse all (appendix D A10): closes every descendant of the node; the node itself stays open.</summary>
     public void CollapseDescendants(TreeNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -219,20 +219,20 @@ public sealed class TreeModel
         Rebuild();
     }
 
-    /// <summary>Volta a calcular a lista de visíveis e avisa a vista (nós mudados por fora: tamanhos, estados).</summary>
+    /// <summary>Recomputes the visible list and notifies the view (nodes changed from outside: sizes, states).</summary>
     public void Refresh()
     {
         _filterVersion++;
         Rebuild();
     }
 
-    /// <summary>Um descendente falhou a carregar durante um refresh (vai para o SQL log).</summary>
+    /// <summary>A descendant failed to load during a refresh (goes to the SQL log).</summary>
     public event EventHandler<Exception>? LoadFailed;
 
-    /// <summary>A estrela de um objeto mudou (para gravar os favoritos da sessão).</summary>
+    /// <summary>An object's star changed (to save the session's favourites).</summary>
     public event EventHandler<TreeNode>? FavoriteChanged;
 
-    /// <summary>Nós visíveis por ordem de apresentação (só dentro de nós expandidos).</summary>
+    /// <summary>Visible nodes in display order (only inside expanded nodes).</summary>
     public IReadOnlyList<TreeNode> Visible => _visible;
 
     public TreeFilterExpression DatabaseFilter { get; private set; } = TreeFilterExpression.Empty;
@@ -241,10 +241,10 @@ public sealed class TreeModel
 
     public bool OnlyFavorites { get; private set; }
 
-    /// <summary>A lista de visíveis mudou.</summary>
+    /// <summary>The visible list changed.</summary>
     public event EventHandler? Changed;
 
-    /// <summary>Uma regex nova é inválida. Disparado uma vez por texto (vai para o SQL log).</summary>
+    /// <summary>A new regex is invalid. Raised once per text (goes to the SQL log).</summary>
     public event EventHandler<string>? FilterError;
 
     public void SetDatabaseFilter(string text)
@@ -282,7 +282,7 @@ public sealed class TreeModel
         Rebuild();
     }
 
-    /// <summary>Liga/desliga a estrela de um objeto.</summary>
+    /// <summary>Toggles an object's star.</summary>
     public void ToggleFavorite(TreeNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -303,7 +303,7 @@ public sealed class TreeModel
         }
     }
 
-    /// <summary>Indica se o nó passa nos filtros, incluindo os antepassados.</summary>
+    /// <summary>Whether the node passes the filters, ancestors included.</summary>
     public bool IsVisible(TreeNode node)
     {
         for (var n = node; n is not null; n = n.Parent)
@@ -316,7 +316,7 @@ public sealed class TreeModel
         return true;
     }
 
-    /// <summary>Expande o nó, carregando os filhos na primeira vez (com placeholder enquanto carrega).</summary>
+    /// <summary>Expands the node, loading the children the first time (with a placeholder while loading).</summary>
     public async Task ExpandAsync(TreeNode node, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -327,7 +327,7 @@ public sealed class TreeModel
         node.IsExpanded = true;
         if (_loading.TryGetValue(node, out var pending))
         {
-            // Já está a carregar (outro expand ou o ExpandAll): espera pelo mesmo pedido.
+            // Already loading (another expand or ExpandAll): waits for the same request.
             await pending.ConfigureAwait(true);
         }
         else if (node.Children is null)
@@ -380,7 +380,7 @@ public sealed class TreeModel
         Rebuild();
     }
 
-    /// <summary>Expande o nó e todos os descendentes até aos objetos (carrega todas as bases: caro, como no HeidiSQL).</summary>
+    /// <summary>Expands the node and every descendant down to the objects (loads every database: expensive, as in HeidiSQL).</summary>
     public async Task ExpandAllAsync(TreeNode node, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -399,8 +399,8 @@ public sealed class TreeModel
     }
 
     /// <summary>
-    /// Pesquisa incremental case-insensitive: primeiro nó visível a partir de <paramref name="start"/>
-    /// (inclusive, com volta ao início) cujo nome começa por <paramref name="prefix"/>; -1 se não houver.
+    /// Case-insensitive incremental search: first visible node from <paramref name="start"/>
+    /// (inclusive, wrapping around to the start) whose name starts with <paramref name="prefix"/>; -1 if there is none.
     /// </summary>
     public int FindByPrefix(string prefix, int start)
     {
@@ -471,9 +471,9 @@ public sealed class TreeModel
     }
 
     /// <summary>
-    /// Somas da coluna Size (anexo D A8) do nó para cima. Base: soma dos objetos (também dentro de grupos), em branco
-    /// enquanto nenhum tiver tamanho e os tamanhos não forem conhecidos. Sessão: soma das bases, só se todas tiverem
-    /// tamanho. Grupos não têm tamanho.
+    /// Sums of the Size column (appendix D A8) from the node up. Database: the sum of the objects (inside groups too), blank
+    /// while none has a size and the sizes are not known. Session: the sum of the databases, only if all of them have a
+    /// size. Groups have no size.
     /// </summary>
     public static void UpdateSizes(TreeNode node)
     {
@@ -518,7 +518,7 @@ public sealed class TreeModel
         }
     }
 
-    /// <summary>Objetos carregados de uma base, dentro ou fora de grupos.</summary>
+    /// <summary>Loaded objects of a database, inside or outside groups.</summary>
     public static IEnumerable<TreeNode> ObjectsOf(TreeNode database)
     {
         ArgumentNullException.ThrowIfNull(database);

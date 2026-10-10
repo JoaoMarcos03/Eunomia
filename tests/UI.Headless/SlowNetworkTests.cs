@@ -13,9 +13,9 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Medição com um servidor lento pela rede (proxy a 256 KB/s com 60 ms por pedido; feedback da beta, 9 out 2026): a UI
-/// thread não pára enquanto chega uma página grande, e escolher outra coisa a meio cancela a carga. Só corre com
-/// <c>EUNOMIA_PERF=1</c>; resultados em <c>%TEMP%\eunomia-slow-network.txt</c>.
+/// Measurement with a server that is slow over the network (proxy at 256 KB/s with 60 ms per request; beta feedback, 9 Oct
+/// 2026): the UI thread does not stall while a large page arrives, and choosing something else halfway cancels the load. Only
+/// runs with <c>EUNOMIA_PERF=1</c>; results in <c>%TEMP%\eunomia-slow-network.txt</c>.
 /// </summary>
 public sealed class SlowNetworkTests
 {
@@ -25,10 +25,10 @@ public sealed class SlowNetworkTests
 
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
-    /// <summary>Maior intervalo entre duas voltas do ciclo de UI (um stall da UI thread aparece aqui).</summary>
+    /// <summary>Longest interval between two rounds of the UI loop (a UI thread stall shows here).</summary>
     private static TimeSpan _longestGap;
 
-    /// <summary>Corre a UI até <paramref name="condition"/>; devolve quanto demorou, ou <c>null</c> se não chegou lá.</summary>
+    /// <summary>Runs the UI until <paramref name="condition"/>; returns how long it took, or <c>null</c> if it never got there.</summary>
     private static async Task<TimeSpan?> PumpAsync(Func<bool> condition, TimeSpan timeout)
     {
         var total = Stopwatch.StartNew();
@@ -63,7 +63,7 @@ public sealed class SlowNetworkTests
         Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Medição: EUNOMIA_PERF=1 e servidor de teste.");
         var db = NewDatabaseName("eunomia_net_");
         var db2 = NewDatabaseName("eunomia_net2_");
-        // 20.000 linhas de 1,6 KB: a primeira página (1.000 linhas) leva uns 8 s pelo proxy; Show all, minutos.
+        // 20,000 rows of 1.6 KB: the first page (1,000 rows) takes about 8 s through the proxy; Show all, minutes.
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE DATABASE `{db2}`; " +
             $"CREATE TABLE `{db}`.big (id INT PRIMARY KEY, c1 VARCHAR(255), c2 VARCHAR(255), c3 VARCHAR(255), c4 VARCHAR(255), c5 VARCHAR(255), c6 VARCHAR(255), c7 VARCHAR(255), c8 VARCHAR(255)) ENGINE=InnoDB; " +
             $"INSERT INTO `{db}`.big SELECT a.n + 10 * b.n + 100 * c.n + 1000 * d.n + 10000 * e.n, REPEAT('a', 200), REPEAT('b', 200), REPEAT('c', 200), REPEAT('d', 200), REPEAT('e', 200), REPEAT('f', 200), REPEAT('g', 200), REPEAT('h', 200) " +
@@ -90,10 +90,10 @@ public sealed class SlowNetworkTests
 
             bool Showing(string name, int rows) => window.DataBrowser?.Table.Ref.Name == name && window.DataGrid.RowCount == rows && !host.IsPrimaryBusy;
 
-            // A meio da primeira página da grande (1 s depois de começar), escolhe outro nó.
+            // Halfway through the large table's first page (1 s after it starts), chooses another node.
             async Task<TimeSpan> MeasureAsync(string what, TreeNode next, Func<bool> done)
             {
-                // Sai da grande (se for a do Data tab, focá-la de novo não recarregava) e volta a ela.
+                // Leaves the large table (if it is the Data tab's, focusing it again would not reload) and goes back to it.
                 window.ShowDataTab();
                 window.Tree.Tree.FocusedNode = Child(dbNode, "small");
                 await UntilAsync(() => Showing("small", 3), TimeSpan.FromMinutes(1));
@@ -107,19 +107,19 @@ public sealed class SlowNetworkTests
                 return elapsed;
             }
 
-            // Primeira página inteira: a UI thread nunca fica parada.
+            // Whole first page: the UI thread never stalls.
             _longestGap = TimeSpan.Zero;
             window.Tree.Tree.FocusedNode = Child(dbNode, "big");
             var page = await UntilAsync(() => Showing("big", 1000), TimeSpan.FromMinutes(2));
             report.Add(string.Create(CultureInfo.InvariantCulture, $"big first page: {page.TotalMilliseconds:0} ms; longest UI gap {_longestGap.TotalMilliseconds:0} ms"));
             Assert.True(_longestGap < UiStallMonitor.Threshold, $"UI thread stalled {_longestGap.TotalMilliseconds:0} ms");
 
-            // Escolher outra coisa a meio da página.
+            // Choosing something else halfway through the page.
             var sameDatabase = await MeasureAsync("other table, same database", Child(dbNode, "small"), () => Showing("small", 3));
             var otherDatabase = await MeasureAsync("table in another database", Child(db2Node, "other"), () => Showing("other", 2));
             var databaseNode = await MeasureAsync("database node (primary free)", dbNode, () => !host.IsPrimaryBusy);
 
-            // Show all a meio e outra tabela. (Do nó da base, a tabela abre no Table tab.)
+            // Show all halfway and another table. (From the database node, the table opens in the Table tab.)
             window.Tree.Tree.FocusedNode = Child(dbNode, "big");
             window.ShowDataTab();
             await UntilAsync(() => Showing("big", 1000), TimeSpan.FromMinutes(2));
@@ -145,8 +145,8 @@ public sealed class SlowNetworkTests
     }
 
     /// <summary>
-    /// Idas ao servidor e tempo das ações do dia a dia com 50 ms por pedido (um servidor noutra cidade, ou uma VPN):
-    /// ligar, abrir uma base, abrir uma tabela no Data tab e outra no Table tab. Resultados em
+    /// Round trips and time of everyday actions with 50 ms per request (a server in another city, or a VPN):
+    /// connecting, opening a database, opening a table in the Data tab and another in the Table tab. Results in
     /// <c>%TEMP%\eunomia-roundtrips.txt</c>.
     /// </summary>
     [AvaloniaFact(Timeout = UiTimeouts.Measurement)]
@@ -171,7 +171,7 @@ public sealed class SlowNetworkTests
             var (window, _, session, connector, log) = CreateShell(slow, db, settings);
             var report = new List<string>();
 
-            // Mede uma ação: tempo até "done" e pedidos ao servidor até tudo acalmar (1 s sem pedidos novos).
+            // Measures an action: time until "done" and requests to the server until everything settles (1 s without new requests).
             async Task MeasureAsync(string what, Action start, Func<bool> done)
             {
                 var before = proxy.Requests;
@@ -212,7 +212,7 @@ public sealed class SlowNetworkTests
             await MeasureAsync("back to a table already seen (child)", () => window.Tree.Tree.FocusedNode = dbNode.Children!.Single(n => n.Name == "child"),
                 () => window.DataBrowser?.Table.Ref.Name == "child" && window.DataGrid.RowCount == 3 && !host.IsPrimaryBusy);
 
-            // Setas pela árvore: 10 tabelas, uma a cada 120 ms; mede até a última aparecer.
+            // Arrows through the tree: 10 tables, one every 120 ms; measures until the last one shows.
             var tenTables = Enumerable.Range(11, 10).Select(i => dbNode.Children!.Single(n => n.Name == $"t{i:D2}")).ToList();
             await MeasureAsync("arrow keys over 10 tables in Data tab (120 ms apart)", () =>
             {
@@ -242,7 +242,7 @@ public sealed class SlowNetworkTests
         }
     }
 
-    /// <summary>Proxy TCP com largura de banda limitada (servidor → cliente) e um atraso fixo em cada pedido do cliente.</summary>
+    /// <summary>TCP proxy with limited bandwidth (server → client) and a fixed delay on each client request.</summary>
     private sealed class SlowProxy : IAsyncDisposable
     {
         private int _requests;
@@ -267,7 +267,7 @@ public sealed class SlowNetworkTests
 
         public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
 
-        /// <summary>Blocos enviados pelo cliente (cada comando do protocolo é um; pedidos seguidos podem juntar-se).</summary>
+        /// <summary>Blocks sent by the client (each protocol command is one; consecutive requests may merge).</summary>
         public int Requests => Volatile.Read(ref _requests);
 
         private async Task AcceptAsync()
@@ -293,7 +293,7 @@ public sealed class SlowNetworkTests
             using (var server = new TcpClient())
             {
                 await server.ConnectAsync(_host, _port);
-                // Buffers pequenos: o que o servidor já mandou e o cliente ainda não leu não pode ser muito.
+                // Small buffers: what the server has sent and the client has not read yet cannot be much.
                 client.ReceiveBufferSize = server.ReceiveBufferSize = 16 * 1024;
                 var up = PumpAsync(client.GetStream(), server.GetStream(), throttle: false);
                 var down = PumpAsync(server.GetStream(), client.GetStream(), throttle: true);
@@ -323,7 +323,7 @@ public sealed class SlowNetworkTests
             }
             catch (Exception ex) when (ex is OperationCanceledException or IOException or SocketException or ObjectDisposedException)
             {
-                // Ligação fechada de um dos lados.
+                // Connection closed on one side.
             }
         }
 

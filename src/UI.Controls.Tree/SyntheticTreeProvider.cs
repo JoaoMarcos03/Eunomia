@@ -1,13 +1,13 @@
 namespace Eunomia.UI.Controls.Tree;
 
 /// <summary>
-/// Árvore sintética e determinística para o spike: por omissão 5 sessões com cor × 20 bases × 100 objetos
-/// (90 tabelas, 5 views, 3 procedures, 2 functions) = 10.000 objetos. Os filhos são "pedidos" com uma
-/// latência configurável, como um <c>SHOW TABLE STATUS</c>.
+/// Synthetic, deterministic tree for the spike: by default 5 coloured sessions × 20 databases × 100 objects
+/// (90 tables, 5 views, 3 procedures, 2 functions) = 10,000 objects. Children are "requested" with a
+/// configurable latency, like a <c>SHOW TABLE STATUS</c>.
 /// </summary>
 public sealed class SyntheticTreeProvider : ITreeDataProvider
 {
-    /// <summary>Cores de sessão observadas nos screenshots (secção 5.6), em ARGB.</summary>
+    /// <summary>Session colours seen in the screenshots (section 5.6), in ARGB.</summary>
     public static readonly uint[] SessionColors = [0xFF006400, 0xFFDC143C, 0xFFF03333, 0xFF76845C, 0xFF9D850B];
 
     private static readonly string[] Prefixes = ["b2b", "ecm", "prd", "std", "app", "sys", "tmp", "log", "phpbb"];
@@ -35,7 +35,7 @@ public sealed class SyntheticTreeProvider : ITreeDataProvider
         _groupByType = groupByType;
     }
 
-    /// <summary>Número de chamadas a <see cref="LoadChildrenAsync"/> (para testes de lazy loading).</summary>
+    /// <summary>Number of calls to <see cref="LoadChildrenAsync"/> (for lazy loading tests).</summary>
     public int LoadCount { get; private set; }
 
     public static IReadOnlyList<TreeNode> CreateSessions(int count = 5)
@@ -138,14 +138,14 @@ public sealed class SyntheticTreeProvider : ITreeDataProvider
                 SizeBytes = kind == TreeNodeKind.Table ? (long)(16 * 1024 + ((h >> 20) % (64UL * 1024 * 1024))) : null,
             });
         }
-        // A árvore ordena objetos pelo nome com comparação natural (secção 4.2).
+        // The tree sorts objects by name with natural comparison (section 4.2).
         list.Sort((a, b) => NaturalComparer.Instance.Compare(a.Name, b.Name));
         return list;
     }
 
     private static ulong Hash(string text, int i)
     {
-        // FNV-1a: estável entre execuções (string.GetHashCode não é).
+        // FNV-1a: stable across runs (string.GetHashCode is not).
         var h = 14695981039346656037UL;
         foreach (var c in text)
         {
@@ -157,7 +157,7 @@ public sealed class SyntheticTreeProvider : ITreeDataProvider
     }
 }
 
-/// <summary>Comparação natural: sequências de dígitos comparadas como números, resto case-insensitive.</summary>
+/// <summary>Natural comparison: digit runs compared as numbers, the rest case-insensitive.</summary>
 public sealed class NaturalComparer : IComparer<string>
 {
     public static NaturalComparer Instance { get; } = new();

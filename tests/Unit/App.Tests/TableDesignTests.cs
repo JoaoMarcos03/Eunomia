@@ -4,7 +4,7 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Modelo editável do table editor (anexo C §5; FAM-E01–E03).</summary>
+/// <summary>Editable model of the table editor (appendix C §5; FAM-E01–E03).</summary>
 public sealed class TableDesignTests
 {
     private static readonly ServerIdentity Maria = new(DbEngine.MariaDb, new Version(10, 4, 32), "10.4.32-MariaDB", null);
@@ -57,7 +57,7 @@ public sealed class TableDesignTests
     [Fact]
     public void DefaultComBarraVemEmHexEVoltaATexto()
     {
-        // O metadata dá os defaults com barras como _utf8mb4 X'…' (válido em qualquer sql_mode); o editor mostra o texto.
+        // The metadata gives defaults with backslashes as _utf8mb4 X'…' (valid under any sql_mode); the editor shows the text.
         var table = Sample() with { Columns = [Column("path", "varchar(40)", false, "_utf8mb4 X'433A5C78'")] };
         var design = TableDesign.From(table);
         Assert.Equal((DefaultKind.Text, @"C:\x"), (design.Columns[0].DefaultKind, design.Columns[0].DefaultText));

@@ -4,7 +4,7 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>SQL dos filtros do Data tab (anexo D B9, B10; FAM-G12, G13).</summary>
+/// <summary>SQL of the Data tab filters (appendix D B9, B10; FAM-G12, G13).</summary>
 public sealed class DataFiltersTests
 {
     private static readonly MySqlDialect Dialect = new(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));
@@ -36,7 +36,7 @@ public sealed class DataFiltersTests
         Assert.Equal("'4x'", DataFilters.Escape(Dialect, Id, "4x"));
         Assert.Equal("b'101'", DataFilters.Escape(Dialect, Flags, "101"));
         Assert.Equal("0x0A0B", DataFilters.Escape(Dialect, Data, "0x0A0B"));
-        // Barras em hex com introdutor: o mesmo valor em qualquer sql_mode.
+        // Backslashes as hex with an introducer: the same value under any sql_mode.
         Assert.Equal("_utf8mb4 X'615C62'", DataFilters.Escape(Dialect, Name, @"a\b"));
     }
 
@@ -71,10 +71,10 @@ public sealed class DataFiltersTests
         Assert.Equal("`name` != 'x'", DataFilters.Single(Dialect, Name, QuickFilterOperator.NotEqual, "x"));
         Assert.Equal("`name` LIKE '%x%' ESCAPE '!'", DataFilters.Single(Dialect, Name, QuickFilterOperator.Contains, "x"));
         Assert.Equal("`id` IN (1, 2, 3)", DataFilters.Single(Dialect, Id, QuickFilterOperator.InVerbatim, "1, 2, 3"));
-        // O clipboard nunca sai do IN: cada item é um literal.
+        // The clipboard never escapes the IN: each item is a literal.
         Assert.Equal("`id` IN ('0); DELETE FROM t; --')", DataFilters.Single(Dialect, Id, QuickFilterOperator.InVerbatim, "0); DELETE FROM t; -- "));
         Assert.Equal("`name` IN ('a', 'b,c', 'd''e', '3')", DataFilters.Single(Dialect, Name, QuickFilterOperator.InVerbatim, "a\n'b,c'\t\"d'e\", 3"));
-        // Curingas do valor escapados: um "_" ou "%" de uma célula conta letra a letra.
+        // The value's wildcards escaped: a "_" or "%" in a cell matches character by character.
         Assert.Equal("`name` LIKE 'a!_b!%c!!%' ESCAPE '!'", DataFilters.Single(Dialect, Name, QuickFilterOperator.StartsWith, "a_b%c!"));
         Assert.Equal("`id` = 'NaN'", DataFilters.Single(Dialect, Id, QuickFilterOperator.Equal, "NaN"));
         Assert.Equal("`id` IS NOT NULL", DataFilters.Single(Dialect, Id, QuickFilterOperator.IsNotNull, string.Empty));

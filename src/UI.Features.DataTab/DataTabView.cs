@@ -14,9 +14,9 @@ using Eunomia.UI.Controls.SqlEditor;
 namespace Eunomia.UI.Features.DataTab;
 
 /// <summary>
-/// Data tab (secção 4.4; anexo D B1): label de topo ("db.tabela: 272 rows total (exact)", menu "Query exact row
-/// count"), à direita Next, Show all, Sorting (n), Columns (v/t) e Filter, o painel de filtro e o grid. A vista só mostra
-/// e avisa; quem a usa (o shell) carrega os dados e grava o estado por tabela.
+/// Data tab (section 4.4; appendix D B1): top label ("db.table: 272 rows total (exact)", "Query exact row count" menu), on
+/// the right Next, Show all, Sorting (n), Columns (v/t) and Filter, the filter panel and the grid. The view only shows
+/// and reports; its user (the shell) loads the data and saves the per-table state.
 /// </summary>
 public sealed class DataTabView : DockPanel
 {
@@ -80,30 +80,30 @@ public sealed class DataTabView : DockPanel
 
     public Button FilterButton { get; }
 
-    /// <summary>Painel do filtro WHERE (oculto até ser usado).</summary>
+    /// <summary>WHERE filter panel (hidden until used).</summary>
     public Border FilterPanel { get; }
 
     private DockPanel? _recentRow;
 
-    /// <summary>Editor do texto colado depois de <c>WHERE</c> (anexo D B9).</summary>
+    /// <summary>Editor of the text pasted after <c>WHERE</c> (appendix D B9).</summary>
     public SqlEditorControl FilterEditor { get; private set; } = null!;
 
-    /// <summary>"Recent filters": 20 por tabela, o mais recente primeiro; escolher não aplica.</summary>
+    /// <summary>"Recent filters": 20 per table, the most recent first; choosing one does not apply it.</summary>
     public ComboBox RecentFilters { get; private set; } = null!;
 
-    /// <summary>"Create multi column filter:" (F7): reescreve o filtro a cada tecla; Enter aplica.</summary>
+    /// <summary>"Create multi column filter:" (F7): rewrites the filter on every key; Enter applies.</summary>
     public TextBox MultiColumnBox { get; private set; } = null!;
 
     public Button ApplyFilterButton { get; private set; } = null!;
 
     public Button ClearFilterButton { get; private set; } = null!;
 
-    /// <summary>Apply filter (botão, F9 no editor ou Enter na caixa multi coluna).</summary>
+    /// <summary>Apply filter (button, F9 in the editor or Enter in the multi-column box).</summary>
     public event EventHandler? ApplyFilterRequested;
 
     public event EventHandler? ClearFilterRequested;
 
-    /// <summary>O texto do multi column filter mudou (o shell reescreve o filtro).</summary>
+    /// <summary>The multi-column filter text changed (the shell rewrites the filter).</summary>
     public event EventHandler<string>? MultiColumnTextChanged;
 
     private Control BuildFilterPanel()
@@ -116,7 +116,7 @@ public sealed class DataTabView : DockPanel
         {
             if (RecentFilters.SelectedItem is RecentFilter recent)
             {
-                // Escolher um filtro recente só o põe no editor (anexo D B9).
+                // Choosing a recent filter only puts it in the editor (appendix D B9).
                 FilterEditor.Text = recent.Text;
             }
         };
@@ -163,14 +163,14 @@ public sealed class DataTabView : DockPanel
         return panel;
     }
 
-    /// <summary>Altura automática do editor: 2 a 8 linhas (secção 5.3).</summary>
+    /// <summary>Automatic editor height: 2 to 8 lines (section 5.3).</summary>
     private void FitFilterEditor()
     {
         var lines = Math.Clamp(FilterEditor.Editor.Document.LineCount, 2, 8);
         FilterEditor.Height = (lines * 16) + 4;
     }
 
-    /// <summary>Filtros recentes da tabela; a combobox fica escondida se não houver.</summary>
+    /// <summary>The table's recent filters; the combo box stays hidden if there are none.</summary>
     public void SetRecentFilters(IReadOnlyList<string> filters)
     {
         ArgumentNullException.ThrowIfNull(filters);
@@ -180,10 +180,10 @@ public sealed class DataTabView : DockPanel
         _recentRow!.IsVisible = filters.Count > 0;
     }
 
-    /// <summary>Botão Filter destacado quando há filtro ativo.</summary>
+    /// <summary>Filter button highlighted when a filter is active.</summary>
     public void SetFilterActive(bool active) => FilterButton.FontWeight = active ? FontWeight.Bold : FontWeight.Normal;
 
-    /// <summary>Um filtro recente; o texto mostrado junta os espaços e corta a 50 caracteres.</summary>
+    /// <summary>A recent filter; the text shown collapses whitespace and is cut at 50 characters.</summary>
     public sealed record RecentFilter(string Text)
     {
         public override string ToString()
@@ -195,7 +195,7 @@ public sealed class DataTabView : DockPanel
 
     public DataGridView Grid { get; }
 
-    /// <summary>"Query exact row count" no menu da label (<c>COUNT(*)</c> em vez da contagem aproximada).</summary>
+    /// <summary>"Query exact row count" in the label menu (<c>COUNT(*)</c> instead of the approximate count).</summary>
     public bool QueryExactCount { get; set; }
 
     public event EventHandler? ExactCountChanged;
@@ -214,24 +214,24 @@ public sealed class DataTabView : DockPanel
         return button;
     }
 
-    /// <summary>Next e Show all ativos só se a última carga trouxe tudo o que pediu e há margem até ao máximo.</summary>
+    /// <summary>Next and Show all enabled only if the last load brought everything it asked for and there is room up to the maximum.</summary>
     public void SetPaging(bool canLoadMore)
     {
         NextButton.IsEnabled = canLoadMore;
         ShowAllButton.IsEnabled = canLoadMore;
     }
 
-    /// <summary>"Sorting" ou "Sorting (n)".</summary>
+    /// <summary>"Sorting" or "Sorting (n)".</summary>
     public void SetSortCount(int count) =>
         SortingButton.Content = count > 0 ? $"Sorting ({count.ToString(CultureInfo.CurrentCulture)})" : "Sorting";
 
-    /// <summary>"Columns (visíveis/total)".</summary>
+    /// <summary>"Columns (visible/total)".</summary>
     public void SetColumns(int visible, int total) =>
         ColumnsButton.Content = string.Create(CultureInfo.CurrentCulture, $"Columns ({visible}/{total})");
 
     /// <summary>
-    /// Diálogo "Sorting" (anexo D B7): uma linha por coluna com a direção e apagar; Reset, Add column, OK e Cancel. O OK
-    /// devolve a ordenação nova.
+    /// "Sorting" dialog (appendix D B7): one row per column with the direction and delete; Reset, Add column, OK and Cancel.
+    /// OK returns the new sort order.
     /// </summary>
     public void ShowSortingPopup(IReadOnlyList<string> columns, IReadOnlyList<DataSort> current, Action<IReadOnlyList<DataSort>> apply)
     {
@@ -321,8 +321,8 @@ public sealed class DataTabView : DockPanel
     }
 
     /// <summary>
-    /// "Columns (v/t)" (anexo D B8): lista com checks de todas as colunas, marcar todas, filtro e "Sort alphabetically";
-    /// o OK devolve as colunas ocultas.
+    /// "Columns (v/t)" (appendix D B8): a checked list of every column, check all, filter and "Sort alphabetically";
+    /// OK returns the hidden columns.
     /// </summary>
     public void ShowColumnsPopup(IReadOnlyList<string> columns, IReadOnlyCollection<string> hidden, Action<IReadOnlyList<string>> apply)
     {

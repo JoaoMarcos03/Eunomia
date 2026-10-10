@@ -1,12 +1,12 @@
 namespace Eunomia.UI.Controls.Grid;
 
 /// <summary>
-/// Larguras das colunas de dados (GridModel da secção 15.1) com somas prefixas, para encontrar as
-/// colunas visíveis por pesquisa binária (secção 15.2). Não inclui a coluna <c>#</c>, que é fixa.
+/// Widths of the data columns (GridModel of section 15.1) with prefix sums, to find the
+/// visible columns by binary search (section 15.2). Does not include the <c>#</c> column, which is fixed.
 /// </summary>
 public sealed class GridColumns
 {
-    /// <summary>Limite da largura automática (<c>MaxColWidth</c>, secção 4.4).</summary>
+    /// <summary>Automatic width limit (<c>MaxColWidth</c>, section 4.4).</summary>
     public const double MaxAutoWidth = 300;
     public const double MinWidth = 24;
 
@@ -19,7 +19,7 @@ public sealed class GridColumns
 
     public double WidthOf(int column) => _widths[column];
 
-    /// <summary>Posição x do início da coluna, relativa ao início da área de dados.</summary>
+    /// <summary>x position of the start of the column, relative to the start of the data area.</summary>
     public double OffsetOf(int column) => _offsets[column];
 
     public void SetWidths(ReadOnlySpan<double> widths)
@@ -38,14 +38,14 @@ public sealed class GridColumns
         Recompute();
     }
 
-    /// <summary>Coluna na posição x (relativa ao início da área de dados), ou -1 fora das colunas.</summary>
+    /// <summary>Column at position x (relative to the start of the data area), or -1 outside the columns.</summary>
     public int ColumnAt(double x)
     {
         if (x < 0 || x >= TotalWidth || _widths.Length == 0)
         {
             return -1;
         }
-        // Maior i com _offsets[i] <= x.
+        // Largest i with _offsets[i] <= x.
         var index = Array.BinarySearch(_offsets, x);
         if (index < 0)
         {
@@ -54,7 +54,7 @@ public sealed class GridColumns
         return Math.Min(index, _widths.Length - 1);
     }
 
-    /// <summary>Colunas que intersetam <c>[scrollX, scrollX + viewportWidth)</c>.</summary>
+    /// <summary>Columns that intersect <c>[scrollX, scrollX + viewportWidth)</c>.</summary>
     public (int First, int Last) VisibleRange(double scrollX, double viewportWidth)
     {
         if (_widths.Length == 0)

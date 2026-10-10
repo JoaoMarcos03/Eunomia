@@ -10,8 +10,8 @@ using Eunomia.UI.Shell;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Pedidos do utilizador de 1 out 2026: scroll livre com o botão do meio no grid e duplo clique numa
-/// tabela da árvore a inserir o nome na query (FAM-T07), sem sair da tab Query.
+/// Requests from 1 Oct 2026: free scroll with the middle button in the grid and double click on a
+/// table in the tree inserting the name in the query (FAM-T07), without leaving the Query tab.
 /// </summary>
 public sealed class UserRequestsTests
 {
@@ -57,7 +57,7 @@ public sealed class UserRequestsTests
 
         window.MouseMove(new Point(400, 100));
         grid.ApplyAutoScroll(0.2);
-        Assert.Equal(0, grid.TopRow); // já está no topo: subir não passa de 0
+        Assert.Equal(0, grid.TopRow); // already at the top: scrolling up does not go below 0
         window.MouseMove(new Point(400, 450));
         grid.ApplyAutoScroll(0.5);
         Assert.True(grid.TopRow > 0);
@@ -66,7 +66,7 @@ public sealed class UserRequestsTests
         window.MouseDown(new Point(300, 200), MouseButton.Left);
         window.MouseUp(new Point(300, 200), MouseButton.Left);
         Assert.False(grid.AutoScroll.IsActive);
-        Assert.Equal(row, grid.Selection.FocusedRow); // o clique que termina não seleciona
+        Assert.Equal(row, grid.Selection.FocusedRow); // the click that ends it does not select
         window.Close();
     }
 

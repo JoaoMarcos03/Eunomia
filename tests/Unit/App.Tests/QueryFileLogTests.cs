@@ -3,7 +3,7 @@ using Eunomia.Engine.Execution;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>"Log queries to file" por sessão (Fase 14): DDL e DML do utilizador, com as passwords mascaradas.</summary>
+/// <summary>Per-session "Log queries to file" (phase 14): the user's DDL and DML, with passwords masked.</summary>
 public sealed class QueryFileLogTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-qlog-" + Guid.NewGuid().ToString("N"));
@@ -42,7 +42,7 @@ public sealed class QueryFileLogTests : IDisposable
         Assert.Contains("[prod]", lines[0], StringComparison.Ordinal);
         Assert.DoesNotContain("segredo", lines[1], StringComparison.Ordinal);
         Assert.EndsWith("ALTER TABLE t ADD b INT;", lines[2], StringComparison.Ordinal);
-        // O SQL log normal recebe tudo.
+        // The normal SQL log gets everything.
         Assert.Equal(5, inner.Lines.Count);
     }
 
@@ -55,7 +55,7 @@ public sealed class QueryFileLogTests : IDisposable
         log.Write("s", SessionLogCategory.UserSql, "DELETE FROM t");
         Assert.Single(File.ReadAllLines(Path.Combine(_dir, "dml.sql")));
 
-        // Caminho impossível: uma linha de erro no SQL log, uma só vez, e as instruções continuam a passar.
+        // Impossible path: one error line in the SQL log, only once, and the statements keep going through.
         Directory.CreateDirectory(_dir);
         var blocked = Path.Combine(_dir, "pasta");
         Directory.CreateDirectory(blocked);

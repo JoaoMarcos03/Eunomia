@@ -8,7 +8,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Run SQL file em streaming (Fase 8; 27.1 #21; PR-14): blocos, DELIMITER, batch, erros e retoma.</summary>
+/// <summary>Streaming Run SQL file (phase 8; 27.1 #21; PR-14): blocks, DELIMITER, batch, errors and resume.</summary>
 public sealed class SqlFileTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -53,7 +53,7 @@ public sealed class SqlFileTests : IAsyncLifetime
     private async Task<string?> ScalarAsync(string sql) =>
         Convert.ToString(await _host.RunPrimaryAsync((h, ct) => h.ExecuteScalarAsync(sql, ct), Ct), CultureInfo.InvariantCulture);
 
-    /// <summary>Script com DELIMITER, comentários, texto com acentos e aspas, e <paramref name="rows"/> INSERTs.</summary>
+    /// <summary>Script with DELIMITER, comments, text with accents and quotes, and <paramref name="rows"/> INSERTs.</summary>
     private static string Script(int rows, string? broken = null)
     {
         var sb = new StringBuilder();
@@ -87,7 +87,7 @@ public sealed class SqlFileTests : IAsyncLifetime
         TestServer.RequireServer();
         var path = Write("script.sql", Script(300), bom: true);
         var progress = new List<SqlFileProgress>();
-        // 37 bytes: as fronteiras caem dentro do DELIMITER, das strings e dos caracteres de 2 bytes.
+        // 37 bytes: the boundaries fall inside the DELIMITER, the strings and the 2-byte characters.
         var result = await new SqlFileJob(_host, Request(path)) { ChunkSize = 37 }.RunAsync(new SyncProgress<SqlFileProgress>(progress.Add), Ct);
 
         Assert.True(result.Completed);
@@ -124,7 +124,7 @@ public sealed class SqlFileTests : IAsyncLifetime
         var first = await new SqlFileJob(_host, Request(path), journal) { ChunkSize = 64 }.RunAsync(null, Ct);
         Assert.True(first.StoppedOnError);
         var error = Assert.Single(first.ErrorList);
-        // Instruções: SET NAMES, CREATE, PROCEDURE, 49 INSERTs; a 53.ª falha. Linha: 2 do cabeçalho + 1 + 7 do DELIMITER + 49 + 1.
+        // Statements: SET NAMES, CREATE, PROCEDURE, 49 INSERTs; the 53rd fails. Line: 2 for the header + 1 + 7 for the DELIMITER + 49 + 1.
         Assert.Equal(53, error.Statement);
         Assert.Equal(60, error.Line);
         Assert.Contains("falta", error.Message, StringComparison.Ordinal);
@@ -133,7 +133,7 @@ public sealed class SqlFileTests : IAsyncLifetime
         Assert.Equal(52, entry.Count);
         Assert.Equal(";", entry.Delimiter);
 
-        // Corrigido o problema, a retoma corre a instrução que falhou e o resto, sem repetir as anteriores.
+        // With the problem fixed, resuming runs the statement that failed and the rest, without repeating the earlier ones.
         await ExecAsync($"CREATE TABLE `{_database}`.falta (a INT)");
         var resumed = await new SqlFileJob(_host, entry, journal) { ChunkSize = 64 }.RunAsync(null, Ct);
         Assert.True(resumed.Completed);
@@ -143,7 +143,7 @@ public sealed class SqlFileTests : IAsyncLifetime
         Assert.Equal("1", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.falta"));
         Assert.Empty(journal.List());
 
-        // Sem Stop on errors, os erros contam-se e o ficheiro vai até ao fim.
+        // Without Stop on errors, the errors are counted and the file runs to the end.
         await ExecAsync($"DROP TABLE `{_database}`.t, `{_database}`.falta");
         await ExecAsync($"DROP PROCEDURE `{_database}`.p");
         var lenient = await new SqlFileJob(_host, Request(path) with { StopOnErrors = false }).RunAsync(null, Ct);

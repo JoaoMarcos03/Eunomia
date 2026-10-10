@@ -12,7 +12,7 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Marca (assets/brand): todas as janelas de topo têm o ícone do Eunomia.</summary>
+/// <summary>Brand (assets/brand): every top-level window has the Eunomia icon.</summary>
 public sealed class BrandTests
 {
     [AvaloniaFact]
@@ -46,7 +46,7 @@ public sealed class BrandTests
     {
         var assemblies = new[] { typeof(MainWindow), typeof(MessageDialog), typeof(SessionManagerWindow), typeof(SqlExportDialog) }
             .Select(t => t.Assembly);
-        // Código de teste: corre sem trimming.
+        // Test code: runs without trimming.
 #pragma warning disable IL2026
         var types = assemblies.SelectMany(a => a.GetTypes())
             .Where(t => typeof(Window).IsAssignableFrom(t) && !t.IsAbstract)

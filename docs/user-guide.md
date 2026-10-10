@@ -1,184 +1,184 @@
-# Eunomia: guia do utilizador
+# Eunomia user guide
 
-O Eunomia é um cliente de bases de dados MySQL e MariaDB para Windows, macOS e Linux, feito para quem usa o HeidiSQL: os menus, os atalhos, os diálogos e o formato dos ficheiros (SQL export, CSV) seguem os do HeidiSQL. As diferenças estão no fim deste guia.
+Eunomia is a MySQL and MariaDB client for Windows, macOS and Linux, built for people who use HeidiSQL: the menus, shortcuts, dialogs and file formats (SQL export, CSV) follow HeidiSQL. The differences are listed at the end of this guide.
 
-Esta é a versão beta (1.0.0-beta.1). Ficam para depois, entre outras coisas: PostgreSQL, SQL Server e SQLite, User manager, Maintenance, Bulk table editor, Generate data, Copy table, Insert files, code folding, e export para outra base ou outro servidor. Os menus só mostram o que já funciona.
+This is the beta (1.0.0-beta.1). Not there yet, among other things: PostgreSQL, SQL Server and SQLite, User manager, Bulk table editor, Generate data, Insert files, and export to another database or server. The menus only show what already works.
 
-## Vindo do HeidiSQL
+## Coming from HeidiSQL
 
-- **As sessões e as preferências**: no primeiro arranque, se o HeidiSQL estiver instalado neste Windows, o Eunomia pergunta se importa tudo o que tem equivalente: as sessões (pastas, cores, SSH, SSL, estatísticas, última base usada), os favoritos, os atalhos, as preferências (arranque, árvore, grid, editor SQL, log, tabs, export, tema claro ou escuro), o filtro, a ordenação e as colunas ocultas guardados de cada tabela, os filtros recentes e o histórico de queries. As passwords vão para o Credential Manager. O HeidiSQL não é alterado. Ficam de fora só as cores personalizadas do editor e do grid, a língua e o pack de ícones. Quase tudo se aplica logo; as tabs em várias linhas aplicam-se no arranque seguinte. Também há o botão **Import sessions from HeidiSQL** no Session Manager (Start e "More"). Um HeidiSQL portable guarda tudo no `portable_settings.txt`: esse ficheiro importa-se com **File › Import settings file**.
-- **Onde estão as coisas**: a mesma janela (árvore à esquerda, tabs Host/Database/Table/Data/Query à direita, SQL log em baixo), os mesmos menus pela mesma ordem e os mesmos atalhos (F9, Ctrl+F9, Ctrl+Shift+F9, F5, F6, F7, Ctrl+T, Ctrl+E, Ctrl+D, Ctrl+Shift+F, F1, Ctrl+F8…). Os atalhos redefinidos no HeidiSQL vêm com o import.
-- **A toolbar** tem só os botões do dia a dia: sessões, refresh, navegação e edição do grid, nova query, Run (com o Stop ao lado), Stop on errors, abrir e gravar ficheiros, Find e Replace, import/export e Preferences. O resto continua nos menus e nos atalhos.
-- **O aspeto** é mais limpo: tema claro e escuro (Tools › Preferences › General › Theme, também a seguir ao Windows), a cor da sessão aparece como uma barra e um fundo suave na árvore, no editor e nos resultados, e a barra de título acompanha o tema.
+- **Sessions and preferences**: on first start, if HeidiSQL is installed on this Windows machine, Eunomia offers to import everything that has an equivalent: sessions (folders, colours, SSH, SSL, statistics, last database used), favourites, shortcuts, preferences (startup, tree, grid, SQL editor, log, tabs, export, light or dark theme), the filter, sort order and hidden columns saved for each table, recent filters and the query history. Passwords go to the Credential Manager. HeidiSQL itself is not changed. Only the custom editor and grid colours, the language and the icon pack are left out. Almost everything applies straight away; tabs on several rows apply on the next start. Session Manager also has an **Import sessions from HeidiSQL** button (Start and "More"). A portable HeidiSQL keeps everything in `portable_settings.txt`: import that file with **File › Import settings file**.
+- **Where things are**: the same window (tree on the left, Host/Database/Table/Data/Query tabs on the right, SQL log at the bottom), the same menus in the same order and the same shortcuts (F9, Ctrl+F9, Ctrl+Shift+F9, F5, F6, F7, Ctrl+T, Ctrl+E, Ctrl+D, Ctrl+Shift+F, F1, Ctrl+F8…). Shortcuts redefined in HeidiSQL come along with the import.
+- **The toolbar** only has the everyday buttons: sessions, refresh, grid navigation and editing, new query, Run (with Stop next to it), Stop on errors, open and save files, Find and Replace, import/export and Preferences. Everything else is still in the menus and shortcuts.
+- **The look** is cleaner: light and dark themes (Tools › Preferences › General › Theme, which can also follow Windows), the session colour shows as a bar and a soft background in the tree, the editor and the results, and the title bar follows the theme.
 
-## Instalar e arrancar
+## Installing and starting
 
-O executável é nativo (NativeAOT) em todos os sistemas: não precisa de .NET instalado.
+The executable is native (NativeAOT) on every system: no .NET installation is needed.
 
-**Windows** (10 ou 11, 64 bits):
+**Windows** (10 or 11, 64-bit):
 
-- Pacote portable: descompactar a pasta e correr `Eunomia.exe`. Para guardar tudo ao lado do executável (pen USB), criar na pasta do executável um ficheiro `portable_settings.json` com o conteúdo `{}` (o pacote feito com `-Portable` já o traz): as preferências ficam nele, as sessões e o `app.db` na mesma pasta, e os journals, o spill e os logs na subpasta `data`. As passwords continuam no Credential Manager do Windows.
-- No primeiro arranque abre o Session Manager.
+- Portable package: unzip the folder and run `Eunomia.exe`. To keep everything next to the executable (USB stick), create a file named `portable_settings.json` with the content `{}` in the executable's folder (packages built with `-Portable` already include it): preferences are stored in it, sessions and `app.db` in the same folder, and journals, spill files and logs in the `data` subfolder. Passwords stay in the Windows Credential Manager.
+- Session Manager opens on first start.
 
-**macOS** (12 ou mais recente; `osx-arm64` para Apple Silicon, `osx-x64` para Intel):
+**macOS** (12 or later; `osx-arm64` for Apple Silicon, `osx-x64` for Intel):
 
-- Descompactar o `.zip` e arrastar o `Eunomia.app` para Aplicações.
-- A aplicação não está assinada pela Apple: na primeira vez, abrir com o botão direito › Abrir (ou Definições do Sistema › Privacidade e Segurança › "Abrir mesmo assim"). Em alternativa, no Terminal: `xattr -dr com.apple.quarantine /Applications/Eunomia.app`.
-- Os atalhos usam ⌘ onde o HeidiSQL usa Ctrl (⌘C, ⌘Enter, ⌘-clique para juntar à seleção); o Control continua a funcionar. As passwords ficam no Porta-chaves (Keychain), com o serviço "Eunomia".
+- Unzip the `.zip` and drag `Eunomia.app` to Applications.
+- The app is not signed by Apple: the first time, open it with right-click › Open (or System Settings › Privacy & Security › "Open Anyway"). Alternatively, in Terminal: `xattr -dr com.apple.quarantine /Applications/Eunomia.app`.
+- Shortcuts use ⌘ where HeidiSQL uses Ctrl (⌘C, ⌘Enter, ⌘-click to add to the selection); Control keeps working. Passwords are stored in the Keychain, under the service "Eunomia".
 
-**Linux** (x64 nativo; arm64 com runtime incluído):
+**Linux** (native x64; arm64 with the runtime included):
 
-- Descompactar o `.tar.gz` e correr `eunomia/Eunomia`, ou `eunomia/install.sh` para instalar no perfil (sem sudo): fica em `~/.local/opt/eunomia`, com atalho no menu e `~/.local/bin/Eunomia`.
-- Precisa de um ambiente gráfico (X11, ou Wayland com XWayland).
-- As passwords ficam no keyring do sistema pelo Secret Service (GNOME Keyring, KWallet 5.97+, KeePassXC). Sem keyring, o Eunomia avisa no arranque e guarda as passwords só até fechar: nunca as escreve em ficheiro.
-- Os diálogos de abrir e gravar são os do sistema (`xdg-desktop-portal`); se não houver, aparece uma caixa para escrever o caminho.
+- Extract the `.tar.gz` and run `eunomia/Eunomia`, or `eunomia/install.sh` to install it in your profile (no sudo): it goes to `~/.local/opt/eunomia`, with a menu entry and `~/.local/bin/Eunomia`.
+- Needs a graphical session (X11, or Wayland with XWayland).
+- Passwords are stored in the system keyring through the Secret Service (GNOME Keyring, KWallet 5.97+, KeePassXC). Without a keyring, Eunomia warns on startup and keeps passwords only until it closes: it never writes them to a file.
+- Open and save dialogs are the system ones (`xdg-desktop-portal`); if there is none, a box to type the path appears instead.
 
-### Onde ficam os dados
+### Where data is stored
 
-| O quê | Onde (instalação normal) |
+| What | Where (normal install) |
 | --- | --- |
-| Preferências | `%APPDATA%\Eunomia\settings.json` |
-| Sessões gravadas (sem passwords) | `%APPDATA%\Eunomia\sessions.json` |
-| Histórico de queries, filtros, favoritos, layouts dos diagramas | `%APPDATA%\Eunomia\app.db` |
-| Passwords | Windows Credential Manager (entradas `Eunomia/…`); chaves e segredos maiores em `%APPDATA%\Eunomia\secrets`, cifrados com DPAPI |
-| Query tabs por gravar (restauro depois de um crash) | `%LOCALAPPDATA%\Eunomia\tabs` |
-| Imports interrompidos (retoma) | `%LOCALAPPDATA%\Eunomia\jobs` |
-| Resultados grandes despejados para disco | `%LOCALAPPDATA%\Eunomia\spill` (limpo no arranque) |
-| Log de diagnóstico e crash reports | `%LOCALAPPDATA%\Eunomia\logs` |
+| Preferences | `%APPDATA%\Eunomia\settings.json` |
+| Saved sessions (no passwords) | `%APPDATA%\Eunomia\sessions.json` |
+| Query history, filters, favourites, diagram layouts | `%APPDATA%\Eunomia\app.db` |
+| Passwords | Windows Credential Manager (`Eunomia/…` entries); keys and larger secrets in `%APPDATA%\Eunomia\secrets`, encrypted with DPAPI |
+| Unsaved query tabs (restored after a crash) | `%LOCALAPPDATA%\Eunomia\tabs` |
+| Interrupted imports (resume) | `%LOCALAPPDATA%\Eunomia\jobs` |
+| Large results spilled to disk | `%LOCALAPPDATA%\Eunomia\spill` (cleaned on startup) |
+| Diagnostic log and crash reports | `%LOCALAPPDATA%\Eunomia\logs` |
 
-No macOS tudo fica em `~/Library/Application Support/Eunomia`. No Linux as preferências, as sessões e o `app.db` ficam em `~/.config/Eunomia` (ou `$XDG_CONFIG_HOME`) e o resto em `~/.local/share/Eunomia` (ou `$XDG_DATA_HOME`); em ambos as pastas só são legíveis pelo próprio utilizador.
+On macOS everything lives in `~/Library/Application Support/Eunomia`. On Linux, preferences, sessions and `app.db` live in `~/.config/Eunomia` (or `$XDG_CONFIG_HOME`) and the rest in `~/.local/share/Eunomia` (or `$XDG_DATA_HOME`); on both, the folders are readable only by their owner.
 
-`settings.json` e `sessions.json` guardam a versão anterior em `.bak`: um ficheiro danificado (falta de luz, disco cheio) fica de lado com o sufixo `.corrupt-<data>` e o Eunomia volta à cópia anterior, avisando no SQL log. Duas janelas do Eunomia abertas ao mesmo tempo não apagam as sessões uma da outra: ao gravar, as alterações das duas juntam-se.
+`settings.json` and `sessions.json` keep the previous version in `.bak`: a damaged file (power cut, full disk) is set aside with a `.corrupt-<date>` suffix and Eunomia goes back to the previous copy, with a warning in the SQL log. Two Eunomia windows open at the same time do not delete each other's sessions: when saving, the changes from both are merged.
 
-Nada sai da máquina: não há telemetria nem verificação de atualizações.
+Nothing leaves the machine: there is no telemetry and no update check.
 
-## Sessões
+## Sessions
 
-- **File › Session manager**: pastas, cores, filtro, New/Save/Delete/Duplicate/Rename, arrastar entre pastas e estatísticas por sessão.
-- **Preferences › General**: "Automatically reconnect to previously opened sessions on startup" liga, no arranque, as sessões que estavam abertas ao fechar; "Restore last used database on startup" volta a selecionar a última base usada.
-- **File › Import settings file**: importa o ficheiro de settings do HeidiSQL (sessões, pastas, atalhos, favoritos). As passwords vão para o Credential Manager; depois convém apagar o ficheiro exportado do HeidiSQL, que as tem quase em claro.
-- SSH: o túnel é interno (não precisa do plink). A primeira ligação a um servidor SSH mostra a chave para confirmar; uma chave diferente depois bloqueia a ligação. Funciona com o agent do OpenSSH e com o Pageant.
-- TLS: por omissão verifica a CA e o nome do servidor; níveis mais fracos têm de ser escolhidos à mão.
-- Várias sessões abertas ao mesmo tempo, cada uma com a sua cor (na árvore, no editor e nos resultados).
-- **Sessões de produção** (Session Manager › Advanced):
-  - **Read-only session**: o Eunomia só envia leituras (SELECT, SHOW, EXPLAIN, USE, SET de variáveis da sessão…); qualquer instrução que mude dados ou estrutura é recusada antes de sair do PC, e o servidor também fica em modo só de leitura (`SET SESSION TRANSACTION READ ONLY`). O grid não edita e a barra da query tab diz "(read-only)".
-  - **Ask before running statements that change data or structure**: para sessões que precisam de escrever, pergunta antes de correr escritas numa query tab, um Run SQL file ou um import de CSV, com o nome e o servidor da sessão.
-- As perguntas de Drop, Empty e Delete rows mostram a sessão e o servidor, para não apagar no servidor errado.
-- **Log queries to file** (Session Manager › Advanced, com "DDL queries" e/ou "DML queries"): as instruções que mudam estrutura ou dados (query tabs, edições do grid, table editor, Drop/Empty) ficam no ficheiro escolhido, uma por linha com a hora e a sessão, e as passwords mascaradas. Serve de registo do que se correu em produção.
+- **File › Session manager**: folders, colours, filter, New/Save/Delete/Duplicate/Rename, drag between folders and per-session statistics.
+- **Preferences › General**: "Automatically reconnect to previously opened sessions on startup" reconnects, on startup, the sessions that were open when the app closed; "Restore last used database on startup" selects the last database used again.
+- **File › Import settings file**: imports a HeidiSQL settings file (sessions, folders, shortcuts, favourites). Passwords go to the Credential Manager; afterwards, delete the file exported from HeidiSQL, which holds them almost in plain text.
+- SSH: the tunnel is built in (no plink needed). The first connection to an SSH server shows its key for confirmation; a different key later blocks the connection. Works with the OpenSSH agent and with Pageant.
+- TLS: by default the CA and the server name are verified; weaker levels have to be chosen by hand.
+- Several sessions open at the same time, each with its own colour (in the tree, the editor and the results).
+- **Production sessions** (Session Manager › Advanced):
+  - **Read-only session**: Eunomia only sends reads (SELECT, SHOW, EXPLAIN, USE, SET of session variables…); any statement that changes data or structure is refused before it leaves the computer, and the server is also put in read-only mode (`SET SESSION TRANSACTION READ ONLY`). The grid does not edit and the query tab bar says "(read-only)".
+  - **Ask before running statements that change data or structure**: for sessions that need to write, asks before running writes from a query tab, a Run SQL file or a CSV import, showing the session name and server.
+- The Drop, Empty and Delete rows questions show the session and the server, so nothing gets deleted on the wrong server.
+- **Log queries to file** (Session Manager › Advanced, with "DDL queries" and/or "DML queries"): statements that change structure or data (query tabs, grid edits, table editor, Drop/Empty) go to the chosen file, one per line with the time and the session, with passwords masked. It works as a record of what ran in production.
 
-## Transações
+## Transactions
 
-- Como no HeidiSQL, cada instrução grava sozinha (autocommit). `START TRANSACTION`/`BEGIN` numa query tab abre uma transação, que só fica gravada com `COMMIT`.
-- Enquanto há uma transação aberta, a status bar mostra **Transaction open** ou, depois de alterações, **Uncommitted changes** (a laranja).
-- Desligar a sessão ou fechar a janela com alterações por confirmar pergunta: **Yes** faz `COMMIT`, **No** faz `ROLLBACK`, **Cancel** não fecha.
-- Gravar uma tabela, um objeto, ou fazer Drop/Empty nessa altura avisa que o servidor faz commit da transação antes do DDL.
-- Se a ligação cair com alterações por confirmar, o Eunomia avisa que o servidor as desfez (não ficaram gravadas). Num deadlock, a query tab avisa que a transação inteira foi desfeita.
-- **Delete selected rows** com várias linhas apaga todas ou nenhuma (numa transação própria).
+- As in HeidiSQL, each statement commits on its own (autocommit). `START TRANSACTION`/`BEGIN` in a query tab opens a transaction, which is only saved with `COMMIT`.
+- While a transaction is open, the status bar shows **Transaction open** or, after changes, **Uncommitted changes** (in orange).
+- Disconnecting the session or closing the window with uncommitted changes asks first: **Yes** runs `COMMIT`, **No** runs `ROLLBACK`, **Cancel** does not close.
+- Saving a table or an object, or running Drop/Empty at that point, warns that the server commits the transaction before the DDL.
+- If the connection drops with uncommitted changes, Eunomia warns that the server rolled them back (they were not saved). On a deadlock, the query tab warns that the whole transaction was rolled back.
+- **Delete selected rows** with several rows deletes all of them or none (in a transaction of its own).
 
-## Árvore, Host tab e Database tab
+## Tree, Host tab and Database tab
 
-- **Ctrl+D** vai para a árvore; **Ctrl+E** para o Table filter. O filtro aceita expressões regulares e `;` como "ou".
-- Favoritos (estrela), grupos por tipo de objeto, colunas e tamanhos na árvore (Tree style options no menu da árvore).
-- O Host tab mostra as bases (Databases), as variáveis (Variables: sessão e global lado a lado, a sessão destacada quando é diferente), o estado do servidor (Status, com médias por hora e por segundo), os processos (Processes: **Del** mata, "EXPLAIN query" no menu) e os contadores de comandos (Command-Statistics). O Database tab mostra os objetos da base selecionada.
-- **F5** refresca o nó da árvore; com o foco numa lista do Host ou do Database tab, refresca só essa lista. **Shift+F5** faz o refresh completo com as estatísticas.
-- **Auto refresh** (**Ctrl+F5**, ou o dropdown do botão Refresh): relê a lista do tab ativo a cada 10 s; "Set interval ..." muda o intervalo. Útil para vigiar os processos.
-- **Find text on server** (**Ctrl+Shift+F**): procura um texto (ou um predicado SQL, como `> NOW()`) em todas as colunas das tabelas escolhidas, com filtro por tipo de coluna, wildcards, regex e maiúsculas. Mostra as linhas encontradas por tabela; **See results** abre uma query tab com os SELECT.
-- **Maintenance** (Tools e menu da árvore): Check, Analyze, Checksum, Optimize e Repair nas tabelas e views escolhidas (as escolhidas na árvore ou na lista vêm marcadas), com as opções que cada operação aceita (Quick, Fast, Medium, Extended, Changed, Use FRM file, For Upgrade). O resultado do servidor aparece por tabela, com os erros a vermelho e as notas a amarelo; Close passa a Cancel enquanto corre. Optimize e Repair reconstroem e bloqueiam a tabela: perguntam antes, com a sessão e o servidor. Numa sessão read-only só o Checksum corre.
+- **Ctrl+D** goes to the tree; **Ctrl+E** to the Table filter. The filter accepts regular expressions and `;` as "or".
+- Favourites (star), groups by object type, columns and sizes in the tree (Tree style options in the tree menu).
+- The Host tab shows the databases (Databases), the variables (Variables: session and global side by side, the session value highlighted when it differs), the server status (Status, with per-hour and per-second averages), the processes (Processes: **Del** kills, "EXPLAIN query" in the menu) and the command counters (Command-Statistics). The Database tab shows the objects of the selected database.
+- **F5** refreshes the tree node; with the focus on a list in the Host or Database tab, it refreshes only that list. **Shift+F5** does a full refresh including statistics.
+- **Auto refresh** (**Ctrl+F5**, or the Refresh button drop-down): reloads the active tab's list every 10 s; "Set interval ..." changes the interval. Useful for watching processes.
+- **Find text on server** (**Ctrl+Shift+F**): searches for a text (or an SQL predicate, such as `> NOW()`) in every column of the chosen tables, with filters by column type, wildcards, regex and case. Shows the matching rows per table; **See results** opens a query tab with the SELECTs.
+- **Maintenance** (Tools and the tree menu): Check, Analyze, Checksum, Optimize and Repair on the chosen tables and views (the ones selected in the tree or the list come pre-checked), with the options each operation accepts (Quick, Fast, Medium, Extended, Changed, Use FRM file, For Upgrade). The server's result shows per table, errors in red and notes in yellow; Close turns into Cancel while it runs. Optimize and Repair rebuild and lock the table: they ask first, showing the session and the server. In a read-only session only Checksum runs.
 
 ## Data tab
 
-- Mostra a tabela focada na árvore em blocos; **Ctrl+Alt+PgDn** (Next) e **Ctrl+Alt+End** (Show all) para ler mais.
-- Uma tabela grande ou um servidor lento não prendem a janela: escolher outra coisa na árvore, ou correr uma query na mesma sessão, cancela o carregamento em curso (o servidor pára a query). **Esc** (Cancel running operation) também. Num Show all cancelado ficam as linhas que já chegaram, e Next e Show all continuam a partir daí.
-- Ordenação por clique no cabeçalho, filtro WHERE (com histórico e autocomplete), Quick Filter no menu da célula, filtro local, multi column filter (**F7**).
-- Editar: escrever na célula; a linha grava ao mudar de linha ou com **Ctrl+Enter**; **Esc** desfaz. **Ctrl+Ins** duplica sem chaves, **Ctrl+Del** apaga as linhas selecionadas. Insert value ▸ (data/hora, GUID, NULL com **Ctrl+Shift+N**, função com **Ctrl+F2**). ENUM, SET, datas, chaves estrangeiras e texto longo têm editores próprios.
-- Cada gravação muda no máximo uma linha (`LIMIT 1`) e confirma quantas linhas mudaram. Sem chave primária nem índice único, o Eunomia usa todas as colunas e compara o texto de forma exata (uma linha `'Ana'` nunca é confundida com `'ana'`).
-- Se outra pessoa mudou a linha no servidor depois de o Eunomia a ter lido, gravar pergunta antes de sobrescrever ("Row changed on the server"): OK grava por cima, Cancel deixa a edição por gravar (Esc desfaz, F5 mostra a linha atual).
-- Números escrevem-se com ponto decimal e sem separadores de milhares (`1234.5`); um valor que não é um número numa coluna numérica é recusado com uma mensagem, em vez de o servidor o converter em silêncio. Para uma expressão SQL, **Ctrl+F2**.
-- O que se copia, duplica e exporta é sempre o valor exato do servidor: DOUBLE com todos os dígitos, BIT em binário (`00001010`), binários completos, mesmo que o grid mostre menos.
-- Copiar: **Ctrl+C**, e "Copy as" em 16 formatos; Export grid rows para ficheiro.
-- **Follow Foreign Key** (menu da célula): abre a tabela referenciada no Data tab, já filtrada pela chave da linha. **Open URL** abre no browser uma célula com um endereço http/https.
-- **Save BLOB to file** (menu da célula e painel do preview): grava o valor completo da célula num ficheiro, mesmo que o grid mostre só o início. Binários vão tal como estão (o nome sugerido é o da coluna, com `.png`, `.jpg`, `.gif` ou `.bmp` se for uma imagem, senão `.bin`); texto vai em UTF-8 com `.txt`.
-- **Image preview** (Grid view options): painel por baixo da árvore com a imagem (JPEG, GIF, BMP ou PNG) da célula focada no Data tab ou num resultado, com o tamanho e o formato; reduz a imagem para caber, sem a ampliar. Imagens acima de 16 MiB não são mostradas.
-- Linhas novas (**Ins**) aparecem no fim do grid (no HeidiSQL aparecem a seguir à linha focada); depois de gravar e recarregar ficam na ordem do servidor.
-- **Preferences › Grid formatting**: fonte e tamanho do grid, largura máxima das colunas, linhas por página e máximo, e quanta memória os resultados podem usar antes de ir para disco.
+- Shows the table focused in the tree in blocks; **Ctrl+Alt+PgDn** (Next) and **Ctrl+Alt+End** (Show all) to read more.
+- A large table or a slow server does not freeze the window: choosing something else in the tree, or running a query in the same session, cancels the load in progress (the server stops the query). **Esc** (Cancel running operation) does too. A cancelled Show all keeps the rows that already arrived, and Next and Show all continue from there.
+- Sorting by clicking the header, WHERE filter (with history and autocomplete), Quick Filter in the cell menu, local filter, multi-column filter (**F7**).
+- Editing: type in the cell; the row is saved when moving to another row or with **Ctrl+Enter**; **Esc** undoes. **Ctrl+Ins** duplicates without keys, **Ctrl+Del** deletes the selected rows. Insert value ▸ (date/time, GUID, NULL with **Ctrl+Shift+N**, function with **Ctrl+F2**). ENUM, SET, dates, foreign keys and long text have their own editors.
+- Each save changes at most one row (`LIMIT 1`) and checks how many rows changed. Without a primary key or unique index, Eunomia uses every column and compares text exactly (a row with `'Ana'` is never mistaken for `'ana'`).
+- If someone else changed the row on the server after Eunomia read it, saving asks before overwriting ("Row changed on the server"): OK writes over it, Cancel keeps the edit unsaved (Esc undoes, F5 shows the current row).
+- Numbers are typed with a decimal point and no thousands separators (`1234.5`); a value that is not a number in a numeric column is refused with a message, instead of the server converting it silently. For an SQL expression, use **Ctrl+F2**.
+- What gets copied, duplicated and exported is always the exact server value: DOUBLE with all digits, BIT in binary (`00001010`), complete binaries, even when the grid shows less.
+- Copying: **Ctrl+C**, and "Copy as" in 16 formats; Export grid rows to a file.
+- **Follow Foreign Key** (cell menu): opens the referenced table in the Data tab, already filtered by the row's key. **Open URL** opens a cell holding an http/https address in the browser.
+- **Save BLOB to file** (cell menu and the preview panel): writes the full cell value to a file, even when the grid shows only the beginning. Binary values are written as they are (the suggested name is the column name, with `.png`, `.jpg`, `.gif` or `.bmp` for an image, otherwise `.bin`); text is written as UTF-8 with `.txt`.
+- **Image preview** (Grid view options): a panel below the tree with the image (JPEG, GIF, BMP or PNG) of the focused cell in the Data tab or a result, with its size and format; it shrinks the image to fit, never enlarges it. Images over 16 MiB are not shown.
+- New rows (**Ins**) appear at the end of the grid (in HeidiSQL they appear after the focused row); after saving and reloading they follow the server's order.
+- **Preferences › Grid formatting**: grid font and size, maximum column width, rows per page and maximum rows, and how much memory results may use before going to disk.
 
 ## Query tabs
 
-- **Ctrl+T** abre uma tab nova, **Ctrl+F4** fecha. As tabs voltam depois de fechar ou de um crash (com o texto até cerca de 2 s antes).
-- **F9** corre tudo, **Ctrl+F9** a seleção, **Ctrl+Shift+F9** a instrução onde está o cursor. "Send batch in one go" e "Stop on errors" no menu SQL.
-- Cada tab corre na sessão da árvore, ou na sessão a que foi fixada ("Pin tab to session" no menu da tab). Cancelar (o botão vermelho) só pára a query desta tab.
-- Autocomplete com **Ctrl+Space** (tabelas, colunas, funções, palavras-chave, variáveis), Find/Replace com **Ctrl+F**/**Ctrl+R** e **F3**, comentar linhas, **Ctrl+U**/**Ctrl+L** para maiúsculas/minúsculas, **Alt+↑/↓** para mover linhas.
-- Resultados em tabs (**Alt+←/→**), com ordenação e filtro locais. Um resultado de uma só tabela com chave pode ser editado como no Data tab.
-- Helpers (à direita): colunas, funções, palavras-chave, snippets e histórico.
-- **Explain current query** (menu Query): corre `EXPLAIN` da instrução onde está o cursor. **Reformat SQL** (**Ctrl+F8**): arruma a seleção ou o texto todo (cláusulas em linhas, AND/OR indentados), num só undo. **F1** abre a ajuda do próprio servidor na palavra do cursor (SQL help).
-- **Code folding** (menu Query ▸ Code folding, ligado por omissão): o texto entre uma linha `#region nome` e uma linha `#endregion` dobra-se pela margem [+]/[−] (o `#` é um comentário no MySQL, o SQL não muda). **Insert region start/end marker** escreve os marcadores na linha do cursor e **Fold selection** envolve as linhas escolhidas numa região já dobrada (um Ctrl+Z desfaz). A margem só aparece quando o texto tem regiões.
-- Ficheiros: **Ctrl+O** abre, **Ctrl+S** grava, **F12** grava como, e a lista dos 20 recentes. Um ficheiro alterado fora do Eunomia pergunta se deve recarregar.
+- **Ctrl+T** opens a new tab, **Ctrl+F4** closes it. Tabs come back after closing the app or after a crash (with the text up to about 2 s before).
+- **F9** runs everything, **Ctrl+F9** the selection, **Ctrl+Shift+F9** the statement under the cursor. "Send batch in one go" and "Stop on errors" are in the SQL menu.
+- Each tab runs on the tree's session, or on the session it was pinned to ("Pin tab to session" in the tab menu). Cancelling (the red button) stops only this tab's query.
+- Autocomplete with **Ctrl+Space** (tables, columns, functions, keywords, variables), Find/Replace with **Ctrl+F**/**Ctrl+R** and **F3**, comment lines, **Ctrl+U**/**Ctrl+L** for upper/lower case, **Alt+↑/↓** to move lines.
+- Results in tabs (**Alt+←/→**), with local sorting and filtering. A result from a single table with a key can be edited as in the Data tab.
+- Helpers (on the right): columns, functions, keywords, snippets and history.
+- **Explain current query** (Query menu): runs `EXPLAIN` on the statement under the cursor. **Reformat SQL** (**Ctrl+F8**): tidies the selection or the whole text (clauses on their own lines, AND/OR indented), as a single undo step. **F1** opens the server's own help on the word under the cursor (SQL help).
+- **Code folding** (Query ▸ Code folding, on by default): the text between a `#region name` line and an `#endregion` line folds through the [+]/[−] margin (`#` starts a comment in MySQL, so the SQL does not change). **Insert region start/end marker** writes the markers on the cursor line and **Fold selection** wraps the chosen lines in an already folded region (one Ctrl+Z undoes it). The margin only appears when the text has regions.
+- Files: **Ctrl+O** opens, **Ctrl+S** saves, **F12** saves as, plus a list of the 20 most recent. A file changed outside Eunomia asks whether to reload.
 
-## Table editor e outros objetos
+## Table editor and other objects
 
-- Alt+Enter numa tabela (ou Create new ▸ Table): colunas, índices, chaves estrangeiras, checks, opções e o código CREATE/ALTER antes de gravar. Save aplica o ALTER calculado pela diferença.
-- Antes de gravar alterações que podem perder dados (apagar colunas, estreitar um tipo, mudar o charset), o Eunomia mostra a lista e pede confirmação. O ALTER corre em modo estrito: um valor que não caiba no tipo novo faz a gravação falhar, em vez de ser cortado. Se o ALTER falhar a meio, as chaves estrangeiras que já tinham sido largadas voltam a ser criadas.
-- **Views, procedures, functions, triggers e events** abrem no Table tab com o `CREATE` editável (em vez dos formulários do HeidiSQL). **Save** substitui o objeto sem o deixar desaparecer: views (e, no MariaDB, também rotinas, triggers e events) com `CREATE OR REPLACE`; no MySQL as rotinas são validadas primeiro com um nome temporário. Se mesmo assim o objeto antigo não puder voltar, o código dele fica num ficheiro na pasta `recovery` (ao lado dos logs) e o erro diz onde. **Create new ▸ View / Stored procedure / Stored function / Trigger / Event** começa por um modelo.
-- **Create new ▸ Table copy** (numa tabela ou view): cria `<nome>_copy` (ou o nome e a base que escolher) com as colunas, índices e chaves estrangeiras marcados e, se quiser, os dados, com um filtro WHERE opcional; tudo corre no servidor. O destino tem de ser uma tabela nova: se o nome já existir, o diálogo recusa (no HeidiSQL oferecia apagar a tabela existente; aqui faz-se Drop à parte). Numa cópia na mesma base, as chaves estrangeiras e os checks ficam com nomes novos (`<destino>_ibfk_1`, `<destino>_chk_1`), porque esses nomes não se podem repetir na base.
-- Mudar de objeto na árvore ou fechar a janela com alterações por gravar pergunta "Save modified table/view/… ?" (Yes grava, No descarta, Cancel fica).
+- Alt+Enter on a table (or Create new ▸ Table): columns, indexes, foreign keys, checks, options and the CREATE/ALTER code before saving. Save applies the ALTER computed from the difference.
+- Before saving changes that may lose data (dropping columns, narrowing a type, changing the charset), Eunomia shows the list and asks for confirmation. The ALTER runs in strict mode: a value that does not fit the new type makes the save fail instead of being truncated. If the ALTER fails halfway, the foreign keys that had already been dropped are created again.
+- **Views, procedures, functions, triggers and events** open in the Table tab with an editable `CREATE` (instead of HeidiSQL's forms). **Save** replaces the object without letting it disappear: views (and, on MariaDB, also routines, triggers and events) with `CREATE OR REPLACE`; on MySQL, routines are first validated under a temporary name. If the old object still cannot be restored, its code is written to a file in the `recovery` folder (next to the logs) and the error says where. **Create new ▸ View / Stored procedure / Stored function / Trigger / Event** starts from a template.
+- **Create new ▸ Table copy** (on a table or view): creates `<name>_copy` (or the name and database you choose) with the checked columns, indexes and foreign keys and, optionally, the data, with an optional WHERE filter; everything runs on the server. The target must be a new table: if the name already exists, the dialog refuses (HeidiSQL offered to drop the existing table; here that is a separate Drop). In a copy within the same database, foreign keys and checks get new names (`<target>_ibfk_1`, `<target>_chk_1`), because those names must be unique in the database.
+- Moving to another object in the tree, or closing the window, with unsaved changes asks "Save modified table/view/… ?" (Yes saves, No discards, Cancel stays).
 
-## Export e import
+## Export and import
 
 ### Export database as SQL (Tools)
 
-- Escolher bases e objetos na árvore do diálogo (com filtros), Drop/Create das bases e das tabelas, os dados (No data, Delete + insert, Insert, Insert ignore, Replace) e o Max INSERT size.
-- Output: um ficheiro `.sql`, um `.zip`, um diretório com um ficheiro por objeto, ou o clipboard (até 64 MiB).
-- **Consistent snapshot**: tudo numa transação, como o `mysqldump --single-transaction`. Sem ele, as tabelas são exportadas em paralelo.
-- O ficheiro escreve-se como `.partial` e só fica com o nome final no fim; um cancel ou erro apaga-o.
+- Choose databases and objects in the dialog's tree (with filters), Drop/Create for databases and tables, the data (No data, Delete + insert, Insert, Insert ignore, Replace) and the Max INSERT size.
+- Output: a `.sql` file, a `.zip`, a directory with one file per object, or the clipboard (up to 64 MiB).
+- **Consistent snapshot**: everything in one transaction, like `mysqldump --single-transaction`. Without it, tables are exported in parallel.
+- The file is written as `.partial` and only gets its final name at the end; a cancel or an error deletes it.
 
 ### Run SQL file
 
-- **Run SQL file…** (menu SQL) corre ficheiros sem os abrir no editor. No **Load** (Ctrl+O), ficheiros com mais de 5 MiB perguntam se é para correr diretamente.
-- O ficheiro é lido aos bocados (memória constante) e o `DELIMITER` mantém-se entre blocos.
-- As instruções do ficheiro não vão para o SQL log; o log mostra o resumo e cada erro com o número da instrução e a linha.
-- Se parar num erro (Stop on errors) ou for cancelado, **Resume** continua na instrução que falhou. Um import interrompido por um crash aparece no arranque seguinte com a opção de retomar ou descartar. Se o ficheiro mudou entretanto, não retoma.
+- **Run SQL file…** (SQL menu) runs files without opening them in the editor. With **Load** (Ctrl+O), files over 5 MiB ask whether to run them directly.
+- The file is read in chunks (constant memory) and `DELIMITER` carries over between chunks.
+- The file's statements do not go to the SQL log; the log shows the summary and each error with the statement number and line.
+- If it stops on an error (Stop on errors) or is cancelled, **Resume** continues at the statement that failed. An import interrupted by a crash shows up on the next start with the option to resume or discard it. If the file changed in the meantime, it does not resume.
 
 ### Import CSV file (Tools)
 
-- Defaults do HeidiSQL: `;` entre campos, `"` à volta (opcional), `"` como escape, `\r\n` no fim das linhas, ignorar 1 linha, REPLACE nos duplicados.
-- **Server parses file contents**: `LOAD DATA LOCAL INFILE` com os dados enviados pelo Eunomia (o servidor não lê ficheiros do PC). O MySQL 8 traz o `local_infile` desligado; nesse caso, ou se usa o modo cliente, ou se liga no servidor com `SET GLOBAL local_infile = 1`.
-- **Client parses file contents**: o Eunomia lê o CSV e envia INSERTs. Trata `""` dentro de aspas e `\N` / `NULL` como NULL.
-- O campo k do ficheiro vai para a k-ésima coluna marcada (Up/Down mudam a ordem).
+- HeidiSQL defaults: `;` between fields, `"` around them (optional), `"` as escape, `\r\n` at the end of lines, skip 1 line, REPLACE on duplicates.
+- **Server parses file contents**: `LOAD DATA LOCAL INFILE` with the data sent by Eunomia (the server does not read files from the computer). MySQL 8 ships with `local_infile` off; in that case either use client mode, or turn it on in the server with `SET GLOBAL local_infile = 1`.
+- **Client parses file contents**: Eunomia reads the CSV and sends INSERTs. It handles `""` inside quotes and treats `\N` / `NULL` as NULL.
+- Field k of the file goes to the k-th checked column (Up/Down change the order).
 
 ## Schema Visualizer
 
-- No menu da árvore (base ou tabela): **Show in schema visualizer**. Abre o tab "Diagram: base".
-- Tabelas com as colunas (chave primária, única e estrangeira, NULL), relações com a notação crow's foot (1:N e 1:1).
-- Roda do rato: zoom; arrastar o fundo (ou espaço + arrastar, ou as setas): mover; **F** ajusta tudo ao ecrã, **0** volta a 100%.
-- Clique seleciona, Ctrl+clique junta; as relações da seleção ficam realçadas. Arrastar move as tabelas (Snap alinha a uma grelha).
-- Clicar numa coluna de chave estrangeira ou numa relação centra a tabela referenciada. Duplo clique abre o Data tab; **Alt+Enter** abre o table editor; o menu do nó tem ainda Select top 1000 rows e Copy name.
-- Pesquisa com a sintaxe do Table filter: o que não corresponde fica esbatido; **Enter** seleciona os resultados.
-- **Hide**, **Only selected** e **Show all** escolhem as tabelas visíveis. Bases com mais de 300 tabelas abrem só o grupo ligado à tabela escolhida.
-- **F5** relê o schema: as posições ficam, as tabelas novas aparecem marcadas e as removidas são contadas na barra. O layout fica guardado por sessão e base.
-- **Export PNG**: a vista atual ou o diagrama inteiro.
-- Com "Sync with tree" ligado, selecionar uma tabela no diagrama seleciona-a na árvore e vice-versa.
+- In the tree menu (database or table): **Show in schema visualizer**. Opens the "Diagram: database" tab.
+- Tables with their columns (primary, unique and foreign key, NULL), relations in crow's foot notation (1:N and 1:1).
+- Mouse wheel: zoom; drag the background (or space + drag, or the arrow keys): pan; **F** fits everything to the screen, **0** goes back to 100%.
+- Click selects, Ctrl+click adds; the selection's relations are highlighted. Dragging moves tables (Snap aligns them to a grid).
+- Clicking a foreign key column or a relation centres the referenced table. Double-click opens the Data tab; **Alt+Enter** opens the table editor; the node menu also has Select top 1000 rows and Copy name.
+- Search with the Table filter syntax: anything that does not match is dimmed; **Enter** selects the matches.
+- **Hide**, **Only selected** and **Show all** choose the visible tables. Databases with more than 300 tables open only the group connected to the chosen table.
+- **F5** reloads the schema: positions are kept, new tables appear highlighted and removed ones are counted in the bar. The layout is saved per session and database.
+- **Export PNG**: the current view or the whole diagram.
+- With "Sync with tree" on, selecting a table in the diagram selects it in the tree and vice versa.
 
-## Diferenças face ao HeidiSQL
+## Differences from HeidiSQL
 
-- **Paleta de comandos** (**Ctrl+Shift+P**, ou Tools ▸ Command palette): escreve parte do nome de um comando ("new query", "export", "wrap") e Enter corre-o. Só mostra os comandos que podem correr naquele momento, com o atalho ao lado. Os menus e atalhos do HeidiSQL ficam iguais.
-- Nada bloqueia a janela: queries, exports e imports correm em ligações próprias, com cancel. Cancelar numa tab só pára essa tab.
-- As tabs, os imports e o layout dos diagramas sobrevivem a um crash.
-- Passwords só no cofre do sistema (Credential Manager, Keychain ou Secret Service); o SQL log mostra `IDENTIFIED BY '***'` em vez da password e o histórico de queries não guarda instruções com passwords.
-- Uma ligação a um servidor remoto sem TLS nem túnel SSH deixa um aviso no SQL log; o tooltip do servidor na status bar diz se a ligação vai cifrada ("Encryption").
-- Edições seguras com qualquer `sql_mode` do servidor (incluindo `NO_BACKSLASH_ESCAPES`), sessões read-only, aviso de transações abertas e confirmação antes de perder dados no table editor.
-- O SQL export, o Run SQL file e o CSV import usam memória constante; o ZIP comprime enquanto escreve.
-- O modo servidor do CSV import não dá ao servidor acesso a ficheiros do PC.
-- Schema Visualizer (não existe no HeidiSQL).
-- Views e rotinas editam-se pelo `CREATE` (sem os formulários do HeidiSQL); se o código novo falhar, o objeto antigo é reposto.
-- Find text on server e Maintenance têm diálogos próprios (no HeidiSQL são tabs do "Table tools"); Optimize e Repair perguntam antes de correr.
-- Não há formatters online no Reformat SQL (o SQL não sai da máquina) nem links para sites.
+- **Command palette** (**Ctrl+Shift+P**, or Tools ▸ Command palette): type part of a command's name ("new query", "export", "wrap") and Enter runs it. It only lists the commands that can run at that moment, with their shortcut. HeidiSQL's menus and shortcuts stay the same.
+- Nothing blocks the window: queries, exports and imports run on their own connections, with cancel. Cancelling in a tab stops only that tab.
+- Tabs, imports and diagram layouts survive a crash.
+- Passwords only in the system vault (Credential Manager, Keychain or Secret Service); the SQL log shows `IDENTIFIED BY '***'` instead of the password and the query history does not keep statements with passwords.
+- A connection to a remote server without TLS or an SSH tunnel leaves a warning in the SQL log; the server tooltip in the status bar says whether the connection is encrypted ("Encryption").
+- Safe edits with any server `sql_mode` (including `NO_BACKSLASH_ESCAPES`), read-only sessions, open-transaction warnings and confirmation before losing data in the table editor.
+- SQL export, Run SQL file and CSV import use constant memory; ZIP output is compressed while it is written.
+- The CSV import's server mode does not give the server access to files on the computer.
+- Schema Visualizer (not in HeidiSQL).
+- Views and routines are edited through their `CREATE` (without HeidiSQL's forms); if the new code fails, the old object is restored.
+- Find text on server and Maintenance have their own dialogs (in HeidiSQL they are tabs of "Table tools"); Optimize and Repair ask before running.
+- Reformat SQL has no online formatters (the SQL never leaves the machine), and there are no links to websites.
 
-## Problemas
+## Troubleshooting
 
-- **"Loading local data is disabled"** no CSV import: ver o modo servidor acima.
-- **A chave SSH do servidor mudou**: a ligação é recusada. Se a mudança era esperada (servidor reinstalado), apague a linha desse servidor no ficheiro `known_hosts` da pasta das preferências (ver "Onde ficam os dados"); na ligação seguinte a chave nova é mostrada para confirmar. Se não a esperava, não ligue.
-- **"Session … is read-only"**: a sessão está marcada como só de leitura (Session Manager › Advanced).
-- **macOS diz que a aplicação "está danificada" ou "não pode ser aberta"**: ver a instalação no macOS (a quarentena do Gatekeeper).
-- **Linux: "No system keyring"** no arranque: instale e desbloqueie o GNOME Keyring ou o KWallet; até lá as passwords não ficam gravadas.
-- **Crash**: no arranque seguinte, o SQL log diz que houve um crash e onde está o relatório (`%LOCALAPPDATA%\Eunomia\logs\crash-….json`). O relatório não tem SQL, valores, servidores nem utilizadores. As query tabs voltam sozinhas.
-- **A janela fica presa**: o log de diagnóstico (`diagnostic.jsonl`, na mesma pasta) regista cada bloqueio da janela com mais de 250 ms.
+- **"Loading local data is disabled"** in the CSV import: see server mode above.
+- **The server's SSH key changed**: the connection is refused. If the change was expected (server reinstalled), delete that server's line from the `known_hosts` file in the preferences folder (see "Where data is stored"); on the next connection the new key is shown for confirmation. If you did not expect it, do not connect.
+- **"Session … is read-only"**: the session is marked read-only (Session Manager › Advanced).
+- **macOS says the app "is damaged" or "can't be opened"**: see the macOS installation notes (Gatekeeper quarantine).
+- **Linux: "No system keyring"** on startup: install and unlock GNOME Keyring or KWallet; until then passwords are not saved.
+- **Crash**: on the next start, the SQL log says there was a crash and where the report is (`%LOCALAPPDATA%\Eunomia\logs\crash-….json`). The report has no SQL, values, servers or users. Query tabs come back on their own.
+- **The window freezes**: the diagnostic log (`diagnostic.jsonl`, in the same folder) records every UI stall longer than 250 ms.

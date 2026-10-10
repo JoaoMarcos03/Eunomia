@@ -3,9 +3,9 @@ using System.Globalization;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Texto de display das células (secção 15.2): separador de milhares, casas decimais de DECIMAL, FLOAT e DOUBLE com
-/// todos os dígitos significativos, BIT em dígitos binários, datas, <c>(NULL)</c> e sufixo <c>" [...]"</c> em texto
-/// cortado (anexo D). Sem estado mutável. O texto para gravar, copiar e exportar é o de <see cref="FormatRaw"/>.
+/// Display text of cells (section 15.2): thousands separator, DECIMAL decimal places, FLOAT and DOUBLE with
+/// every significant digit, BIT as binary digits, dates, <c>(NULL)</c> and the <c>" [...]"</c> suffix on cut
+/// text (appendix D). No mutable state. The text to save, copy and export comes from <see cref="FormatRaw"/>.
 /// </summary>
 public sealed class DisplayFormatter
 {
@@ -21,8 +21,8 @@ public sealed class DisplayFormatter
     private readonly CultureInfo _culture;
     private readonly string[] _decimalFormats;
 
-    /// <param name="culture">Separadores numéricos; o HeidiSQL usa os do sistema. Por omissão, a cultura atual.</param>
-    /// <param name="thousandsSeparator">Mostrar separador de milhares (ligado por omissão).</param>
+    /// <param name="culture">Numeric separators; HeidiSQL uses the system's. By default, the current culture.</param>
+    /// <param name="thousandsSeparator">Show the thousands separator (on by default).</param>
     public DisplayFormatter(CultureInfo? culture = null, bool thousandsSeparator = true)
     {
         _culture = culture ?? CultureInfo.CurrentCulture;
@@ -76,7 +76,7 @@ public sealed class DisplayFormatter
         }
     }
 
-    /// <summary>Bytes mostrados no grid: hex com <c>0x</c>, no máximo <see cref="MaxDisplayBytes"/> bytes.</summary>
+    /// <summary>Bytes shown in the grid: hex with <c>0x</c>, at most <see cref="MaxDisplayBytes"/> bytes.</summary>
     public const int MaxDisplayBytes = 256;
 
     private static readonly string[] DateTimeFormats =
@@ -88,11 +88,11 @@ public sealed class DisplayFormatter
     private static readonly string[] RawDecimalFormats = [.. Enumerable.Range(0, 13).Select(s => s == 0 ? "0" : "0." + new string('0', s))];
 
     /// <summary>
-    /// Texto bruto e sem perdas de uma célula, para editar, copiar, duplicar, exportar e pôr num WHERE: números sem
-    /// separadores e com todos os dígitos (FLOAT e DOUBLE com o valor mais curto que volta ao mesmo número), BIT em dígitos
-    /// binários (a forma que o DML lê como <c>b'…'</c>), datas como no display, binário completo em <c>0x…</c>, texto sem
-    /// o sufixo de cortado; <c>null</c> se for NULL. Uma célula cortada no SELECT (<c>LEFT(…, 256)</c>) continua parcial:
-    /// quem grava tem de ir buscar o valor completo (<see cref="RowBlock.IsTruncated"/>).
+    /// Lossless raw text of a cell, to edit, copy, duplicate, export and put in a WHERE: numbers without separators and
+    /// with every digit (FLOAT and DOUBLE with the shortest value that round-trips to the same number), BIT as binary digits
+    /// (the form the DML reads as <c>b'…'</c>), dates as displayed, full binary as <c>0x…</c>, text without the cut
+    /// suffix; <c>null</c> for NULL. A cell cut in the SELECT (<c>LEFT(…, 256)</c>) stays partial: whoever saves
+    /// has to fetch the full value (<see cref="RowBlock.IsTruncated"/>).
     /// </summary>
     public static string? FormatRaw(RowBlock block, int row, int column)
     {
@@ -124,14 +124,14 @@ public sealed class DisplayFormatter
 
     private static readonly DisplayFormatter Invariant = new(CultureInfo.InvariantCulture, thousandsSeparator: false);
 
-    /// <summary>Coluna BIT (guardada como inteiro).</summary>
+    /// <summary>BIT column (stored as an integer).</summary>
     public static bool IsBit(ColumnInfo info)
     {
         ArgumentNullException.ThrowIfNull(info);
         return info.Storage == StorageKind.Int64 && info.NativeType.StartsWith("BIT", StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Dígitos binários de um BIT, com zeros à esquerda até à largura declarada (<c>BIT(4)</c> → <c>0101</c>).</summary>
+    /// <summary>Binary digits of a BIT, zero-padded to the declared width (<c>BIT(4)</c> → <c>0101</c>).</summary>
     public static string BitText(long value, ColumnInfo info)
     {
         ArgumentNullException.ThrowIfNull(info);
@@ -146,13 +146,13 @@ public sealed class DisplayFormatter
         return digits;
     }
 
-    /// <summary>Valor mais curto que volta ao mesmo número; o FLOAT (lido como double) volta a float primeiro.</summary>
+    /// <summary>Shortest value that round-trips to the same number; FLOAT (read as double) goes back to float first.</summary>
     private static string RoundTrip(double value, ColumnInfo info) =>
         info.NativeType.StartsWith("FLOAT", StringComparison.OrdinalIgnoreCase)
             ? ((float)value).ToString("R", CultureInfo.InvariantCulture)
             : value.ToString("R", CultureInfo.InvariantCulture);
 
-    /// <summary>Número em texto invariante com o separador decimal e, se ligado, o de milhares da cultura.</summary>
+    /// <summary>Number as invariant text with the culture's decimal separator and, if on, its thousands separator.</summary>
     private string LocalizeNumber(string invariant)
     {
         var format = _culture.NumberFormat;
@@ -192,7 +192,7 @@ public sealed class DisplayFormatter
         return truncated || bytes.Length > MaxDisplayBytes ? text + TruncatedSuffix : text;
     }
 
-    /// <summary>Formata uma coluna inteira de um bloco.</summary>
+    /// <summary>Formats a whole column of a block.</summary>
     public string[] FormatColumn(RowBlock block, int column)
     {
         var cells = new string[block.RowCount];

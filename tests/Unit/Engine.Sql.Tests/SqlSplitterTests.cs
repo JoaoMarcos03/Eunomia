@@ -2,7 +2,7 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.Engine.Sql.Tests;
 
-/// <summary>Splitter (FAM-Q02). A suíte de compatibilidade com 100+ scripts do HeidiSQL fica pendente (golden da Fase 0).</summary>
+/// <summary>Splitter (FAM-Q02). The compatibility suite with 100+ HeidiSQL scripts is still pending (phase 0 golden files).</summary>
 public sealed class SqlSplitterTests
 {
     private static string[] Texts(string sql, string delimiter = ";") => [.. SqlSplitter.Split(sql, delimiter).Select(s => s.Text)];

@@ -3,7 +3,7 @@ using Eunomia.App.Settings;
 
 namespace Eunomia.Infra.Settings.Tests;
 
-/// <summary><c>sessions.json</c> robusto (Fase 14): cópia de segurança, ficheiro corrompido e duas instâncias a gravar.</summary>
+/// <summary>Robust <c>sessions.json</c> (phase 14): backup copy, corrupted file and two instances saving.</summary>
 public sealed class SessionStoreTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-sessions-" + Guid.NewGuid().ToString("N"));
@@ -32,7 +32,7 @@ public sealed class SessionStoreTests : IDisposable
         var catalogA = a.Load();
         var catalogB = b.Load();
 
-        // A: sessão nova e porta mudada na partilhada. B: host mudado na partilhada e outra sessão nova.
+        // A: a new session and a changed port on the shared one. B: a changed host on the shared one and another new session.
         catalogA.Sessions.Add(Session("dev-a"));
         catalogA.Sessions[0].Port = 3307;
         a.Save(catalogA);
@@ -44,7 +44,7 @@ public sealed class SessionStoreTests : IDisposable
         Assert.Equal(["dev-a", "dev-b", "prod"], final.Sessions.Select(s => s.Name).Order(StringComparer.Ordinal));
         var prod = final.Sessions.Single(s => s.Name == "prod");
         Assert.Equal(("db.example.com", 3307), (prod.Host, prod.Port));
-        // O catálogo em memória de B passa a ter também o que A gravou.
+        // B's in-memory catalog now also has what A saved.
         Assert.Contains(catalogB.Sessions, s => s.Name == "dev-a");
     }
 

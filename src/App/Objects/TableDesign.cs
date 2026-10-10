@@ -4,7 +4,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Objects;
 
-/// <summary>Tipos do "Default" do table editor (anexo C §5.2, <c>TColumnDefaultEditorLink</c>).</summary>
+/// <summary>Kinds of the table editor "Default" (appendix C §5.2, <c>TColumnDefaultEditorLink</c>).</summary>
 public enum DefaultKind
 {
     None,
@@ -14,18 +14,18 @@ public enum DefaultKind
     AutoIncrement,
 }
 
-/// <summary>Uma linha da grelha de colunas do table editor (anexo C §5.2), nos campos que o utilizador edita.</summary>
+/// <summary>A row of the table editor's column grid (appendix C §5.2), in the fields the user edits.</summary>
 public sealed class ColumnDesign
 {
-    /// <summary>Nome no servidor antes de editar; <c>null</c> numa coluna nova.</summary>
+    /// <summary>Name on the server before editing; <c>null</c> for a new column.</summary>
     public string? OriginalName { get; set; }
 
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Tipo sem argumentos, em maiúsculas (<c>VARCHAR</c>).</summary>
+    /// <summary>Type without arguments, in upper case (<c>VARCHAR</c>).</summary>
     public string DataType { get; set; } = "INT";
 
-    /// <summary>Length/Set: <c>255</c>, <c>10,2</c> ou <c>'a','b'</c>.</summary>
+    /// <summary>Length/Set: <c>255</c>, <c>10,2</c> or <c>'a','b'</c>.</summary>
     public string LengthSet { get; set; } = string.Empty;
 
     public bool Unsigned { get; set; }
@@ -36,7 +36,7 @@ public sealed class ColumnDesign
 
     public DefaultKind DefaultKind { get; set; } = DefaultKind.None;
 
-    /// <summary>Texto do "Custom text" (sem aspas) ou a expressão.</summary>
+    /// <summary>"Custom text" text (unquoted) or the expression.</summary>
     public string DefaultText { get; set; } = string.Empty;
 
     public string OnUpdate { get; set; } = string.Empty;
@@ -45,17 +45,17 @@ public sealed class ColumnDesign
 
     public string Collation { get; set; } = string.Empty;
 
-    /// <summary>Expressão de coluna gerada.</summary>
+    /// <summary>Generated column expression.</summary>
     public string Expression { get; set; } = string.Empty;
 
-    /// <summary>Vazio, <c>VIRTUAL</c>, <c>STORED</c> ou <c>PERSISTENT</c>.</summary>
+    /// <summary>Empty, <c>VIRTUAL</c>, <c>STORED</c> or <c>PERSISTENT</c>.</summary>
     public string Virtuality { get; set; } = string.Empty;
 
     public bool Invisible { get; set; }
 
     public ColumnDesign Clone() => (ColumnDesign)MemberwiseClone();
 
-    /// <summary>O que a célula Default mostra: "No default", o texto entre aspas, NULL, a expressão ou AUTO_INCREMENT, mais o ON UPDATE.</summary>
+    /// <summary>What the Default cell shows: "No default", the quoted text, NULL, the expression or AUTO_INCREMENT, plus ON UPDATE.</summary>
     public string DefaultCaption => DefaultKind switch
     {
         DefaultKind.Text => "'" + DefaultText + "'",
@@ -65,7 +65,7 @@ public sealed class ColumnDesign
         _ => "No default",
     } + (OnUpdate.Length > 0 ? " ON UPDATE " + OnUpdate : string.Empty);
 
-    /// <summary>Tipo nativo completo: <c>varchar(40)</c>, <c>int(10) unsigned zerofill</c>.</summary>
+    /// <summary>Full native type: <c>varchar(40)</c>, <c>int(10) unsigned zerofill</c>.</summary>
     public string NativeType()
     {
         var sb = new StringBuilder(DataType.ToLowerInvariant());
@@ -85,17 +85,17 @@ public sealed class ColumnDesign
     }
 }
 
-/// <summary>Um índice no table editor: colunas com o prefixo opcional (<c>nome(20)</c>).</summary>
+/// <summary>An index in the table editor: columns with an optional prefix (<c>name(20)</c>).</summary>
 public sealed class IndexDesign
 {
     public string Name { get; set; } = string.Empty;
 
     public IndexKind Kind { get; set; } = IndexKind.Key;
 
-    /// <summary>Colunas como o utilizador as escreve: <c>a, b(20)</c>.</summary>
+    /// <summary>Columns as the user types them: <c>a, b(20)</c>.</summary>
     public string Columns { get; set; } = string.Empty;
 
-    /// <summary>Vazio, BTREE, HASH ou RTREE.</summary>
+    /// <summary>Empty, BTREE, HASH or RTREE.</summary>
     public string Algorithm { get; set; } = string.Empty;
 
     public string Comment { get; set; } = string.Empty;
@@ -107,7 +107,7 @@ public sealed class ForeignKeyDesign
 
     public string Columns { get; set; } = string.Empty;
 
-    /// <summary>Tabela referida (na mesma base, ou <c>base.tabela</c>).</summary>
+    /// <summary>Referenced table (in the same database, or <c>database.table</c>).</summary>
     public string ReferenceTable { get; set; } = string.Empty;
 
     public string ForeignColumns { get; set; } = string.Empty;
@@ -125,9 +125,9 @@ public sealed class CheckDesign
 }
 
 /// <summary>
-/// Modelo editável do table editor (anexo C §5; FAM-E01–E03): Basic (nome, comentário), Options (auto increment,
-/// collation com "Convert data", engine, row format, checksum, avg row length, max rows), colunas, índices, chaves
-/// estrangeiras e checks. Converte de e para <see cref="TableDefinition"/>; o ALTER sai do <see cref="IDdlComposer"/>.
+/// Editable model of the table editor (appendix C §5; FAM-E01–E03): Basic (name, comment), Options (auto increment,
+/// collation with "Convert data", engine, row format, checksum, avg row length, max rows), columns, indexes, foreign
+/// keys and checks. Converts from and to <see cref="TableDefinition"/>; the ALTER comes from the <see cref="IDdlComposer"/>.
 /// </summary>
 public sealed class TableDesign
 {
@@ -141,7 +141,7 @@ public sealed class TableDesign
 
     public string Collation { get; set; } = string.Empty;
 
-    /// <summary>"Convert data": <c>CONVERT TO CHARSET</c> com a collation em vez de <c>COLLATE=</c>.</summary>
+    /// <summary>"Convert data": <c>CONVERT TO CHARSET</c> with the collation instead of <c>COLLATE=</c>.</summary>
     public bool ConvertData { get; set; }
 
     public string Engine { get; set; } = string.Empty;
@@ -162,7 +162,7 @@ public sealed class TableDesign
 
     public List<CheckDesign> Checks { get; } = [];
 
-    /// <summary>Tipos do drop-down "Datatype", por categoria (anexo C §5.2).</summary>
+    /// <summary>Types of the "Datatype" drop-down, by category (appendix C §5.2).</summary>
     public static IReadOnlyList<(string Category, IReadOnlyList<string> Types)> DataTypes { get; } =
     [
         ("Integer", ["TINYINT", "SMALLINT", "MEDIUMINT", "INT", "BIGINT", "BIT"]),
@@ -176,13 +176,13 @@ public sealed class TableDesign
 
     private static readonly HashSet<string> IntegerTypes = new(StringComparer.OrdinalIgnoreCase) { "TINYINT", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT" };
 
-    /// <summary>Unsigned e Zerofill só nos números (não no BIT); AUTO_INCREMENT só nos inteiros.</summary>
+    /// <summary>Unsigned and Zerofill only for numbers (not BIT); AUTO_INCREMENT only for integers.</summary>
     public static bool IsNumeric(string dataType) =>
         IntegerTypes.Contains(dataType) || dataType.ToUpperInvariant() is "FLOAT" or "DOUBLE" or "DECIMAL" or "REAL" or "NUMERIC";
 
     public static bool IsInteger(string dataType) => IntegerTypes.Contains(dataType);
 
-    /// <summary>Tabela nova numa base (o nome fica por escrever).</summary>
+    /// <summary>New table in a database (the name is still to be typed).</summary>
     public static TableDesign New(string database) => new() { Database = database };
 
     public static TableDesign From(TableDefinition table)
@@ -226,7 +226,7 @@ public sealed class TableDesign
         return design;
     }
 
-    /// <summary><c>ROW_FORMAT</c> só quando foi dado na criação (o <c>Row_format</c> do status é o efetivo).</summary>
+    /// <summary><c>ROW_FORMAT</c> only when it was given at creation (the status <c>Row_format</c> is the effective one).</summary>
     private static string ExplicitRowFormat(IReadOnlyDictionary<string, string> options) =>
         CreateOption(options.GetValueOrDefault("Create_options") ?? string.Empty, "row_format");
 
@@ -294,8 +294,8 @@ public sealed class TableDesign
     }
 
     /// <summary>
-    /// Texto de um literal SQL: tira as aspas e desfaz <c>''</c> e as barras; o hex com introdutor (<c>_utf8mb4 X'…'</c>,
-    /// a forma dos literais com barras) volta a texto UTF-8.
+    /// Text of an SQL literal: removes the quotes and undoes <c>''</c> and the backslashes; hex with an introducer
+    /// (<c>_utf8mb4 X'…'</c>, the form of literals with backslashes) goes back to UTF-8 text.
     /// </summary>
     internal static string Unquote(string literal)
     {
@@ -329,7 +329,7 @@ public sealed class TableDesign
         return sb.ToString();
     }
 
-    /// <summary>A definição pedida pelo editor (para o CREATE ou para o diff do ALTER).</summary>
+    /// <summary>The definition requested by the editor (for the CREATE or for the ALTER diff).</summary>
     public TableDefinition ToDefinition(ITypeMapper types, IDialect dialect)
     {
         ArgumentNullException.ThrowIfNull(types);
@@ -371,7 +371,7 @@ public sealed class TableDesign
         return new TableDefinition(new DbObjectRef(Database, Database, Name, DbObjectKind.Table), columns, indexes, fks, checks, options);
     }
 
-    /// <summary>Texto de <c>_utf8mb4 X'…'</c> ou <c>_utf8 X'…'</c>, ou <c>null</c> se não for essa forma.</summary>
+    /// <summary>Text of <c>_utf8mb4 X'…'</c> or <c>_utf8 X'…'</c>, or <c>null</c> if it is not that form.</summary>
     private static string? HexText(string literal)
     {
         var at = literal.IndexOf(" X'", StringComparison.OrdinalIgnoreCase);
@@ -415,8 +415,8 @@ public sealed class TableDesign
     }
 
     /// <summary>
-    /// Nome numa lista do editor (<c>a, b(20)</c>): entre backticks (com <c>``</c>) quando tem vírgulas, parênteses,
-    /// backticks, espaços nas pontas ou, nos nomes de tabelas, um ponto; assim um nome nunca se parte em dois ao voltar a ler.
+    /// Name in an editor list (<c>a, b(20)</c>): in backticks (with <c>``</c>) when it has commas, parentheses,
+    /// backticks, spaces at the ends or, for table names, a dot; that way a name never splits in two when read back.
     /// </summary>
     public static string FormatName(string name) => FormatName(name, dotIsSpecial: false);
 
@@ -425,10 +425,10 @@ public sealed class TableDesign
             ? "`" + name.Replace("`", "``", StringComparison.Ordinal) + "`"
             : name;
 
-    /// <summary><c>a, `b,c`, d(20)</c> → nomes (sem o comprimento do prefixo).</summary>
+    /// <summary><c>a, `b,c`, d(20)</c> → names (without the prefix length).</summary>
     public static IReadOnlyList<string> SplitList(string text) => [.. SplitParts(text).Select(p => p.Column)];
 
-    /// <summary><c>a, `b,c`(10)</c> → nomes e comprimentos de prefixo, respeitando os backticks.</summary>
+    /// <summary><c>a, `b,c`(10)</c> → names and prefix lengths, honouring the backticks.</summary>
     public static IReadOnlyList<(string Column, int? SubPart)> SplitParts(string text)
     {
         var result = new List<(string, int?)>();
@@ -456,7 +456,7 @@ public sealed class TableDesign
         return result;
     }
 
-    /// <summary>Nomes separados por <paramref name="separator"/> fora de backticks, sem os backticks.</summary>
+    /// <summary>Names separated by <paramref name="separator"/> outside backticks, without the backticks.</summary>
     private static List<string> SplitNames(string text, char separator) =>
         [.. SplitOutsideBackticks(text ?? string.Empty, separator).Select(p => UnquoteName(p.Trim())).Where(p => p.Length > 0)];
 
@@ -482,7 +482,7 @@ public sealed class TableDesign
     private static string UnquoteName(string part) =>
         part.Length >= 2 && part[0] == '`' && part[^1] == '`' ? part[1..^1].Replace("``", "`", StringComparison.Ordinal) : part;
 
-    /// <summary>Erros que impedem gravar: nome em falta, coluna sem nome, índice sem colunas.</summary>
+    /// <summary>Errors that prevent saving: missing name, column without a name, index without columns.</summary>
     public IReadOnlyList<string> Validate()
     {
         var errors = new List<string>();

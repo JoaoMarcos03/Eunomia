@@ -12,12 +12,12 @@ public enum ChordModifiers
 }
 
 /// <summary>
-/// Atalho de teclado independente do UI framework (a camada App não referencia Avalonia, secção 21):
-/// modificadores e o nome da tecla, como no texto "Ctrl+Shift+F9". A UI converte para o tipo do framework.
+/// Keyboard shortcut independent of the UI framework (the App layer does not reference Avalonia, section 21):
+/// modifiers and the key name, as in the text "Ctrl+Shift+F9". The UI converts it to the framework type.
 /// </summary>
 public readonly record struct KeyChord(ChordModifiers Modifiers, string Key)
 {
-    /// <summary>Lê "Ctrl+Shift+F9", "Alt+Enter", "Ins", "F5". Modificadores em qualquer ordem, case-insensitive.</summary>
+    /// <summary>Reads "Ctrl+Shift+F9", "Alt+Enter", "Ins", "F5". Modifiers in any order, case-insensitive.</summary>
     public static KeyChord Parse(string text) =>
         TryParse(text, out var chord) ? chord : throw new FormatException($"Atalho inválido: '{text}'.");
 

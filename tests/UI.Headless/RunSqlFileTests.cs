@@ -11,7 +11,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Run SQL file pela janela principal (Fase 8; anexo B §4.1–4.2): ficheiro grande no Load, progresso e Resume.</summary>
+/// <summary>Run SQL file through the main window (phase 8; appendix B §4.1–4.2): a large file on Load, progress and Resume.</summary>
 public sealed class RunSqlFileTests
 {
     private static async Task<string?> ScalarAsync(string cs, string sql)
@@ -36,18 +36,18 @@ public sealed class RunSqlFileTests
             var journal = new TransferJournal(Path.Combine(dir, "jobs"));
             var (window, context, session, connector, log) = CreateShell(cs, db, journal: journal);
             Assert.True(await window.ConnectAsync(window, session, null));
-            // A base focada na árvore passa a ser a atual da sessão (o ficheiro corre nela).
+            // The database focused in the tree becomes the session's current one (the file runs in it).
             var model = window.Tree.Tree.Model!;
             var root = await WaitAsync(() => model.Roots.FirstOrDefault());
             window.Tree.Tree.FocusedNode = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db));
             var open = connector.Find(session.Id)!;
             await WaitAsync(() => open.Host.CurrentDatabase == db ? "ok" : null);
 
-            // Mais de 5 MiB: o Load pergunta e "Run file(s) directly" corre-o sem o abrir.
+            // Over 5 MiB: Load asks and "Run file(s) directly" runs it without opening it.
             var big = new StringBuilder("CREATE TABLE t (id INT PRIMARY KEY, txt VARCHAR(200));\r\n");
             var row = 0;
             var statements = 0;
-            // INSERTs de 100 linhas: o servidor faz um commit (fsync) por instrução, e 58.000 levavam minutos.
+            // INSERTs of 100 rows: the server commits (fsync) per statement, and 58,000 took minutes.
             while (big.Length < SqlFile.LargeFileBytes + 100_000)
             {
                 statements++;
@@ -81,7 +81,7 @@ public sealed class RunSqlFileTests
             Assert.False(run.ResumeButton.IsVisible);
             run.Close();
 
-            // "Run SQL file..." com Stop on errors: pára na instrução que falha; Resume continua dela.
+            // "Run SQL file..." with Stop on errors: stops at the failing statement; Resume continues from it.
             var broken = Path.Combine(dir, "broken.sql");
             await File.WriteAllTextAsync(broken, "INSERT INTO u VALUES (1);\r\nINSERT INTO u VALUES (2);\r\nINSERT INTO falta VALUES (1);\r\nINSERT INTO u VALUES (3);\r\n");
             await ExecAsync(cs, $"CREATE TABLE `{db}`.u (a INT)");

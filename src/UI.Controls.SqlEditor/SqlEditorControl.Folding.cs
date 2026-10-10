@@ -4,9 +4,9 @@ using AvaloniaEdit.Folding;
 namespace Eunomia.UI.Controls.SqlEditor;
 
 /// <summary>
-/// Code folding (Query ▸ Code folding; secção 6 da spec): regiões entre <c>#region</c> e <c>#endregion</c>, recalculadas
-/// 300 ms depois da última edição. A margem com os marcadores só aparece quando o texto tem regiões, para um editor sem
-/// regiões ficar igual. Insert region start/end marker e Fold selection escrevem os marcadores num só undo.
+/// Code folding (Query ▸ Code folding; spec section 6): regions between <c>#region</c> and <c>#endregion</c>, recomputed
+/// 300 ms after the last edit. The margin with the markers only appears when the text has regions, so an editor without
+/// regions looks the same. Insert region start/end marker and Fold selection write the markers as a single undo step.
 /// </summary>
 public sealed partial class SqlEditorControl
 {
@@ -14,7 +14,7 @@ public sealed partial class SqlEditorControl
     private DispatcherTimer? _foldingTimer;
     private bool _codeFolding;
 
-    /// <summary>Liga ou desliga o code folding; desligar desdobra tudo e tira a margem.</summary>
+    /// <summary>Turns code folding on or off; turning it off unfolds everything and removes the margin.</summary>
     public bool CodeFolding
     {
         get => _codeFolding;
@@ -25,11 +25,11 @@ public sealed partial class SqlEditorControl
         }
     }
 
-    /// <summary>Regiões conhecidas e se estão dobradas (testes).</summary>
+    /// <summary>Known regions and whether they are folded (tests).</summary>
     public IReadOnlyList<(int Start, int End, bool Folded)> Foldings =>
         _folding is null ? [] : [.. _folding.AllFoldings.Select(f => (f.StartOffset, f.EndOffset, f.IsFolded))];
 
-    /// <summary>Dobra a região que começa em <paramref name="offset"/> (testes e Fold selection).</summary>
+    /// <summary>Folds the region that starts at <paramref name="offset"/> (tests and Fold selection).</summary>
     public void FoldAt(int offset)
     {
         if (_folding?.GetFoldingsAt(offset).FirstOrDefault() is { } section)
@@ -38,7 +38,7 @@ public sealed partial class SqlEditorControl
         }
     }
 
-    /// <summary>Recalcula as regiões já (sem esperar pela pausa na escrita).</summary>
+    /// <summary>Recomputes the regions now (without waiting for a pause in typing).</summary>
     public void UpdateFoldings()
     {
         _foldingTimer?.Stop();
@@ -60,7 +60,7 @@ public sealed partial class SqlEditorControl
         _folding.UpdateFoldings(regions.Select(r => new NewFolding(r.StartOffset, r.EndOffset) { Name = r.Name }), -1);
     }
 
-    /// <summary>Marcadores [+]/[−] com as cores do editor (por omissão o AvaloniaEdit pinta-os de branco, também no tema escuro).</summary>
+    /// <summary>[+]/[−] markers with the editor colours (by default AvaloniaEdit paints them white, in the dark theme too).</summary>
     private void ApplyFoldingTheme()
     {
         foreach (var margin in Editor.TextArea.LeftMargins.OfType<FoldingMargin>())
@@ -72,7 +72,7 @@ public sealed partial class SqlEditorControl
         }
     }
 
-    /// <summary>Insert region start marker: uma linha <c>#region </c> antes da linha do cursor, com o cursor no fim dela.</summary>
+    /// <summary>Insert region start marker: a <c>#region </c> line before the cursor line, with the cursor at its end.</summary>
     public void InsertRegionStart()
     {
         var line = Editor.Document.GetLineByOffset(Editor.CaretOffset);
@@ -81,7 +81,7 @@ public sealed partial class SqlEditorControl
         UpdateFoldings();
     }
 
-    /// <summary>Insert region end marker: uma linha <c>#endregion</c> depois da linha do cursor.</summary>
+    /// <summary>Insert region end marker: an <c>#endregion</c> line after the cursor line.</summary>
     public void InsertRegionEnd()
     {
         var line = Editor.Document.GetLineByOffset(Editor.CaretOffset);
@@ -89,7 +89,7 @@ public sealed partial class SqlEditorControl
         UpdateFoldings();
     }
 
-    /// <summary>Fold selection: as linhas da seleção entre marcadores novos, já dobradas.</summary>
+    /// <summary>Fold selection: the selected lines between new markers, already folded.</summary>
     public void FoldSelection()
     {
         var document = Editor.Document;

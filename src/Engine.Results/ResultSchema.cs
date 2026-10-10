@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Results;
 
-/// <summary>Categorias de tipo usadas para as cores do grid (secção 5.6, <c>preferences.pas</c>).</summary>
+/// <summary>Type categories used for the grid colours (section 5.6, <c>preferences.pas</c>).</summary>
 public enum TypeCategory
 {
     Integer,
@@ -12,36 +12,36 @@ public enum TypeCategory
     Other,
 }
 
-/// <summary>Como os valores de uma coluna ficam guardados num <see cref="RowBlock"/> (secção 11.1).</summary>
+/// <summary>How a column's values are stored in a <see cref="RowBlock"/> (section 11.1).</summary>
 public enum StorageKind
 {
-    /// <summary>Inteiros com sinal em <c>long[]</c>.</summary>
+    /// <summary>Signed integers in <c>long[]</c>.</summary>
     Int64,
 
-    /// <summary>DECIMAL sem perdas: valor não escalado em <c>long[]</c> mais <see cref="ColumnInfo.Scale"/>.</summary>
+    /// <summary>Lossless DECIMAL: unscaled value in <c>long[]</c> plus <see cref="ColumnInfo.Scale"/>.</summary>
     Decimal,
 
-    /// <summary>FLOAT/DOUBLE em <c>double[]</c>.</summary>
+    /// <summary>FLOAT/DOUBLE in <c>double[]</c>.</summary>
     Double,
 
-    /// <summary>Datas e horas como ticks em <c>long[]</c>.</summary>
+    /// <summary>Dates and times as ticks in <c>long[]</c>.</summary>
     DateTime,
 
-    /// <summary>Texto numa arena UTF-8 com offsets.</summary>
+    /// <summary>Text in a UTF-8 arena with offsets.</summary>
     String,
 
-    /// <summary>Bytes (BLOB, BINARY, BIT, geometria) numa arena com offsets; mostrados em hex.</summary>
+    /// <summary>Bytes (BLOB, BINARY, BIT, geometry) in an arena with offsets; shown as hex.</summary>
     Binary,
 }
 
-/// <summary>Metadata de uma coluna do resultado.</summary>
-/// <param name="Name">Nome da coluna.</param>
-/// <param name="NativeType">Tipo tal como o servidor o descreve, por exemplo <c>VARCHAR(255)</c>.</param>
-/// <param name="Category">Categoria para cores.</param>
-/// <param name="Storage">Representação em memória.</param>
-/// <param name="IsPrimaryKey">Faz parte da chave primária (PK a bold no grid).</param>
-/// <param name="IsNullable">Aceita NULL.</param>
-/// <param name="Scale">Casas decimais de DECIMAL; casas das frações de segundo em DATETIME/TIMESTAMP; 0 nos outros tipos.</param>
+/// <summary>Metadata of a result column.</summary>
+/// <param name="Name">Column name.</param>
+/// <param name="NativeType">Type as the server describes it, for example <c>VARCHAR(255)</c>.</param>
+/// <param name="Category">Category for colours.</param>
+/// <param name="Storage">In-memory representation.</param>
+/// <param name="IsPrimaryKey">Part of the primary key (PK in bold in the grid).</param>
+/// <param name="IsNullable">Accepts NULL.</param>
+/// <param name="Scale">DECIMAL decimal places; fractional-second digits for DATETIME/TIMESTAMP; 0 for other types.</param>
 public sealed record ColumnInfo(
     string Name,
     string NativeType,
@@ -51,20 +51,20 @@ public sealed record ColumnInfo(
     bool IsNullable,
     int Scale = 0)
 {
-    /// <summary>Números alinham à direita no grid.</summary>
+    /// <summary>Numbers align right in the grid.</summary>
     public bool IsNumeric => Category is TypeCategory.Integer or TypeCategory.Real;
 
-    /// <summary>Base de origem da coluna (<c>org_db</c>), se o servidor a der; vazia em expressões.</summary>
+    /// <summary>Source database of the column (<c>org_db</c>), if the server gives it; empty for expressions.</summary>
     public string? SourceDatabase { get; init; }
 
-    /// <summary>Tabela de origem (<c>org_table</c>): caption do result tab e resultados editáveis.</summary>
+    /// <summary>Source table (<c>org_table</c>): result tab caption and editable results.</summary>
     public string? SourceTable { get; init; }
 
-    /// <summary>Nome da coluna na tabela (<c>org_name</c>), que pode diferir do alias.</summary>
+    /// <summary>Column name in the table (<c>org_name</c>), which may differ from the alias.</summary>
     public string? SourceColumn { get; init; }
 }
 
-/// <summary>Colunas de um resultado, imutável.</summary>
+/// <summary>Columns of a result, immutable.</summary>
 public sealed class ResultSchema
 {
     public ResultSchema(IReadOnlyList<ColumnInfo> columns)
@@ -80,7 +80,7 @@ public sealed class ResultSchema
     public ColumnInfo this[int index] => Columns[index];
 }
 
-/// <summary>Estado da contagem de linhas (secção 11.1): reproduz "(exact)" / "(approximately)" do HeidiSQL.</summary>
+/// <summary>State of the row count (section 11.1): reproduces HeidiSQL's "(exact)" / "(approximately)".</summary>
 public enum RowCountKind
 {
     Unknown,
@@ -89,7 +89,7 @@ public enum RowCountKind
     Final,
 }
 
-/// <summary>Contagem de linhas e o grau de certeza.</summary>
+/// <summary>Row count and its degree of certainty.</summary>
 public readonly record struct RowCountState(RowCountKind Kind, long Count)
 {
     public static RowCountState Unknown => new(RowCountKind.Unknown, 0);

@@ -3,23 +3,23 @@ using Avalonia.Input;
 namespace Eunomia.UI.Controls.Common.Input;
 
 /// <summary>
-/// Teclas por sistema (Fase 14): no macOS a tecla Command (⌘, <see cref="KeyModifiers.Meta"/>) faz o papel do Ctrl dos
-/// atalhos do HeidiSQL (⌘C, ⌘Enter, ⌘-clique para juntar à seleção), como nas outras aplicações do Mac; o Control físico
-/// continua a funcionar. Noutros sistemas nada muda.
+/// Keys per system (phase 14): on macOS the Command key (⌘, <see cref="KeyModifiers.Meta"/>) plays the part of the Ctrl of
+/// HeidiSQL's shortcuts (⌘C, ⌘Enter, ⌘-click to add to the selection), as in other Mac applications; the physical Control
+/// key keeps working. Nothing changes on other systems.
 /// </summary>
 public static class PlatformKeys
 {
-    /// <summary>O Ctrl dos atalhos é o Command (macOS).</summary>
+    /// <summary>The shortcuts' Ctrl is Command (macOS).</summary>
     public static bool CommandIsMeta { get; } = OperatingSystem.IsMacOS();
 
-    /// <summary>Modificadores com o Command tratado como Ctrl no macOS.</summary>
+    /// <summary>Modifiers with Command treated as Ctrl on macOS.</summary>
     public static KeyModifiers Normalize(KeyModifiers modifiers) =>
         CommandIsMeta && modifiers.HasFlag(KeyModifiers.Meta) ? (modifiers & ~KeyModifiers.Meta) | KeyModifiers.Control : modifiers;
 
-    /// <summary>O "Ctrl" dos atalhos está carregado (Command no macOS, Ctrl em todos).</summary>
+    /// <summary>The shortcuts' "Ctrl" is pressed (Command on macOS, Ctrl everywhere).</summary>
     public static bool IsCommand(KeyModifiers modifiers) => Normalize(modifiers).HasFlag(KeyModifiers.Control);
 
-    /// <summary>Modificadores para mostrar um atalho num menu: Ctrl passa a Command no macOS.</summary>
+    /// <summary>Modifiers to show a shortcut in a menu: Ctrl becomes Command on macOS.</summary>
     public static KeyModifiers ForDisplay(KeyModifiers modifiers) =>
         CommandIsMeta && modifiers.HasFlag(KeyModifiers.Control) ? (modifiers & ~KeyModifiers.Control) | KeyModifiers.Meta : modifiers;
 }

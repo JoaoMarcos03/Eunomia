@@ -148,7 +148,7 @@ public sealed class CommandRegistryTests
     [Fact]
     public void ComandoDesativadoNaoConsomeOAtalho()
     {
-        // Esc: Cancel editing (grid, só com alterações pendentes) vs Cancel running operation (global, só a correr).
+        // Esc: Cancel editing (grid, only with pending changes) vs Cancel running operation (global, only while running).
         var r = new CommandRegistry();
         r.Register(new CommandDescriptor("grid.cancelEditing", "Cancel editing", "Data", KeyChord.Parse("Esc"), [CommandContexts.Grid]));
         r.Register(new CommandDescriptor("operation.cancel", "Cancel running operation", "Various", KeyChord.Parse("Esc")));

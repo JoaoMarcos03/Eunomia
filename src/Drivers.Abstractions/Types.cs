@@ -2,7 +2,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.Drivers.Abstractions;
 
-/// <summary>Tipos lógicos da secção 14.4.</summary>
+/// <summary>Logical types of section 14.4.</summary>
 public enum LogicalTypeKind
 {
     Integer,
@@ -26,8 +26,8 @@ public enum LogicalTypeKind
 }
 
 /// <summary>
-/// Tipo lógico com os parâmetros que importam para edição sem perdas e para as cores do grid (14.4).
-/// Os campos que não se aplicam a um tipo ficam a <c>null</c>.
+/// Logical type with the parameters that matter for lossless editing and for the grid colours (14.4).
+/// Fields that do not apply to a type are left <c>null</c>.
 /// </summary>
 public sealed record LogicalType(
     LogicalTypeKind Kind,
@@ -44,8 +44,8 @@ public sealed record LogicalType(
     LogicalType? Element = null)
 {
     /// <summary>
-    /// Categoria de cor por omissão (coluna "Categoria de cor" da 14.4). Boolean e Json têm duas opções na
-    /// tabela; fica a primeira (Integer e Text) até haver preferência.
+    /// Default colour category (the "Colour category" column of 14.4). Boolean and Json have two options in the
+    /// table; the first one is used (Integer and Text) until there is a preference.
     /// </summary>
     public TypeCategory Category => Kind switch
     {
@@ -59,15 +59,15 @@ public sealed record LogicalType(
     };
 }
 
-/// <summary>Tipo nativo ↔ tipo lógico (secção 14.4). Alimenta editores, cores e o armazenamento dos blocos.</summary>
+/// <summary>Native type ↔ logical type (section 14.4). Feeds editors, colours and block storage.</summary>
 public interface ITypeMapper
 {
-    /// <summary>Interpreta o tipo tal como o servidor o descreve, por exemplo <c>decimal(12,2) unsigned</c>.</summary>
+    /// <summary>Parses the type as the server describes it, for example <c>decimal(12,2) unsigned</c>.</summary>
     LogicalType Map(string nativeType);
 
-    /// <summary>Como os valores deste tipo ficam guardados num <see cref="RowBlock"/>.</summary>
+    /// <summary>How values of this type are stored in a <see cref="RowBlock"/>.</summary>
     StorageKind StorageFor(LogicalType type);
 
-    /// <summary>Texto nativo do tipo (para DDL), o inverso de <see cref="Map"/>.</summary>
+    /// <summary>Native text of the type (for DDL), the inverse of <see cref="Map"/>.</summary>
     string ToNative(LogicalType type);
 }

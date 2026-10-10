@@ -2,7 +2,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.Drivers.MySql.Tests;
 
-/// <summary>Instruções do Maintenance (anexo B §2.2): opções que cada operação aceita, pela ordem do HeidiSQL.</summary>
+/// <summary>Maintenance statements (appendix B §2.2): the options each operation accepts, in HeidiSQL's order.</summary>
 public sealed class MaintenanceSqlTests
 {
     private static readonly MySqlDialect Dialect = new(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));

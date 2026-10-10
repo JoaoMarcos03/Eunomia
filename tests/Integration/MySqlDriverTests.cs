@@ -6,7 +6,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Driver MySQL/MariaDB contra um servidor real (secção 24; integração da Fase 3).</summary>
+/// <summary>MySQL/MariaDB driver against a real server (section 24; phase 3 integration).</summary>
 public sealed class MySqlDriverTests : IAsyncLifetime
 {
     private IDbConnectionHandle _db = null!;
@@ -28,7 +28,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     {
         if (_db is not null)
         {
-            // A ligação pode ter sido morta pelo teste: limpa por uma ligação nova.
+            // The connection may have been killed by the test: cleans up through a new connection.
             await _db.DisposeAsync();
             await using var cleanup = await TestServer.OpenAsync();
             await TestServer.DropDatabaseAsync(cleanup, _database);
@@ -84,7 +84,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
         Assert.Equal("1234567890.12", Cell(0, "d"));
         Assert.Equal("123456789012345678901234567890.0123456789", Cell(0, "big"));
         Assert.Equal("3.25", Cell(0, "f"));
-        // BIT em dígitos binários (como o HeidiSQL; o DML lê esta forma como b'101').
+        // BIT as binary digits (like HeidiSQL; the DML reads this form as b'101').
         Assert.Equal("101", Cell(0, "b"));
         Assert.Equal("café ☕", Cell(0, "v"));
         Assert.Equal("linha1\nlinha2", Cell(0, "tx"));
@@ -214,7 +214,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
         var events = await run;
 
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5));
-        // MariaDB devolve 1 em SLEEP interrompido por KILL QUERY, ou erro 1317.
+        // MariaDB returns 1 for a SLEEP interrupted by KILL QUERY, or error 1317.
         Assert.True(events.OfType<StatementCompleted>().Any() || events.OfType<ExecutionError>().Any(e => e.Error.Code == 1317));
     }
 

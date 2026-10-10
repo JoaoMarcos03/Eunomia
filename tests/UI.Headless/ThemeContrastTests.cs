@@ -5,17 +5,17 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Contraste dos temas a partir dos tokens (roadmap 4.5; WCAG 2.1 AA): texto 4,5:1 (1.4.3), glifos e indicadores 3:1
-/// (1.4.11). Os pares abaixo do AA estão em <see cref="Exceptions"/> com o valor atual, que não pode piorar; mudá-los é
-/// uma decisão de design (cores do realce do HeidiSQL exigidas pela secção 5.6 da spec, acento da Fase 13) registada no
-/// roadmap. Um par que passe a cumprir sai das exceções.
+/// Theme contrast from the tokens (roadmap 4.5; WCAG 2.1 AA): text 4.5:1 (1.4.3), glyphs and indicators 3:1
+/// (1.4.11). The pairs below AA are in <see cref="Exceptions"/> with their current value, which may not get worse; changing
+/// them is a design decision (HeidiSQL highlight colours required by spec section 5.6, the phase 13 accent) recorded in the
+/// roadmap. A pair that starts to comply leaves the exceptions.
 /// </summary>
 public sealed class ThemeContrastTests
 {
     private const double Text = 4.5;
     private const double Graphics = 3.0;
 
-    /// <summary>Primeiro plano, fundo, mínimo e onde se vê.</summary>
+    /// <summary>Foreground, background, minimum and where it shows.</summary>
     private static readonly (string Foreground, string Background, double Minimum, string Where)[] Pairs =
     [
         ("text.primary", "surface.content", Text, "grid, árvore, listas, editor"),
@@ -64,7 +64,7 @@ public sealed class ThemeContrastTests
         ("status.busy", "surface.chrome", Graphics, "indicador de ocupado"),
     ];
 
-    /// <summary>Pares abaixo do AA a 9 out 2026, com o contraste atual (decisão do autor no roadmap 4.5).</summary>
+    /// <summary>Pairs below AA on 9 Oct 2026, with their current contrast (the author's decision in roadmap 4.5).</summary>
     private static readonly Dictionary<(string Theme, string Foreground, string Background), double> Exceptions = new()
     {
         [("Light", "accent.text", "accent")] = 4.28,
@@ -122,11 +122,11 @@ public sealed class ThemeContrastTests
     {
         Assert.Equal(21.0, Contrast(Colors.Black, Colors.White), 2);
         Assert.Equal(1.0, Contrast(Colors.Gray, Colors.Gray), 2);
-        // #767676 sobre branco é o cinzento mais claro que cumpre 4,5:1.
+        // #767676 on white is the lightest grey that meets 4.5:1.
         Assert.Equal(4.54, Contrast(Color.Parse("#767676"), Colors.White), 2);
     }
 
-    /// <summary>Razão de contraste da WCAG 2.1: (L1 + 0,05) / (L2 + 0,05) com a luminância relativa sRGB.</summary>
+    /// <summary>WCAG 2.1 contrast ratio: (L1 + 0.05) / (L2 + 0.05) with sRGB relative luminance.</summary>
     private static double Contrast(Color a, Color b)
     {
         var (la, lb) = (Luminance(a), Luminance(b));

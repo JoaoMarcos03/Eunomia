@@ -3,7 +3,7 @@ using Eunomia.App.Diagnostics;
 
 namespace Eunomia.Infra.Observability.Tests;
 
-/// <summary>Log de diagnóstico e crash reports (Fase 12; secção 21.5): JSON lines, redação, rotação, sem mensagens no crash.</summary>
+/// <summary>Diagnostic log and crash reports (phase 12; section 21.5): JSON lines, redaction, rotation, no messages in the crash.</summary>
 public sealed class DiagnosticsTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "eunomia-diag-" + Guid.NewGuid().ToString("N")[..8]);

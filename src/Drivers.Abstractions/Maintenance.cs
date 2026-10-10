@@ -1,6 +1,6 @@
 namespace Eunomia.Drivers.Abstractions;
 
-/// <summary>Operações do Maintenance (Table tools, anexo B §2.2), pela ordem do HeidiSQL.</summary>
+/// <summary>Maintenance operations (Table tools, appendix B §2.2), in HeidiSQL's order.</summary>
 public enum MaintenanceOperation
 {
     Check,
@@ -10,7 +10,7 @@ public enum MaintenanceOperation
     Repair,
 }
 
-/// <summary>Opções das operações de manutenção; cada operação aceita só algumas (anexo B §2.2).</summary>
+/// <summary>Options of the maintenance operations; each operation accepts only some of them (appendix B §2.2).</summary>
 [Flags]
 public enum MaintenanceOptions
 {

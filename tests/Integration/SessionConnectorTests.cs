@@ -5,7 +5,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Sessões gravadas ligadas ao servidor real (FAM-S04, S07, S08).</summary>
+/// <summary>Saved sessions connected to the real server (FAM-S04, S07, S08).</summary>
 public sealed class SessionConnectorTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

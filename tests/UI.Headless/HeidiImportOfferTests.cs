@@ -8,7 +8,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Primeiro arranque com o HeidiSQL instalado (Fase 13): pergunta uma vez se importa as sessões dele.</summary>
+/// <summary>First start with HeidiSQL installed (phase 13): asks once whether to import its sessions.</summary>
 public sealed class HeidiImportOfferTests
 {
     private static MainWindow Shell(SessionCatalog catalog, AppSettings settings, Func<string> import)
@@ -50,7 +50,7 @@ public sealed class HeidiImportOfferTests
         Assert.Equal((1, 1), (questions, imports));
         Assert.True(settings.SessionManager.HeidiImportOffered);
 
-        // Segunda vez (ou com sessões): não pergunta.
+        // The second time (or with sessions): it does not ask.
         catalog.Sessions.Clear();
         await window.OfferHeidiSqlImportAsync();
         Assert.Equal(1, questions);

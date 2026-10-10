@@ -9,8 +9,8 @@ public enum DiagnosticLevel
 }
 
 /// <summary>
-/// Porta do log de diagnóstico (secção 21.5): em ficheiro, nunca com valores de dados nem segredos (quem implementa
-/// redige o texto). Thread-safe; nunca lança.
+/// Diagnostic log port (section 21.5): to a file, never with data values or secrets (the implementation
+/// redacts the text). Thread-safe; never throws.
 /// </summary>
 public interface IDiagnosticLog
 {

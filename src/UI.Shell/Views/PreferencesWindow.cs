@@ -17,9 +17,9 @@ using Eunomia.UI.Shell.Input;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Preferences (anexo C §7): tabs General, Logging, SQL, Grid formatting, Data editors, Shortcuts e Files and tabs,
-/// com OK · Cancel · Apply · Restore defaults. As alterações ficam pendentes até OK ou Apply. Só aparecem as opções que
-/// têm efeito (sem atualizações, estatísticas de uso, línguas nem packs de ícones).
+/// Preferences (appendix C §7): General, Logging, SQL, Grid formatting, Data editors, Shortcuts and Files and tabs tabs,
+/// with OK · Cancel · Apply · Restore defaults. Changes stay pending until OK or Apply. Only the options that have an
+/// effect show (no updates, usage statistics, languages or icon packs).
 /// </summary>
 public sealed class PreferencesWindow : Window
 {
@@ -28,7 +28,7 @@ public sealed class PreferencesWindow : Window
     public const string DataPage = "Grid formatting";
     public const string DataEditorsPage = "Data editors";
 
-    /// <summary>Fontes propostas para o grid (a caixa aceita outra escrita à mão).</summary>
+    /// <summary>Fonts offered for the grid (the box accepts another one typed by hand).</summary>
     public static readonly IReadOnlyList<string> GridFonts =
         OperatingSystem.IsWindows() ? ["Tahoma", "Segoe UI", "Verdana", "Arial", "Calibri", "Consolas", "Courier New", "Cascadia Mono"]
         : OperatingSystem.IsMacOS() ? ["Helvetica Neue", "Helvetica", "Arial", "Verdana", "Menlo", "SF Mono", "Monaco"]
@@ -36,7 +36,7 @@ public sealed class PreferencesWindow : Window
     public const string ShortcutsPage = "Shortcuts";
     public const string SqlPage = "SQL";
 
-    /// <summary>Fontes de largura fixa propostas para o editor (Preferences › SQL só aceita estas).</summary>
+    /// <summary>Fixed-width fonts offered for the editor (Preferences › SQL only accepts these).</summary>
     public static readonly IReadOnlyList<string> EditorFonts =
         OperatingSystem.IsWindows() ? ["Consolas", "Courier New", "Cascadia Mono", "Cascadia Code", "Lucida Console"]
         : OperatingSystem.IsMacOS() ? ["Menlo", "SF Mono", "Monaco", "Courier New"]
@@ -45,7 +45,7 @@ public sealed class PreferencesWindow : Window
     private readonly ShellContext _context;
     private readonly TabControl _pages = new TabControl().Named("Preferences");
 
-    // Cópias de trabalho (aplicadas em OK/Apply).
+    // Working copies (applied on OK/Apply).
     private readonly LogOptions _log;
     private readonly TabOptions _tabs;
     private readonly QueryOptions _query;
@@ -149,7 +149,7 @@ public sealed class PreferencesWindow : Window
         Content = root;
     }
 
-    /// <summary>Registo de trabalho do Shortcuts (testes).</summary>
+    /// <summary>Working registry of Shortcuts (tests).</summary>
     internal CommandRegistry PendingShortcuts => _shortcuts;
 
     private static TabItem Page(string header, Control content) => new()
@@ -242,8 +242,8 @@ public sealed class PreferencesWindow : Window
     }
 
     /// <summary>
-    /// Preferences › SQL (anexo C §6): fonte do editor e tamanho, tab width, tabs to spaces, máximo de result sets, auto
-    /// completion (ligado e atraso depois de <c>.</c>) e auto uppercase. Os esquemas de cores ficam para depois.
+    /// Preferences › SQL (appendix C §6): editor font and size, tab width, tabs to spaces, maximum result sets, auto
+    /// completion (on, and the delay after <c>.</c>) and auto uppercase. Colour schemes come later.
     /// </summary>
     private Control BuildSql()
     {
@@ -280,8 +280,8 @@ public sealed class PreferencesWindow : Window
     }
 
     /// <summary>
-    /// Preferences › Shortcuts (anexo C §2.5): árvore por categoria pela ordem do HeidiSQL, filtro, hint da action,
-    /// caixa de captura do atalho com "Remove", e aviso de conflito com Yes / No / Ignore.
+    /// Preferences › Shortcuts (appendix C §2.5): a tree by category in HeidiSQL's order, filter, the action's hint,
+    /// a shortcut capture box with "Remove", and a conflict warning with Yes / No / Ignore.
     /// </summary>
     private Control BuildShortcuts()
     {
@@ -380,7 +380,7 @@ public sealed class PreferencesWindow : Window
         return layout;
     }
 
-    /// <summary>Atribui um atalho; se já estiver em uso no mesmo contexto, pergunta como no HeidiSQL.</summary>
+    /// <summary>Assigns a shortcut; if it is already in use in the same context, asks as in HeidiSQL.</summary>
     internal async Task AssignAsync(string id, KeyChord chord, Func<string, Task<MessageDialogResult>>? ask = null)
     {
         var conflicts = _shortcuts.ConflictsFor(id, chord);
@@ -406,7 +406,7 @@ public sealed class PreferencesWindow : Window
         _shortcuts.SetShortcut(id, chord);
     }
 
-    /// <summary>Aplica as alterações pendentes às settings e ao registo, e grava.</summary>
+    /// <summary>Applies the pending changes to the settings and the registry, and saves.</summary>
     internal void Apply()
     {
         var settings = _context.Settings;
@@ -542,7 +542,7 @@ public sealed class PreferencesWindow : Window
     }
 }
 
-/// <summary>Caixa que captura um atalho (tecla + modificadores) e o mostra como texto.</summary>
+/// <summary>Box that captures a shortcut (key + modifiers) and shows it as text.</summary>
 public sealed class ShortcutBox : TextBox
 {
     private KeyChord? _chord;

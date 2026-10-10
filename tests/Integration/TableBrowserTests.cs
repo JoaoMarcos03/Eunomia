@@ -7,14 +7,14 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Data tab contra o servidor (Fase 5; anexo D B2–B6; FAM-G02, G03, C01; PR-17).</summary>
+/// <summary>Data tab against the server (phase 5; appendix D B2–B6; FAM-G02, G03, C01; PR-17).</summary>
 public sealed class TableBrowserTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
     private string _database = string.Empty;
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    /// <summary>0..9 (gerador portátil: o MySQL não tem as tabelas <c>seq_*</c> do MariaDB).</summary>
+    /// <summary>0..9 (portable generator: MySQL does not have MariaDB's <c>seq_*</c> tables).</summary>
     private const string Digits = "(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)";
 
     public async ValueTask InitializeAsync()
@@ -93,7 +93,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
         await browser.LoadAsync(1000, Ct);
         var block = browser.Source!.TryGetBlock(0, out var b) ? b : throw new InvalidOperationException();
 
-        // Linha com id 10: body com 300 caracteres (cortado a 256) e data com 400 bytes.
+        // Row with id 10: body with 300 characters (cut at 256) and data with 400 bytes.
         Assert.True(block.IsTruncated(9, 2));
         Assert.EndsWith(" [...]", new DisplayFormatter(null).Format(block, 9, 2), StringComparison.Ordinal);
         Assert.False(block.IsTruncated(0, 2));
@@ -147,7 +147,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
     public async Task ShowAllCanceladoGuardaAsLinhasENextContinua()
     {
         TestServer.RequireServer();
-        // As linhas 11 e 12 demoram: o Show all é cancelado a meio delas (Esc ou outra escolha na árvore).
+        // Rows 11 and 12 are slow: Show all is cancelled halfway through them (Esc or another choice in the tree).
         var options = new DataBrowseOptions { RowsPerStep = 5, Filter = "SLEEP(IF(id IN (11, 12), 1, 0)) = 0" };
         using var browser = new TableBrowser(_host, await Table("t"), options);
         await browser.LoadAsync(5, Ct);
@@ -155,7 +155,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
         cancel.CancelAfter(TimeSpan.FromMilliseconds(500));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => browser.ShowAllAsync(cancel.Token));
 
-        // Ficam só blocos inteiros (o que estava a meio não entra) e Next e Show all continuam a partir daí.
+        // Only whole blocks stay (the one in progress is left out) and Next and Show all continue from there.
         var kept = browser.Loaded;
         Assert.InRange(kept, 5, 10);
         Assert.Equal(0, kept % 5);

@@ -7,9 +7,9 @@ using Avalonia.Styling;
 namespace Eunomia.App.Desktop;
 
 /// <summary>
-/// Barra de título do Windows no tema da aplicação (Fase 13): no tema escuro pede ao DWM a barra escura
-/// (<c>DWMWA_USE_IMMERSIVE_DARK_MODE</c>, atributo 20 desde o Windows 10 20H1; 19 nas versões 1809–1909). Em versões
-/// sem o atributo a chamada falha e a barra fica clara, sem mais efeitos.
+/// Windows title bar in the application's theme (phase 13): in the dark theme it asks the DWM for the dark bar
+/// (<c>DWMWA_USE_IMMERSIVE_DARK_MODE</c>, attribute 20 since Windows 10 20H1; 19 in versions 1809–1909). On versions
+/// without the attribute the call fails and the bar stays light, with no other effect.
 /// </summary>
 internal static partial class DarkTitleBar
 {

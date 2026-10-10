@@ -20,12 +20,12 @@ using Eunomia.UI.Controls.Grid;
 namespace Eunomia.UI.Features.SchemaVisualizer;
 
 /// <summary>
-/// Tab "Diagram: base" (secção 17): barra com a pesquisa (sintaxe do Table filter: regex, <c>;</c> = <c>|</c>; tabelas e
-/// colunas; o resto fica esbatido), Fit, 100%, Relayout, Hide, Show only selected, Show all, Snap to grid, Sync with
-/// tree e Export PNG; o canvas por baixo. O layout corre fora da UI thread e pode ser cancelado; tabelas sem posição
-/// (novas no schema ou ainda nunca mostradas) são colocadas à direita das outras, sem as mexer (SV-12). Com mais de
-/// <see cref="MaxDefaultTables"/> tabelas e sem layout guardado, abre só o componente ligado da tabela focada (ou o
-/// maior), e o resto fica escondido até "Show all" (secção 17.5).
+/// "Diagram: database" tab (section 17): a bar with the search (Table filter syntax: regex, <c>;</c> = <c>|</c>; tables and
+/// columns; the rest is dimmed), Fit, 100%, Relayout, Hide, Show only selected, Show all, Snap to grid, Sync with
+/// tree and Export PNG; the canvas below. The layout runs off the UI thread and can be cancelled; tables without a position
+/// (new in the schema or never shown yet) are placed to the right of the others, without moving them (SV-12). With more
+/// than <see cref="MaxDefaultTables"/> tables and no saved layout, only the connected component of the focused table (or
+/// the largest one) opens, and the rest stays hidden until "Show all" (section 17.5).
 /// </summary>
 public sealed class SchemaVisualizerView : DockPanel
 {
@@ -52,7 +52,7 @@ public sealed class SchemaVisualizerView : DockPanel
             TypeColor = (category, dark) => ((ISolidColorBrush)(dark ? GridPalette.Dark : GridPalette.Light).TextFor((TypeCategory)Math.Clamp(category, 0, 6))).Color.ToUInt32(),
         };
 
-        // Acessibilidade: nomes para os controlos sem texto visível próprio.
+        // Accessibility: names for the controls without visible text of their own.
         Avalonia.Automation.AutomationProperties.SetName(Canvas, "Schema diagram of " + database);
         Avalonia.Automation.AutomationProperties.SetName(_search, "Search tables and columns");
         var bar = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 3) };
@@ -122,27 +122,27 @@ public sealed class SchemaVisualizerView : DockPanel
 
     public SchemaDiagram? Diagram => _diagram;
 
-    /// <summary>Selecionar um nó seleciona a tabela na árvore ("Sync with tree", ligado por omissão).</summary>
+    /// <summary>Selecting a node selects the table in the tree ("Sync with tree", on by default).</summary>
     public bool SyncWithTree => _sync.IsChecked == true;
 
-    /// <summary>Layout em curso (os testes esperam por ele).</summary>
+    /// <summary>Layout in progress (tests wait for it).</summary>
     public Task Layouting { get; private set; } = Task.CompletedTask;
 
-    /// <summary>Duplo clique ou Enter: abre o Data tab da tabela.</summary>
+    /// <summary>Double click or Enter: opens the table's Data tab.</summary>
     public event EventHandler<string>? OpenTableRequested;
 
-    /// <summary>Alt+Enter: abre a estrutura no table editor.</summary>
+    /// <summary>Alt+Enter: opens the structure in the table editor.</summary>
     public event EventHandler<string>? EditTableRequested;
 
     public event EventHandler<string>? SelectTopRequested;
 
-    /// <summary>F5: o shell relê o schema e volta a chamar <see cref="ShowAsync"/>.</summary>
+    /// <summary>F5: the shell reads the schema again and calls <see cref="ShowAsync"/> again.</summary>
     public event EventHandler? RefreshRequested;
 
-    /// <summary>Posições, visibilidade ou vista mudaram (o shell guarda <see cref="CurrentState"/>).</summary>
+    /// <summary>Positions, visibility or view changed (the shell saves <see cref="CurrentState"/>).</summary>
     public event EventHandler? StateChanged;
 
-    /// <summary>Um nó foi selecionado com "Sync with tree" ligado.</summary>
+    /// <summary>A node was selected with "Sync with tree" on.</summary>
     public event EventHandler<string>? TableSelected;
 
     internal TextBox SearchBox => _search;
@@ -150,8 +150,8 @@ public sealed class SchemaVisualizerView : DockPanel
     internal TextBlock StatusText => _status;
 
     /// <summary>
-    /// Mostra o diagrama: posições do diagrama atual (refresh) ou do layout guardado; o resto é colocado pelo layout.
-    /// Num refresh, as tabelas novas ficam marcadas e as removidas contadas na barra (SV-16).
+    /// Shows the diagram: positions from the current diagram (refresh) or from the saved layout; the rest is placed by the
+    /// layout. On a refresh, new tables are highlighted and removed ones are counted in the bar (SV-16).
     /// </summary>
     public async Task ShowAsync(SchemaDiagram diagram, DiagramLayoutState? saved, string? focusTable = null)
     {
@@ -202,7 +202,7 @@ public sealed class SchemaVisualizerView : DockPanel
         var placedBefore = nodes.Any(n => ReferenceEquals(n.Tag, Placed)) || saved?.Nodes.Count > 0;
         if (!placedBefore && nodes.Count > MaxDefaultTables)
         {
-            // Nunca 2.000 tabelas de uma vez: o componente da tabela focada, ou o maior.
+            // Never 2,000 tables at once: the focused table's component, or the largest one.
             var keep = ComponentOf(nodes, edges, focusTable is not null && _nodes.TryGetValue(focusTable, out var f) ? f : null);
             foreach (var node in nodes)
             {
@@ -288,7 +288,7 @@ public sealed class SchemaVisualizerView : DockPanel
         return best;
     }
 
-    /// <summary>Coloca <paramref name="nodes"/> com o layout (fora da UI thread), à direita dos que já têm posição.</summary>
+    /// <summary>Places <paramref name="nodes"/> with the layout (off the UI thread), to the right of those that already have a position.</summary>
     private Task PlaceAsync(List<GraphNode> nodes)
     {
         _layout?.Cancel();
@@ -300,7 +300,7 @@ public sealed class SchemaVisualizerView : DockPanel
         _layout = cts;
         var index = nodes.Select((n, i) => (n, i)).ToDictionary(t => t.n, t => t.i);
         var sizes = nodes.Select(n => new LayoutSize(n.Size.Width, n.Size.Height)).ToList();
-        // Esquerda → direita a partir das tabelas referenciadas.
+        // Left → right from the referenced tables.
         var links = Canvas.Edges.Where(e => index.ContainsKey(e.From) && index.ContainsKey(e.To)).Select(e => new LayoutEdge(index[e.To], index[e.From])).ToList();
         var others = Canvas.Nodes.Where(n => !n.IsHidden && ReferenceEquals(n.Tag, Placed) && !index.ContainsKey(n)).ToList();
         var origin = others.Count == 0 ? new Point(0, 0) : new Point(others.Max(n => n.Bounds.Right) + 120, others.Min(n => n.Position.Y));
@@ -330,7 +330,7 @@ public sealed class SchemaVisualizerView : DockPanel
         }
     }
 
-    /// <summary>Estado para guardar: posições, escondidas (só das tabelas já colocadas) e a vista.</summary>
+    /// <summary>State to save: positions, hidden tables (only those already placed) and the view.</summary>
     public DiagramLayoutState CurrentState() => new(
         _diagram?.Hash ?? string.Empty,
         _nodes.Values.Where(n => ReferenceEquals(n.Tag, Placed) || n.IsHidden)
@@ -340,8 +340,8 @@ public sealed class SchemaVisualizerView : DockPanel
         Canvas.Offset.Y);
 
     /// <summary>
-    /// Árvore → visualizer (secção 17.3): seleciona e centra a tabela sem roubar o foco do teclado; uma tabela escondida
-    /// volta a aparecer.
+    /// Tree → visualizer (section 17.3): selects and centres the table without stealing the keyboard focus; a hidden table
+    /// shows again.
     /// </summary>
     public void Highlight(string table, bool select = true)
     {
@@ -373,7 +373,7 @@ public sealed class SchemaVisualizerView : DockPanel
         UpdateStatus();
     }
 
-    // ---------- Ações ----------
+    // ---------- Actions ----------
 
     private async Task RelayoutAsync()
     {
@@ -431,7 +431,7 @@ public sealed class SchemaVisualizerView : DockPanel
         ScheduleSave();
     }
 
-    /// <summary>Pesquisa com a sintaxe do Table filter (SV-06): nome da tabela ou de uma coluna.</summary>
+    /// <summary>Search with the Table filter syntax (SV-06): table name or a column name.</summary>
     private void ApplySearch()
     {
         var filter = new TreeFilterExpression(_search.Text ?? string.Empty);
@@ -530,7 +530,7 @@ public sealed class SchemaVisualizerView : DockPanel
         e.Handled = true;
     }
 
-    /// <summary>Menu do nó (SV-14).</summary>
+    /// <summary>Node menu (SV-14).</summary>
     private void ShowNodeMenu(GraphNodeEventArgs e)
     {
         var table = e.Node.Id;

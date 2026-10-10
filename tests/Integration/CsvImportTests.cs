@@ -8,7 +8,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>CSV import nos modos servidor e cliente (Fase 8; FAM-E07; PR-15; anexo B §3).</summary>
+/// <summary>CSV import in server and client modes (phase 8; FAM-E07; PR-15; appendix B §3).</summary>
 public sealed class CsvImportTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -34,7 +34,7 @@ public sealed class CsvImportTests : IAsyncLifetime
         _database = "eunomia_csv_" + Guid.NewGuid().ToString("N")[..8];
         _directory = Path.Combine(Path.GetTempPath(), "eunomia-it", "csv-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(_directory);
-        // O MySQL 8 tem o local_infile desligado por omissão; o servidor de teste é só dos testes.
+        // MySQL 8 has local_infile off by default; the test server is for tests only.
         await ExecAsync("SET GLOBAL local_infile = 1");
         await ExecAsync($"CREATE DATABASE `{_database}` CHARACTER SET utf8mb4");
         await ExecAsync($"CREATE TABLE `{_database}`.t (id INT PRIMARY KEY, name VARCHAR(50), price DECIMAL(10,2), note TEXT)");
@@ -90,7 +90,7 @@ public sealed class CsvImportTests : IAsyncLifetime
         var result = await new CsvImportJob(_host, Request(path, method)).RunAsync(new SyncProgress<CsvImportProgress>(progress.Add), Ct);
 
         Assert.False(result.Cancelled);
-        // REPLACE conta 2 na linha substituída.
+        // REPLACE counts 2 for the replaced row.
         Assert.Equal(4, result.Rows);
         Assert.Equal(new FileInfo(path).Length, result.BytesRead);
         Assert.Equal("1|Ana; \"a\"|10.50|<NULL> ; 2|Rui|20.00|linha\r\nnova ; 3|ação|<NULL>|", await RowsAsync());
@@ -128,7 +128,7 @@ public sealed class CsvImportTests : IAsyncLifetime
         {
             sb.Append(CultureInfo.InvariantCulture, $"{i};n{i};{i}.25;nota\r\n");
         }
-        // Chave duplicada no fim, com INSERT simples: erro depois de 2 lotes de 10.000.
+        // Duplicate key at the end, with plain INSERT: an error after 2 batches of 10,000.
         sb.Append("5;dup;1;x\r\n");
         var path = Write("c.csv", sb.ToString(), new UTF8Encoding(false));
         var error = await Assert.ThrowsAnyAsync<Exception>(() => new CsvImportJob(_host, Request(path, CsvImportMethod.Client) with { Duplicates = CsvDuplicates.Insert }).RunAsync(null, Ct));
@@ -136,7 +136,7 @@ public sealed class CsvImportTests : IAsyncLifetime
         Assert.Contains("Duplicate", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("record", error.Message, StringComparison.Ordinal);
         Assert.Equal("20000", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
-        // A ligação de job ficou com o SQL_MODE reposto.
+        // The job connection had its SQL_MODE restored.
         Assert.Equal(await ScalarAsync("SELECT @@GLOBAL.sql_mode"), Convert.ToString(await _host.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT @@SESSION.sql_mode", ct), Ct), CultureInfo.InvariantCulture));
     }
 
@@ -155,7 +155,7 @@ public sealed class CsvImportTests : IAsyncLifetime
         {
             await ExecAsync("SET GLOBAL local_infile = 1");
         }
-        // O modo cliente não precisa dele.
+        // Client mode does not need it.
         Assert.Equal(1, (await new CsvImportJob(_host, Request(path, CsvImportMethod.Client)).RunAsync(null, Ct)).Rows);
     }
 
@@ -174,7 +174,7 @@ public sealed class CsvImportTests : IAsyncLifetime
         var result = await new CsvImportJob(_host, Request(path, CsvImportMethod.Server)).RunAsync(null, cts.Token);
 
         Assert.True(result.Cancelled || result.Rows == 300_000);
-        // A sessão continua a responder.
+        // The session still answers.
         Assert.Equal("1", await ScalarAsync("SELECT 1"));
     }
 
@@ -189,12 +189,12 @@ public sealed class CsvImportTests : IAsyncLifetime
         }
         var path = Write("e.csv", sb.ToString(), new UTF8Encoding(false));
 
-        // O cancel chega ao mesmo tempo ao stream que o LOAD DATA lê e ao MySqlConnector; quando o stream ganha, o driver
-        // recebia um erro do LOAD DATA em vez do cancel (falhava sobretudo com a máquina carregada). Várias voltas.
+        // The cancel reaches both the stream LOAD DATA reads from and MySqlConnector at the same time; when the stream wins, the
+        // driver got a LOAD DATA error instead of the cancel (it failed mostly with the machine under load). Several rounds.
         for (var round = 0; round < 5; round++)
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
-            // Cancela no primeiro relatório (100 ms) com o ficheiro a meio.
+            // Cancels on the first report (100 ms) with the file halfway.
             var progress = new SyncProgress<CsvImportProgress>(p =>
             {
                 if (p.BytesRead > 0 && p.BytesRead < p.TotalBytes)
@@ -206,7 +206,7 @@ public sealed class CsvImportTests : IAsyncLifetime
             var result = await new CsvImportJob(_host, Request(path, CsvImportMethod.Server)).RunAsync(progress, cts.Token);
 
             Assert.True(result.Cancelled);
-            // O LOAD DATA cancelado não deixa linhas a meio (InnoDB: a instrução é desfeita).
+            // The cancelled LOAD DATA leaves no half rows (InnoDB: the statement is rolled back).
             Assert.Equal("0", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
         }
         Assert.Equal("1", await ScalarAsync("SELECT 1"));

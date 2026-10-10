@@ -8,9 +8,9 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Carga lenta no Data tab (tabela grande num servidor lento; aqui um filtro com <c>SLEEP</c> por linha): escolher outra
-/// coisa na árvore ou correr uma query cancela-a, em vez de a ligação primária ficar ocupada até ao fim (feedback da
-/// beta, 9 out 2026). Cada carga lenta demora 25 s ou mais; o que vem a seguir tem de aparecer muito antes.
+/// Slow load in the Data tab (a large table on a slow server; here a filter with <c>SLEEP</c> per row): choosing something
+/// else in the tree or running a query cancels it, instead of the primary connection staying busy until the end (beta
+/// feedback, 9 Oct 2026). Each slow load takes 25 s or more; whatever comes next must show up long before that.
 /// </summary>
 public sealed class DataLoadCancelTests
 {
@@ -65,15 +65,15 @@ public sealed class DataLoadCancelTests
                 Assert.True(await context.Commands.ExecuteAsync("filter.apply"));
             }
 
-            // "slow": cada linha do filtro dorme 5 s (primeira página de 5 linhas: 25 s).
+            // "slow": each filtered row sleeps 5 s (first page of 5 rows: 25 s).
             await ShowAsync(Child(dbNode, "slow"), 5);
             await FilterAsync("SLEEP(5) = 0");
             await WaitAsync(() => host.IsPrimaryBusy ? "ok" : null);
 
-            // Uma tabela de outra base: o USE já não espera pelo fim da carga.
+            // A table from another database: the USE no longer waits for the load to finish.
             Assert.True(await ShowAsync(Child(db2Node, "other"), 2) < Quick);
 
-            // O nó da base: a carga acaba logo e a ligação primária fica livre.
+            // The database node: the load ends right away and the primary connection is free.
             window.Tree.Tree.FocusedNode = Child(dbNode, "slow");
             await WaitAsync(() => host.IsPrimaryBusy ? "ok" : null);
             var clock = Stopwatch.StartNew();
@@ -81,7 +81,7 @@ public sealed class DataLoadCancelTests
             await WaitAsync(() => !host.IsPrimaryBusy ? "ok" : null, TimeSpan.FromSeconds(60));
             Assert.True(clock.Elapsed < Quick);
 
-            // Uma query na mesma sessão: Run fica ativo e a carga cede-lhe a ligação. (Da base, o objeto abre no Table tab.)
+            // A query on the same session: Run is enabled and the load yields the connection to it. (From the database, the object opens in the Table tab.)
             window.Tree.Tree.FocusedNode = Child(dbNode, "slow");
             window.ShowDataTab();
             await WaitAsync(() => host.IsPrimaryBusy ? "ok" : null);
@@ -94,7 +94,7 @@ public sealed class DataLoadCancelTests
             var view = Assert.IsType<QueryTabView>(window.Tabs.QueryTabs[0].Content);
             Assert.Equal("42", view.ResultGrids[0].Control.GetDisplayText(0, 0));
 
-            // Show all a meio (cada linha acima da 5 dorme 1 s: 35 s) e outra tabela da mesma base.
+            // Show all halfway (each row above 5 sleeps 1 s: 35 s) and another table from the same database.
             window.Tree.Tree.FocusedNode = Child(dbNode, "tail");
             window.ShowDataTab();
             await WaitAsync(() => Showing("tail", 5) ? "ok" : null);
@@ -105,7 +105,7 @@ public sealed class DataLoadCancelTests
             Assert.True(await ShowAsync(Child(dbNode, "small"), 3) < Quick);
             await showAll;
 
-            // Voltar à tabela abandonada carrega-a de novo; nenhum cancelamento aparece como erro.
+            // Going back to the abandoned table loads it again; no cancellation shows as an error.
             await ShowAsync(Child(dbNode, "tail"), 5);
             Assert.DoesNotContain(log.Snapshot(), l => l.Kind == Eunomia.Presentation.Logging.LogLineKind.Error);
 

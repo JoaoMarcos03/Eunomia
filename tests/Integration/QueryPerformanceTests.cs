@@ -9,8 +9,8 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// PR-10 (overhead por instrução: ≤ 1 ms além do round trip, zero round trips extra) e PR-20 (cancel parado ≤ 2 s).
-/// Só com <c>EUNOMIA_PERF=1</c>; valores indicativos (esta máquina não é a de referência).
+/// PR-10 (overhead per statement: ≤ 1 ms beyond the round trip, zero extra round trips) and PR-20 (stopped cancel ≤ 2 s).
+/// Only with <c>EUNOMIA_PERF=1</c>; indicative values (this machine is not the reference one).
 /// </summary>
 public sealed class QueryPerformanceTests : IAsyncLifetime
 {
@@ -45,7 +45,7 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
         }
     }
 
-    /// <summary>Instruções que esta ligação já mandou ao servidor (o status <c>Questions</c> da sessão).</summary>
+    /// <summary>Statements this connection has already sent to the server (the session's <c>Questions</c> status).</summary>
     private Task<long> QuestionsAsync() =>
         _host.RunPrimaryAsync(async (h, ct) =>
         {
@@ -68,7 +68,7 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
         var sql = string.Concat(Enumerable.Repeat("SELECT 1;\n", Statements));
         var statements = SqlSplitter.Split(sql);
 
-        // Referência: o mesmo número de round trips com o MySqlConnector sozinho.
+        // Reference: the same number of round trips with MySqlConnector alone.
         await using (var connection = new MySqlConnection(TestServer.ConnectionString))
         {
             await connection.OpenAsync(Ct);
@@ -108,7 +108,7 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
             $"PR-10: {Statements} x SELECT 1 uma a uma {oneByOne.Elapsed.TotalMilliseconds:F0} ms, MySqlConnector sozinho {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms/instrução, {roundTrips} comandos ({questions} instruções no servidor); batch in one go {batch.Elapsed.TotalMilliseconds:F0} ms"));
         Assert.Equal(Statements, summary.Executed);
         TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-10: uma a uma {oneByOne.Elapsed.TotalMilliseconds:F0} ms, sozinho {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms, {roundTrips} comandos, {questions} instruções no servidor, batch {batch.Elapsed.TotalMilliseconds:F0} ms"));
-        // Zero idas extra: um comando por instrução (o SHOW WARNINGS segue no mesmo comando).
+        // Zero extra round trips: one command per statement (SHOW WARNINGS follows in the same command).
         Assert.Equal(Statements, roundTrips);
         Assert.True(overhead <= 1.0, $"Overhead {overhead:F3} ms por instrução.");
     }
@@ -130,8 +130,8 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Leitura de um resultado grande (300.000 linhas × 7 colunas de tipos comuns): o executor em blocos contra o
-    /// MySqlConnector sozinho a ler todas as células, para ver quanto custa o caminho até aos blocos. Só mede e grava em
+    /// Reading a large result (300,000 rows × 7 columns of common types): the block executor against
+    /// MySqlConnector alone reading every cell, to see what the path to the blocks costs. It only measures and writes to
     /// <c>%TEMP%\eunomia-read-throughput.txt</c>.
     /// </summary>
     [Fact]
@@ -200,7 +200,7 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
             $"MySqlConnector GetValue: {medianRaw:F0} ms\nexecutor (blocos): {medianEngine:F0} ms\nruns raw: {string.Join(";", raw.Select(r => r.ToString("F0", CultureInfo.InvariantCulture)))}\nruns executor: {string.Join(";", engine.Select(r => r.ToString("F0", CultureInfo.InvariantCulture)))}\n"));
     }
 
-    /// <summary>Conta os comandos que as ligações da sessão mandam (cada um é uma ida ao servidor).</summary>
+    /// <summary>Counts the commands the session's connections send (each one is a round trip).</summary>
     private sealed class CommandCounter : ISessionLog
     {
         private int _count;

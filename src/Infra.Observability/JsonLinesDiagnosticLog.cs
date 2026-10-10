@@ -9,10 +9,10 @@ using Eunomia.Engine.Sql;
 namespace Eunomia.Infra.Observability;
 
 /// <summary>
-/// Log de diagnóstico em ficheiro (secção 21.5): uma linha JSON por entrada (<c>t</c>, <c>lvl</c>, <c>cat</c>,
-/// <c>msg</c> e, com exceção, <c>exc</c> com tipo, mensagem e stack), escrita por uma tarefa de fundo para nunca
-/// bloquear quem escreve; rotação por tamanho (<c>diagnostic.jsonl</c>, <c>diagnostic.1.jsonl</c>…). O texto é redigido:
-/// passwords em SQL e pares <c>password=…</c> / <c>pwd=…</c> de connection strings passam a <c>***</c>.
+/// Diagnostic log in a file (section 21.5): one JSON line per entry (<c>t</c>, <c>lvl</c>, <c>cat</c>,
+/// <c>msg</c> and, with an exception, <c>exc</c> with type, message and stack), written by a background task so the
+/// writer never blocks; rotation by size (<c>diagnostic.jsonl</c>, <c>diagnostic.1.jsonl</c>…). The text is redacted:
+/// passwords in SQL and <c>password=…</c> / <c>pwd=…</c> pairs from connection strings become <c>***</c>.
 /// </summary>
 public sealed partial class JsonLinesDiagnosticLog : IDiagnosticLog, IDisposable
 {
@@ -22,7 +22,7 @@ public sealed partial class JsonLinesDiagnosticLog : IDiagnosticLog, IDisposable
     private readonly long _maxBytes;
     private readonly int _maxFiles;
     private readonly DiagnosticLevel _minimum;
-    // Fila cheia: a linha nova perde-se (quem escreve nunca espera).
+    // Queue full: the new line is lost (writers never wait).
     private readonly Channel<string> _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(10_000) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
     private readonly Task _writer;
     private long _pending;
@@ -75,11 +75,11 @@ public sealed partial class JsonLinesDiagnosticLog : IDiagnosticLog, IDisposable
         }
         catch (Exception e) when (e is ArgumentException or InvalidOperationException)
         {
-            // O log nunca derruba quem escreve.
+            // The log never brings down whoever writes.
         }
     }
 
-    /// <summary>Espera que as linhas aceites cheguem ao disco (fecho e crash); <c>false</c> se o tempo acabar.</summary>
+    /// <summary>Waits for the accepted lines to reach the disk (shutdown and crash); <c>false</c> if the time runs out.</summary>
     public bool Flush(TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
@@ -106,7 +106,7 @@ public sealed partial class JsonLinesDiagnosticLog : IDiagnosticLog, IDisposable
         }
     }
 
-    /// <summary>Escreve em lotes (o que estiver na fila), rodando o ficheiro quando o lote o faria passar do limite.</summary>
+    /// <summary>Writes in batches (whatever is in the queue), rotating the file when the batch would take it over the limit.</summary>
     private async Task WriteLoopAsync()
     {
         var batch = new StringBuilder();
@@ -153,7 +153,7 @@ public sealed partial class JsonLinesDiagnosticLog : IDiagnosticLog, IDisposable
         }
         catch (IOException)
         {
-            // Disco cheio ou ficheiro bloqueado: as linhas perdem-se, a aplicação continua.
+            // Full disk or locked file: the lines are lost, the application carries on.
         }
         catch (UnauthorizedAccessException)
         {
@@ -176,13 +176,13 @@ public sealed partial class JsonLinesDiagnosticLog : IDiagnosticLog, IDisposable
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // Ficheiro aberto por outro programa: continua no atual.
+            // File opened by another program: carries on with the current one.
         }
     }
 
     private string Rotated(int index) => Path.Combine(_directory, $"diagnostic.{index.ToString(CultureInfo.InvariantCulture)}.jsonl");
 
-    /// <summary>Tipo e stack (com as causas internas), sem as mensagens, que podem trazer SQL ou valores.</summary>
+    /// <summary>Type and stack (with the inner causes), without the messages, which may carry SQL or values.</summary>
     public static string StackOf(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -198,7 +198,7 @@ public sealed partial class JsonLinesDiagnosticLog : IDiagnosticLog, IDisposable
         return sb.ToString();
     }
 
-    /// <summary>Passwords em SQL e em connection strings passam a <c>***</c>.</summary>
+    /// <summary>Passwords in SQL and in connection strings become <c>***</c>.</summary>
     public static string Redact(string text)
     {
         ArgumentNullException.ThrowIfNull(text);

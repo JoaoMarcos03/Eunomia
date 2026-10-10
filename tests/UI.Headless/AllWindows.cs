@@ -15,10 +15,10 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Todas as janelas de topo da aplicação, criadas com dados mínimos (marca, acessibilidade).</summary>
+/// <summary>Every top-level window of the application, created with minimal data (brand, accessibility).</summary>
 internal static class AllWindows
 {
-    /// <summary>Uma fábrica por janela; uma janela nova sem entrada aqui faz falhar o <c>BrandTests</c>.</summary>
+    /// <summary>One factory per window; a new window without an entry here fails <c>BrandTests</c>.</summary>
     public static IReadOnlyDictionary<Type, Func<Window>> Factories { get; } = new Dictionary<Type, Func<Window>>
     {
         [typeof(MainWindow)] = () => new MainWindow(TestShell.CreateContext()),

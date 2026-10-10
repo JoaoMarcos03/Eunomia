@@ -2,7 +2,7 @@ using Eunomia.App.Sessions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Regras do Session Manager do HeidiSQL (FAM-S03; anexo A §1.3–1.5).</summary>
+/// <summary>Rules of HeidiSQL's Session Manager (FAM-S03; appendix A §1.3–1.5).</summary>
 public sealed class SessionCatalogTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 5, 12, 0, 0, TimeSpan.Zero);

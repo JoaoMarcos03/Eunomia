@@ -2,7 +2,7 @@ using Eunomia.App.Search;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Search and replace text (anexo C §4.7; FAM-Q10).</summary>
+/// <summary>Search and replace text (appendix C §4.7; FAM-Q10).</summary>
 public sealed class TextSearchTests
 {
     private const string Text = "SELECT name FROM people;\nselect Name, nameless FROM people WHERE name = 'x';";
@@ -29,7 +29,7 @@ public sealed class TextSearchTests
         Assert.Equal(17, TextSearch.FindNext(Text, 40, 0, Text.Length, back)!.Value.Start);
         Assert.Null(TextSearch.FindNext(Text, 17, 0, Text.Length, back));
 
-        // Só na segunda linha.
+        // Only on the second line.
         var line2 = Text.IndexOf('\n', StringComparison.Ordinal) + 1;
         var inSelection = new SearchOptions { Find = "people" };
         Assert.Equal(Text.LastIndexOf("people", StringComparison.Ordinal), TextSearch.FindNext(Text, line2, line2, Text.Length, inSelection)!.Value.Start);
@@ -47,11 +47,11 @@ public sealed class TextSearchTests
         Assert.Equal(2, count);
         Assert.Contains("FROM p\nq;", replaced, StringComparison.Ordinal);
 
-        // Literal: "$1" fica como está.
+        // Literal: "$1" stays as it is.
         var (literal, _) = TextSearch.ReplaceAll("a.b", 0, 3, new SearchOptions { Find = ".", Replace = "$1" });
         Assert.Equal("a$1b", literal);
 
-        // Só no intervalo.
+        // Only within the range.
         var (scoped, n) = TextSearch.ReplaceAll("x x x", 2, 5, new SearchOptions { Find = "x", Replace = "y" });
         Assert.Equal(("x y y", 2), (scoped, n));
     }

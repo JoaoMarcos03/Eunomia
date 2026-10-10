@@ -1,12 +1,12 @@
 namespace Eunomia.UI.Controls.Tree.Tests;
 
 /// <summary>
-/// Regras da secção 4.3 que dependem do tipo de nó, uma por teste (FAM-T04).
-/// Os casos de regex estão em <c>Engine.Sql.Tests/TreeFilterExpressionTests</c>.
+/// Section 4.3 rules that depend on the node kind, one per test (FAM-T04).
+/// The regex cases are in <c>Engine.Sql.Tests/TreeFilterExpressionTests</c>.
 /// </summary>
 public sealed class TreeFilterRulesTests
 {
-    /// <summary>Provider com filhos fixos por nó, sem latência.</summary>
+    /// <summary>Provider with fixed children per node, without latency.</summary>
     private sealed class StaticProvider : ITreeDataProvider
     {
         public Dictionary<TreeNode, Func<TreeNode, IReadOnlyList<TreeNode>>> Children { get; } = [];
@@ -90,7 +90,7 @@ public sealed class TreeFilterRulesTests
     {
         var (model, _) = await BuildAsync();
 
-        // "prd" corresponde à base prd_archive e a várias tabelas; só a base conta.
+        // "prd" matches the prd_archive database and several tables; only the database counts.
         model.SetDatabaseFilter("prd");
 
         Assert.Equal(["localhost", "prd_archive", "users", "server-01"], Names(model));
@@ -103,7 +103,7 @@ public sealed class TreeFilterRulesTests
 
         model.SetTableFilter("prd");
 
-        // Sessões e bases ficam; tabela, view e procedure filtradas pelo nome.
+        // Sessions and databases stay; table, view and procedure filtered by name.
         Assert.Equal(
             ["localhost", "elmwood", "prd_products", "sp_prd_sync", "v_prd_list", "prd_archive", "test", "server-01", "elmwood2", "prd_products"],
             Names(model));
@@ -124,7 +124,7 @@ public sealed class TreeFilterRulesTests
     {
         var (model, _) = await BuildAsync();
 
-        // A base chama-se prd_archive, mas a tabela "users" não contém "prd".
+        // The database is called prd_archive, but the "users" table does not contain "prd".
         model.SetTableFilter("prd_archive");
 
         Assert.DoesNotContain("users", Names(model));
@@ -148,7 +148,7 @@ public sealed class TreeFilterRulesTests
 
         Assert.Equal(["shop", "Tables"], Names(model));
         Assert.True(model.IsVisible(group));
-        // Uma coluna não é filtrada pelo nome, mas fica escondida com a tabela.
+        // A column is not filtered by name, but it is hidden along with its table.
         Assert.False(model.IsVisible(column));
         model.SetTableFilter("orders");
         Assert.True(model.IsVisible(column));
@@ -235,7 +235,7 @@ public sealed class TreeFilterRulesTests
         var errors = new List<string>();
         model.FilterError += (_, e) => errors.Add(e);
 
-        // Enquanto se escreve "(", a árvore mostra tudo.
+        // While "(" is being typed, the tree shows everything.
         model.SetTableFilter("(");
         model.SetTableFilter("(");
 

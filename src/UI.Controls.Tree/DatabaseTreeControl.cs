@@ -10,15 +10,15 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Controls.Tree;
 
 /// <summary>
-/// Árvore de bases virtualizada, desenhada linha a linha sobre um único elemento visual (secção 15.3):
-/// só as linhas visíveis são desenhadas, com a cor da sessão como fundo, o caminho até ao nó focado a
-/// bold, estrela de favorito na margem esquerda e coluna Size com barra proporcional (secções 4.2 e 5.6).
-/// Teclas: setas, PgUp/PgDn, Home/End, ← colapsa ou sobe, → expande ou desce, + expande, - colapsa,
-/// * expande tudo, pesquisa incremental ao escrever.
+/// Virtualised database tree, drawn row by row on a single visual element (section 15.3):
+/// only visible rows are drawn, with the session colour as the background, the path to the focused node in
+/// bold, a favourite star in the left margin and a Size column with a proportional bar (sections 4.2 and 5.6).
+/// Keys: arrows, PgUp/PgDn, Home/End, ← collapses or goes up, → expands or goes down, + expands, - collapses,
+/// * expands everything, incremental search while typing.
 /// </summary>
 public sealed class DatabaseTreeControl : Control
 {
-    /// <summary>Altura de linha a 96 DPI (<c>size.row.tree</c>).</summary>
+    /// <summary>Row height at 96 DPI (<c>size.row.tree</c>).</summary>
     public const double RowHeight = 21;
     public const double IndentWidth = 16;
     public const double StarWidth = 16;
@@ -26,7 +26,7 @@ public sealed class DatabaseTreeControl : Control
     public const double IconWidth = 20;
     public const double SizeColumnWidth = 76;
 
-    /// <summary>Folga entre o fim do nome e a margem direita (ou a coluna Size): cerca de 1,5 caracteres.</summary>
+    /// <summary>Gap between the end of the name and the right margin (or the Size column): about 1.5 characters.</summary>
     private double NamePadding => Math.Ceiling(FontSize * 0.85);
 
     private bool _showSizes = true;
@@ -55,11 +55,11 @@ public sealed class DatabaseTreeControl : Control
         ActualThemeVariantChanged += (_, _) => ApplyTheme();
     }
 
-    /// <summary>Tamanho da fonte em DIPs (Segoe UI 9 pt = 12 px).</summary>
+    /// <summary>Font size in DIPs (Segoe UI 9 pt = 12 px).</summary>
     public double FontSize { get; set; } = 12;
 
-    /// <summary>Display › Display size of objects: coluna Size visível (por omissão, como no HeidiSQL).</summary>
-    /// <summary>O nome do nó ficou cortado no último desenho (aparece em tooltip).</summary>
+    /// <summary>Display › Display size of objects: Size column visible (by default, as in HeidiSQL).</summary>
+    /// <summary>The node's name was cut in the last drawing (it shows in a tooltip).</summary>
     public bool IsNameClipped(TreeNode node) => _clipped.Contains(node);
 
     public bool ShowSizes
@@ -115,8 +115,8 @@ public sealed class DatabaseTreeControl : Control
     }
 
     /// <summary>
-    /// Formato em processo do drag da árvore (anexo D A12): só o editor de queries aceita, e decide o texto no drop
-    /// (Shift qualifica com a base).
+    /// In-process format of the tree drag (appendix D A12): only the query editor accepts it, and it decides the text on drop
+    /// (Shift qualifies with the database).
     /// </summary>
     public static DataFormat<TreeNode> NodeFormat { get; } = DataFormat.CreateInProcessFormat<TreeNode>("Eunomia.TreeNode");
 
@@ -133,7 +133,7 @@ public sealed class DatabaseTreeControl : Control
         _ = DragDrop.DoDragDropAsync(press, transfer, DragDropEffects.Copy);
     }
 
-    /// <summary>Tree style options › Auto expand on click: o nó selecionado expande (anexo D A3; desligado por omissão).</summary>
+    /// <summary>Tree style options › Auto expand on click: the selected node expands (appendix D A3; off by default).</summary>
     public bool AutoExpand { get; set; }
 
     private async Task ExpandQuietlyAsync(TreeNode node, bool all = false)
@@ -148,10 +148,10 @@ public sealed class DatabaseTreeControl : Control
         }
     }
 
-    /// <summary>Um expand pedido pela árvore (teclado, rato, auto expand) falhou; a mensagem vai para o SQL log.</summary>
+    /// <summary>An expand requested by the tree (keyboard, mouse, auto expand) failed; the message goes to the SQL log.</summary>
     public event EventHandler<Exception>? ExpandFailed;
 
-    /// <summary>Primeira linha visível (índice em <see cref="TreeModel.Visible"/>).</summary>
+    /// <summary>First visible row (index in <see cref="TreeModel.Visible"/>).</summary>
     public int TopRow
     {
         get => _topRow;
@@ -176,10 +176,10 @@ public sealed class DatabaseTreeControl : Control
 
     public event EventHandler? FocusedNodeChanged;
 
-    /// <summary>Duplo clique num nó (fora da estrela e do botão de expandir).</summary>
+    /// <summary>Double click on a node (outside the star and the expand button).</summary>
     public event EventHandler<TreeNodeDoubleClickEventArgs>? NodeDoubleClicked;
 
-    /// <summary>Mudou o scroll, o número de linhas ou o tamanho do viewport.</summary>
+    /// <summary>The scroll, the row count or the viewport size changed.</summary>
     public event EventHandler? ScrollChanged;
 
     public override void Render(DrawingContext context)
@@ -320,7 +320,7 @@ public sealed class DatabaseTreeControl : Control
         var row = RowAt(point.Position.Y);
         if (point.Properties.IsRightButtonPressed)
         {
-            // toRightClickSelect: o botão direito seleciona o nó antes de abrir o popupDB.
+            // toRightClickSelect: the right button selects the node before opening popupDB.
             if (row >= 0)
             {
                 FocusedNode = _model.Visible[row];
@@ -345,7 +345,7 @@ public sealed class DatabaseTreeControl : Control
         else if (e.ClickCount == 2)
         {
             FocusedNode = node;
-            // "Doubleclick inserts node text" (4.2, FAM-T07): quem trata o evento decide; senão expande/colapsa.
+            // "Doubleclick inserts node text" (4.2, FAM-T07): whoever handles the event decides; otherwise it expands/collapses.
             var args = new TreeNodeDoubleClickEventArgs(node, e.KeyModifiers);
             NodeDoubleClicked?.Invoke(this, args);
             if (!args.Handled && node.CanExpand)
@@ -384,7 +384,7 @@ public sealed class DatabaseTreeControl : Control
         if (!ReferenceEquals(node, _hover))
         {
             _hover = node;
-            // Tooltip só com o texto do nó, e só quando está cortado (anexo D A14).
+            // Tooltip with just the node's text, and only when it is cut (appendix D A14).
             ToolTip.SetTip(this, node is not null && _clipped.Contains(node) ? node.DisplayText : null);
             InvalidateVisual();
         }
@@ -437,7 +437,7 @@ public sealed class DatabaseTreeControl : Control
 
     private void EnsureVisible(TreeNode? node)
     {
-        // Antes do primeiro layout não há viewport; o OnSizeChanged volta a chamar.
+        // Before the first layout there is no viewport; OnSizeChanged calls this again.
         if (_model is null || node is null || Bounds.Height <= 0)
         {
             return;
@@ -486,7 +486,7 @@ public sealed class DatabaseTreeControl : Control
         var sessionColor = node.Session?.SessionColor ?? 0;
         if (sessionColor != 0)
         {
-            // Cor da sessão (secção 5.6): tinta suave na linha e uma barra com a cor inteira na margem esquerda.
+            // Session colour (section 5.6): a soft tint on the row and a bar with the full colour in the left margin.
             context.FillRectangle(BrushFor(ColorMath.SessionTint(sessionColor, _palette.BackgroundArgb)), row);
             context.FillRectangle(BrushFor(sessionColor | 0xFF000000), new Rect(0, y, 3, RowHeight));
         }
@@ -494,7 +494,7 @@ public sealed class DatabaseTreeControl : Control
         {
             foreground = _palette.Categories[node.TextCategory];
         }
-        // Nós de sessões que não são a ativa a cinzento (anexo D A6).
+        // Nodes of sessions that are not the active one in grey (appendix D A6).
         if (_focused?.Session is { } active && node.Session is { } own && !ReferenceEquals(active, own))
         {
             foreground = _palette.Muted;
@@ -503,7 +503,7 @@ public sealed class DatabaseTreeControl : Control
         var focused = ReferenceEquals(node, _focused);
         if (focused)
         {
-            // Nó focado: cor de seleção com a árvore focada, cinzento sem foco (como as listas do Windows).
+            // Focused node: selection colour with the tree focused, grey without focus (like Windows lists).
             var treeFocused = IsKeyboardFocusWithin;
             context.FillRectangle(treeFocused ? _palette.Selection : _palette.InactiveSelection, row);
             if (sessionColor != 0)
@@ -520,7 +520,7 @@ public sealed class DatabaseTreeControl : Control
             context.FillRectangle(_palette.Hover, row);
         }
 
-        // Estrela de favorito na margem esquerda (cheia se favorito, oca em hover).
+        // Favourite star in the left margin (filled if favourite, hollow on hover).
         if (node.IsObject && (node.IsFavorite || ReferenceEquals(node, _hover)))
         {
             DrawStar(context, new Point(StarWidth / 2, y + (RowHeight / 2)), node.IsFavorite);
@@ -548,8 +548,8 @@ public sealed class DatabaseTreeControl : Control
         DrawOverlays(context, node, iconRect);
         x += IconWidth;
 
-        // A coluna Size só ocupa espaço nas linhas que têm tamanho para mostrar; nas outras o nome vai até perto da
-        // margem direita, com uma folga de cerca de 1,5 caracteres.
+        // The Size column only takes space on rows that have a size to show; on the others the name goes up to near the
+        // right margin, with a gap of about 1.5 characters.
         var sizeLeft = width;
         if (ShowSizes && node.SizeBytes is { } size)
         {
@@ -570,7 +570,7 @@ public sealed class DatabaseTreeControl : Control
         context.DrawText(text, new Point(x, y + ((RowHeight - text.Height) / 2)));
     }
 
-    /// <summary>Marcador da base em <c>USE</c> e overlay da engine da tabela, no canto do ícone (anexo D A2).</summary>
+    /// <summary>Marker of the database in <c>USE</c> and the table's engine overlay, in the icon's corner (appendix D A2).</summary>
     private void DrawOverlays(DrawingContext context, TreeNode node, Rect icon)
     {
         if (node.IsCurrent)
@@ -599,8 +599,8 @@ public sealed class DatabaseTreeControl : Control
     };
 
     /// <summary>
-    /// Coluna Size: texto cinzento à direita; barra proporcional só nos objetos, relativa ao maior objeto da base
-    /// (anexo D A2, A8).
+    /// Size column: grey text on the right; proportional bar only on objects, relative to the largest object in the database
+    /// (appendix D A2, A8).
     /// </summary>
     private void DrawSize(DrawingContext context, TreeNode node, long size, Rect cell, IImmutableBrush? textBrush)
     {
@@ -658,7 +658,7 @@ public sealed class DatabaseTreeControl : Control
         return brush;
     }
 
-    /// <summary>Seta de expandir: "›" fechado, "⌄" aberto.</summary>
+    /// <summary>Expand arrow: "›" closed, "⌄" open.</summary>
     private static void DrawExpandGlyph(DrawingContext context, Point center, bool expanded, IImmutableBrush brush)
     {
         var pen = new ImmutablePen(brush, 1.4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
@@ -709,8 +709,8 @@ public sealed class DatabaseTreeControl : Control
     }
 
     /// <summary>
-    /// Ícones vetoriais simples e próprios (não Icons8), um por tipo de nó. Grupos usam o ícone do tipo; colunas, uma
-    /// chave colorida pelo tipo de índice ou um campo simples.
+    /// Simple vector icons of our own (not Icons8), one per node kind. Groups use the kind's icon; columns, a key
+    /// coloured by the index kind or a plain field.
     /// </summary>
     private void DrawIcon(DrawingContext context, TreeNode node, Rect r, bool onColor)
     {
@@ -736,7 +736,7 @@ public sealed class DatabaseTreeControl : Control
             return;
         }
         var fill = BrushFor(color);
-        // Contorno: a cor do ícone escurecida (legível no claro e no escuro).
+        // Outline: the icon colour darkened (readable in light and dark).
         var edge = new ImmutablePen(onColor ? BrushFor(0xFFFFFFFF) : BrushFor(ColorMath.Mix(color, 0xFF000000, 0.65)), 1);
         switch (kind)
         {
@@ -765,7 +765,7 @@ public sealed class DatabaseTreeControl : Control
     {
         if (marker == ColumnKeyMarker.None)
         {
-            // Campo: retângulo estreito com uma linha.
+            // Field: a narrow rectangle with a line.
             var field = new Rect(r.X + 2, r.Y + 3, r.Width - 4, r.Height - 6);
             context.DrawRectangle(BrushFor(0xFFDDE6EE), new ImmutablePen(BrushFor(0xFF6B7C88), 1), field);
             return;
@@ -778,7 +778,7 @@ public sealed class DatabaseTreeControl : Control
             ColumnKeyMarker.Spatial => 0xFF8E44AD,
             _ => 0xFF2E86C1,
         };
-        // Chave: anel e haste.
+        // Key: ring and shaft.
         var brush = BrushFor(color);
         var pen = new ImmutablePen(brush, 2);
         context.DrawEllipse(null, pen, new Rect(r.X + 1, r.Y + 1, 6, 6));
@@ -789,7 +789,7 @@ public sealed class DatabaseTreeControl : Control
     private readonly record struct TextKey(string Text, Typeface Typeface, IImmutableBrush Brush, double Size);
 }
 
-/// <summary>Duplo clique num nó da árvore. <see cref="Handled"/> evita o expandir/colapsar por omissão.</summary>
+/// <summary>Double click on a tree node. <see cref="Handled"/> prevents the default expand/collapse.</summary>
 public sealed class TreeNodeDoubleClickEventArgs(TreeNode node, KeyModifiers modifiers) : EventArgs
 {
     public TreeNode Node { get; } = node;

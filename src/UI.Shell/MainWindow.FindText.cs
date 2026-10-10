@@ -6,12 +6,12 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Find text on server (Ctrl+Shift+F; Search menu e popupDB): o diálogo na base focada; cada contagem corre numa ligação
-/// de jobs (a árvore e as query tabs continuam livres); "See results" abre uma query tab com os SELECT e corre-a.
+/// Find text on server (Ctrl+Shift+F; Search menu and popupDB): the dialog on the focused database; each count runs on a jobs
+/// connection (the tree and the query tabs stay free); "See results" opens a query tab with the SELECTs and runs it.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Diálogo aberto (testes).</summary>
+    /// <summary>Open dialog (tests).</summary>
     internal FindTextDialog? FindTextWindow { get; private set; }
 
     private void InitFindText()

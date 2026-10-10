@@ -4,8 +4,8 @@ using System.Runtime.CompilerServices;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Vista de um source só com as colunas visíveis, pela ordem dada (colunas ocultas do Data tab, anexo D B8): os blocos
-/// são projetados sem copiar dados. O valor completo é pedido ao source de baixo com o índice de coluna original.
+/// View of a source with only the visible columns, in the given order (Data tab hidden columns, appendix D B8): blocks
+/// are projected without copying data. The full value is requested from the underlying source with the original column index.
 /// </summary>
 public sealed class ProjectedRowSource : IRowSource, IFullValueSource
 {
@@ -23,10 +23,10 @@ public sealed class ProjectedRowSource : IRowSource, IFullValueSource
         inner.BlocksAvailable += (_, e) => BlocksAvailable?.Invoke(this, e);
     }
 
-    /// <summary>Source de baixo (para edição e export, que precisam de todas as colunas).</summary>
+    /// <summary>Underlying source (for editing and export, which need every column).</summary>
     public IRowSource Inner => _inner;
 
-    /// <summary>Índice da coluna no source de baixo.</summary>
+    /// <summary>Column index in the underlying source.</summary>
     public int InnerColumn(int column) => _columns[column];
 
     public ResultSchema Schema { get; }

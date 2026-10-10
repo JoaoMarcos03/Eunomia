@@ -2,7 +2,7 @@ using Eunomia.App.Sessions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Linha de comandos compatível com o HeidiSQL (FAM-S06; anexo A §9).</summary>
+/// <summary>HeidiSQL-compatible command line (FAM-S06; appendix A §9).</summary>
 public sealed class CommandLineTests
 {
     [Fact]

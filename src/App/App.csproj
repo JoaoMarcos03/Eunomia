@@ -9,7 +9,7 @@
     <InternalsVisibleTo Include="Integration.Tests" />
   </ItemGroup>
 
-  <!-- App: comandos, navegação, jobs e políticas sobre o motor (secção 21: A -> E). -->
+  <!-- App: commands, navigation, jobs and policies on top of the engine (section 21: A -> E). -->
   <ItemGroup>
     <ProjectReference Include="..\Engine.Execution\Engine.Execution.csproj" />
     <ProjectReference Include="..\Engine.Metadata\Engine.Metadata.csproj" />

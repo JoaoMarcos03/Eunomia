@@ -8,13 +8,13 @@ using Eunomia.UI.Controls.Grid;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Resultados editáveis nas query tabs (anexo D B18, <c>IsEditable</c>): quando todas as colunas vêm da mesma tabela
-/// (origem dada pelo servidor) e a chave dela está no resultado, o grid grava como o Data tab (UPDATE/INSERT pela chave,
-/// verificação das linhas afetadas e releitura). Senão, fica só de leitura e diz porquê.
+/// Editable results in the query tabs (appendix D B18, <c>IsEditable</c>): when every column comes from the same table
+/// (origin given by the server) and its key is in the result, the grid saves like the Data tab (UPDATE/INSERT by key,
+/// check of the affected rows and reading back). Otherwise, it stays read-only and says why.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Liga a edição de um result tab já completo, se o resultado for editável.</summary>
+    /// <summary>Turns on editing for an already complete result tab, if the result is editable.</summary>
     private async Task EnableResultEditingAsync(ResultView entry, OpenSession session)
     {
         var grid = entry.Grid.Control;
@@ -50,7 +50,7 @@ public sealed partial class MainWindow
         grid.CommitHandler = commit => CommitResultRowAsync(entry, session, table, columns, commit);
     }
 
-    /// <summary>Valor atual de uma célula do resultado: o gravado por cima, senão o do source (texto bruto, binário completo).</summary>
+    /// <summary>Current value of a result cell: the saved one on top, otherwise the source's (raw text, full binary).</summary>
     private static async Task<CellLiteral> ResultValueAsync(DataGridControl grid, long row, int column)
     {
         if (grid.Edits.TryGetCommitted(row, column, out var committed))

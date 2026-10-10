@@ -13,15 +13,15 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Features.TableEditor;
 
-/// <summary>Listas dos drop-downs do table editor: collations, engines e tabelas da base (referências das FKs).</summary>
+/// <summary>Lists of the table editor drop-downs: collations, engines and the database's tables (FK references).</summary>
 public sealed record TableEditorLists(IReadOnlyList<string> Collations, IReadOnlyList<string> Engines, IReadOnlyList<string> Tables);
 
 /// <summary>
-/// Table editor (anexo C §5; FAM-E01): em cima, as tabs Basic, Options, Indexes (n), Foreign keys (n), Check
-/// constraints (n), CREATE code e, nas tabelas que já existem, ALTER code (Partitions fica para depois); ao meio, a grelha das colunas com
-/// as 15 colunas do HeidiSQL (#, Name, Datatype, Length/Set, Unsigned, Allow NULL, Zerofill, Default, Comment,
-/// Collation, Expression, Virtuality, SRID, Invisible, Compressed) e Add/Remove/Up/Down; em baixo, Discard e Save.
-/// Edita o <see cref="TableDesign"/> diretamente; o código vem de quem cria a vista.
+/// Table editor (appendix C §5; FAM-E01): on top, the Basic, Options, Indexes (n), Foreign keys (n), Check
+/// constraints (n), CREATE code and, for tables that already exist, ALTER code tabs (Partitions comes later); in the middle,
+/// the columns grid with HeidiSQL's 15 columns (#, Name, Datatype, Length/Set, Unsigned, Allow NULL, Zerofill, Default,
+/// Comment, Collation, Expression, Virtuality, SRID, Invisible, Compressed) and Add/Remove/Up/Down; at the bottom, Discard and
+/// Save. Edits the <see cref="TableDesign"/> directly; the code comes from whoever creates the view.
 /// </summary>
 public sealed class TableEditorView : DockPanel
 {
@@ -122,9 +122,9 @@ public sealed class TableEditorView : DockPanel
     public TableDesign Design { get; }
 
     /// <summary>
-    /// O desenho mudou desde que a vista abriu (ou desde <see cref="MarkSaved"/>): compara o CREATE gerado com o de
-    /// então. Assim, eventos que os controlos levantam ao aparecer (seleção das listas, texto) não contam como
-    /// alterações, e desfazer uma alteração à mão volta a "sem alterações".
+    /// The design changed since the view opened (or since <see cref="MarkSaved"/>): compares the generated CREATE with the one
+    /// from then. That way, events the controls raise when they appear (list selection, text) do not count as
+    /// changes, and undoing a change by hand goes back to "no changes".
     /// </summary>
     public bool IsModified => !string.Equals(Safe(() => _createCode(Design)), _savedCode, StringComparison.Ordinal);
 
@@ -134,10 +134,10 @@ public sealed class TableEditorView : DockPanel
 
     public event EventHandler? DiscardRequested;
 
-    /// <summary>Alguma coisa mudou no desenho (contagens, código, botões).</summary>
+    /// <summary>Something changed in the design (counts, code, buttons).</summary>
     public event EventHandler? DesignChanged;
 
-    /// <summary>Linha de colunas escolhida (Add insere a seguir; Remove, Up e Down atuam nela).</summary>
+    /// <summary>Chosen column row (Add inserts after it; Remove, Up and Down act on it).</summary>
     public int SelectedColumn
     {
         get => _selected;
@@ -150,10 +150,10 @@ public sealed class TableEditorView : DockPanel
 
     public string CreateCodeText => _createCodeBox.Text ?? string.Empty;
 
-    /// <summary>Tab "Indexes (n)" (testes).</summary>
+    /// <summary>"Indexes (n)" tab (tests).</summary>
     public TabItem IndexesTab => _indexesTab;
 
-    /// <summary>Volta a mostrar o desenho depois de o mudar por código.</summary>
+    /// <summary>Shows the design again after changing it in code.</summary>
     public void Refresh()
     {
         RebuildAll();
@@ -161,7 +161,7 @@ public sealed class TableEditorView : DockPanel
 
     public string AlterCodeText => _alterCodeBox.Text ?? string.Empty;
 
-    /// <summary>Depois de gravar: sem alterações por gravar.</summary>
+    /// <summary>After saving: no unsaved changes.</summary>
     public void MarkSaved()
     {
         _savedCode = Safe(() => _createCode(Design));
@@ -175,7 +175,7 @@ public sealed class TableEditorView : DockPanel
         DesignChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Alteração num campo de texto: não reconstrói as linhas (o foco fica no campo).</summary>
+    /// <summary>Change in a text field: does not rebuild the rows (the focus stays in the field).</summary>
     private void Edited()
     {
         UpdateCounts();
@@ -399,7 +399,7 @@ public sealed class TableEditorView : DockPanel
     private HashSet<string> PrimaryColumns() =>
         Design.Indexes.Where(i => i.Kind == IndexKind.Primary).SelectMany(i => TableDesign.SplitList(i.Columns)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>As linhas das colunas, uma grelha por coluna da tabela.</summary>
+    /// <summary>The column rows, one grid per table column.</summary>
     private void RebuildColumns()
     {
         _columnRows.Children.Clear();
@@ -432,7 +432,7 @@ public sealed class TableEditorView : DockPanel
             _selected = Design.Columns.IndexOf(c);
             HighlightSelection();
         };
-        // Menu da coluna como no HeidiSQL: Create new index ▸ e Add to index ▸ (em vez de arrastar para os índices).
+        // Column menu as in HeidiSQL: Create new index ▸ and Add to index ▸ (instead of dragging to the indexes).
         var menu = new ContextMenu();
         menu.Opening += (_, _) => menu.ItemsSource = ColumnMenuItems(c);
         row.ContextMenu = menu;
@@ -496,10 +496,10 @@ public sealed class TableEditorView : DockPanel
         return row;
     }
 
-    /// <summary>Célula Default: o texto atual e, ao clicar, o painel do editor de defaults (anexo C §5.2).</summary>
+    /// <summary>Default cell: the current text and, on click, the defaults editor panel (appendix C §5.2).</summary>
     private Button DefaultButton(ColumnDesign c)
     {
-        // TextBlock: num Button, o "_" de AUTO_INCREMENT seria a tecla de acesso.
+        // TextBlock: in a Button, the "_" of AUTO_INCREMENT would be the access key.
         var button = new Button { Content = new TextBlock { Text = c.DefaultCaption }, HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left, MinHeight = 0, Padding = new Thickness(4, 1) }.Named("Default");
         var group = "default" + Guid.NewGuid().ToString("N");
         var none = new RadioButton { Content = "No default value", GroupName = group, IsChecked = c.DefaultKind == DefaultKind.None };
@@ -556,7 +556,7 @@ public sealed class TableEditorView : DockPanel
 
     private void AddColumn()
     {
-        // Add a seguir à focada, copiando tipo, tamanho, unsigned e NULL (anexo C §5.2).
+        // Add after the focused one, copying type, length, unsigned and NULL (appendix C §5.2).
         var after = _selected >= 0 && _selected < Design.Columns.Count ? Design.Columns[_selected] : null;
         var column = new ColumnDesign
         {
@@ -627,7 +627,7 @@ public sealed class TableEditorView : DockPanel
         return [Item("Add column", AddColumn), Item("Remove column", RemoveColumn), new Separator(), create, add];
     }
 
-    /// <summary>Create new index ▸ tipo: um índice novo só com esta coluna (PRIMARY junta-se à chave primária, se já houver).</summary>
+    /// <summary>Create new index ▸ kind: a new index with only this column (PRIMARY joins the primary key, if there is one).</summary>
     internal void CreateIndex(ColumnDesign column, IndexKind kind)
     {
         if (kind == IndexKind.Primary && Design.Indexes.FirstOrDefault(i => i.Kind == IndexKind.Primary) is { } primary)
@@ -645,7 +645,7 @@ public sealed class TableEditorView : DockPanel
         Changed();
     }
 
-    /// <summary>Add to index ▸ nome: junta a coluna ao fim das colunas do índice.</summary>
+    /// <summary>Add to index ▸ name: appends the column to the end of the index's columns.</summary>
     internal void AddToIndex(IndexDesign index, ColumnDesign column)
     {
         if (IndexHasColumn(index, column))
@@ -679,7 +679,7 @@ public sealed class TableEditorView : DockPanel
         Changed();
     }
 
-    /// <summary>Índices, chaves estrangeiras e checks: uma linha por item, com o botão de remover.</summary>
+    /// <summary>Indexes, foreign keys and checks: one row per item, with the remove button.</summary>
     private void RebuildLists()
     {
         UpdateCounts();

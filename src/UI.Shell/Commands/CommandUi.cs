@@ -12,10 +12,10 @@ using Eunomia.UI.Shell.Input;
 namespace Eunomia.UI.Shell.Commands;
 
 /// <summary>
-/// Gera menus, context menus e a toolbar a partir do registo de comandos (secção 21.2). Captions, atalhos,
-/// ícones, estado ativo e check vêm sempre do registo. Itens sem handler (versões seguintes) ficam escondidos, e com
-/// eles os separadores que deixariam de separar alguma coisa e os submenus vazios (Fase 13: a geografia dos menus
-/// mantém-se, sem itens que não fazem nada). Os estados são relidos quando um menu abre e, na toolbar, a cada 250 ms.
+/// Generates menus, context menus and the toolbar from the command registry (section 21.2). Captions, shortcuts,
+/// icons, enabled and checked state always come from the registry. Items without a handler (later versions) are hidden, and
+/// with them the separators that would no longer separate anything and empty submenus (phase 13: the menu geography
+/// stays, without items that do nothing). States are read again when a menu opens and, on the toolbar, every 250 ms.
 /// </summary>
 public sealed class CommandUi
 {
@@ -38,13 +38,13 @@ public sealed class CommandUi
         _timer.Start();
     }
 
-    /// <summary>Itens de submenus construídos em runtime ("Connect to ▸", "Editor commands ▸").</summary>
+    /// <summary>Submenu items built at runtime ("Connect to ▸", "Editor commands ▸").</summary>
     public Func<string, IReadOnlyList<object>>? DynamicItems { get; set; }
 
-    /// <summary>Entradas dos dropdowns da toolbar (Session manager, Refresh, Run, Load SQL file).</summary>
+    /// <summary>Entries of the toolbar drop-downs (Session manager, Refresh, Run, Load SQL file).</summary>
     public Func<string, IReadOnlyList<MenuEntry>>? DropdownEntries { get; set; }
 
-    /// <summary>Um handler lançou uma exceção (o shell mostra o diálogo de erro).</summary>
+    /// <summary>A handler threw an exception (the shell shows the error dialog).</summary>
     public event EventHandler<Exception>? CommandFailed;
 
     public Menu BuildMainMenu(IReadOnlyList<MenuDefinition> menus)
@@ -52,7 +52,7 @@ public sealed class CommandUi
         var menu = new Menu();
         foreach (var definition in menus)
         {
-            // Os itens de cada menu só são criados na primeira abertura (arranque mais leve, PR-01).
+            // Each menu's items are only created the first time it opens (lighter startup, PR-01).
             var top = new MenuItem { Header = definition.Caption, ItemsSource = new[] { new MenuItem { Header = "..." } } };
             var built = false;
             top.SubmenuOpened += (_, _) =>
@@ -70,7 +70,7 @@ public sealed class CommandUi
         return menu;
     }
 
-    /// <summary>Itens de menu (para menus, context menus e flyouts) a partir das entradas do layout.</summary>
+    /// <summary>Menu items (for menus, context menus and flyouts) from the layout entries.</summary>
     public List<object> BuildItems(IReadOnlyList<MenuEntry> entries)
     {
         var items = new List<object>();
@@ -116,7 +116,7 @@ public sealed class CommandUi
         return menu;
     }
 
-    /// <summary>Context menu criado a pedido: os itens deixam de ser seguidos quando o menu fecha.</summary>
+    /// <summary>Context menu created on demand: its items stop being tracked when the menu closes.</summary>
     public ContextMenu BuildTransientContextMenu(IReadOnlyList<MenuEntry> entries)
     {
         var first = _menuItems.Count;
@@ -145,7 +145,7 @@ public sealed class CommandUi
             GroupName = command.RadioGroup,
         };
         ToolTip.SetShowOnDisabled(item, true);
-        // Modificadores do clique (Shift no Quick Filter e no "Select top N rows"): o Click não os traz.
+        // Click modifiers (Shift in Quick Filter and in "Select top N rows"): Click does not carry them.
         var modifiers = KeyModifiers.None;
         item.AddHandler(InputElement.PointerPressedEvent, (_, e) => modifiers = e.KeyModifiers, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
         item.AddHandler(InputElement.PointerReleasedEvent, (_, e) => modifiers = e.KeyModifiers, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -184,7 +184,7 @@ public sealed class CommandUi
         var command = _registry.Get(id);
         var icon = new Image { Width = 16, Height = 16, Source = IconFactory.Get(command.Icon) };
 
-        // Botões simples (templates leves): o primeiro frame do arranque desenha os 30 de uma vez (PR-01).
+        // Plain buttons (light templates): the first startup frame draws all 30 at once (PR-01).
         var main = new Button { Content = icon, Focusable = false, Classes = { "toolbar" } };
         main.Click += (_, _) => Execute(id);
         Control button = main;
@@ -218,7 +218,7 @@ public sealed class CommandUi
         return button;
     }
 
-    /// <summary>Ícones da toolbar de novo (o tema mudou); os dos menus são recriados quando o menu abre.</summary>
+    /// <summary>Toolbar icons again (the theme changed); the menu ones are recreated when the menu opens.</summary>
     private void RefreshIcons()
     {
         foreach (var (button, icon, id) in _buttons)
@@ -251,7 +251,7 @@ public sealed class CommandUi
                 button.IsEnabled = state.CanExecute;
                 icon.Source = IconFactory.Get(state.Command.Icon, state.CanExecute);
             }
-            // Toggles: botão "afundado" (classe checked) como no HeidiSQL.
+            // Toggles: a "pressed" button (checked class) as in HeidiSQL.
             var main = button is StackPanel pair ? (Button)pair.Children[0] : (Button)button;
             if (main.Classes.Contains("checked") != state.IsChecked)
             {
@@ -275,7 +275,7 @@ public sealed class CommandUi
     }
 
     /// <summary>
-    /// Modificadores do último item de menu escolhido (válidos durante o handler do comando; a seguir voltam a None).
+    /// Modifiers of the last menu item chosen (valid during the command's handler; afterwards they go back to None).
     /// </summary>
     public KeyModifiers InvokeModifiers { get; private set; }
 
@@ -297,7 +297,7 @@ public sealed class CommandUi
                 InvokeModifiers = KeyModifiers.None;
             }
         }
-#pragma warning disable CA1031 // Um erro de um comando não pode derrubar a aplicação: vai para o diálogo de erro.
+#pragma warning disable CA1031 // An error in a command must not bring the application down: it goes to the error dialog.
         catch (Exception ex)
 #pragma warning restore CA1031
         {
@@ -316,7 +316,7 @@ public sealed class CommandUi
         item.IsVisible = state.IsImplemented;
         item.IsEnabled = state.CanExecute;
         item.IsChecked = state.IsChecked;
-        // As legendas dos comandos não usam teclas de acesso; as dinâmicas levam dados (valores do Quick Filter, defaults).
+        // Command captions do not use access keys; dynamic ones carry data (Quick Filter values, defaults).
         item.Header = LiteralText.Escaped(state.Caption);
         item.InputGesture = KeyChordMapper.ToGesture(_registry.ShortcutOf(id));
         item.Icon = IconFactory.CreateImage(state.Command.Icon, state.CanExecute);
@@ -324,8 +324,8 @@ public sealed class CommandUi
     }
 
     /// <summary>
-    /// Separadores e submenus de uma lista de itens (menu ou toolbar): um separador só aparece entre dois grupos com
-    /// itens visíveis; um submenu sem itens visíveis esconde-se. Devolve se ficou algum item visível.
+    /// Separators and submenus of a list of items (menu or toolbar): a separator only shows between two groups with
+    /// visible items; a submenu without visible items is hidden. Returns whether any item stayed visible.
     /// </summary>
     public bool Arrange(IReadOnlyList<object> items)
     {

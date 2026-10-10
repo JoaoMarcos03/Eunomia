@@ -3,9 +3,9 @@ using System.Text;
 namespace Eunomia.Engine.Transfer;
 
 /// <summary>
-/// Escrita em UTF-8 com um buffer próprio (secção 13.1: buffer de 1 MB, encoder reutilizado): o texto é codificado
-/// diretamente no buffer e o stream só recebe escritas grandes. Não é thread-safe; <see cref="BytesWritten"/> pode ser
-/// lido de outra thread para o progresso.
+/// UTF-8 writing with its own buffer (section 13.1: 1 MB buffer, reused encoder): text is encoded
+/// straight into the buffer and the stream only gets large writes. Not thread-safe; <see cref="BytesWritten"/> can be
+/// read from another thread for progress.
 /// </summary>
 public sealed class Utf8Output : IDisposable
 {
@@ -26,7 +26,7 @@ public sealed class Utf8Output : IDisposable
         _buffer = new byte[bufferSize];
     }
 
-    /// <summary>Bytes escritos até agora, incluindo os que ainda estão no buffer.</summary>
+    /// <summary>Bytes written so far, including those still in the buffer.</summary>
     public long BytesWritten => Volatile.Read(ref _flushed) + _used;
 
     public void Write(string text) => Write(text.AsSpan());
@@ -35,7 +35,7 @@ public sealed class Utf8Output : IDisposable
     {
         while (!text.IsEmpty)
         {
-            // No pior caso cada carácter ocupa 3 bytes; um par de surrogates ocupa 4 para 2 caracteres.
+            // In the worst case each character takes 3 bytes; a surrogate pair takes 4 for 2 characters.
             var room = _buffer.Length - _used;
             if (room < 4)
             {
@@ -81,7 +81,7 @@ public sealed class Utf8Output : IDisposable
         _buffer[_used++] = value;
     }
 
-    /// <summary>Espaço contíguo para escrever pelo menos <paramref name="size"/> bytes (até ao tamanho do buffer).</summary>
+    /// <summary>Contiguous space to write at least <paramref name="size"/> bytes (up to the buffer size).</summary>
     public Span<byte> GetSpan(int size)
     {
         ArgumentOutOfRangeException.ThrowIfGreaterThan(size, _buffer.Length);
@@ -98,7 +98,7 @@ public sealed class Utf8Output : IDisposable
         _used += count;
     }
 
-    /// <summary>Passa o buffer para o stream (sem <c>Flush</c> do stream).</summary>
+    /// <summary>Passes the buffer to the stream (without a stream <c>Flush</c>).</summary>
     public void Flush()
     {
         if (_used == 0)

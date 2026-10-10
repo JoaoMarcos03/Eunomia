@@ -3,7 +3,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.Engine.Transfer.Tests;
 
-/// <summary>Formato do dump do HeidiSQL (FAM-E06; anexo B §2.3.2–2.3.4).</summary>
+/// <summary>HeidiSQL's dump format (FAM-E06; appendix B §2.3.2–2.3.4).</summary>
 public sealed class SqlDumpWriterTests
 {
     private static readonly DumpHeader Header = new("127.0.0.1", "10.4.32-MariaDB - mariadb.org binary distribution", "Win64", "0.8.0");
@@ -145,7 +145,7 @@ public sealed class SqlDumpWriterTests
     public void InsertFechaAo90PorCentoDoTamanhoOuAoNumeroDeLinhas()
     {
         var rows = Enumerable.Range(1, 25).Select(i => (i, (string?)new string('x', 100))).ToArray();
-        // 1 KB × 0,9 = 921 bytes: o prefixo e 7 linhas de ~110 bytes.
+        // 1 KB × 0.9 = 921 bytes: the prefix and 7 rows of ~110 bytes.
         var bySize = Dump(new SqlDumpOptions { Data = DumpDataMode.Insert, MaxInsertSizeKb = 1 }, w => WriteAll(w, rows));
         var byRows = Dump(new SqlDumpOptions { Data = DumpDataMode.Insert, MaxRowsPerInsert = 10 }, w => WriteAll(w, rows));
         var single = Dump(new SqlDumpOptions { Data = DumpDataMode.InsertIgnore, MaxInsertSizeKb = 0 }, w => WriteAll(w, rows[..2]));
@@ -255,7 +255,7 @@ public sealed class SqlDumpWriterTests
     private static void WriteAll(SqlDumpWriter writer, (int, string?)[] rows)
     {
         writer.BeginData("d", "t", rows.Length, false, ["id", "name"]);
-        // Em dois blocos, para o INSERT continuar entre blocos.
+        // In two blocks, so the INSERT continues across blocks.
         writer.WriteRows(Block(IdName, rows[..(rows.Length / 2)]));
         writer.WriteRows(Block(IdName, rows[(rows.Length / 2)..]));
         writer.EndData();

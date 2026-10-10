@@ -6,7 +6,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Restauro das query tabs depois de reabrir ou de um crash (anexo C §4.3; FAM-Q07; PR-21).</summary>
+/// <summary>Query tab restore after reopening or after a crash (appendix C §4.3; FAM-Q07; PR-21).</summary>
 public sealed class TabRestoreTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-tr-" + Guid.NewGuid().ToString("N")[..8]);
@@ -43,7 +43,7 @@ public sealed class TabRestoreTests : IDisposable
         second.SetCaption("Relatório", modified: true);
         first.Tabs.SelectedItem = second.Item;
         first.SaveJournal(wait: true);
-        // Crash: a janela não fecha e não grava mais nada.
+        // Crash: the window does not close and saves nothing more.
 
         var reopened = Window();
         Assert.Equal(2, reopened.Tabs.QueryTabs.Count);
@@ -56,7 +56,7 @@ public sealed class TabRestoreTests : IDisposable
         Assert.Equal(5, restoredView.Editor.Editor.CaretOffset);
         Assert.Equal("SELECT 1;", Assert.IsType<QueryTabView>(reopened.Tabs.QueryTabs[0].Content).Editor.Text);
 
-        // Continua a gravar sobre o journal restaurado; fechar a tab apaga-a.
+        // Keeps saving on top of the restored journal; closing the tab deletes it.
         restoredView.Editor.Editor.Document.Insert(restoredView.Editor.Text.Length, "\nSELECT 4;");
         reopened.SaveJournal(wait: true);
         Assert.EndsWith("SELECT 4;", new TabJournal(_dir).Restore()[1].Text, StringComparison.Ordinal);

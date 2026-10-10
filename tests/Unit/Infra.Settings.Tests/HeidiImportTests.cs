@@ -7,8 +7,8 @@ using Eunomia.Infra.Settings.HeidiImport;
 namespace Eunomia.Infra.Settings.Tests;
 
 /// <summary>
-/// Import do ficheiro de settings do HeidiSQL (FAM-S05). O ficheiro de exemplo segue o formato do anexo A §1.8;
-/// a comparação com um export real do HeidiSQL 12.21 fica pendente (golden file da Fase 0, "Precisa do Marcos").
+/// Import of the HeidiSQL settings file (FAM-S05). The sample file follows the format of appendix A §1.8;
+/// the comparison with a real HeidiSQL 12.21 export is still pending (phase 0 golden file, a manual check).
 /// </summary>
 public sealed class HeidiImportTests
 {

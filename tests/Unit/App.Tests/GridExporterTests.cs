@@ -7,9 +7,9 @@ using Eunomia.Engine.Results;
 namespace Eunomia.App.Tests;
 
 /// <summary>
-/// Os 16 formatos do Copy as e do Export grid rows contra os exemplos do anexo B §1.3 (FAM-C02, C03): tabela <c>t</c>
-/// com <c>id INT PK AUTO_INCREMENT</c>, <c>name VARCHAR</c>, <c>note TEXT NULL</c> e a linha <c>(1, 'a"b', NULL)</c>.
-/// Os golden files do HeidiSQL ficam para a verificação manual.
+/// The 16 Copy as and Export grid rows formats against the examples in appendix B §1.3 (FAM-C02, C03): table <c>t</c>
+/// with <c>id INT PK AUTO_INCREMENT</c>, <c>name VARCHAR</c>, <c>note TEXT NULL</c> and the row <c>(1, 'a"b', NULL)</c>.
+/// HeidiSQL's golden files are left for the manual check.
 /// </summary>
 public sealed class GridExporterTests
 {
@@ -34,7 +34,7 @@ public sealed class GridExporterTests
     public void ExcelCsv()
     {
         Assert.Equal("\"id\",\"name\",\"note\"\r\n\"1\",\"a\"\"b\",\\N\r\n", Export(GridExportFormat.ExcelCsv));
-        // Clipboard: TAB; locale com vírgula decimal: ponto e vírgula.
+        // Clipboard: TAB; locale with a decimal comma: semicolon.
         Assert.Equal("\"id\"\t\"name\"\t\"note\"\r\n\"1\"\t\"a\"\"b\"\t\\N\r\n", Export(GridExportFormat.ExcelCsv, new GridExportOptions { ToClipboard = true }));
         var pt = Export(GridExportFormat.ExcelCsv, new GridExportOptions { ToClipboard = false, Culture = CultureInfo.GetCultureInfo("pt-PT") });
         Assert.StartsWith("\"id\";\"name\";\"note\"", pt, StringComparison.Ordinal);
@@ -81,7 +81,7 @@ public sealed class GridExporterTests
         Assert.Equal("$t = [\r\n\t[\r\n\t\t'id' => 1,\r\n\t\t'name' => 'a\"b',\r\n\t\t'note' => null,\r\n\t],\r\n];\r\n",
             Export(GridExportFormat.PhpArray, new GridExportOptions { ToClipboard = true }));
         Assert.StartsWith("<?php\r\n$t = [", Export(GridExportFormat.PhpArray), StringComparison.Ordinal);
-        // D6: barra invertida e aspa escapadas; zeros à esquerda fora.
+        // D6: backslash and quote escaped; leading zeros removed.
         var tricky = Export(GridExportFormat.PhpArray, new GridExportOptions { ToClipboard = true }, Sample(["007", @"c:\x'y", "a\tb"]));
         Assert.Contains("'id' => 7,", tricky, StringComparison.Ordinal);
         Assert.Contains(@"'name' => 'c:\\x\'y',", tricky, StringComparison.Ordinal);
@@ -101,7 +101,7 @@ public sealed class GridExporterTests
             "{\r\n\t\"table\": \"t\",\r\n\t\"rows\":\r\n\t[\r\n\t\t{\r\n\t\t\t\"id\": 1,\r\n\t\t\t\"name\": \"a\\\"b\",\r\n\t\t\t\"note\": null\r\n\t\t}\r\n\t]\r\n}\r\n",
             Export(GridExportFormat.Json));
         Assert.Equal("{\"id\": 1, \"name\": \"a\\\"b\", \"note\": null}\n", Export(GridExportFormat.JsonLines));
-        // D6: com 0 linhas o JSON continua válido; caracteres de controlo como \u00XX.
+        // D6: with 0 rows the JSON is still valid; control characters as \u00XX.
         var empty = Export(GridExportFormat.Json, data: Sample() with { Rows = [] });
         Assert.Equal("{\r\n\t\"table\": \"t\",\r\n\t\"rows\":\r\n\t[\r\n\t]\r\n}\r\n", empty);
         Assert.Contains("\\u0001", Export(GridExportFormat.JsonLines, data: Sample(["1", "\u0001", null])), StringComparison.Ordinal);
@@ -124,7 +124,7 @@ public sealed class GridExporterTests
     [Fact]
     public void NomesEValoresHostisNaoSaemDoFormato()
     {
-        // Nomes de tabela e de coluna vêm do servidor e podem ter qualquer carácter.
+        // Table and column names come from the server and can have any character.
         var columns = Sample().Columns.Select((c, i) => i == 1 ? c with { Name = "n\" onmouseover=\"alert(1)" } : c).ToList();
         var data = new GridExportData(columns, [["1", "x | y\nz", @"\input{/etc/passwd} #1 ^~"]], "t\" onload=\"alert(1)", ["id"]);
         var options = new GridExportOptions { ToClipboard = false, Culture = CultureInfo.InvariantCulture, Query = "SELECT * FROM t WHERE a < 5 AND b = '<script>alert(1)</script>'" };

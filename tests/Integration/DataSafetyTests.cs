@@ -11,12 +11,12 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// Escritas que não podem estragar dados (Fase 14): valores exatos com qualquer <c>sql_mode</c>, tabelas sem chave com
-/// linhas que só diferem em maiúsculas e chaves desatualizadas na cache.
+/// Writes that must not damage data (phase 14): exact values under any <c>sql_mode</c>, tables without a key with
+/// rows that only differ in case, and stale keys in the cache.
 /// </summary>
 public sealed class DataSafetyTests : IAsyncLifetime
 {
-    /// <summary>Valores que um escaping errado altera: barras, aspas, quebras de linha, NUL, Ctrl+Z e fora do BMP.</summary>
+    /// <summary>Values that wrong escaping alters: backslashes, quotes, line breaks, NUL, Ctrl+Z and characters outside the BMP.</summary>
     private static readonly string[] Tricky =
     [
         @"C:\dir\file.txt",
@@ -84,7 +84,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.v (k VARCHAR(100) PRIMARY KEY, t TEXT, c VARCHAR(100) COLLATE latin1_swedish_ci)");
         var table = await TableAsync("v");
-        // O modo muda na sessão sem o cliente saber (como um SET do utilizador ou de um trigger de login).
+        // The mode changes during the session without the client knowing (like a SET by the user or by a login trigger).
         if (noBackslashEscapes)
         {
             await ExecAsync("SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_BACKSLASH_ESCAPES')");
@@ -98,7 +98,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
             await writer.WriteAsync(table, new RowChange(RowChangeKind.Insert, Values(), Values(("k", key), ("t", value), ("c", latin))), Ct);
             Assert.Equal(Hex(value), await ScalarAsync($"SELECT HEX(t) FROM `{_database}`.v WHERE k = _utf8mb4 X'{Hex(key)}'"));
 
-            // UPDATE pela chave com barras e aspas no WHERE: muda exatamente esta linha.
+            // UPDATE by key with backslashes and quotes in the WHERE: changes exactly this row.
             var updated = value + "|2";
             var result = await writer.WriteAsync(table, new RowChange(RowChangeKind.Update, Values(("k", key)), Values(("t", updated))), Ct);
             Assert.Equal(1, result.AffectedRows);
@@ -117,7 +117,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         var table = await TableAsync("nokey");
         var writer = new RowWriter(_host);
 
-        // A linha visível é ('ab', 'çé', 1); com a collation da coluna, ('Ab', 'Çé', 1) também correspondia ao WHERE.
+        // The visible row is ('ab', 'çé', 1); with the column collation, ('Ab', 'Çé', 1) also matched the WHERE.
         var result = await writer.WriteAsync(table, new RowChange(RowChangeKind.Update, Values(("name", "ab"), ("latin", "çé"), ("n", "1")), Values(("n", "2"))), Ct);
         Assert.Equal(1, result.AffectedRows);
         Assert.Equal("Ab:1,ab:2", await ScalarAsync($"SELECT GROUP_CONCAT(CONCAT(name, ':', n) ORDER BY BINARY name) FROM `{_database}`.nokey"));
@@ -132,7 +132,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.stale (id INT PRIMARY KEY, v VARCHAR(10))");
         var cached = await TableAsync("stale");
-        // Outra pessoa tira a chave e mete linhas com o mesmo id depois de a definição estar na cache.
+        // Someone else removes the key and inserts rows with the same id after the definition is in the cache.
         await ExecAsync($"ALTER TABLE `{_database}`.stale DROP PRIMARY KEY");
         await ExecAsync($"INSERT INTO `{_database}`.stale VALUES (1, 'a'), (1, 'b'), (1, 'c')");
 
@@ -147,7 +147,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     public async Task DuplicarPeloTextoBrutoGuardaOsMesmosValores()
     {
         TestServer.RequireServer();
-        // Zero dates (MySQL 8 recusa-as no modo por omissão): a sessão fica sem modo estrito durante o teste.
+        // Zero dates (MySQL 8 refuses them in the default mode): the session runs without strict mode during the test.
         await ExecAsync("SET SESSION sql_mode = ''");
         await ExecAsync($"CREATE TABLE `{_database}`.dup (d DOUBLE, f FLOAT, b BIT(8), n DECIMAL(30,10), big BIGINT UNSIGNED, bin LONGBLOB, t TEXT, dt DATETIME(6), z DATE)");
         await ExecAsync($"INSERT INTO `{_database}`.dup VALUES (PI(), 0.1, b'1010', 12345678901234567890.0123456789, 18446744073709551615, " +
@@ -169,7 +169,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
             return values;
         }, Ct);
 
-        // "Duplicate row" grava os valores lidos: a cópia tem de ser igual byte a byte.
+        // "Duplicate row" saves the values read: the copy must be identical byte for byte.
         await ExecAsync("SET SESSION sql_mode = ''");
         await new RowWriter(_host).WriteAsync(table, new RowChange(RowChangeKind.Insert, Values(), raw), Ct);
         Assert.Equal(1L, Convert.ToInt64(await ScalarAsync(
@@ -177,7 +177,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         Assert.Equal(2L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.dup"), System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal("10", Convert.ToString(await ScalarAsync($"SELECT MIN(b + 0) FROM `{_database}`.dup"), System.Globalization.CultureInfo.InvariantCulture));
 
-        // Sem chave, o WHERE com todos os valores brutos (DOUBLE e BLOB completos) encontra a linha.
+        // Without a key, the WHERE with every raw value (full DOUBLE and BLOB) finds the row.
         var noFloat = raw.Where(v => !string.Equals(v.Key, "f", StringComparison.OrdinalIgnoreCase)).ToDictionary(v => v.Key, v => v.Value, StringComparer.OrdinalIgnoreCase);
         await ExecAsync($"ALTER TABLE `{_database}`.dup DROP COLUMN f");
         _metadata.InvalidateTable(new DbObjectRef(_database, _database, "dup", DbObjectKind.Table));
@@ -202,7 +202,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         await Assert.ThrowsAsync<RowWriteException>(() => writer.WriteAsync(table, new RowChange(RowChangeKind.Update, Values(("id", "1")), Values(("amount", typed))), Ct));
         await Assert.ThrowsAsync<RowWriteException>(() => writer.WriteAsync(table, new RowChange(RowChangeKind.Update, Values(("id", "1")), Values(("flag", typed))), Ct));
         Assert.Equal("10.00|0", await ScalarAsync($"SELECT CONCAT(amount, '|', flag) FROM `{_database}`.num"));
-        // Números válidos e expressões (Ctrl+F2) passam.
+        // Valid numbers and expressions (Ctrl+F2) go through.
         await writer.WriteAsync(table, new RowChange(RowChangeKind.Update, Values(("id", "1")), Values(("amount", " 1.5e1 "))), Ct);
         await writer.WriteAsync(table, new RowChange(RowChangeKind.Update, Values(("id", "1")),
             new Dictionary<string, CellLiteral> { ["flag"] = new("1 + 0", IsFunction: true) }), Ct);
@@ -215,7 +215,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.shrink (id INT PRIMARY KEY, name VARCHAR(40))");
         await ExecAsync($"INSERT INTO `{_database}`.shrink VALUES (1, 'um nome comprido demais')");
-        // Sessão sem modo estrito: o MySQL cortaria o valor e só deixaria um warning.
+        // Session without strict mode: MySQL would truncate the value and only leave a warning.
         await ExecAsync("SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION'");
         var session = new Eunomia.App.Sessions.OpenSession(new Eunomia.App.Sessions.SessionDefinition(), _host);
         var baseline = await TableAsync("shrink");
@@ -228,7 +228,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         Assert.Equal("um nome comprido demais", await ScalarAsync($"SELECT name FROM `{_database}`.shrink"));
         Assert.Equal("varchar(40)", await ScalarAsync(
             $"SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{_database}' AND TABLE_NAME = 'shrink' AND COLUMN_NAME = 'name'"));
-        // O modo da sessão volta a ser o do utilizador.
+        // The session mode goes back to the user's.
         Assert.Equal("NO_ENGINE_SUBSTITUTION", await ScalarAsync("SELECT @@SESSION.sql_mode"));
     }
 
@@ -244,7 +244,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         var session = new Eunomia.App.Sessions.OpenSession(new Eunomia.App.Sessions.SessionDefinition(), _host);
         var baseline = await TableAsync("child");
         var design = Eunomia.App.Objects.TableDesign.From(baseline);
-        // A FK muda (o primeiro ALTER larga-a) e a coluna estreita (o segundo ALTER falha no modo estrito).
+        // The FK changes (the first ALTER drops it) and the column narrows (the second ALTER fails in strict mode).
         design.ForeignKeys[0].OnDelete = ForeignKeyAction.Restrict;
         design.Columns[2].LengthSet = "5";
         var statements = Eunomia.App.Objects.TableEditing.Statements(_host.ServerServices!, baseline, design);
@@ -276,11 +276,11 @@ public sealed class DataSafetyTests : IAsyncLifetime
         await Assert.ThrowsAnyAsync<Exception>(() => Eunomia.App.Objects.ObjectCode.SaveAsync(session, _database, obj, before, broken, Ct));
         Assert.Equal(before, await _host.RunMetadataAsync((h, ct) => h.Metadata.GetCreateCodeAsync(obj, ct), Ct));
 
-        // Uma alteração válida grava.
+        // A valid change saves.
         var changed = original.Replace("1", "7", StringComparison.Ordinal);
         await Eunomia.App.Objects.ObjectCode.SaveAsync(session, _database, obj, before, changed, Ct);
         Assert.Contains("7", await _host.RunMetadataAsync((h, ct) => h.Metadata.GetCreateCodeAsync(obj, ct), Ct), StringComparison.Ordinal);
-        // Nenhum objeto temporário de validação fica para trás.
+        // No temporary validation object is left behind.
         Assert.Equal(0L, Convert.ToInt64(await ScalarAsync(
             $"SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = '{_database}' AND ROUTINE_NAME LIKE 'eunomia_check_%'"), System.Globalization.CultureInfo.InvariantCulture));
     }
@@ -297,7 +297,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         var recovery = Path.Combine(Path.GetTempPath(), "eunomia-recovery-" + Guid.NewGuid().ToString("N"));
         try
         {
-            // Nome novo (caminho DROP + CREATE) com código inválido e um original que o servidor também recusa.
+            // New name (DROP + CREATE path) with invalid code and an original that the server also refuses.
             var error = await Assert.ThrowsAsync<InvalidOperationException>(() => Eunomia.App.Objects.ObjectCode.SaveAsync(
                 session, _database, obj, "CREATE TRIGGER t_lost BEFORE INSERT ON host FOR EACH ROW SET NEW.nope = 1",
                 "CREATE TRIGGER t_new BEFORE INSERT ON host FOR EACH ROW SET NEW.nope = 2", Ct, recovery));
@@ -319,7 +319,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.busy (id INT PRIMARY KEY, v VARCHAR(10)) ENGINE=InnoDB");
-        // Outra sessão com uma transação aberta que leu a tabela: segura o lock de metadata até ao COMMIT.
+        // Another session with an open transaction that read the table: it holds the metadata lock until COMMIT.
         await using var other = new MySqlConnection(TestServer.ConnectionString);
         await other.OpenAsync(Ct);
         await using (var hold = new MySqlCommand($"START TRANSACTION; SELECT * FROM `{_database}`.busy;", other))
@@ -329,10 +329,10 @@ public sealed class DataSafetyTests : IAsyncLifetime
         var session = new Eunomia.App.Sessions.OpenSession(new Eunomia.App.Sessions.SessionDefinition(), _host);
         var error = await Assert.ThrowsAsync<Eunomia.Engine.Execution.SessionOperationException>(() => Eunomia.App.Objects.TableEditing.ApplyAsync(
             session, [$"ALTER TABLE `{_database}`.busy ADD COLUMN extra INT"], Ct));
-        // Sozinho espera ~10 s (uma tentativa); com outro DDL em paralelo no servidor pode haver várias tentativas.
+        // On its own it waits ~10 s (one attempt); with another DDL running in parallel on the server there may be several attempts.
         Assert.Equal(1205, error.Error.Code);
         Assert.Contains("metadata lock", error.Error.Message, StringComparison.Ordinal);
-        // A sessão volta ao lock_wait_timeout que tinha.
+        // The session goes back to the lock_wait_timeout it had.
         Assert.NotEqual(10L, Convert.ToInt64(await ScalarAsync("SELECT @@SESSION.lock_wait_timeout"), System.Globalization.CultureInfo.InvariantCulture));
         await using (var commit = new MySqlCommand("COMMIT", other))
         {
@@ -358,27 +358,27 @@ public sealed class DataSafetyTests : IAsyncLifetime
         RowChange Change(string id, string column, string expected, string value) =>
             new(RowChangeKind.Update, Values(("id", id)), Values((column, value))) { Expected = Values((column, expected)) };
 
-        // Outra sessão muda v depois de o grid ter lido 'a': gravar pára e não apaga a alteração dela.
+        // Another session changes v after the grid read 'a': saving stops and does not wipe out its change.
         await OtherAsync($"UPDATE `{_database}`.shared SET v = 'outra' WHERE id = 1");
         await Assert.ThrowsAsync<RowConflictException>(() => writer.WriteAsync(table, Change("1", "v", "a", "minha"), Ct));
         Assert.Equal("outra", await ScalarAsync($"SELECT v FROM `{_database}`.shared WHERE id = 1"));
-        // Sobrescrever (o utilizador confirmou): sem verificação.
+        // Overwrite (the user confirmed): no check.
         await writer.WriteAsync(table, Change("1", "v", "a", "minha") with { Expected = null }, Ct);
         Assert.Equal("minha", await ScalarAsync($"SELECT v FROM `{_database}`.shared WHERE id = 1"));
 
-        // A outra sessão gravou o mesmo valor: não há conflito.
+        // The other session saved the same value: there is no conflict.
         await OtherAsync($"UPDATE `{_database}`.shared SET v = 'igual' WHERE id = 2");
         await writer.WriteAsync(table, Change("2", "v", "b", "igual"), Ct);
 
-        // A outra sessão mudou outra coluna: a gravação passa e não toca nela.
+        // The other session changed another column: the save goes through and does not touch it.
         await OtherAsync($"UPDATE `{_database}`.shared SET w = 'dela' WHERE id = 3");
         await writer.WriteAsync(table, Change("3", "v", "c", "nova"), Ct);
         Assert.Equal("nova|dela", await ScalarAsync($"SELECT CONCAT(v, '|', w) FROM `{_database}`.shared WHERE id = 3"));
 
-        // FLOAT não entra na verificação (o texto lido arredonda): grava sem falso conflito.
+        // FLOAT is left out of the check (the text read rounds): saves without a false conflict.
         await writer.WriteAsync(table, Change("3", "f", "0.3", "0.5"), Ct);
 
-        // Linha apagada por outra sessão: erro, nada gravado.
+        // Row deleted by another session: error, nothing saved.
         await OtherAsync($"DELETE FROM `{_database}`.shared WHERE id = 2");
         await Assert.ThrowsAsync<RowWriteException>(() => writer.WriteAsync(table, Change("2", "v", "igual", "x"), Ct));
     }
@@ -393,7 +393,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         var services = _host.ServerServices!;
         Assert.Equal(@"'a\b'", services.Dialect.PlainStringLiteral(@"a\b"));
 
-        // Um COMMENT com barras gerado pelo DDL composer fica exatamente como escrito.
+        // A COMMENT with backslashes generated by the DDL composer stays exactly as written.
         var comment = @"C:\dir 'x'";
         await ExecAsync($"CREATE TABLE `{_database}`.commented (id INT) COMMENT {services.Dialect.PlainStringLiteral(comment)}");
         Assert.Equal(comment, await ScalarAsync(

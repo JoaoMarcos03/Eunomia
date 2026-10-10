@@ -7,7 +7,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>CREATE e ALTER do table editor contra o servidor (Fase 7; anexo C §5.3; FAM-E02).</summary>
+/// <summary>Table editor CREATE and ALTER against the server (phase 7; appendix C §5.3; FAM-E02).</summary>
 public sealed class DdlComposerTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -62,8 +62,8 @@ public sealed class DdlComposerTests : IAsyncLifetime
     public async Task ExpressoesComPlicaEBarraSobrevivemALeitura()
     {
         TestServer.RequireServer();
-        // Coluna gerada, default com expressão e CHECK com plica e barra nos literais: o MySQL 8 dá-os escapados no
-        // information_schema (bug #100607); o CREATE feito a partir da leitura tem de dar a mesma tabela.
+        // Generated column, expression default and CHECK with a quote and a backslash in the literals: MySQL 8 returns them escaped
+        // in information_schema (bug #100607); the CREATE built from the read must give the same table.
         await ExecAsync($"CREATE TABLE `{_database}`.expr (id INT PRIMARY KEY, a VARCHAR(20) NOT NULL DEFAULT 'a', " +
             @"g VARCHAR(60) AS (CONCAT(a, 'it''s \\ ok')) VIRTUAL, d VARCHAR(20) DEFAULT (CONCAT('x', '''y')), " +
             "CONSTRAINT no_quote CHECK (a <> 'it''s')) ENGINE=InnoDB");
@@ -71,7 +71,7 @@ public sealed class DdlComposerTests : IAsyncLifetime
         var copy = table with
         {
             Ref = table.Ref with { Name = "expr_copy" },
-            // No MySQL os nomes dos CHECK são únicos na base.
+            // On MySQL, CHECK names are unique in the database.
             Checks = [.. table.Checks.Select(c => c with { Name = "no_quote_copy" })],
         };
         foreach (var sql in Ddl.Create(copy))
@@ -108,7 +108,7 @@ public sealed class DdlComposerTests : IAsyncLifetime
         Assert.Equal([10], table.Indexes.Single(i => i.Name == "uq_name").SubParts!);
         Assert.Equal("NULL", table.Columns.Single(c => c.Name == "notes").DefaultExpression);
 
-        // O CREATE gerado, corrido noutro nome, dá a mesma definição.
+        // The generated CREATE, run under another name, gives the same definition.
         var copy = table with { Ref = table.Ref with { Name = "t_copy" }, ForeignKeys = [] };
         foreach (var sql in Ddl.Create(copy))
         {
@@ -128,16 +128,16 @@ public sealed class DdlComposerTests : IAsyncLifetime
         var notes = columns.Single(c => c.Name == "notes");
         columns.Remove(columns.Single(c => c.Name == "gone"));
         columns[columns.IndexOf(name)] = name with { Name = "title", NativeType = "varchar(60)", Comment = "o título" };
-        // notes passa para a seguir ao id; nova coluna no fim.
+        // notes moves to after id; new column at the end.
         columns.Remove(notes);
         columns.Insert(1, notes with { IsNullable = false, DefaultExpression = null });
-        // Sem largura de apresentação: o MySQL 8 tira-a dos inteiros e o MariaDB não.
+        // No display width: MySQL 8 removes it from integers and MariaDB does not.
         columns.Add(new ColumnDefinition("rating", "decimal(5,1)", new LogicalType(LogicalTypeKind.Decimal, Precision: 5, Scale: 1), true, "5.0", false, false, false, null));
         var indexes = before.Indexes.Where(i => i.Name != "ix_price")
             .Select(i => i.Name == "uq_name" ? i with { Columns = ["title"], SubParts = [20] } : i)
             .Append(new IndexDefinition("ix_rating", IndexKind.Key, ["rating", "price"]))
             .ToList();
-        // O índice que o InnoDB cria para a chave estrangeira continua lá.
+        // The index InnoDB creates for the foreign key is still there.
         var after = before with
         {
             Ref = before.Ref with { Name = "t2" },
@@ -159,9 +159,9 @@ public sealed class DdlComposerTests : IAsyncLifetime
         }
 
         var actual = await ReadAsync("t2");
-        // O servidor reordena os índices depois de os largar e criar: compara-se pela definição de cada um.
-        // O MySQL 8 guarda as estatísticas do information_schema em cache (information_schema_stats_expiry) e só as
-        // atualiza depois do ALTER: o AUTO_INCREMENT aparece num lado e não no outro. Compara-se sem ele.
+        // The server reorders the indexes after dropping and creating them: they are compared by each one's definition.
+        // MySQL 8 caches the information_schema statistics (information_schema_stats_expiry) and only refreshes them
+        // after the ALTER: AUTO_INCREMENT shows on one side and not on the other. They are compared without it.
         static TableDefinition Sorted(TableDefinition t) => t with
         {
             Indexes = [.. t.Indexes.OrderBy(i => i.Name, StringComparer.Ordinal)],

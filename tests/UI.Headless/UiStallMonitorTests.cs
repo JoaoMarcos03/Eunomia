@@ -5,7 +5,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Stalls da UI thread &gt; 250 ms (Fase 12; secção 21.5; critério 27.3).</summary>
+/// <summary>UI thread stalls &gt; 250 ms (phase 12; section 21.5; criterion 27.3).</summary>
 public sealed class UiStallMonitorTests
 {
     private sealed class Capture : IDiagnosticLog
@@ -33,7 +33,7 @@ public sealed class UiStallMonitorTests
         await PumpAsync(TimeSpan.FromMilliseconds(350));
         Assert.Equal(0, monitor.Stalls);
 
-        // Trabalho síncrono na UI thread: o próximo tick chega atrasado.
+        // Synchronous work on the UI thread: the next tick arrives late.
         Thread.Sleep(450);
         await PumpAsync(TimeSpan.FromMilliseconds(250));
 

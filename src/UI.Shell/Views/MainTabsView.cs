@@ -11,8 +11,8 @@ using Eunomia.UI.Controls.Common.Icons;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Uma query tab: caption ("Query", "Query #2"), <c>*</c> quando modificada e conteúdo. O conteúdo (editor,
-/// helpers e resultados) só é criado quando a tab é mostrada ou usada pela primeira vez (arranque mais leve, PR-01).
+/// A query tab: caption ("Query", "Query #2"), <c>*</c> when modified, and content. The content (editor,
+/// helpers and results) is only created when the tab is shown or used for the first time (lighter startup, PR-01).
 /// </summary>
 public sealed class QueryTab
 {
@@ -30,7 +30,7 @@ public sealed class QueryTab
         IsClosable = closable;
     }
 
-    /// <summary>Sessão onde a tab corre (D9): barra com a cor e tooltip com o nome; "(pinned)" quando fixada.</summary>
+    /// <summary>Session the tab runs on (D9): a bar with the colour and a tooltip with the name; "(pinned)" when pinned.</summary>
     public void SetSession(string? session, uint color, bool pinned)
     {
         _session.IsVisible = session is not null && (color != 0 || pinned);
@@ -71,9 +71,9 @@ public sealed class QueryTab
 }
 
 /// <summary>
-/// Tabs principais (secção 5.3, anexo C §1.8, FAM-L04/L05): Host, Database, Table, Data, Query e Query #N, com
-/// botão de fechar nas query tabs, "+" a seguir à última, fecho por duplo clique ou clique do meio (preferências)
-/// e várias linhas quando não cabem.
+/// Main tabs (section 5.3, appendix C §1.8, FAM-L04/L05): Host, Database, Table, Data, Query and Query #N, with
+/// a close button on the query tabs, "+" after the last one, closing by double click or middle click (preferences)
+/// and several rows when they do not fit.
 /// </summary>
 public sealed class MainTabsView : TabControl
 {
@@ -123,10 +123,10 @@ public sealed class MainTabsView : TabControl
 
     public QueryTab? ActiveQueryTab => _queryTabs.FirstOrDefault(q => ReferenceEquals(q.Item, SelectedItem));
 
-    /// <summary>Query tab debaixo do rato quando o context menu da barra abriu (as ações atuam nela).</summary>
+    /// <summary>Query tab under the mouse when the tab bar context menu opened (the actions act on it).</summary>
     public QueryTab? ContextTab { get; set; }
 
-    /// <summary>Tab alvo das ações: a do context menu, se houver, senão a ativa.</summary>
+    /// <summary>Target tab of the actions: the context menu's, if any, otherwise the active one.</summary>
     public QueryTab? TargetQueryTab => ContextTab ?? ActiveQueryTab;
 
     /// <summary>Tabs in multiple lines (popupMainTabs).</summary>
@@ -136,7 +136,7 @@ public sealed class MainTabsView : TabControl
         ItemsPanel = new FuncTemplate<Panel?>(() => value ? new WrapPanel() : new StackPanel { Orientation = Orientation.Horizontal });
     }
 
-    /// <summary>Close query tabs to the right (pára se o utilizador cancelar uma).</summary>
+    /// <summary>Close query tabs to the right (stops if the user cancels one).</summary>
     public async Task CloseQueryTabsRightOfAsync(QueryTab tab)
     {
         var index = Items.IndexOf(tab.Item);
@@ -150,12 +150,12 @@ public sealed class MainTabsView : TabControl
     }
 
     /// <summary>
-    /// Pergunta antes de fechar (tab alterada: "Save changes to file …?" / "Save content of tab …?"); devolve falso se o
-    /// utilizador cancelar.
+    /// Asks before closing (changed tab: "Save changes to file …?" / "Save content of tab …?"); returns false if the
+    /// user cancels.
     /// </summary>
     public Func<QueryTab, Task<bool>>? ConfirmClose { get; set; }
 
-    /// <summary>Fecho pedido pelo utilizador: pergunta (se for preciso) e fecha.</summary>
+    /// <summary>Close requested by the user: asks (if needed) and closes.</summary>
     public async Task<bool> RequestCloseAsync(QueryTab tab)
     {
         ArgumentNullException.ThrowIfNull(tab);
@@ -173,7 +173,7 @@ public sealed class MainTabsView : TabControl
 
     public event EventHandler<QueryTab>? QueryTabClosing;
 
-    /// <summary>Veto ao fecho (uma tab com uma query a correr não fecha, anexo C §4.3).</summary>
+    /// <summary>Close veto (a tab with a running query does not close, appendix C §4.3).</summary>
     public Func<QueryTab, bool>? CanCloseQueryTab { get; set; }
 
     public QueryTab AddQueryTab(bool select = true, bool closable = true, string? name = null)
@@ -228,12 +228,12 @@ public sealed class MainTabsView : TabControl
 
     private readonly List<TabItem> _diagramTabs = [];
 
-    /// <summary>Tabs de diagrama ("Diagram: base", secção 17), entre as query tabs e o "+".</summary>
+    /// <summary>Diagram tabs ("Diagram: database", section 17), between the query tabs and the "+".</summary>
     public IReadOnlyList<TabItem> DiagramTabs => _diagramTabs;
 
     public event EventHandler<TabItem>? DiagramTabClosed;
 
-    /// <summary>Tab de diagrama com a cor da sessão no cabeçalho e botão de fechar.</summary>
+    /// <summary>Diagram tab with the session colour in the header and a close button.</summary>
     public TabItem AddDiagramTab(string caption, Control content, uint sessionColor)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -304,7 +304,7 @@ public sealed class MainTabsView : TabControl
         Items.Remove(tab.Item);
         if (wasSelected)
         {
-            // Como no HeidiSQL: fica ativa a tab à esquerda da que fechou.
+            // As in HeidiSQL: the tab to the left of the closed one becomes active.
             SelectedIndex = Math.Max(0, Math.Min(index - 1, Items.Count - 2));
         }
     }
@@ -320,7 +320,7 @@ public sealed class MainTabsView : TabControl
         }
     }
 
-    /// <summary>Tabs visíveis, pela ordem (para Ctrl+1…5 e Ctrl+Tab), sem o "+".</summary>
+    /// <summary>Visible tabs, in order (for Ctrl+1…5 and Ctrl+Tab), without the "+".</summary>
     public IReadOnlyList<TabItem> VisibleTabs =>
         Items.OfType<TabItem>().Where(t => t.IsVisible && !ReferenceEquals(t, _plus)).ToList();
 
@@ -356,12 +356,12 @@ public sealed class MainTabsView : TabControl
         }
     }
 
-    /// <summary>Context menu da barra de tabs (popupMainTabs); criado a pedido pelo shell.</summary>
+    /// <summary>Tab bar context menu (popupMainTabs); created on demand by the shell.</summary>
     public Func<ContextMenu>? HeaderMenuFactory { get; set; }
 
     private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        // Só nos cabeçalhos: o conteúdo das tabs (grid, editor) tem os seus próprios menus.
+        // Only on the headers: the tabs' content (grid, editor) has its own menus.
         if (HeaderMenuFactory is null || e.Source is not Visual source || FindTabItem(source) is not { } item || !IsInHeader(source, item))
         {
             return;
@@ -375,7 +375,7 @@ public sealed class MainTabsView : TabControl
 
     private void OnDoubleTapped(object? sender, TappedEventArgs e)
     {
-        // Duplo clique numa query tab fecha-a (preferência); no espaço vazio à direita das tabs abre uma nova.
+        // Double click on a query tab closes it (preference); on the empty space to the right of the tabs it opens a new one.
         if (e.Source is Visual source && FindTabItem(source) is { } item)
         {
             var tab = _queryTabs.FirstOrDefault(q => ReferenceEquals(q.Item, item));
@@ -433,14 +433,14 @@ public sealed class MainTabsView : TabControl
         return panel;
     }
 
-    /// <summary>Muda caption e ícone de uma tab fixa (o Table tab usa o ícone do tipo de objeto).</summary>
+    /// <summary>Changes the caption and icon of a fixed tab (the Table tab uses the object kind's icon).</summary>
     public static void SetFixedHeader(TabItem tab, string text, string icon)
     {
         ArgumentNullException.ThrowIfNull(tab);
         tab.Header = Header(text, icon, null);
     }
 
-    /// <summary>Muda a caption de uma tab fixa ("Database: shop", "Table: products").</summary>
+    /// <summary>Changes the caption of a fixed tab ("Database: shop", "Table: products").</summary>
     public static void SetFixedCaption(TabItem tab, string text)
     {
         if (tab.Header is StackPanel panel && panel.Children.OfType<TextBlock>().FirstOrDefault() is { } block)

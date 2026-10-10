@@ -6,7 +6,7 @@ using Xunit.v3;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Proteções da corrida headless (roadmap 2.4): diálogos modais inesperados e timeout por teste.</summary>
+/// <summary>Safeguards of the headless run (roadmap 2.4): unexpected modal dialogs and a per-test timeout.</summary>
 public sealed class TestHarnessTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
@@ -24,7 +24,7 @@ public sealed class TestHarnessTests
             owner.Close();
         }
 
-        // Sem o guarda, este await nunca acabava. O registo é consumido aqui: neste teste o diálogo era o esperado.
+        // Without the guard, this await never finished. The record is consumed here: in this test the dialog was the expected one.
         Assert.Equal(MessageDialogResult.None, result);
         Assert.Equal(["MessageDialog \"Error\": Something broke"], UnexpectedDialogGuardAttribute.TakeOpened());
     }
@@ -43,7 +43,7 @@ public sealed class TestHarnessTests
     [Fact]
     public void TestesAssincronosTemTimeout()
     {
-        // Código de teste: corre sem trimming.
+        // Test code: runs without trimming.
 #pragma warning disable IL2026, IL2070
         var missing = typeof(TestHarnessTests).Assembly.GetTypes()
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))

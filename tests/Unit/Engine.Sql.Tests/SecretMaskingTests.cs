@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Sql.Tests;
 
-/// <summary>Passwords mascaradas no SQL log (secção 23.2).</summary>
+/// <summary>Passwords masked in the SQL log (section 23.2).</summary>
 public sealed class SecretMaskingTests
 {
     [Theory]

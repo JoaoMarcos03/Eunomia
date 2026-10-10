@@ -5,7 +5,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Find text on server (anexo B §2.4): condições por coluna e consultas por tabela.</summary>
+/// <summary>Find text on server (appendix B §2.4): conditions per column and queries per table.</summary>
 public sealed class ServerTextSearchTests
 {
     private static readonly MySqlDialect Dialect = new(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));

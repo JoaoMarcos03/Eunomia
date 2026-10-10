@@ -10,10 +10,10 @@ using Eunomia.UI.Controls.Graph.Layout;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Canvas do Schema Visualizer (Fase 9; SV-01–SV-04, SV-07, SV-08, SV-13, SV-15).</summary>
+/// <summary>Schema Visualizer canvas (phase 9; SV-01–SV-04, SV-07, SV-08, SV-13, SV-15).</summary>
 public sealed class SchemaCanvasTests
 {
-    /// <summary>clientes ← encomendas → produtos, e encomenda_linhas → encomendas (1:N) e perfis → clientes (1:1).</summary>
+    /// <summary>customers ← orders → products, plus order_lines → orders (1:N) and profiles → customers (1:1).</summary>
     internal static (List<GraphNode> Nodes, List<GraphEdge> Edges) Shop()
     {
         GraphNode Node(string name, params GraphRow[] rows) => new(name, name, rows);
@@ -35,7 +35,7 @@ public sealed class SchemaCanvasTests
         return (nodes, edges);
     }
 
-    /// <summary>Layout esquerda → direita com as tabelas referenciadas à esquerda.</summary>
+    /// <summary>Left → right layout with the referenced tables on the left.</summary>
     internal static void LayoutOf(List<GraphNode> nodes, List<GraphEdge> edges)
     {
         foreach (var n in nodes)
@@ -90,7 +90,7 @@ public sealed class SchemaCanvasTests
         window.CaptureRenderedFrame();
         var header = canvas.ToScreen(encomendas.Position + new Point(20, 10));
 
-        // Clique no cabeçalho seleciona; Ctrl+clique noutro junta.
+        // Click on the header selects; Ctrl+click on another adds it.
         window.MouseDown(header, MouseButton.Left);
         window.MouseUp(header, MouseButton.Left);
         Assert.Equal([encomendas], canvas.SelectedNodes);
@@ -99,11 +99,11 @@ public sealed class SchemaCanvasTests
         window.MouseUp(canvas.ToScreen(clientes.Position + new Point(20, 10)), MouseButton.Left, RawInputModifiers.Control);
         Assert.Equal(2, canvas.SelectedNodes.Count);
 
-        // Arrastar move os selecionados; com snap, as posições ficam na grelha.
+        // Dragging moves the selected ones; with snap, the positions land on the grid.
         canvas.SnapToGrid = true;
         var moved = 0;
         canvas.NodesMoved += (_, _) => moved++;
-        // Longe do clique anterior (senão conta como duplo clique).
+        // Far from the previous click (otherwise it counts as a double click).
         var start = canvas.ToScreen(clientes.Position + new Point(90, 12));
         var before = encomendas.Position;
         window.MouseDown(start, MouseButton.Left);
@@ -115,7 +115,7 @@ public sealed class SchemaCanvasTests
         Assert.Equal(0, clientes.Position.X % 20);
         Assert.Equal(0, encomendas.Position.Y % 20);
 
-        // Roda: zoom no ponto do rato; 0 volta a 100%; F ajusta.
+        // Wheel: zoom at the mouse point; 0 goes back to 100%; F fits.
         canvas.Focus();
         window.MouseWheel(new Point(500, 280), new Vector(0, 2));
         Assert.True(canvas.Zoom > 1.2);
@@ -124,7 +124,7 @@ public sealed class SchemaCanvasTests
         window.KeyPress(Key.F, RawInputModifiers.None, PhysicalKey.F, "f");
         Assert.True(canvas.Nodes.All(n => new Rect(canvas.Bounds.Size).Contains(canvas.ToScreen(n.Bounds.Center))));
 
-        // Clique numa coluna FK (cliente_id) ativa a relação para clientes.
+        // Click on an FK column (customer_id) activates the relation to customers.
         canvas.ZoomTo(1);
         canvas.CenterOn(encomendas);
         GraphEdge? activated = null;
@@ -134,7 +134,7 @@ public sealed class SchemaCanvasTests
         window.MouseUp(fkRow, MouseButton.Left);
         Assert.Same(clientes, activated?.To);
 
-        // Duplo clique ativa o nó.
+        // Double click activates the node.
         GraphNode? opened = null;
         canvas.NodeActivated += (_, e) => opened = e.Node;
         window.MouseDown(header = canvas.ToScreen(encomendas.Position + new Point(20, 10)), MouseButton.Left);
@@ -143,7 +143,7 @@ public sealed class SchemaCanvasTests
         window.MouseUp(header, MouseButton.Left);
         Assert.Same(encomendas, opened);
 
-        // Export PNG do diagrama inteiro.
+        // Export PNG of the whole diagram.
         using var png = new MemoryStream();
         canvas.ExportPng(png, wholeDiagram: true);
         Assert.Equal([0x89, 0x50, 0x4E, 0x47], png.ToArray()[..4]);

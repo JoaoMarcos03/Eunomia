@@ -1,9 +1,9 @@
 namespace Eunomia.Engine.Sql.Filters;
 
 /// <summary>
-/// Histórico de uma caixa de filtro da árvore (secção 4.3): até 20 entradas, a mais recente primeiro,
-/// globais (não por sessão). A UI grava quando a caixa perde o foco; "Clear" limpa a caixa e
-/// "Empty recent filters" chama <see cref="Clear"/>.
+/// History of a tree filter box (section 4.3): up to 20 entries, the most recent first,
+/// global (not per session). The UI saves when the box loses focus; "Clear" clears the box and
+/// "Empty recent filters" calls <see cref="Clear"/>.
 /// </summary>
 public sealed class FilterHistory
 {
@@ -13,7 +13,7 @@ public sealed class FilterHistory
 
     public IReadOnlyList<string> Entries => _entries;
 
-    /// <summary>Acrescenta no topo. Texto vazio é ignorado; um texto repetido sobe para o topo.</summary>
+    /// <summary>Adds at the top. Empty text is ignored; a repeated text moves to the top.</summary>
     public void Add(string text)
     {
         ArgumentNullException.ThrowIfNull(text);

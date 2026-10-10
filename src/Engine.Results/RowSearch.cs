@@ -3,9 +3,9 @@ using System.Text.RegularExpressions;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Procura no grid (anexo C §4.7): percorre as células de todas as linhas carregadas, coluna a coluna, a partir de uma
-/// posição (incluída), para a frente ou para trás, comparando o texto de display; NULL não conta. Corre fora da UI
-/// thread e é cancelável.
+/// Search in the grid (appendix C §4.7): goes through the cells of every loaded row, column by column, from a
+/// position (included), forwards or backwards, comparing the display text; NULL does not count. Runs off the UI
+/// thread and can be cancelled.
 /// </summary>
 public static class RowSearch
 {

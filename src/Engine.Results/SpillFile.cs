@@ -4,8 +4,8 @@ using Microsoft.Win32.SafeHandles;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Ficheiro de spill de um resultado (secção 11.3): blocos escritos uma vez, em sequência, e lidos por offset. Aberto
-/// com <see cref="FileOptions.DeleteOnClose"/>, por isso desaparece ao fechar o resultado (ou o processo). Thread-safe.
+/// Spill file of a result (section 11.3): blocks written once, sequentially, and read by offset. Opened
+/// with <see cref="FileOptions.DeleteOnClose"/>, so it disappears when the result (or the process) closes. Thread-safe.
 /// </summary>
 public sealed class SpillFile : IDisposable
 {
@@ -24,7 +24,7 @@ public sealed class SpillFile : IDisposable
 
     public string Path { get; }
 
-    /// <summary>Bytes escritos no disco.</summary>
+    /// <summary>Bytes written to disk.</summary>
     public long Length
     {
         get
@@ -44,7 +44,7 @@ public sealed class SpillFile : IDisposable
         }
     }
 
-    /// <summary>Escreve o bloco (uma vez; blocos são imutáveis, por isso escrever de novo não é preciso).</summary>
+    /// <summary>Writes the block (once; blocks are immutable, so writing them again is not needed).</summary>
     public void Write(RowBlock block)
     {
         ArgumentNullException.ThrowIfNull(block);
@@ -92,7 +92,7 @@ public sealed class SpillFile : IDisposable
 
     public void Dispose() => _handle.Dispose();
 
-    /// <summary>Apaga ficheiros de spill deixados por processos que já não existem (arranque, secção 11.3).</summary>
+    /// <summary>Deletes spill files left by processes that no longer exist (startup, section 11.3).</summary>
     public static int CleanOrphans(string directory)
     {
         if (!Directory.Exists(directory))
@@ -109,7 +109,7 @@ public sealed class SpillFile : IDisposable
             }
             catch (IOException)
             {
-                // Em uso por outra instância: fica.
+                // In use by another instance: left alone.
             }
             catch (UnauthorizedAccessException)
             {

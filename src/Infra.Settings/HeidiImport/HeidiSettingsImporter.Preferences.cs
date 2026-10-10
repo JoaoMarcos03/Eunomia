@@ -5,15 +5,15 @@ using Eunomia.App.Settings;
 namespace Eunomia.Infra.Settings.HeidiImport;
 
 /// <summary>
-/// Preferências e estado do HeidiSQL com equivalente no Eunomia (Fase 13; anexo A §8, anexo C §7, anexo D B9/B12):
-/// opções globais (arranque, árvore, grid, editor, log, tabs, export de grid e SQL, tema), o estado por tabela das
-/// sessões importadas (<c>&lt;db&gt;|&lt;tabela&gt;</c>: Filter, Sort, HiddenColumns e RecentFilters, no mesmo formato) e o
-/// histórico de queries (<c>QueryHistory</c>: <c>data|base|ms|sql</c>). Sem equivalente ficam de fora: cores do editor e
-/// do grid por categoria, língua, pack de ícones, atualizações e estatísticas de uso.
+/// HeidiSQL preferences and state with an equivalent in Eunomia (phase 13; appendix A §8, appendix C §7, appendix D B9/B12):
+/// global options (startup, tree, grid, editor, log, tabs, grid and SQL export, theme), the per-table state of the
+/// imported sessions (<c>&lt;db&gt;|&lt;table&gt;</c>: Filter, Sort, HiddenColumns and RecentFilters, in the same format) and the
+/// query history (<c>QueryHistory</c>: <c>date|database|ms|sql</c>). Left out, with no equivalent: editor and grid colours
+/// per category, language, icon pack, updates and usage statistics.
 /// </summary>
 public sealed partial class HeidiSettingsImporter
 {
-    /// <summary>Estilos VCL que o HeidiSQL trata como escuros (anexo C §8).</summary>
+    /// <summary>VCL styles HeidiSQL treats as dark (appendix C §8).</summary>
     private static readonly HashSet<string> DarkStyles = new(StringComparer.OrdinalIgnoreCase)
     {
         "Amakrits", "Aqua Graphite", "Auric", "Carbon", "Charcoal Dark Slate", "Cobalt XEMedia", "Glossy", "Glow", "Golden Graphite",
@@ -21,10 +21,10 @@ public sealed partial class HeidiSettingsImporter
         "CharcoalDarkSlate",
     };
 
-    /// <summary>Codificações do export de grid pela ordem do HeidiSQL (<c>GridExportEncoding</c> é o índice).</summary>
+    /// <summary>Grid export encodings in HeidiSQL's order (<c>GridExportEncoding</c> is the index).</summary>
     private static readonly string?[] GridExportEncodings = ["ANSI", "ASCII", "Unicode", "Unicode Big Endian", "UTF-8", null, "UTF-8-BOM"];
 
-    /// <summary>Opções globais (valores na raiz da chave do HeidiSQL); devolve quantas foram aplicadas.</summary>
+    /// <summary>Global options (values at the root of the HeidiSQL key); returns how many were applied.</summary>
     private int ImportPreferences(HeidiSettingsFile file)
     {
         var root = new Dictionary<string, HeidiValue>(StringComparer.OrdinalIgnoreCase);
@@ -59,7 +59,7 @@ public sealed partial class HeidiSettingsImporter
         }
 
         var s = settings;
-        // Arranque e Session Manager.
+        // Startup and Session Manager.
         Bool("AutoReconnect", v => s.SessionManager.AutoReconnect = v);
         Bool("RestoreLastUsedDB", v => s.SessionManager.RestoreLastUsedDatabase = v);
         Int("SessionManager_ListWidth", 100, 2000, v => s.SessionManager.ListWidth = v);
@@ -67,7 +67,7 @@ public sealed partial class HeidiSettingsImporter
         Int("SessionManager_WindowHeight", 300, 3000, v => s.SessionManager.WindowHeight = v);
         Bool("SessionManager_ListFoldersAtTop", v => s.SessionManager.FoldersAtTop = v);
         Bool("RestoreTabs", v => s.Query.RestoreTabs = v);
-        // Árvore e painéis.
+        // Tree and panels.
         Bool("GroupTreeObjects", v => s.Tree.GroupObjects = v);
         Bool("TreeShowColumns", v => s.Display.ColumnsInTree = v);
         Bool("DisplayObjectSizeColumn", v => s.Display.ObjectSizes = v);
@@ -87,7 +87,7 @@ public sealed partial class HeidiSettingsImporter
         Bool("ForeignDropDown", v => s.Data.ForeignDropDown = v);
         Bool("DisplayBLOBsAsText", v => s.Data.BlobAsText = v);
         Bool("WarnUnsafeUpdates", v => s.Query.WarnUnsafeUpdates = v);
-        // Editor SQL e execução.
+        // SQL editor and execution.
         Str("FontName", v => s.Query.EditorFont = v);
         Int("FontSize", 6, 40, v => s.Query.EditorFontSize = v);
         Int("TabWidth", 1, 16, v => s.Query.TabWidth = v);
@@ -118,7 +118,7 @@ public sealed partial class HeidiSettingsImporter
         Bool("LogScript", v => s.Log.Script = v);
         Bool("LogTimestamp", v => s.Log.Timestamps = v);
         Bool("LogHorizontalScrollbar", v => s.Log.HorizontalScrollbar = v);
-        // Export de grid (ficheiro e clipboard) e SQL export.
+        // Grid export (file and clipboard) and SQL export.
         var e = s.Export;
         Bool("GridExportOutputCopy", v => e.OutputToClipboard = v);
         Str("GridExportFilename", v => e.FileName = v);
@@ -147,12 +147,12 @@ public sealed partial class HeidiSettingsImporter
         Int("DataInsertSize", 0, 1_048_576, v => s.SqlExport.MaxInsertSizeKb = v);
         Bool("ExportSQLAddComments", v => s.SqlExport.AddComments = v);
         Bool("ExportSQLRemoveDefiner", v => s.SqlExport.RemoveDefiner = v);
-        // Tema: os estilos escuros do HeidiSQL dão o tema escuro; os outros, o claro.
+        // Theme: HeidiSQL's dark styles give the dark theme; the others, the light one.
         Str("Theme", v => s.Theme = DarkStyles.Contains(v.Trim()) ? ThemeNames.Dark : ThemeNames.Light);
         return count;
     }
 
-    /// <summary><c>LastSessions</c> (caminhos separados por <c>|</c>) e <c>LastActiveSession</c> para os ids do catálogo.</summary>
+    /// <summary><c>LastSessions</c> (paths separated by <c>|</c>) and <c>LastActiveSession</c> to the catalog ids.</summary>
     private void ImportLastSessions(HeidiSettingsFile file)
     {
         string? Root(string name) => file.Values.FirstOrDefault(v => v.KeyPath.Count == 0 && v.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Value;
@@ -175,8 +175,8 @@ public sealed partial class HeidiSettingsImporter
     }
 
     /// <summary>
-    /// Estado por tabela (subchaves <c>&lt;db&gt;|&lt;tabela&gt;</c>, também <c>host|db|tabela</c>) e histórico de queries de
-    /// uma sessão importada. Devolve (estados de tabela, entradas de histórico).
+    /// Per-table state (subkeys <c>&lt;db&gt;|&lt;table&gt;</c>, also <c>host|db|table</c>) and query history of an
+    /// imported session. Returns (table states, history entries).
     /// </summary>
     private (int Tables, int History) ImportSessionState(SessionDefinition session, string sessionKey, Dictionary<string, Dictionary<string, HeidiValue>> keys)
     {
@@ -221,7 +221,7 @@ public sealed partial class HeidiSettingsImporter
             }
             else if (rest.Length == 2 && rest[1].Equals("RecentFilters", StringComparison.OrdinalIgnoreCase))
             {
-                // Valores 1…20, o 1 é o mais recente: entram do mais antigo para o mais recente.
+                // Values 1…20, 1 is the most recent: they go in from the oldest to the most recent.
                 foreach (var filter in values.Values
                              .Select(v => (Order: int.TryParse(v.Name, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : int.MaxValue, v.Value))
                              .Where(v => v.Value.Length > 0)
@@ -235,8 +235,8 @@ public sealed partial class HeidiSettingsImporter
     }
 
     /// <summary>
-    /// Valores <c>data|base|duração_ms|sql</c> (o SQL pode ter <c>|</c>), do mais antigo para o mais recente. Entradas
-    /// com passwords ficam de fora, como no histórico do Eunomia.
+    /// <c>date|database|duration_ms|sql</c> values (the SQL may contain <c>|</c>), from the oldest to the most recent. Entries
+    /// with passwords are left out, as in Eunomia's history.
     /// </summary>
     private int ImportHistory(SessionDefinition session, IEnumerable<HeidiValue> values)
     {

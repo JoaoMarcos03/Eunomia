@@ -6,7 +6,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Cache de metadata por sessão (Fase 4; PR-08; FAM-S04, T08).</summary>
+/// <summary>Per-session metadata cache (phase 4; PR-08; FAM-S04, T08).</summary>
 public sealed class MetadataCacheTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -70,7 +70,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
         Assert.True(withStats.HasStatistics);
         Assert.True(withStats.Objects.Single(o => o.Ref.Name == "t1").SizeBytes > 0);
         Assert.Equal(2, Volatile.Read(ref changes));
-        // As estatísticas correram numa ligação de job: a de metadata ficou livre (primária, metadata e job abertas).
+        // The statistics ran on a job connection: the metadata one stayed free (primary, metadata and job open).
         Assert.Equal(3, _host.OwnConnectionIds.Count);
     }
 
@@ -100,7 +100,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
 
         Assert.Same(a, b);
         var first = await a;
-        // A passagem com os detalhes chega em background e pode já ter substituído a entrada: comparam-se os objetos.
+        // The pass with the details arrives in the background and may already have replaced the entry: the objects are compared.
         var cached = cache.CachedObjects(_database);
         Assert.NotNull(cached);
         Assert.Equal(first.Objects.Select(o => o.Ref.Name), cached.Objects.Select(o => o.Ref.Name));
@@ -112,7 +112,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
         TestServer.RequireServer();
         var cache = new MetadataCache(_host, new MetadataOptions { FullTableStatus = false });
         await cache.GetObjectsAsync(_database, Ct);
-        // Os detalhes chegam em background: sem esperar, podiam ler a base já com a t2.
+        // The details arrive in the background: without waiting, the database could already be read with t2.
         await cache.WaitForStatisticsAsync(_database);
         await _host.RunPrimaryAsync((h, ct) => h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.t2 (id INT)", ct), Ct);
 

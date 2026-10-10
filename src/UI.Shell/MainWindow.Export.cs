@@ -9,9 +9,9 @@ using Eunomia.UI.Controls.Common.TreeList;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Copy as (16 formatos), Copy column names e "Copy all lines … in CSV format" (Fase 5; anexo B §1.5; FAM-C02, C06).
-/// O Copy as usa sempre as linhas selecionadas e as opções do clipboard (<c>GridExportClp*</c>); valores cortados levam a
-/// reler as linhas sem <c>LEFT()</c> antes de exportar.
+/// Copy as (16 formats), Copy column names and "Copy all lines … in CSV format" (phase 5; appendix B §1.5; FAM-C02, C06).
+/// Copy as always uses the selected rows and the clipboard options (<c>GridExportClp*</c>); cut values make it
+/// read the rows again without <c>LEFT()</c> before exporting.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -40,7 +40,7 @@ public sealed partial class MainWindow
         return null;
     }
 
-    /// <summary>Linhas e colunas do Data grid no source do browser, e as definições das colunas.</summary>
+    /// <summary>Data grid rows and columns in the browser's source, and the column definitions.</summary>
     private (IReadOnlyList<long> Rows, IReadOnlyList<(int Column, GridExportColumn Info)> Columns)? DataGridExportShape(bool selectedOnly, bool focusedColumnOnly = false)
     {
         if (_browser is not { Source: { } source } browser || DataGrid.Source is not ProjectedRowSource projected)
@@ -65,7 +65,7 @@ public sealed partial class MainWindow
         return (rows, columns);
     }
 
-    /// <summary>Lê as linhas a exportar; se alguma célula veio cortada, relê as linhas sem <c>LEFT()</c> (anexo D B4).</summary>
+    /// <summary>Reads the rows to export; if any cell came cut, reads the rows again without <c>LEFT()</c> (appendix D B4).</summary>
     internal async Task<GridExportData?> ReadDataGridExportAsync(bool selectedOnly, bool focusedColumnOnly = false)
     {
         if (DataGridExportShape(selectedOnly, focusedColumnOnly) is not ({ } rows, { } columns) || _browser is not { Source: { } source } browser)
@@ -108,7 +108,7 @@ public sealed partial class MainWindow
         };
     }
 
-    /// <summary>Copy as: linhas selecionadas, no formato escolhido, para o clipboard em texto (anexo B §1.5).</summary>
+    /// <summary>Copy as: the selected rows, in the chosen format, to the clipboard as text (appendix B §1.5).</summary>
     private async Task CopyAsAsync(GridExportFormat format)
     {
         if (DialectOf() is not { } dialect || await ReadDataGridExportAsync(selectedOnly: true) is not { } data)
@@ -123,10 +123,10 @@ public sealed partial class MainWindow
         _context.Log.Append(LogCategory.Info, $"{data.Rows.Count} row(s) copied to clipboard as {HeidiSqlCatalog.CopyAsFormats[(int)format].Caption}.");
     }
 
-    /// <summary>Substitui o diálogo Export grid rows (testes).</summary>
+    /// <summary>Replaces the Export grid rows dialog (tests).</summary>
     internal Func<UI.Features.Transfer.GridExportRequest?>? ExportDialogOverride { get; set; }
 
-    /// <summary>Placeholders do nome do ficheiro com a sessão e a base atuais.</summary>
+    /// <summary>File name placeholders with the current session and database.</summary>
     private string ExpandExportFileName(string template)
     {
         var session = _dataTarget is { } target ? Sessions?.Connector.Find(target.Session) : null;
@@ -135,7 +135,7 @@ public sealed partial class MainWindow
             _browser?.Table.Ref.Schema ?? "nodb", DateTime.Now);
     }
 
-    /// <summary>Export grid rows (anexo B §1.4): diálogo, leitura das linhas (completas) e escrita no clipboard ou em ficheiro.</summary>
+    /// <summary>Export grid rows (appendix B §1.4): dialog, reading the (full) rows and writing to the clipboard or a file.</summary>
     private async Task ExportGridRowsAsync()
     {
         if (_browser is not { } browser || DialectOf() is not { } dialect)
@@ -175,7 +175,7 @@ public sealed partial class MainWindow
             _context.Log.Append(LogCategory.Info, $"{data.Rows.Count} row(s) exported to {request.FileName}.");
             if (request.OpenFile)
             {
-                // Abre o ficheiro com o nome já expandido (o HeidiSQL abria o nome com os placeholders).
+                // Opens the file with the name already expanded (HeidiSQL opened the name with the placeholders).
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(request.FileName) { UseShellExecute = true })?.Dispose();
             }
         }
@@ -185,7 +185,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Captions visíveis do grid ou da lista focada.</summary>
+    /// <summary>Visible captions of the focused grid or list.</summary>
     private IReadOnlyList<string>? ColumnNames()
     {
         if (FocusedGrid() is { Source: { } source })
@@ -195,7 +195,7 @@ public sealed partial class MainWindow
         return FocusedTreeList()?.Columns.Where(c => c.Visible).Select(c => c.Header).ToList();
     }
 
-    /// <summary>Copy column names: uma por linha.</summary>
+    /// <summary>Copy column names: one per line.</summary>
     private async Task CopyColumnNamesAsync()
     {
         if (ColumnNames() is { } names && Clipboard is { } clipboard)
@@ -204,7 +204,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>"Copy all lines from listing or tree in CSV format": TSV do texto visível, sem aspas.</summary>
+    /// <summary>"Copy all lines from listing or tree in CSV format": TSV of the visible text, unquoted.</summary>
     private async Task CopyAllLinesAsync()
     {
         var sb = new StringBuilder();

@@ -1,12 +1,12 @@
 namespace Eunomia.App.Commands;
 
-/// <summary>Um comando na paleta: id, legenda, categoria, atalho (texto) e se está ligado (toggles).</summary>
+/// <summary>A command in the palette: id, caption, category, shortcut (text) and whether it is on (toggles).</summary>
 public sealed record CommandMatch(string Id, string Caption, string Category, string? Shortcut, bool IsChecked);
 
 /// <summary>
-/// Pesquisa da paleta de comandos (Ctrl+Shift+P; roadmap 1.x #11): cada palavra escrita tem de aparecer na legenda ou na
-/// categoria, sem distinguir maiúsculas. Primeiro as legendas que começam pelo texto escrito, depois as que têm uma palavra
-/// a começar pela primeira palavra escrita, depois as outras; dentro de cada grupo, pela legenda.
+/// Command palette search (Ctrl+Shift+P; roadmap 1.x #11): every typed word must appear in the caption or the
+/// category, case-insensitively. First the captions that start with the typed text, then those with a word
+/// starting with the first typed word, then the rest; within each group, by caption.
 /// </summary>
 public static class CommandSearch
 {

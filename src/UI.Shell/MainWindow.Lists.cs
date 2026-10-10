@@ -17,15 +17,15 @@ using Eunomia.UI.Shell.Sessions;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Host tab e Database tab sobre a sessão ativa (Fase 4; secção 4.9): listas carregadas quando o tab é mostrado e
-/// atualizadas quando a cache de metadata muda; "Fetch database items", Kill Process(es), rename F2 e status bar.
+/// Host tab and Database tab on the active session (phase 4; section 4.9): lists loaded when the tab is shown and
+/// updated when the metadata cache changes; "Fetch database items", Kill Process(es), F2 rename and status bar.
 /// </summary>
 public sealed partial class MainWindow
 {
     private HostTabView? _hostView;
     private DatabaseTabView? _databaseView;
 
-    /// <summary>Host tab (criado na primeira vez que é preciso).</summary>
+    /// <summary>Host tab (created the first time it is needed).</summary>
     internal HostTabView HostView
     {
         get
@@ -50,7 +50,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Database tab (criado na primeira vez que é preciso).</summary>
+    /// <summary>Database tab (created the first time it is needed).</summary>
     internal DatabaseTabView DatabaseView
     {
         get
@@ -102,7 +102,7 @@ public sealed partial class MainWindow
         };
     }
 
-    /// <summary>A cache mudou (objetos carregados, estatísticas): atualiza o Host ou o Database tab se estiverem à vista.</summary>
+    /// <summary>The cache changed (objects loaded, statistics): updates the Host or the Database tab if they are in view.</summary>
     private void OnMetadataChangedForLists(OpenSession open, MetadataChangedEventArgs e)
     {
         if (!ReferenceEquals(ActiveSession, open))
@@ -120,7 +120,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Host tab: a lista do sub-tab visível (Databases, Variables, Status, Processes ou Command-Statistics).</summary>
+    /// <summary>Host tab: the list of the visible sub-tab (Databases, Variables, Status, Processes or Command-Statistics).</summary>
     private async Task RefreshHostAsync()
     {
         if (ActiveSession is not { } open || !ReferenceEquals(_tabs.SelectedItem, _tabs.HostTab))
@@ -150,7 +150,7 @@ public sealed partial class MainWindow
             }
             else if (ReferenceEquals(view.SelectedItem, view.VariablesTab))
             {
-                // Os valores da sessão são os da ligação principal (a das queries e do Data tab).
+                // The session values are the main connection's (the one for queries and the Data tab).
                 var session = await open.Host.RunPrimaryAsync((h, ct) => h.Metadata.GetVariablesAsync(session: true, ct), CancellationToken.None, applyQueryTimeout: false);
                 var global = await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetVariablesAsync(session: false, ct), CancellationToken.None);
                 view.ShowVariables(HostVariables.Build(session, global));
@@ -171,7 +171,7 @@ public sealed partial class MainWindow
         _ui.Refresh();
     }
 
-    /// <summary>"Fetch database items": relê os objetos das bases selecionadas (anexo D A7).</summary>
+    /// <summary>"Fetch database items": reads the objects of the selected databases again (appendix D A7).</summary>
     private async Task FetchDatabaseItemsAsync()
     {
         if (ActiveSession is not { } open || _hostView is not { } view)
@@ -186,7 +186,7 @@ public sealed partial class MainWindow
         await RefreshHostAsync();
     }
 
-    /// <summary>Kill Process(es) (Del): pergunta e mata os processos selecionados, menos as ligações da própria sessão.</summary>
+    /// <summary>Kill Process(es) (Del): asks and kills the selected processes, except the session's own connections.</summary>
     private async Task KillProcessesAsync()
     {
         if (ActiveSession is not { } open || _hostView is not { } view || open.Host.ServerServices is not { } services)
@@ -215,7 +215,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Database tab: os objetos da base do nó focado (carrega a lista, como o HeidiSQL ao pintar a lista).</summary>
+    /// <summary>Database tab: the objects of the focused node's database (loads the list, like HeidiSQL when painting the list).</summary>
     private async Task RefreshDatabaseTabAsync()
     {
         if (ActiveSession is not { } open || _tree.Tree.FocusedNode?.Database is not { } dbNode)
@@ -249,7 +249,7 @@ public sealed partial class MainWindow
         _context.Status.Info = DatabaseObjectList.StatusText(database, objects);
     }
 
-    /// <summary>Rename F2 na lista: <c>RENAME TABLE</c> em tabelas e views; os outros tipos não se renomeiam aqui.</summary>
+    /// <summary>F2 rename in the list: <c>RENAME TABLE</c> for tables and views; other kinds are not renamed here.</summary>
     internal async Task RenameObjectAsync(TreeListRenameEventArgs e)
     {
         if (ActiveSession is not { } open || e.Node.Tag is not DbObjectRef obj || open.Host.ServerServices is not { } services)
@@ -275,7 +275,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Esquece a cache de uma base e atualiza a árvore e o Database tab.</summary>
+    /// <summary>Forgets a database's cache and updates the tree and the Database tab.</summary>
     private async Task ReloadDatabaseObjectsAsync(OpenSession open, string database)
     {
         open.Metadata.Invalidate(database);
@@ -289,7 +289,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Duplo clique numa base do Host tab: foca-a na árvore (o Database tab abre).</summary>
+    /// <summary>Double click on a database in the Host tab: focuses it in the tree (the Database tab opens).</summary>
     private void FocusTreeDatabase(string database)
     {
         if (ActiveSession is { } open && _sessionNodes.TryGetValue(open.Id, out var session)
@@ -299,7 +299,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Enter ou duplo clique na lista de objetos: foca o objeto na árvore (o Table tab abre).</summary>
+    /// <summary>Enter or double click in the object list: focuses the object in the tree (the Table tab opens).</summary>
     private void FocusTreeObject(DbObjectRef obj)
     {
         if (ActiveSession is { } open)
@@ -308,7 +308,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Foca um objeto de uma sessão na árvore (expande a base se for preciso); <c>false</c> se não o encontrar.</summary>
+    /// <summary>Focuses an object of a session in the tree (expanding the database if needed); <c>false</c> if it is not found.</summary>
     private async Task<bool> FocusTreeObjectAsync(Guid sessionId, DbObjectRef obj)
     {
         if (!_sessionNodes.TryGetValue(sessionId, out var session)
@@ -326,7 +326,7 @@ public sealed partial class MainWindow
         return true;
     }
 
-    /// <summary>Objetos selecionados na lista do Database tab, quando é ela que tem o foco.</summary>
+    /// <summary>Objects selected in the Database tab list, when it has the focus.</summary>
     private (OpenSession Session, string Database, IReadOnlyList<DbObjectRef> Objects)? ListTarget()
     {
         if (_databaseView is { Database: { } db } view && view.List.IsKeyboardFocusWithin && ActiveSession is { Host.ServerServices: not null } open)

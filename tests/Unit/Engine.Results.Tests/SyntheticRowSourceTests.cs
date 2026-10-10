@@ -76,7 +76,7 @@ public sealed class SyntheticRowSourceTests
             var nulls = Enumerable.Range(0, block.RowCount).Count(r => block.IsNull(r, c));
             if (source.Schema[c].IsNullable)
             {
-                // ~8% de 1024, com margem larga.
+                // ~8% of 1024, with a wide margin.
                 Assert.InRange(nulls, 30, 150);
             }
             else
@@ -203,7 +203,7 @@ public sealed class SyntheticRowSourceTests
         var source = new SyntheticRowSource(budgetBytes: oneBlock);
         var ct = TestContext.Current.CancellationToken;
 
-        // Range de 3 blocos acima do orçamento de 1: os 3 ficam (visível + prefetch não se despeja).
+        // A range of 3 blocks above a budget of 1: all 3 stay (visible + prefetch is not evicted).
         await source.RequestRangeAsync(0, 3 * 1024, ct);
 
         Assert.True(source.TryGetBlock(0, out _));

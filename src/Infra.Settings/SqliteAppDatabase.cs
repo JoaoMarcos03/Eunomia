@@ -5,10 +5,10 @@ using Microsoft.Data.Sqlite;
 namespace Eunomia.Infra.Settings;
 
 /// <summary>
-/// <c>app.db</c> (secção 21.4) em SQLite: estado por tabela, filtros recentes, favoritos e histórico de queries.
-/// Uma ligação partilhada protegida por lock (os acessos são curtos); WAL para não bloquear leituras.
-/// O esquema é versionado com <c>PRAGMA user_version</c>. Um ficheiro danificado (falta de luz, disco cheio) fica de lado
-/// com o sufixo <c>.corrupt-&lt;data&gt;</c> e a base volta vazia, em vez de a aplicação não arrancar.
+/// <c>app.db</c> (section 21.4) in SQLite: per-table state, recent filters, favourites and query history.
+/// One shared connection protected by a lock (accesses are short); WAL so reads are not blocked.
+/// The schema is versioned with <c>PRAGMA user_version</c>. A damaged file (power cut, full disk) is set aside
+/// with the <c>.corrupt-&lt;date&gt;</c> suffix and the database starts empty, instead of the application not starting.
 /// </summary>
 public sealed class SqliteAppDatabase : IAppDatabase
 {
@@ -30,7 +30,7 @@ public sealed class SqliteAppDatabase : IAppDatabase
         }
         catch (SqliteException)
         {
-            // Ficheiro que não é uma base SQLite ou está danificado: fica de lado (com o WAL) e começa-se outro.
+            // A file that is not an SQLite database or is damaged: set aside (with the WAL) and a new one is started.
             var stamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
             CorruptBackup = $"{path}.corrupt-{stamp}";
             SqliteConnection.ClearAllPools();
@@ -45,7 +45,7 @@ public sealed class SqliteAppDatabase : IAppDatabase
         }
     }
 
-    /// <summary>O <c>app.db</c> estava danificado e foi posto de lado neste caminho (favoritos e histórico recomeçam).</summary>
+    /// <summary><c>app.db</c> was damaged and was set aside at this path (favourites and history start over).</summary>
     public string? CorruptBackup { get; }
 
     private SqliteConnection OpenAndMigrate(string path)
@@ -162,7 +162,7 @@ public sealed class SqliteAppDatabase : IAppDatabase
         lock (_gate)
         {
             using var tx = _connection.BeginTransaction();
-            // used_at estritamente crescente: duas entradas no mesmo tick ficam pela ordem de inserção.
+            // used_at strictly increasing: two entries in the same tick keep their insertion order.
             var next = Convert.ToInt64(Scalar("SELECT COALESCE(MAX(used_at), 0) + 1 FROM recent_filters", tx), CultureInfo.InvariantCulture);
             var now = Math.Max(next, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             Execute("INSERT INTO recent_filters (session, db, tbl, filter, used_at) VALUES ($s, $d, $t, $f, $u) ON CONFLICT DO UPDATE SET used_at = excluded.used_at", tx,

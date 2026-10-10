@@ -9,7 +9,7 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Shell.Views;
 
-/// <summary>Escolha de um valor de uma lista (a codificação do Load SQL file, anexo C §4.3).</summary>
+/// <summary>Choice of one value from a list (the Load SQL file encoding, appendix C §4.3).</summary>
 public sealed class ChoiceDialog : Window
 {
     private readonly ComboBox _choices;

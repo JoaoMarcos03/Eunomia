@@ -3,7 +3,7 @@ using Eunomia.App.Sessions;
 
 namespace Eunomia.Presentation.Sessions;
 
-/// <summary>Resposta ao "Save modifications?" (Yes / No / Cancel).</summary>
+/// <summary>Answer to "Save modifications?" (Yes / No / Cancel).</summary>
 public enum SavePrompt
 {
     Save,
@@ -12,10 +12,10 @@ public enum SavePrompt
 }
 
 /// <summary>
-/// Estado do Session Manager (FAM-S01, S03; anexo A §1): lista de sessões e folders, sessão selecionada com um
-/// rascunho editável, deteção de alterações (Save só ativo com alterações; "Save modifications?" ao mudar de sessão,
-/// exceto quando só a password mudou, que é usada no Open e depois descartada), New/Save/Delete/Duplicate/Rename/Move
-/// gravados de imediato, e passwords no cofre de segredos.
+/// Session Manager state (FAM-S01, S03; appendix A §1): list of sessions and folders, selected session with an
+/// editable draft, change detection (Save only enabled with changes; "Save modifications?" when switching sessions,
+/// except when only the password changed, which is used for Open and then discarded), New/Save/Delete/Duplicate/Rename/Move
+/// saved immediately, and passwords in the secret vault.
 /// </summary>
 public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore store, ISecretStore secrets, TimeProvider? clock = null)
 {
@@ -25,33 +25,33 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
 
     public SessionCatalog Catalog { get; } = catalog;
 
-    /// <summary>Sessão selecionada (a gravada), ou <c>null</c> quando é um folder ou nada.</summary>
+    /// <summary>Selected session (the saved one), or <c>null</c> when it is a folder or nothing.</summary>
     public SessionDefinition? Selected { get; private set; }
 
-    /// <summary>Folder selecionado (quando não é uma sessão).</summary>
+    /// <summary>Selected folder (when it is not a session).</summary>
     public IReadOnlyList<string>? SelectedFolder { get; private set; }
 
-    /// <summary>Valores do formulário (cópia editável de <see cref="Selected"/>).</summary>
+    /// <summary>Form values (editable copy of <see cref="Selected"/>).</summary>
     public SessionDefinition? Draft { get; private set; }
 
-    /// <summary>Password escrita no formulário.</summary>
+    /// <summary>Password typed in the form.</summary>
     public string Password { get; set; } = string.Empty;
 
     public string SshPassword { get; set; } = string.Empty;
 
-    /// <summary>Há alterações por gravar (o botão Save fica ativo).</summary>
+    /// <summary>There are unsaved changes (the Save button is enabled).</summary>
     public bool IsModified =>
         Selected is not null && Draft is not null
         && (!Selected.HasSameSettings(Draft) || Password != _storedPassword || SshPassword != _storedSshPassword);
 
-    /// <summary>Alterações que justificam o "Save modifications?" (a password sozinha não).</summary>
+    /// <summary>Changes that justify "Save modifications?" (the password alone does not).</summary>
     public bool NeedsSavePrompt =>
         Selected is not null && Draft is not null && (!Selected.HasSameSettings(Draft) || SshPassword != _storedSshPassword);
 
-    /// <summary>Folder onde ficam as sessões e folders novos "in selected folder".</summary>
+    /// <summary>Folder where new sessions and folders go "in selected folder".</summary>
     public IReadOnlyList<string> CurrentFolder => Selected?.Folder ?? SelectedFolder ?? [];
 
-    /// <summary>Seleciona uma sessão (ou nada). O chamador já tratou do "Save modifications?".</summary>
+    /// <summary>Selects a session (or nothing). The caller has already handled "Save modifications?".</summary>
     public void SelectSession(SessionDefinition? session)
     {
         Selected = session;
@@ -69,7 +69,7 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
         SelectedFolder = folder;
     }
 
-    /// <summary>Save (Ctrl+S): grava os campos e as passwords; a cor passa logo para as sessões abertas (o shell trata).</summary>
+    /// <summary>Save (Ctrl+S): saves the fields and the passwords; the colour goes straight to the open sessions (the shell handles it).</summary>
     public void Save()
     {
         if (Selected is null || Draft is null)
@@ -101,10 +101,10 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
         Persist();
     }
 
-    /// <summary>Descarta o rascunho (No no "Save modifications?").</summary>
+    /// <summary>Discards the draft (No on "Save modifications?").</summary>
     public void Discard() => SelectSession(Selected);
 
-    /// <summary>New › Session in root folder / in selected folder: gravada logo, para rename.</summary>
+    /// <summary>New › Session in root folder / in selected folder: saved right away, ready for rename.</summary>
     public SessionDefinition NewSession(bool inSelectedFolder)
     {
         var session = Catalog.CreateSession(inSelectedFolder ? CurrentFolder : [], _clock.GetUtcNow());
@@ -124,7 +124,7 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
         return folder;
     }
 
-    /// <summary>Delete (Del): a sessão, ou o folder com todas as sessões lá dentro; limpa as credenciais.</summary>
+    /// <summary>Delete (Del): the session, or the folder with every session inside it; cleans up the credentials.</summary>
     public void DeleteSelected()
     {
         IReadOnlyList<SessionDefinition> removed;
@@ -152,7 +152,7 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
         SelectSession(null);
     }
 
-    /// <summary>Duplicate / save as (F12): grava os valores do formulário como sessão nova.</summary>
+    /// <summary>Duplicate / save as (F12): saves the form values as a new session.</summary>
     public SessionDefinition Duplicate(string newName)
     {
         var values = Draft ?? throw new InvalidOperationException("No session selected.");
@@ -186,7 +186,7 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
         return error;
     }
 
-    /// <summary>Drag &amp; drop: largar num folder move para lá; numa sessão, para o folder dela; fora, para a raiz.</summary>
+    /// <summary>Drag &amp; drop: dropping on a folder moves there; on a session, to its folder; outside, to the root.</summary>
     public string? Move(SessionTreeNode source, SessionTreeNode? target)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -199,7 +199,7 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
         return error;
     }
 
-    /// <summary>Valores para o Open (os do formulário, mesmo não gravados) e a password escrita.</summary>
+    /// <summary>Values for Open (the form's, even when not saved) and the typed password.</summary>
     public (SessionDefinition Values, LoginCredentials? Credentials) ValuesForOpen()
     {
         var values = Draft ?? throw new InvalidOperationException("No session selected.");
@@ -207,7 +207,7 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
         return (values, credentials);
     }
 
-    /// <summary>Depois de um Open (com ou sem sucesso): estatísticas da sessão gravada atualizadas e persistidas.</summary>
+    /// <summary>After an Open (successful or not): the saved session's statistics updated and persisted.</summary>
     public void RecordConnectAttempt(SessionDefinition values)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -220,7 +220,7 @@ public sealed class SessionManagerModel(SessionCatalog catalog, ISessionStore st
 
     public void Persist() => store.Save(Catalog);
 
-    /// <summary>"Last connect" como o HeidiSQL o mostra: "há X" (o tooltip tem a data exata).</summary>
+    /// <summary>"Last connect" as HeidiSQL shows it: "X ago" (the tooltip has the exact date).</summary>
     public static string Ago(DateTimeOffset? when, DateTimeOffset now)
     {
         if (when is not { } value)

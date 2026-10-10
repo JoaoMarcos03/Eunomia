@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Eunomia.Engine.Transfer.Tests;
 
-/// <summary>CSV import do lado do cliente (FAM-E07; anexo B §3.3): parser em streaming e INSERT multi-row.</summary>
+/// <summary>Client-side CSV import (FAM-E07; appendix B §3.3): streaming parser and multi-row INSERT.</summary>
 public sealed class CsvTests
 {
     [Fact]
@@ -165,7 +165,7 @@ public sealed class CsvTests
         return rows;
     }
 
-    /// <summary>Devolve no máximo <c>chunk</c> caracteres por leitura, como um ficheiro lido aos bocados.</summary>
+    /// <summary>Returns at most <c>chunk</c> characters per read, like a file read in pieces.</summary>
     private sealed class ChunkedReader(string text, int chunk) : TextReader
     {
         private int _pos;

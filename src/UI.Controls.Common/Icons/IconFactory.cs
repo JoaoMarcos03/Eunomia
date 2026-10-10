@@ -5,18 +5,18 @@ using Avalonia.Media;
 namespace Eunomia.UI.Controls.Common.Icons;
 
 /// <summary>
-/// Cria imagens dos ícones do <see cref="IconSet"/> (com cache). A versão desativada é gerada em tons de cinzento,
-/// como no HeidiSQL (secção 5.7: "ícones em versão grayscale gerada"). No tema escuro (<see cref="Dark"/>) as tintas
-/// escuras (contornos cinzentos, linhas azul-escuras) são aclaradas para se verem no fundo escuro.
+/// Creates images of the <see cref="IconSet"/> icons (cached). The disabled version is generated in shades of grey,
+/// as in HeidiSQL (section 5.7: "icons in a generated grayscale version"). In the dark theme (<see cref="Dark"/>) the dark
+/// inks (grey outlines, dark blue lines) are lightened so they show on the dark background.
 /// </summary>
 public static class IconFactory
 {
     private static readonly Dictionary<(string, bool, bool), IImage?> Cache = [];
 
-    /// <summary>Tema escuro ativo (a aplicação tem um só tema para todas as janelas).</summary>
+    /// <summary>Dark theme active (the application has a single theme for every window).</summary>
     public static bool Dark { get; private set; }
 
-    /// <summary>O tema dos ícones mudou: quem guardou imagens deve pedi-las de novo.</summary>
+    /// <summary>The icon theme changed: whoever kept images must request them again.</summary>
     public static event EventHandler? ThemeChanged;
 
     public static void SetDark(bool dark)
@@ -44,7 +44,7 @@ public static class IconFactory
         if (parts is not null)
         {
             var group = new DrawingGroup();
-            // Moldura transparente 16×16: todos os ícones ficam com o mesmo tamanho lógico.
+            // Transparent 16×16 frame: every icon gets the same logical size.
             group.Children.Add(new GeometryDrawing { Geometry = new RectangleGeometry(new Rect(0, 0, 16, 16)), Brush = Brushes.Transparent });
             foreach (var part in parts)
             {
@@ -61,7 +61,7 @@ public static class IconFactory
         return image;
     }
 
-    /// <summary>Controlo <see cref="Image"/> 16×16 com o ícone (ou <c>null</c> se a chave não existir).</summary>
+    /// <summary>16×16 <see cref="Image"/> control with the icon (or <c>null</c> if the key does not exist).</summary>
     public static Image? CreateImage(string? key, bool enabled = true)
     {
         var source = Get(key, enabled);
@@ -78,13 +78,13 @@ public static class IconFactory
         {
             if (dark && y < 110)
             {
-                // Tinta escura no fundo escuro: 60% do caminho até ao branco, mantendo o tom.
+                // Dark ink on a dark background: 60% of the way to white, keeping the hue.
                 static byte Lighten(byte c) => (byte)(c + ((255 - c) * 0.6));
                 return Color.FromRgb(Lighten(r), Lighten(g), Lighten(b));
             }
             return Color.FromRgb(r, g, b);
         }
-        // Luminância para a versão desativada: clara no tema claro, apagada no escuro.
+        // Luminance for the disabled version: light in the light theme, dimmed in the dark one.
         var level = dark ? (byte)(60 + (y * 0.25)) : (byte)(y + ((255 - y) * 0.45));
         return Color.FromRgb(level, level, level);
     }

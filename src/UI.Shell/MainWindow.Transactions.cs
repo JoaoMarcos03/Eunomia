@@ -6,17 +6,17 @@ using Eunomia.UI.Controls.Common.Dialogs;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Transações da ligação primária (secção 14.5; Fase 14): a status bar mostra "Transaction open" / "Uncommitted changes";
-/// desligar uma sessão ou fechar a janela com alterações por confirmar pergunta Commit (Yes), Rollback (No) ou Cancel;
-/// uma ligação que cai com alterações por confirmar avisa que o servidor as desfez. Os pedidos de fecho passam todos por
-/// <see cref="_closeGuards"/>, por ordem, para que uma pergunta não salte as outras.
+/// Transactions of the primary connection (section 14.5; phase 14): the status bar shows "Transaction open" / "Uncommitted
+/// changes"; disconnecting a session or closing the window with uncommitted changes asks Commit (Yes), Rollback (No) or
+/// Cancel; a connection that drops with uncommitted changes warns that the server rolled them back. Every close request goes
+/// through <see cref="_closeGuards"/>, in order, so one question does not skip the others.
 /// </summary>
 public sealed partial class MainWindow
 {
     private readonly List<(Func<bool> Needed, Func<Task<bool>> Confirm)> _closeGuards = [];
     private bool _closeConfirmed;
 
-    /// <summary>Testes: resposta à pergunta sobre a transação aberta (sem diálogo).</summary>
+    /// <summary>Tests: answer to the question about the open transaction (no dialog).</summary>
     internal Func<string, Task<MessageDialogResult>>? TransactionQuestionOverride { get; set; }
 
     private void InitCloseGuards()
@@ -48,7 +48,7 @@ public sealed partial class MainWindow
         return true;
     }
 
-    /// <summary>Guarda de fecho com um Run SQL file a correr (a janela de progresso não é modal).</summary>
+    /// <summary>Close guard with a Run SQL file running (the progress window is not modal).</summary>
     private void AddRunningJobGuard() => _closeGuards.Add((
         () => !RunningFiles.IsCompleted,
         async () => (await ConfirmAsync("Confirm",
@@ -67,7 +67,7 @@ public sealed partial class MainWindow
         Close();
     }
 
-    /// <summary>Avisos de transação perdida quando a ligação primária de uma sessão cai.</summary>
+    /// <summary>Lost-transaction warnings when a session's primary connection drops.</summary>
     private void WatchTransactions(OpenSession open)
     {
         open.Host.Transactions.Changed += (_, _) => Dispatcher.UIThread.Post(UpdateStatusBar);
@@ -88,8 +88,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Sessão com alterações por confirmar: pergunta Commit (Yes) / Rollback (No) / Cancel e corre o escolhido na ligação
-    /// primária. Devolve se pode seguir (desligar ou fechar).
+    /// Session with uncommitted changes: asks Commit (Yes) / Rollback (No) / Cancel and runs the choice on the primary
+    /// connection. Returns whether it may proceed (disconnect or close).
     /// </summary>
     internal async Task<bool> ResolveOpenTransactionAsync(OpenSession open)
     {
@@ -121,8 +121,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Antes de uma operação que escreve (Run SQL file, import de CSV): numa sessão read-only diz que não pode; com
-    /// "Ask before running statements that change data" pergunta. Devolve se pode seguir.
+    /// Before an operation that writes (Run SQL file, CSV import): in a read-only session it says it cannot; with
+    /// "Ask before running statements that change data" it asks. Returns whether it may proceed.
     /// </summary>
     internal async Task<bool> ConfirmWritesAsync(OpenSession session, string question)
     {
@@ -134,7 +134,7 @@ public sealed partial class MainWindow
         return !session.Definition.ConfirmChanges || (await ConfirmAsync("Confirm changes", question + SessionLine(session))).Ok;
     }
 
-    /// <summary>Texto do painel da transação na status bar: vazio, "Transaction open" ou "Uncommitted changes".</summary>
+    /// <summary>Text of the transaction panel in the status bar: empty, "Transaction open" or "Uncommitted changes".</summary>
     private static string TransactionStatus(OpenSession session) =>
         session.Host.Transactions.HasChanges ? "Uncommitted changes"
         : session.Host.Transactions.IsOpen ? "Transaction open"

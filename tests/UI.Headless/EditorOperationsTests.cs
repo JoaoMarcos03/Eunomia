@@ -8,7 +8,7 @@ using Eunomia.UI.Shell;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Un/comment, Ctrl+U/L, Move line up/down e Editor commands (anexo C §1.7, §2.3; FAM-Q10).</summary>
+/// <summary>Un/comment, Ctrl+U/L, Move line up/down and Editor commands (appendix C §1.7, §2.3; FAM-Q10).</summary>
 public sealed class EditorOperationsTests
 {
     private static SqlEditorControl Editor(string text)
@@ -33,7 +33,7 @@ public sealed class EditorOperationsTests
         editor.ToggleComment();
         Assert.Equal("SELECT 1;\n  SELECT 2;\n\nSELECT 3;", editor.Text);
 
-        // Sem seleção: a linha do cursor; uma só alteração no undo.
+        // No selection: the cursor line; a single undo step.
         editor.Editor.Select(0, 0);
         editor.Editor.CaretOffset = editor.Text.Length;
         editor.ToggleComment();
@@ -103,7 +103,7 @@ public sealed class EditorOperationsTests
         prefs.Show();
         prefs.CaptureRenderedFrame();
         var font = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(prefs).OfType<ComboBox>().Single(c => c.Name == "editorFont");
-        // A segunda fonte da lista do sistema (Courier New no Windows).
+        // The second font in the system list (Courier New on Windows).
         var chosen = Eunomia.UI.Shell.Views.PreferencesWindow.EditorFonts[1];
         font.SelectedItem = chosen;
         window.Context.Settings.Query.EditorFontSize = 9;

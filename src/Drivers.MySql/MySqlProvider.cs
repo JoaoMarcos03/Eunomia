@@ -4,7 +4,7 @@ using MySqlConnector;
 
 namespace Eunomia.Drivers.MySql;
 
-/// <summary>Provider MySQL/MariaDB (secção 14.1, ADR-08: MySqlConnector).</summary>
+/// <summary>MySQL/MariaDB provider (section 14.1, ADR-08: MySqlConnector).</summary>
 public sealed class MySqlProvider : IDbProvider
 {
     public DbEngine Engine => DbEngine.MySql;
@@ -13,7 +13,7 @@ public sealed class MySqlProvider : IDbProvider
 
     public IServerServices ForServer(ServerIdentity server) => new MySqlServerServices(server);
 
-    /// <summary>Peças com o modo atual da ligação (<c>NO_BACKSLASH_ESCAPES</c>) e o RDS.</summary>
+    /// <summary>Pieces with the connection's current mode (<c>NO_BACKSLASH_ESCAPES</c>) and RDS.</summary>
     public IServerServices ForConnection(IDbConnectionHandle handle)
     {
         ArgumentNullException.ThrowIfNull(handle);
@@ -27,10 +27,10 @@ public sealed class MySqlProvider : IDbProvider
     public DbError? TranslateException(Exception exception) => exception switch
     {
         DbOperationException db => db.Error,
-        // Socket fechado a meio de uma leitura: o MySqlConnector embrulha-o sem o código CR_SERVER_LOST.
+        // Socket closed in the middle of a read: MySqlConnector wraps it without the CR_SERVER_LOST code.
         MySqlException { InnerException: IOException or System.Net.Sockets.SocketException } my => new DbError(2013, "HY000", "Lost connection to server: " + my.Message),
         MySqlException my => MySqlQueryExecutor.ToError(my),
-        // Socket fechado ou túnel caído: o mesmo que CR_SERVER_LOST.
+        // Socket closed or tunnel down: the same as CR_SERVER_LOST.
         IOException or System.Net.Sockets.SocketException => new DbError(2013, "HY000", "Lost connection to server: " + exception.Message),
         ObjectDisposedException or InvalidOperationException when exception.Message.Contains("Broken", StringComparison.OrdinalIgnoreCase) || exception.Message.Contains("Connection must be Open", StringComparison.Ordinal) =>
             new DbError(2006, "HY000", "Server has gone away: " + exception.Message),
@@ -38,7 +38,7 @@ public sealed class MySqlProvider : IDbProvider
     };
 }
 
-/// <summary>Peças sem estado de ligação para uma versão do servidor.</summary>
+/// <summary>Pieces without connection state for a server version.</summary>
 public sealed class MySqlServerServices(ServerIdentity server, bool noBackslashEscapes = false, bool isRds = false) : IServerServices
 {
     public ServerIdentity Server { get; } = server;

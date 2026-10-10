@@ -5,9 +5,9 @@ using System.Text.Json;
 namespace Eunomia.Infra.Observability;
 
 /// <summary>
-/// Crash reports locais (secção 21.5): um JSON por crash com a versão, o sistema, o tempo de vida e a memória do
-/// processo e o tipo e a stack da exceção, sem mensagens (podem trazer SQL, valores, hostnames ou utilizadores). Nada
-/// sai da máquina. No arranque seguinte, <see cref="TakeUnseen"/> diz que houve um crash (uma vez).
+/// Local crash reports (section 21.5): one JSON per crash with the version, the system, the process's uptime and
+/// memory and the exception's type and stack, without messages (they may carry SQL, values, host names or users). Nothing
+/// leaves the machine. On the next start, <see cref="TakeUnseen"/> reports that there was a crash (once).
 /// </summary>
 public static class CrashReports
 {
@@ -39,7 +39,7 @@ public static class CrashReports
         return path;
     }
 
-    /// <summary>O crash report mais recente ainda não visto, marcado como visto; <c>null</c> se não houver.</summary>
+    /// <summary>The most recent crash report not seen yet, marked as seen; <c>null</c> if there is none.</summary>
     public static string? TakeUnseen(string directory)
     {
         ArgumentNullException.ThrowIfNull(directory);

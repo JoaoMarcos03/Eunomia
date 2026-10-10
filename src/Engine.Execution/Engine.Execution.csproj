@@ -8,7 +8,7 @@
     <InternalsVisibleTo Include="Engine.Execution.Tests" />
   </ItemGroup>
 
-  <!-- SessionHost, ligações, filas, cancel (secção 21.1); só conhece os contratos dos drivers. -->
+  <!-- SessionHost, connections, queues, cancel (section 21.1); it only knows the driver contracts. -->
   <ItemGroup>
     <ProjectReference Include="..\Drivers.Abstractions\Drivers.Abstractions.csproj" />
   </ItemGroup>

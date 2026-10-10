@@ -6,10 +6,10 @@ using Eunomia.UI.Controls.Common.Dialogs;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Auto refresh (Ctrl+F5; dropdown do Refresh, anexo C §3.12): relê a lista do tab ativo a cada intervalo (Host tab:
-/// a lista do sub-tab, como os processos; Database tab: os objetos da base; Data tab: as linhas, se não houver edição
-/// por gravar). "Set interval ..." pede os segundos. E "EXPLAIN query" dos processos (anexo C §1.8): uma query tab nova
-/// com <c>USE base; EXPLAIN sql;</c> a correr.
+/// Auto refresh (Ctrl+F5; Refresh drop-down, appendix C §3.12): reloads the active tab's list at every interval (Host tab:
+/// the sub-tab's list, such as the processes; Database tab: the database's objects; Data tab: the rows, if there is no
+/// unsaved edit). "Set interval ..." asks for the seconds. Plus the processes' "EXPLAIN query" (appendix C §1.8): a new
+/// query tab running <c>USE database; EXPLAIN sql;</c>.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -17,10 +17,10 @@ public sealed partial class MainWindow
     private int _autoRefreshSeconds = 10;
     private bool _autoRefreshBusy;
 
-    /// <summary>Intervalo do auto refresh em segundos (testes).</summary>
+    /// <summary>Auto refresh interval in seconds (tests).</summary>
     internal int AutoRefreshSeconds => _autoRefreshSeconds;
 
-    /// <summary>Substitui o pedido do intervalo (testes).</summary>
+    /// <summary>Replaces the interval prompt (tests).</summary>
     internal Func<int, Task<string?>>? AutoRefreshIntervalOverride { get; set; }
 
     private void InitAutoRefresh()
@@ -67,7 +67,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Uma volta do auto refresh: só o tab ativo, e nunca duas ao mesmo tempo.</summary>
+    /// <summary>One auto refresh round: only the active tab, and never two at the same time.</summary>
     internal async Task AutoRefreshTickAsync()
     {
         if (_autoRefreshBusy || ActiveSession is not { } open)
@@ -97,7 +97,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>EXPLAIN query (processos): uma query tab nova com <c>USE base; EXPLAIN sql;</c> e corre-a.</summary>
+    /// <summary>EXPLAIN query (processes): a new query tab with <c>USE database; EXPLAIN sql;</c>, and runs it.</summary>
     private async Task ExplainProcessAsync()
     {
         if (_hostView?.ProcessList.FocusedNode?.Tag is not ServerProcess { Info: { Length: > 0 } info } process
@@ -105,8 +105,8 @@ public sealed partial class MainWindow
         {
             return;
         }
-        // O texto é de outra sessão: só uma instrução explicável vai para o EXPLAIN (um "SELECT 1; DROP …" no INFO não
-        // pode correr com os privilégios de quem está a ver os processos).
+        // The text belongs to another session: only one explainable statement goes into the EXPLAIN (a "SELECT 1; DROP …" in
+        // INFO must not run with the privileges of whoever is watching the processes).
         var statements = Eunomia.Engine.Sql.Splitting.SqlSplitter.Split(info);
         var first = statements.Count == 1 ? statements[0].Text.TrimStart('(', ' ', '\t', '\r', '\n') : string.Empty;
         var word = new string([.. first.TakeWhile(char.IsLetter)]).ToUpperInvariant();

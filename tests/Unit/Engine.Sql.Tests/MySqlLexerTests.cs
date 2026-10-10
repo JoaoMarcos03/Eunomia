@@ -75,7 +75,7 @@ public sealed class MySqlLexerTests
     [Fact]
     public void TracoTracoSemEspacoNaoEhComentario()
     {
-        // Em MySQL "--" só abre comentário seguido de espaço: 1--1 é 1 - (-1).
+        // In MySQL "--" only starts a comment when followed by a space: 1--1 is 1 - (-1).
         Assert.Equal(
             [("1", SqlTokenKind.Number), ("-", SqlTokenKind.Operator), ("-", SqlTokenKind.Operator), ("1", SqlTokenKind.Number)],
             Lex("1--1"));

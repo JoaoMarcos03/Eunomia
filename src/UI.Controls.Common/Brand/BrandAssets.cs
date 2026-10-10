@@ -5,9 +5,9 @@ using Avalonia.Platform;
 namespace Eunomia.UI.Controls.Common.Brand;
 
 /// <summary>
-/// Marca do Eunomia (ficheiros em <c>assets/brand</c>, gerados fora do repo): o ícone das janelas, o mesmo
-/// <c>eunomia.ico</c> que vai no executável, e o logo vetorial. Cada janela de topo põe
-/// <c>Icon = BrandAssets.WindowIcon</c> no construtor.
+/// Eunomia brand (files in <c>assets/brand</c>, generated outside the repo): the window icon, the same
+/// <c>eunomia.ico</c> that goes into the executable, and the vector logo. Every top-level window sets
+/// <c>Icon = BrandAssets.WindowIcon</c> in its constructor.
 /// </summary>
 public static class BrandAssets
 {
@@ -16,7 +16,7 @@ public static class BrandAssets
     private static WindowIcon? _windowIcon;
     private static BrandResources? _resources;
 
-    /// <summary>Ícone partilhado por todas as janelas (lido uma vez dos recursos).</summary>
+    /// <summary>Icon shared by every window (read once from the resources).</summary>
     public static WindowIcon WindowIcon
     {
         get
@@ -30,7 +30,7 @@ public static class BrandAssets
         }
     }
 
-    /// <summary>Logo (símbolo) vetorial, de <c>EunomiaLogo.axaml</c>; partilhado pelos controlos que o mostram.</summary>
+    /// <summary>Vector logo (symbol), from <c>EunomiaLogo.axaml</c>; shared by the controls that show it.</summary>
     public static IImage Logo
     {
         get

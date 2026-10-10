@@ -4,9 +4,9 @@ using Avalonia.Platform.Storage;
 namespace Eunomia.UI.Controls.Common.Dialogs;
 
 /// <summary>
-/// Seletores de ficheiros e pastas do sistema, devolvendo caminhos locais (Fase 14). Onde o sistema não tem seletor
-/// (Linux sem <c>xdg-desktop-portal</c> nem GTK) ou ele falha, pede o caminho numa caixa de texto em vez de não fazer
-/// nada, para abrir, gravar e exportar funcionarem sempre.
+/// System file and folder pickers, returning local paths (phase 14). Where the system has no picker
+/// (Linux without <c>xdg-desktop-portal</c> or GTK) or it fails, asks for the path in a text box instead of doing
+/// nothing, so open, save and export always work.
 /// </summary>
 public static class PathPicker
 {
@@ -25,7 +25,7 @@ public static class PathPicker
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // Portal do sistema indisponível a meio: segue para a caixa de texto.
+                // System portal unavailable midway: moves on to the text box.
             }
         }
         return await AskAsync(owner, options.Title ?? "Open file", string.Empty).ConfigureAwait(true) is { } path ? [path] : [];

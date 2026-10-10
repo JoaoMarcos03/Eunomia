@@ -8,7 +8,7 @@ using Eunomia.UI.Controls.SqlEditor;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Code folding (Query ▸ Code folding; secção 6: só por <c>#region</c>/<c>#endregion</c>).</summary>
+/// <summary>Code folding (Query ▸ Code folding; section 6: only by <c>#region</c>/<c>#endregion</c>).</summary>
 public sealed class CodeFoldingTests
 {
     private static readonly string Nl = Environment.NewLine;
@@ -137,7 +137,7 @@ public sealed class CodeFoldingTests
         editor.Text = text;
         editor.CodeFolding = true;
         Assert.Equal(2, editor.Foldings.Count);
-        // Dobra a primeira região; a segunda fica aberta.
+        // Folds the first region; the second stays open.
         editor.FoldAt(0);
         window.CaptureRenderedFrame();
 

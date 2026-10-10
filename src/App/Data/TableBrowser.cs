@@ -5,7 +5,7 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.App.Data;
 
-/// <summary>Estado do Data tab de uma tabela (gravado por tabela) e os limites de paginação.</summary>
+/// <summary>Data tab state of a table (saved per table) and the paging limits.</summary>
 public sealed record DataBrowseOptions
 {
     public IReadOnlyList<string> Hidden { get; init; } = [];
@@ -22,10 +22,10 @@ public sealed record DataBrowseOptions
 }
 
 /// <summary>
-/// Dados de uma tabela no Data tab (anexo D B2–B6): carrega as primeiras N linhas na ligação primária, acrescenta com
-/// Next (<c>LIMIT carregadas, passo</c>) e Show all (até ao máximo), em streaming para um
-/// <see cref="MaterializedRowSource"/>. As colunas cortadas a 256 ficam marcadas; o valor completo de uma célula é
-/// pedido por chave (<see cref="IFullValueSource"/>). Um browser por carga: mudar filtro, ordenação ou colunas cria outro.
+/// Data of a table in the Data tab (appendix D B2–B6): loads the first N rows on the primary connection, appends with
+/// Next (<c>LIMIT loaded, step</c>) and Show all (up to the maximum), streaming into a
+/// <see cref="MaterializedRowSource"/>. Columns cut at 256 are flagged; the full value of a cell is
+/// fetched by key (<see cref="IFullValueSource"/>). One browser per load: changing the filter, sort or columns creates another.
 /// </summary>
 public sealed class TableBrowser : IFullValueSource, IDisposable
 {
@@ -52,34 +52,34 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
 
     public DataBrowseOptions Options { get; }
 
-    /// <summary>Último SELECT feito (colunas, chave e colunas cortadas).</summary>
+    /// <summary>Last SELECT run (columns, key and cut columns).</summary>
     public DataSelect Select => _select;
 
-    /// <summary>Linhas do grid; <c>null</c> até chegar o primeiro result set.</summary>
+    /// <summary>Grid rows; <c>null</c> until the first result set arrives.</summary>
     public MaterializedRowSource? Source => _source;
 
-    /// <summary>Linhas pedidas até agora (o "wanted" do HeidiSQL).</summary>
+    /// <summary>Rows requested so far (HeidiSQL's "wanted").</summary>
     public long Wanted { get; private set; }
 
     public long Loaded => _source?.RowCount.Count ?? 0;
 
-    /// <summary>Next e Show all ficam ativos se a última carga trouxe tudo o que pediu e ainda não chegou ao máximo.</summary>
+    /// <summary>Next and Show all stay enabled if the last load brought everything it asked for and has not reached the maximum.</summary>
     public bool CanLoadMore => Loaded == Wanted && Wanted < Options.MaximumRows;
 
-    /// <summary>Show all chegou ao máximo (D5: aviso na label).</summary>
+    /// <summary>Show all reached the maximum (D5: warning in the label).</summary>
     public bool ReachedMaximum => Loaded >= Options.MaximumRows;
 
-    /// <summary>O primeiro result set começou: o grid já pode mostrar a fonte.</summary>
+    /// <summary>The first result set started: the grid can already show the source.</summary>
     public event EventHandler? SourceReady;
 
     /// <summary>
-    /// Tempo que um SELECT abandonado a meio (outra escolha na árvore) tem para acabar antes do <c>KILL QUERY</c>: uma
-    /// página pequena acaba sozinha (cancelá-la abria outra ligação e custava segundos num servidor remoto); uma tabela
-    /// grande é cancelada logo a seguir. O Esc cancela logo.
+    /// Time a SELECT abandoned halfway (another choice in the tree) has to finish before the <c>KILL QUERY</c>: a small
+    /// page finishes on its own (cancelling it opened another connection and cost seconds on a remote server); a large
+    /// table is cancelled right after. Esc cancels immediately.
     /// </summary>
     public static readonly TimeSpan AbandonGrace = TimeSpan.FromMilliseconds(500);
 
-    /// <summary>Primeira carga: <paramref name="wanted"/> linhas (múltiplo do passo, para continuar a página certa).</summary>
+    /// <summary>First load: <paramref name="wanted"/> rows (a multiple of the step, to continue on the right page).</summary>
     public Task LoadAsync(long wanted, CancellationToken cancellationToken)
     {
         var step = Options.RowsPerStep;
@@ -87,11 +87,11 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         return FetchAsync(0, (int)count, cancellationToken);
     }
 
-    /// <summary>Next: mais um passo, até ao máximo.</summary>
+    /// <summary>Next: one more step, up to the maximum.</summary>
     public Task NextAsync(CancellationToken cancellationToken) =>
         CanLoadMore ? FetchAsync(Loaded, (int)Math.Min(Options.RowsPerStep, Options.MaximumRows - Loaded), cancellationToken) : Task.CompletedTask;
 
-    /// <summary>Show all: o resto até ao máximo (<c>DatagridMaximumRows</c>).</summary>
+    /// <summary>Show all: the rest, up to the maximum (<c>DatagridMaximumRows</c>).</summary>
     public Task ShowAllAsync(CancellationToken cancellationToken) =>
         CanLoadMore ? FetchAsync(Loaded, (int)(Options.MaximumRows - Loaded), cancellationToken) : Task.CompletedTask;
 
@@ -131,8 +131,8 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Cancelado (Esc, outra escolha na árvore): ficam as linhas que chegaram, em blocos inteiros de um passo (o
-            // bloco a meio não entra), e Next e Show all continuam a partir daí.
+            // Cancelled (Esc, another choice in the tree): the rows that arrived are kept, in whole blocks of one step (the
+            // block in progress is left out), and Next and Show all continue from there.
             Wanted = Loaded;
             throw;
         }
@@ -143,8 +143,8 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
     }
 
     /// <summary>
-    /// As mesmas linhas já carregadas, sem cortar nada (anexo D B4: Export e Copy as reexecutam o SELECT sem
-    /// <c>LEFT()</c>), pela mesma ordem. Quem chama larga o resultado.
+    /// The same rows already loaded, with nothing cut (appendix D B4: Export and Copy as run the SELECT again without
+    /// <c>LEFT()</c>), in the same order. The caller disposes the result.
     /// </summary>
     public async Task<MaterializedRowSource> LoadFullRowsAsync(CancellationToken cancellationToken)
     {
@@ -173,7 +173,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         return result ?? throw new InvalidOperationException("No result.");
     }
 
-    /// <summary>Nomes de origem (as colunas <c>LEFT(…)</c> não têm) e a chave marcada como PK para o bold.</summary>
+    /// <summary>Source names (the <c>LEFT(…)</c> columns have none) and the key flagged as PK for the bold.</summary>
     private static ResultSchema Rename(ResultSchema schema, DataSelect select)
     {
         if (schema.Count != select.Columns.Count)
@@ -185,8 +185,8 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
     }
 
     /// <summary>
-    /// Contagem para a label: <c>SHOW TABLE STATUS LIKE</c> (aproximada) ou <c>COUNT(*)</c> com
-    /// <paramref name="exact"/> ("Query exact row count"), na ligação de metadata.
+    /// Count for the label: <c>SHOW TABLE STATUS LIKE</c> (approximate) or <c>COUNT(*)</c> with
+    /// <paramref name="exact"/> ("Query exact row count"), on the metadata connection.
     /// </summary>
     public async Task<(long? Rows, bool Exact)> CountAsync(bool exact, CancellationToken cancellationToken)
     {
@@ -226,8 +226,8 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
     }
 
     /// <summary>
-    /// "More values" do Quick Filter (anexo D B10): <c>SELECT col, COUNT(*) AS c FROM t [WHERE filtro] GROUP BY col ORDER BY
-    /// c DESC, col LIMIT 50</c>, na ligação de metadata. Valores <c>null</c> são NULL; binário vem em hex.
+    /// Quick Filter "More values" (appendix D B10): <c>SELECT col, COUNT(*) AS c FROM t [WHERE filter] GROUP BY col ORDER BY
+    /// c DESC, col LIMIT 50</c>, on the metadata connection. <c>null</c> values are NULL; binary comes as hex.
     /// </summary>
     public async Task<IReadOnlyList<(string? Value, long Count)>> TopValuesAsync(string column, CancellationToken cancellationToken)
     {
@@ -262,7 +262,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Texto bruto de uma célula carregada (sem separadores de milhares nem sufixo); <c>null</c> se for NULL ou não estiver em memória.</summary>
+    /// <summary>Raw text of a loaded cell (no thousands separators or suffix); <c>null</c> if it is NULL or not in memory.</summary>
     public string? RawText(long row, int column, out bool truncated)
     {
         truncated = false;
@@ -275,8 +275,8 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
     }
 
     /// <summary>
-    /// Valor completo de uma célula (Ctrl+C, edição, export): sem formatação de display; se a célula veio cortada, busca
-    /// a coluna pela chave da linha (<c>SELECT col FROM t WHERE chave</c>).
+    /// Full value of a cell (Ctrl+C, editing, export): without display formatting; if the cell came cut, fetches
+    /// the column by the row's key (<c>SELECT col FROM t WHERE key</c>).
     /// </summary>
     public async ValueTask<string?> GetFullTextAsync(long row, int column, CancellationToken cancellationToken = default)
     {
@@ -323,10 +323,10 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         throw new InvalidOperationException("Key column not in the SELECT: " + column);
     }
 
-    /// <summary>Texto bruto sem perdas (<see cref="DisplayFormatter.FormatRaw"/>) de uma célula que não é NULL.</summary>
+    /// <summary>Lossless raw text (<see cref="DisplayFormatter.FormatRaw"/>) of a cell that is not NULL.</summary>
     private static string Raw(RowBlock block, int row, int column) => DisplayFormatter.FormatRaw(block, row, column) ?? string.Empty;
 
-    /// <summary>Literal SQL do valor de uma célula (chaves no WHERE): números sem aspas, binário em hex, o resto como texto.</summary>
+    /// <summary>SQL literal of a cell value (keys in the WHERE): numbers unquoted, binary as hex, the rest as text.</summary>
     private string Literal(RowBlock block, int row, int column)
     {
         var info = block.Schema[column];

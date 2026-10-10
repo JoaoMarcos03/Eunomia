@@ -15,7 +15,7 @@ using ColumnDefinition = Eunomia.Drivers.Abstractions.ColumnDefinition;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Schema Visualizer no shell (Fase 9; secção 17; SV-06, SV-10, SV-12, SV-14–SV-16).</summary>
+/// <summary>Schema Visualizer in the shell (phase 9; section 17; SV-06, SV-10, SV-12, SV-14–SV-16).</summary>
 public sealed class SchemaVisualizerTests
 {
     private static ColumnDefinition Column(string name, string type, LogicalTypeKind kind, bool nullable = false) =>
@@ -72,14 +72,14 @@ public sealed class SchemaVisualizerTests
         await view.ShowAsync(SchemaDiagram.From("shop", tables), null, focusTable: "t3");
         await view.Layouting;
 
-        // Mais de 300 tabelas: só o componente de t3 (t0 e as 49 filhas).
+        // More than 300 tables: only t3's component (t0 and its 49 children).
         Assert.Equal(50, view.Canvas.Nodes.Count(n => !n.IsHidden));
         Assert.Equal(["t3"], view.Canvas.SelectedNodes.Select(n => n.Id));
         var state = view.CurrentState();
         Assert.Equal(400, state.Nodes.Count);
         Assert.Equal(350, state.Nodes.Values.Count(n => !n.Placed));
 
-        // Reabrir com o estado guardado e uma tabela nova ligada a t0: as posições ficam, a nova é colocada à parte.
+        // Reopening with the saved state and a new table connected to t0: the positions stay, the new one is placed apart.
         tables.Add(new TableDefinition(Ref("novo"), [Column("id", "int", LogicalTypeKind.Integer), Column("p", "int", LogicalTypeKind.Integer)], [],
             [new ForeignKeyDefinition("fk_novo", ["p"], Ref("t0"), ["id"], ForeignKeyAction.Restrict, ForeignKeyAction.Restrict)], [], new Dictionary<string, string>()));
         var again = new SchemaVisualizerView("shop");
@@ -129,11 +129,11 @@ public sealed class SchemaVisualizerTests
             Assert.Equal(Controls.Graph.GraphCardinality.OneToOne, GraphCardinalityOf(view, "fk_p"));
             Assert.Equal("Diagram: " + db, ((TabItem)window.Tabs.SelectedItem!).Header is StackPanel header ? header.Children.OfType<TextBlock>().First().Text : null);
 
-            // Árvore → diagrama: a tabela focada fica selecionada no diagrama.
+            // Tree → diagram: the focused table is selected in the diagram.
             window.Tree.Tree.FocusedNode = TreeModel.ObjectsOf(dbNode).Single(n => n.Name == "customers");
             Assert.Equal(["customers"], view.Canvas.SelectedNodes.Select(n => n.Id));
 
-            // Diagrama → árvore: selecionar um nó foca a tabela na árvore; duplo clique abre o Data tab.
+            // Diagram → tree: selecting a node focuses the table in the tree; double click opens the Data tab.
             view.Canvas.Select([view.Canvas.Nodes.Single(n => n.Id == "profiles")]);
             await WaitAsync(() => window.Tree.Tree.FocusedNode?.Name == "profiles" ? "ok" : null);
             var profiles = view.Canvas.Nodes.Single(n => n.Id == "profiles");
@@ -146,7 +146,7 @@ public sealed class SchemaVisualizerTests
             window.MouseUp(at, MouseButton.Left);
             await WaitAsync(() => ReferenceEquals(window.Tabs.SelectedItem, window.Tabs.DataTab) ? "ok" : null);
 
-            // F5 com uma tabela nova: as posições ficam e a nova é marcada.
+            // F5 with a new table: the positions stay and the new one is highlighted.
             var before = view.Canvas.Nodes.Single(n => n.Id == "customers").Position;
             await ExecAsync(cs, $"CREATE TABLE `{db}`.notes (id INT PRIMARY KEY, order_id INT, CONSTRAINT fk_n FOREIGN KEY (order_id) REFERENCES `{db}`.orders (id)) ENGINE=InnoDB");
             window.Tabs.SelectedItem = window.Tabs.DiagramTabs[0];
@@ -157,7 +157,7 @@ public sealed class SchemaVisualizerTests
             Assert.True(view.Canvas.Nodes.Single(n => n.Id == "notes").IsNew);
             Assert.Equal(before, view.Canvas.Nodes.Single(n => n.Id == "customers").Position);
 
-            // Fechar guarda o layout; reabrir repõe-no.
+            // Closing saves the layout; reopening restores it.
             var moved = view.Canvas.Nodes.Single(n => n.Id == "customers");
             moved.Position += new Point(200, 40);
             window.Tabs.CloseDiagramTab(window.Tabs.DiagramTabs[0]);

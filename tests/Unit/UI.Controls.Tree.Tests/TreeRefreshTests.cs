@@ -1,11 +1,11 @@
 namespace Eunomia.UI.Controls.Tree.Tests;
 
-/// <summary>Refresh com estado, caminhos, grupos e somas da coluna Size (Fase 4; FAM-T01, T02, T08).</summary>
+/// <summary>Refresh with state, paths, groups and Size column sums (phase 4; FAM-T01, T02, T08).</summary>
 public sealed class TreeRefreshTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    /// <summary>Sessão → bases → (grupo "Tables" opcional) → tabelas com tamanho. Os dados podem mudar entre refreshes.</summary>
+    /// <summary>Session → databases → (optional "Tables" group) → tables with a size. The data may change between refreshes.</summary>
     private sealed class FakeProvider : ITreeDataProvider
     {
         public Dictionary<string, List<(string Name, long? Size)>> Databases { get; } = new(StringComparer.Ordinal)
@@ -97,7 +97,7 @@ public sealed class TreeRefreshTests
     [Fact]
     public async Task GruposSaoTransparentesNoCaminho()
     {
-        // O objeto focado é reencontrado depois de ligar ou desligar "Group objects by type".
+        // The focused object is found again after turning "Group objects by type" on or off.
         var (model, provider, session) = Create();
         await model.ExpandAsync(session, Ct);
         await model.ExpandAsync(Child(session, "a"), Ct);
@@ -158,10 +158,10 @@ public sealed class TreeRefreshTests
         await model.ExpandAsync(Child(session, "a"), Ct);
         await model.ExpandAsync(Child(session, "b"), Ct);
 
-        // Base: soma dos objetos, também dentro dos grupos. Grupos sem tamanho.
+        // Database: the sum of the objects, inside groups too. Groups have no size.
         Assert.Equal(400, Child(session, "a").SizeBytes);
         Assert.Null(Child(Child(session, "a"), "Tables").SizeBytes);
-        // Sessão: só quando todas as bases têm tamanho ("c" ainda não foi carregada).
+        // Session: only when every database has a size ("c" has not been loaded yet).
         Assert.Null(session.SizeBytes);
 
         var c = Child(session, "c");

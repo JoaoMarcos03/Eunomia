@@ -4,7 +4,7 @@ using Eunomia.Infra.Settings.Journal;
 
 namespace Eunomia.Infra.Settings.Tests;
 
-/// <summary>Journal das query tabs (TR-31; PR-21; FAM-Q07).</summary>
+/// <summary>Query tab journal (TR-31; PR-21; FAM-Q07).</summary>
 public sealed class TabJournalTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-tj-" + Guid.NewGuid().ToString("N")[..8]);
@@ -47,7 +47,7 @@ public sealed class TabJournalTests : IDisposable
         journal.Append(id, new TextEdit(9, 0, " SELECT 2;"));
         journal.Flush();
 
-        // Kill a meio da escrita do registo seguinte: só metade chegou ao disco.
+        // Killed in the middle of writing the next record: only half reached the disk.
         var path = Directory.GetFiles(_dir, "*.journal").Single();
         var full = File.ReadAllBytes(path);
         journal.Append(id, new TextEdit(19, 0, " SELECT 3;"));
@@ -56,7 +56,7 @@ public sealed class TabJournalTests : IDisposable
         File.WriteAllBytes(path, withThird[..(full.Length + ((withThird.Length - full.Length) / 2))]);
         Assert.Equal("SELECT 1; SELECT 2;", TabJournal.Replay(path));
 
-        // Um byte trocado falha o CRC: fica o que estava antes.
+        // A flipped byte fails the CRC: what was there before stays.
         withThird[full.Length + 10] ^= 0xFF;
         File.WriteAllBytes(path, withThird);
         Assert.Equal("SELECT 1; SELECT 2;", TabJournal.Replay(path));
@@ -102,7 +102,7 @@ public sealed class TabJournalTests : IDisposable
         {
             return;
         }
-        // Uma tab de outra instância viva (outro processo) não é restaurada.
+        // A tab of another live instance (another process) is not restored.
         using var other = Process.Start(new ProcessStartInfo("cmd.exe", "/c ping -n 30 127.0.0.1 > nul") { CreateNoWindow = true, UseShellExecute = false })!;
         try
         {

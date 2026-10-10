@@ -10,8 +10,8 @@ using Eunomia.UI.Controls.Grid;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Texto vindo de dados em menus e caixas: no AccessText do tema o primeiro "_" vira tecla de acesso e desaparecia
-/// ("prd_products" aparecia como "prdproducts").
+/// Text from data in menus and check boxes: in the theme's AccessText the first "_" became an access key and disappeared
+/// ("prd_products" showed as "prdproducts").
 /// </summary>
 public sealed class LiteralTextTests
 {

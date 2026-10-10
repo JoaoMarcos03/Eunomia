@@ -3,27 +3,27 @@ using Eunomia.Engine.Sql.Filters;
 namespace Eunomia.Engine.Sql.Tests;
 
 /// <summary>
-/// Casos da secção 4.3 ao nível da expressão (FAM-T04). As regras que dependem do tipo de nó
-/// (alvo de cada filtro, favoritos, bases sem objetos) estão em <c>UI.Controls.Tree.Tests</c>.
-/// Não validados em runtime no HeidiSQL (a Fase 0 não foi feita).
+/// Section 4.3 cases at expression level (FAM-T04). The rules that depend on the node kind
+/// (target of each filter, favourites, databases without objects) are in <c>UI.Controls.Tree.Tests</c>.
+/// Not validated at runtime against HeidiSQL (phase 0 was not done).
 /// </summary>
 public sealed class TreeFilterExpressionTests
 {
     [Theory]
-    // Exemplo do screenshot 1 (b2b;prd_products|ecm_*product).
+    // Example from screenshot 1 (b2b;prd_products|ecm_*product).
     [InlineData("b2b;prd_products|ecm_*product", "b2b_budgets", true)]
     [InlineData("b2b;prd_products|ecm_*product", "prd_products", true)]
     [InlineData("b2b;prd_products|ecm_*product", "prd_products_web_roles", true)]
     [InlineData("b2b;prd_products|ecm_*product", "ecm_products_discount", true)]
     [InlineData("b2b;prd_products|ecm_*product", "ecm_stores_products", false)]
     [InlineData("b2b;prd_products|ecm_*product", "ecm_orders", false)]
-    // Prefixo e sufixo com ^ e $.
+    // Prefix and suffix with ^ and $.
     [InlineData("^prd_", "prd_products", true)]
     [InlineData("^prd_", "prd_categories", true)]
     [InlineData("^prd_", "std_prd_x", false)]
     [InlineData("_log$", "app_log", true)]
     [InlineData("_log$", "log_app", false)]
-    // Regex normal: \d, e * é quantificador, não wildcard.
+    // Normal regex: \d, and * is a quantifier, not a wildcard.
     [InlineData(@"phpbb_\d", "phpbb_1users", true)]
     [InlineData(@"phpbb_\d", "phpbb_users", false)]
     [InlineData("test.*", "my_test_table", true)]
@@ -31,41 +31,41 @@ public sealed class TreeFilterExpressionTests
     [InlineData("test.*", "tset", false)]
     [InlineData("ecm_*product", "ecmproduct", true)]
     [InlineData("ecm_*product", "ecm__product", true)]
-    // Correspondência parcial.
+    // Partial match.
     [InlineData("ecm_order", "ecm_orders", true)]
     [InlineData("ecm_order", "ecm_orders_status", true)]
     [InlineData("order", "ecm_orders_status", true)]
-    // Negação por lookahead negativo, case-insensitive.
+    // Negation through a negative lookahead, case-insensitive.
     [InlineData("^(?!sys)", "users", true)]
     [InlineData("^(?!sys)", "orders", true)]
     [InlineData("^(?!sys)", "sys_config", false)]
     [InlineData("^(?!sys)", "SYSLOG", false)]
     [InlineData("^(?!tmp_)", "tmp_import", false)]
-    // AND por lookahead.
+    // AND through a lookahead.
     [InlineData("^(?=.*prd)(?=.*web)", "prd_products_web_roles", true)]
     [InlineData("^(?=.*prd)(?=.*web)", "prd_products", false)]
-    // Sempre case-insensitive; (?-i) força sensibilidade.
+    // Always case-insensitive; (?-i) forces case sensitivity.
     [InlineData("PRD", "prd_products", true)]
     [InlineData("prd", "PRD_PRODUCTS", true)]
     [InlineData("(?-i)Prd", "prd_x", false)]
     [InlineData("(?-i)Prd", "Prd_x", true)]
     [InlineData("AÇÃO", "tabela_ação", true)]
-    // ; e | são ambos OR.
+    // ; and | are both OR.
     [InlineData("a;b|c", "xcx", true)]
     [InlineData("users;orders", "orders", true)]
     [InlineData("users;orders", "items", false)]
-    // Espaços são significativos (sem trim).
+    // Spaces are significant (no trim).
     [InlineData("b2b; prd", "prd_products", false)]
     [InlineData("b2b; prd", "b2b_budgets", true)]
     [InlineData("b2b; prd", "old prd", true)]
-    // Metacaracteres.
+    // Metacharacters.
     [InlineData("a.c", "abc", true)]
     [InlineData("colou?r", "color", true)]
     [InlineData("colou?r", "colour", true)]
     [InlineData("ab+c", "ac", false)]
     [InlineData(@"a\.b", "a.b", true)]
     [InlineData(@"a\.b", "axb", false)]
-    // Um ; literal é impossível: \; vira \| (pipe literal).
+    // A literal ; is impossible: \; becomes \| (a literal pipe).
     [InlineData(@"a\;b", "a|b", true)]
     [InlineData(@"a\;b", "a;b", false)]
     public void Corresponde(string filter, string name, bool expected)
@@ -109,7 +109,7 @@ public sealed class TreeFilterExpressionTests
     {
         Assert.Equal(TimeSpan.FromMilliseconds(50), TreeFilterExpression.MatchTimeout);
 
-        // Backtracking catastrófico: o timeout dispara e o nó fica visível.
+        // Catastrophic backtracking: the timeout fires and the node stays visible.
         var f = new TreeFilterExpression("^(x+x+)+y$");
         Assert.True(f.IsMatch(new string('x', 40)));
     }

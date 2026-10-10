@@ -3,10 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Cache de texto de display por (bloco, coluna) (secção 15.1, Renderer). A formatação corre em
-/// background (<see cref="Prefetch"/>); <see cref="TryGet"/> nunca bloqueia e, se o bloco estiver
-/// residente, pode formatar na hora quando o chamador o permite (para não mostrar placeholder em dados
-/// que já estão em memória). Limitada por orçamento de bytes com LRU. Thread-safe.
+/// Display text cache per (block, column) (section 15.1, Renderer). Formatting runs in the
+/// background (<see cref="Prefetch"/>); <see cref="TryGet"/> never blocks and, if the block is
+/// resident, may format on the spot when the caller allows it (so no placeholder is shown for data
+/// already in memory). Bounded by a byte budget with LRU. Thread-safe.
 /// </summary>
 public sealed class FormattedCellCache
 {
@@ -42,12 +42,12 @@ public sealed class FormattedCellCache
         }
     }
 
-    /// <summary>Colunas formatadas em background ficaram disponíveis. Disparado no thread pool.</summary>
+    /// <summary>Columns formatted in the background became available. Raised on the thread pool.</summary>
     public event EventHandler? Formatted;
 
     /// <summary>
-    /// Texto das células da coluna <paramref name="column"/> no bloco <paramref name="blockIndex"/>.
-    /// Com <paramref name="formatIfResident"/>, formata já se o bloco estiver residente.
+    /// Text of the cells of column <paramref name="column"/> in block <paramref name="blockIndex"/>.
+    /// With <paramref name="formatIfResident"/>, formats right away if the block is resident.
     /// </summary>
     public bool TryGet(int blockIndex, int column, bool formatIfResident, [NotNullWhen(true)] out string[]? cells)
     {
@@ -74,8 +74,8 @@ public sealed class FormattedCellCache
     }
 
     /// <summary>
-    /// Formata em background as colunas <paramref name="columns"/> dos blocos <c>[firstBlock, lastBlock]</c>,
-    /// carregando os blocos que faltarem.
+    /// Formats in the background the columns <paramref name="columns"/> of blocks <c>[firstBlock, lastBlock]</c>,
+    /// loading the missing blocks.
     /// </summary>
     public void Prefetch(int firstBlock, int lastBlock, ReadOnlySpan<int> columns)
     {
@@ -162,7 +162,7 @@ public sealed class FormattedCellCache
             }
             _entries[key] = _lru.AddFirst(new Entry(key, cells, size));
             _bytes += size;
-            // Mantém sempre pelo menos as entradas mais recentes (as visíveis) mesmo acima do orçamento.
+            // Always keeps at least the most recent entries (the visible ones), even above the budget.
             while (_bytes > BudgetBytes && _lru.Count > 64)
             {
                 var last = _lru.Last!;

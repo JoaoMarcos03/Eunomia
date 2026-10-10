@@ -2,30 +2,30 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.Engine.Execution;
 
-/// <summary>Dependências do SessionHost (ligadas no composition root).</summary>
+/// <summary>SessionHost dependencies (wired in the composition root).</summary>
 public sealed class SessionServices
 {
     public required IDbProvider Provider { get; init; }
 
-    /// <summary>Túneis SSH (Infra.Ssh); obrigatório só para sessões com SSH.</summary>
+    /// <summary>SSH tunnels (Infra.Ssh); only required for sessions with SSH.</summary>
     public ISshTunnelFactory? Ssh { get; init; }
 
-    /// <summary>Lê um segredo do cofre no momento de abrir (nunca fica guardado no SessionHost).</summary>
+    /// <summary>Reads a secret from the vault at opening time (it is never kept in the SessionHost).</summary>
     public required Func<SecretReference, CancellationToken, ValueTask<string>> ResolveSecret { get; init; }
 
     public ISessionLog? Log { get; init; }
 
-    /// <summary>Separa o startup script em instruções (o splitter do Engine.Sql).</summary>
+    /// <summary>Splits the startup script into statements (the Engine.Sql splitter).</summary>
     public Func<string, IReadOnlyList<string>> SplitScript { get; init; } = s => [s];
 
     public TimeProvider Clock { get; init; } = TimeProvider.System;
 }
 
 /// <summary>
-/// Uma sessão aberta, como ator isolado (secção 12): ligação primária para o trabalho do utilizador, ligação de
-/// metadata para a árvore e o autocomplete, ligações de job a pedido; cada uma com a sua fila. Mantém o túnel SSH,
-/// faz keep-alive, deteta ligações perdidas e volta a ligar de forma visível (estado Reconnecting, mensagens no log,
-/// replay de <c>USE</c>, time zone e startup script). "Reconnecting" e "Failed" nunca bloqueiam outras sessões.
+/// An open session, as an isolated actor (section 12): a primary connection for the user's work, a metadata connection
+/// for the tree and the autocomplete, job connections on demand; each one with its own queue. Keeps the SSH tunnel,
+/// does keep-alive, detects lost connections and reconnects visibly (Reconnecting state, messages in the log,
+/// replay of <c>USE</c>, time zone and startup script). "Reconnecting" and "Failed" never block other sessions.
 /// </summary>
 public sealed class SessionHost : IAsyncDisposable
 {
@@ -73,18 +73,18 @@ public sealed class SessionHost : IAsyncDisposable
     public DateTimeOffset? ConnectedAt { get; private set; }
 
     /// <summary>
-    /// Cifra TLS da ligação primária, <c>""</c> sem TLS, <c>null</c> se não se sabe (23.2: uma ligação sem verificação
-    /// fica visível).
+    /// TLS cipher of the primary connection, <c>""</c> without TLS, <c>null</c> if unknown (23.2: a connection without
+    /// verification is made visible).
     /// </summary>
     public string? Encryption => _primary?.Handle?.Encryption;
 
-    /// <summary>A sessão passa por um túnel SSH (os dados vão cifrados até ao servidor SSH, mesmo sem TLS).</summary>
+    /// <summary>The session goes through an SSH tunnel (data is encrypted up to the SSH server, even without TLS).</summary>
     public bool ThroughSsh => Settings.Connection.Ssh is not null;
 
-    /// <summary>Id da ligação primária no servidor (<c>CONNECTION_ID()</c>).</summary>
+    /// <summary>Id of the primary connection on the server (<c>CONNECTION_ID()</c>).</summary>
     public long? PrimaryConnectionId => _primary?.Handle?.ServerConnectionId;
 
-    /// <summary>Ids no servidor de todas as ligações abertas da sessão (primária, metadata e jobs).</summary>
+    /// <summary>Server ids of every open connection of the session (primary, metadata and jobs).</summary>
     public IReadOnlyList<long> OwnConnectionIds
     {
         get
@@ -98,25 +98,25 @@ public sealed class SessionHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Base em uso na ligação primária.</summary>
+    /// <summary>Database in use on the primary connection.</summary>
     public string? CurrentDatabase => _primary?.Database;
 
-    /// <summary>A primária tem uma operação do utilizador a correr.</summary>
+    /// <summary>The primary connection has a user operation running.</summary>
     public bool IsPrimaryBusy => _primary?.IsBusy == true;
 
-    /// <summary>Estado da transação da ligação primária (secção 14.5), seguido pelas instruções que ela envia.</summary>
+    /// <summary>Transaction state of the primary connection (section 14.5), tracked from the statements it sends.</summary>
     public TransactionTracker Transactions { get; } = new();
 
     /// <summary>
-    /// A ligação primária caiu com uma transação aberta com alterações: o servidor desfê-la e essas alterações perderam-se.
+    /// The primary connection dropped with an open transaction holding changes: the server rolled it back and those changes were lost.
     /// </summary>
     public event EventHandler? TransactionLost;
 
     public event EventHandler<SessionStateChangedEventArgs>? StateChanged;
 
     /// <summary>
-    /// Liga (abre túnel SSH se houver e a ligação primária); a de metadata abre em seguida. Erros (host key por
-    /// confirmar, password errada, servidor em baixo) chegam ao chamador e a sessão fica em Failed.
+    /// Connects (opens the SSH tunnel, if any, and the primary connection); the metadata one opens next. Errors (host key to
+    /// confirm, wrong password, server down) reach the caller and the session moves to Failed.
     /// </summary>
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {
@@ -152,9 +152,9 @@ public sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Trabalho do utilizador na ligação primária (queries, edições, DDL), com o timeout de cliente (D8).
-    /// <paramref name="abandonGrace"/>: ver <see cref="ConnectionLane.RunAsync{T}"/> (leituras que se abandonam ao
-    /// navegar).
+    /// User work on the primary connection (queries, edits, DDL), with the client timeout (D8).
+    /// <paramref name="abandonGrace"/>: see <see cref="ConnectionLane.RunAsync{T}"/> (reads abandoned when
+    /// navigating).
     /// </summary>
     public Task<T> RunPrimaryAsync<T>(Func<IDbConnectionHandle, CancellationToken, Task<T>> work, CancellationToken cancellationToken, bool applyQueryTimeout = true, TimeSpan abandonGrace = default)
     {
@@ -166,7 +166,7 @@ public sealed class SessionHost : IAsyncDisposable
         return lane.RunAsync(work, WorkPriority.Visible, SessionLogCategory.UserSql, retryAfterReconnect: false, cancellationToken, abandonGrace);
     }
 
-    /// <summary>Metadata (árvore, colunas, contagens); repete uma vez depois de religar.</summary>
+    /// <summary>Metadata (tree, columns, counts); retried once after reconnecting.</summary>
     public Task<T> RunMetadataAsync<T>(Func<IDbConnectionHandle, CancellationToken, Task<T>> work, CancellationToken cancellationToken, WorkPriority priority = WorkPriority.Visible, TimeSpan abandonGrace = default)
     {
         var lane = _metadata ?? throw new InvalidOperationException("The session is not connected.");
@@ -174,9 +174,9 @@ public sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Trabalho pesado (export, import) numa ligação de job; no máximo <see cref="SessionConnectionSettings.MaxJobConnections"/>
-    /// ao mesmo tempo, os outros esperam na fila (12.6). Com <paramref name="logCommands"/> a <c>false</c>, os comandos não
-    /// vão para o SQL log.
+    /// Heavy work (export, import) on a job connection; at most <see cref="SessionConnectionSettings.MaxJobConnections"/>
+    /// at the same time, the others wait in the queue (12.6). With <paramref name="logCommands"/> set to <c>false</c>, the
+    /// commands do not go to the SQL log.
     /// </summary>
     public async Task<T> RunJobAsync<T>(Func<IDbConnectionHandle, CancellationToken, Task<T>> work, CancellationToken cancellationToken, bool logCommands = true)
     {
@@ -202,8 +202,8 @@ public sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Erro de uma instrução dentro de um trabalho (as exceções do driver só são traduzidas à saída dele): o
-    /// <see cref="DbError"/>, ou <c>null</c> se a exceção não vem do servidor, é um cancel ou a ligação caiu.
+    /// Error of a statement inside a unit of work (driver exceptions are only translated when they leave it): the
+    /// <see cref="DbError"/>, or <c>null</c> if the exception does not come from the server, is a cancel or the connection dropped.
     /// </summary>
     public DbError? StatementError(Exception exception)
     {
@@ -217,9 +217,9 @@ public sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Ligação própria, fora das filas (o <c>LOAD DATA LOCAL</c> do CSV import, com opções que as outras ligações não
-    /// têm): o mesmo túnel e as mesmas opções ajustadas por <paramref name="adjust"/>, com a time zone da sessão e os
-    /// comandos no SQL log. Quem a pede fecha-a.
+    /// A connection of its own, outside the queues (the CSV import's <c>LOAD DATA LOCAL</c>, with options the other
+    /// connections do not have): the same tunnel and the same options adjusted by <paramref name="adjust"/>, with the session's
+    /// time zone and the commands in the SQL log. The caller closes it.
     /// </summary>
     public async Task<IDbConnectionHandle> OpenDedicatedAsync(Func<ConnectionOptions, ConnectionOptions> adjust, CancellationToken cancellationToken)
     {
@@ -241,8 +241,8 @@ public sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Relê o estado da sessão que muda o SQL gerado (o <c>sql_mode</c>) na ligação primária e atualiza
-    /// <see cref="ServerServices"/>; chamado dentro de um trabalho da primária depois de um <c>SET</c> do utilizador.
+    /// Reads again the session state that changes the generated SQL (<c>sql_mode</c>) on the primary connection and updates
+    /// <see cref="ServerServices"/>; called inside a unit of work on the primary connection after a user <c>SET</c>.
     /// </summary>
     public async Task RefreshSessionStateAsync(IDbConnectionHandle primary, CancellationToken cancellationToken)
     {
@@ -251,10 +251,10 @@ public sealed class SessionHost : IAsyncDisposable
         ServerServices = _services.Provider.ForConnection(primary);
     }
 
-    /// <summary>Cancela a operação em curso na primária (a do tab que pediu, D2).</summary>
+    /// <summary>Cancels the operation in progress on the primary connection (the one from the tab that asked, D2).</summary>
     public void CancelPrimary() => _primary?.CancelCurrent();
 
-    /// <summary>Muda a base da primária (<c>USE</c>), reposta depois de religar.</summary>
+    /// <summary>Changes the primary connection's database (<c>USE</c>), restored after reconnecting.</summary>
     public Task UseDatabaseAsync(string database, CancellationToken cancellationToken)
     {
         var dialect = ServerServices?.Dialect ?? throw new InvalidOperationException("The session is not connected.");
@@ -265,7 +265,7 @@ public sealed class SessionHost : IAsyncDisposable
         }, cancellationToken, applyQueryTimeout: false);
     }
 
-    /// <summary>Desliga: cancela tudo (prazo de 3 s, 12.4) e fecha ligações e túnel.</summary>
+    /// <summary>Disconnects: cancels everything (3 s deadline, 12.4) and closes the connections and the tunnel.</summary>
     public async Task DisconnectAsync()
     {
         if (State is SessionState.Closed or SessionState.Closing)
@@ -302,7 +302,7 @@ public sealed class SessionHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Ligação no próprio computador (nome, loopback, socket ou named pipe): sem TLS não sai da máquina.</summary>
+    /// <summary>Connection to this computer (name, loopback, socket or named pipe): without TLS it does not leave the machine.</summary>
     public static bool IsLocalHost(string host)
     {
         ArgumentNullException.ThrowIfNull(host);
@@ -388,8 +388,8 @@ public sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Sessão read-only: a ligação fica em transações só de leitura no servidor e com a guarda que recusa no cliente
-    /// tudo o que a <see cref="ReadOnlyPolicy"/> não deixa (antes do startup script, que também passa por ela).
+    /// Read-only session: the connection uses read-only transactions on the server and the guard that refuses on the client
+    /// everything <see cref="ReadOnlyPolicy"/> does not allow (before the startup script, which also goes through it).
     /// </summary>
     private async Task ProtectAsync(IDbConnectionHandle handle, CancellationToken cancellationToken)
     {
@@ -408,7 +408,7 @@ public sealed class SessionHost : IAsyncDisposable
         };
     }
 
-    /// <summary>Estado replicado em cada ligação nova (12.2): modo read-only, base, time zone e startup script.</summary>
+    /// <summary>State replayed on every new connection (12.2): read-only mode, database, time zone and startup script.</summary>
     private async Task AfterOpenAsync(ConnectionLane lane, IDbConnectionHandle handle, CancellationToken cancellationToken)
     {
         await ProtectAsync(handle, cancellationToken).ConfigureAwait(false);
@@ -430,7 +430,7 @@ public sealed class SessionHost : IAsyncDisposable
                 {
                     await TryRunAsync(handle, statement, cancellationToken).ConfigureAwait(false);
                 }
-                // O script pode mudar o sql_mode (escaping dos literais simples).
+                // The script may change sql_mode (escaping of simple literals).
                 try
                 {
                     await handle.RefreshSessionAsync(cancellationToken).ConfigureAwait(false);
@@ -449,7 +449,7 @@ public sealed class SessionHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Erros do startup script e do replay só vão para o log (como no HeidiSQL).</summary>
+    /// <summary>Errors from the startup script and the replay only go to the log (as in HeidiSQL).</summary>
     private async Task TryRunAsync(IDbConnectionHandle handle, string sql, CancellationToken cancellationToken)
     {
         try
@@ -496,7 +496,7 @@ public sealed class SessionHost : IAsyncDisposable
         Log(SessionLogCategory.Info, $"Reconnected ({lane.Name}).");
     }
 
-    /// <summary>Volta a ligar a primária de forma visível; os outros pedidos esperam na fila.</summary>
+    /// <summary>Reconnects the primary connection visibly; the other requests wait in the queue.</summary>
     private async Task ReconnectAsync()
     {
         try
@@ -522,7 +522,7 @@ public sealed class SessionHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Keep-alive (TR-05): ping assíncrono nas ligações paradas há mais de "Ping every X seconds".</summary>
+    /// <summary>Keep-alive (TR-05): asynchronous ping on connections idle for longer than "Ping every X seconds".</summary>
     private void KeepAliveTick()
     {
         if (Settings.KeepAlive is not { } interval || State is not (SessionState.Ready or SessionState.Busy))

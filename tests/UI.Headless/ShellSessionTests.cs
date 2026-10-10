@@ -8,8 +8,8 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Shell ligado a um servidor real (FAM-S07, L06): sessão como raiz da árvore, bases e tabelas, Data tab, Run (F9)
-/// e status bar. Precisa do servidor de testes (tests/Integration/Start-TestServer.ps1); sem ele fica "skipped".
+/// Shell connected to a real server (FAM-S07, L06): session as the tree root, databases and tables, Data tab, Run (F9)
+/// and status bar. Needs the test server (tests/Integration/Start-TestServer.ps1); without it, it is skipped.
 /// </summary>
 public sealed class ShellSessionTests
 {
@@ -32,7 +32,7 @@ public sealed class ShellSessionTests
             Assert.Equal(database, db.Name);
             Assert.Same(connector.Open[0], window.ActiveSession);
             Assert.StartsWith("Connected: ", context.Status.Connected, StringComparison.Ordinal);
-            // Uptime e hora do servidor numa só ida ao servidor (também no MySQL 8); o tooltip diz se a ligação vai cifrada.
+            // Uptime and server time in a single round trip (also on MySQL 8); the tooltip says whether the connection is encrypted.
             await WaitAsync(() => context.Status.Uptime.StartsWith("Uptime: ", StringComparison.Ordinal) && !context.Status.Uptime.Contains("unknown", StringComparison.Ordinal)
                 && context.Status.ServerTime.StartsWith("Server time: ", StringComparison.Ordinal) ? "ok" : null, TimeSpan.FromSeconds(15));
             Assert.Contains("\nEncryption: ", context.Status.ServerTooltip, StringComparison.Ordinal);

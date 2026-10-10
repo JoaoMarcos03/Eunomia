@@ -8,8 +8,8 @@ using Eunomia.UI.Controls.SqlEditor;
 namespace Eunomia.UI.Features.TableEditor;
 
 /// <summary>
-/// Editor por código de uma view, procedure, function, trigger ou event (Table tab): o <c>CREATE</c> num editor SQL,
-/// com Discard e Save em baixo. Quem cria a vista grava (apaga e volta a criar o objeto).
+/// Code editor of a view, procedure, function, trigger or event (Table tab): the <c>CREATE</c> in an SQL editor,
+/// with Discard and Save at the bottom. Whoever creates the view saves (drops and creates the object again).
 /// </summary>
 public sealed class ObjectCodeEditorView : DockPanel
 {
@@ -24,7 +24,7 @@ public sealed class ObjectCodeEditorView : DockPanel
         IsNew = isNew;
         _saved = code;
         Editor = new SqlEditorControl { Text = code };
-        // O servidor devolve o CREATE de uma view numa só linha: quebrar as linhas longas lê-se melhor.
+        // The server returns a view's CREATE on a single line: breaking the long lines reads better.
         Editor.Editor.WordWrap = true;
 
         var hint = new TextBlock
@@ -52,14 +52,14 @@ public sealed class ObjectCodeEditorView : DockPanel
 
     public DbObjectKind Kind { get; }
 
-    /// <summary>Objeto novo ("Create new ▸"), ainda não existe no servidor.</summary>
+    /// <summary>New object ("Create new ▸"), it does not exist on the server yet.</summary>
     public bool IsNew { get; }
 
     public SqlEditorControl Editor { get; }
 
     public string Code => Editor.Text;
 
-    /// <summary>O código mudou desde que a vista abriu (ou desde <see cref="MarkSaved"/>).</summary>
+    /// <summary>The code changed since the view opened (or since <see cref="MarkSaved"/>).</summary>
     public bool IsModified => !string.Equals(Editor.Text, _saved, StringComparison.Ordinal);
 
     public event EventHandler? SaveRequested;

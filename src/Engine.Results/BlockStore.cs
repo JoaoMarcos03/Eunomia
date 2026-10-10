@@ -3,9 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Cache de blocos com orçamento de memória e LRU (secção 11.3). Os blocos do range fixado
-/// (visível + prefetch) nunca são despejados. Blocos despejados voltam a ser pedidos ao loader
-/// (no source real: refetch por keyset ou leitura do spill). Thread-safe.
+/// Block cache with a memory budget and LRU (section 11.3). Blocks of the pinned range
+/// (visible + prefetch) are never evicted. Evicted blocks are requested from the loader again
+/// (in the real source: refetch by keyset or a spill read). Thread-safe.
 /// </summary>
 public sealed class BlockStore
 {
@@ -18,8 +18,8 @@ public sealed class BlockStore
     private int _pinnedLast = -2;
     private long _residentBytes;
 
-    /// <param name="loader">Produz um bloco. Corre no thread pool.</param>
-    /// <param name="budgetBytes">Orçamento; acima dele despeja os blocos menos usados que não estão fixados.</param>
+    /// <param name="loader">Produces a block. Runs on the thread pool.</param>
+    /// <param name="budgetBytes">Budget; above it, the least used blocks that are not pinned are evicted.</param>
     public BlockStore(Func<int, CancellationToken, RowBlock> loader, long budgetBytes)
     {
         ArgumentNullException.ThrowIfNull(loader);
@@ -52,12 +52,12 @@ public sealed class BlockStore
         }
     }
 
-    /// <summary>Número de blocos produzidos pelo loader (inclui refetch de blocos despejados).</summary>
+    /// <summary>Number of blocks produced by the loader (includes refetches of evicted blocks).</summary>
     public int LoadCount => Volatile.Read(ref _loadCount);
 
     private int _loadCount;
 
-    /// <summary>Um bloco ficou residente. Disparado no thread pool.</summary>
+    /// <summary>A block became resident. Raised on the thread pool.</summary>
     public event Action<RowBlock>? BlockLoaded;
 
     public bool TryGet(int blockIndex, [NotNullWhen(true)] out RowBlock? block)
@@ -89,7 +89,7 @@ public sealed class BlockStore
             }
             if (!_loading.TryGetValue(blockIndex, out task!))
             {
-                // O load é partilhado por todos os pedidos; o cancelamento só afeta quem espera.
+                // The load is shared by every request; cancellation only affects whoever is waiting.
                 task = Task.Run(() => Load(blockIndex), CancellationToken.None);
                 _loading[blockIndex] = task;
             }
@@ -97,7 +97,7 @@ public sealed class BlockStore
         return cancellationToken.CanBeCanceled ? task.WaitAsync(cancellationToken) : task;
     }
 
-    /// <summary>Fixa os blocos <c>[first, last]</c>: não são despejados até ao próximo <see cref="Pin"/>.</summary>
+    /// <summary>Pins blocks <c>[first, last]</c>: they are not evicted until the next <see cref="Pin"/>.</summary>
     public void Pin(int first, int last)
     {
         lock (_lock)

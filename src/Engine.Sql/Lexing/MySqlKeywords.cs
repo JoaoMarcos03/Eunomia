@@ -3,8 +3,8 @@ using System.Collections.Frozen;
 namespace Eunomia.Engine.Sql.Lexing;
 
 /// <summary>
-/// Listas estáticas do spike: keywords, tipos e funções MySQL mais comuns, escritas a partir da
-/// documentação do MySQL (não copiadas do HeidiSQL). No produto vêm de <c>mysql.help_topic</c> (secção 16.1).
+/// The spike's static lists: the most common MySQL keywords, types and functions, written from the
+/// MySQL documentation (not copied from HeidiSQL). In the product they come from <c>mysql.help_topic</c> (section 16.1).
 /// </summary>
 public static class MySqlKeywords
 {
@@ -53,7 +53,7 @@ public static class MySqlKeywords
     private static readonly FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> DataTypeLookup = DataTypes.GetAlternateLookup<ReadOnlySpan<char>>();
     private static readonly FrozenSet<string>.AlternateLookup<ReadOnlySpan<char>> FunctionLookup = Functions.GetAlternateLookup<ReadOnlySpan<char>>();
 
-    /// <summary>Classifica uma palavra sem alocar. Keywords têm prioridade sobre tipos e funções.</summary>
+    /// <summary>Classifies a word without allocating. Keywords take precedence over types and functions.</summary>
     public static SqlTokenKind Classify(ReadOnlySpan<char> word)
     {
         if (KeywordLookup.Contains(word))

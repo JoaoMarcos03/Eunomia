@@ -5,7 +5,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Opções do Preferences com efeito (Fase 13): fonte e largura do grid, barras das listas, reconectar sessões.</summary>
+/// <summary>Preferences options with an effect (phase 13): grid font and width, list bars, reconnecting sessions.</summary>
 public sealed class PreferencesOptionsTests
 {
     [AvaloniaFact]
@@ -36,7 +36,7 @@ public sealed class PreferencesOptionsTests
         var settings = new AppSettings();
         var (window, _, session, connector, _) = CreateShell(cs, string.Empty, settings);
 
-        // Desligado: não liga nada.
+        // Off: connects nothing.
         settings.SessionManager.LastSessions = [session.Id];
         Assert.False(await window.ReconnectLastSessionsAsync());
         Assert.Empty(connector.Open);
@@ -45,7 +45,7 @@ public sealed class PreferencesOptionsTests
         Assert.True(await window.ReconnectLastSessionsAsync());
         Assert.Single(connector.Open);
 
-        // Display bars desligado: as listas do Host tab deixam de ter barras.
+        // Display bars off: the Host tab lists no longer have bars.
         await WaitAsync(() => window.Tree.Tree.Model!.Roots.FirstOrDefault());
         window.Tabs.SelectedItem = window.Tabs.HostTab;
         var host = window.HostView;

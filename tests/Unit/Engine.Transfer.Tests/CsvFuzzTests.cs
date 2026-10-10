@@ -3,9 +3,9 @@ using System.Text;
 namespace Eunomia.Engine.Transfer.Tests;
 
 /// <summary>
-/// Fuzzing determinístico do leitor de CSV (Fase 14): o mesmo ficheiro lido com buffers de 16 (o mínimo) a 80 caracteres dá os
-/// mesmos registos que lido de uma vez (aspas, aspas duplicadas, terminadores de vários caracteres, quebras de linha
-/// dentro de campos e <c>\N</c> podem cair na fronteira de um buffer).
+/// Deterministic fuzzing of the CSV reader (phase 14): the same file read with buffers of 16 (the minimum) to 80 characters gives
+/// the same records as when read in one go (quotes, doubled quotes, multi-character terminators, line breaks
+/// inside fields and <c>\N</c> may fall on a buffer boundary).
 /// </summary>
 public sealed class CsvFuzzTests
 {

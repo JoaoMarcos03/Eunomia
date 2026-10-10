@@ -9,13 +9,13 @@ using Eunomia.Engine.Transfer;
 
 namespace Eunomia.App.Transfer;
 
-/// <summary>Quem separa os campos (anexo B §3.1; omissão: o servidor).</summary>
+/// <summary>Who splits the fields (appendix B §3.1; default: the server).</summary>
 public enum CsvImportMethod
 {
-    /// <summary><c>LOAD DATA LOCAL INFILE</c> alimentado pelo stream do cliente.</summary>
+    /// <summary><c>LOAD DATA LOCAL INFILE</c> fed by the client's stream.</summary>
     Server,
 
-    /// <summary>O cliente lê o CSV e envia INSERT multi-row.</summary>
+    /// <summary>The client reads the CSV and sends multi-row INSERTs.</summary>
     Client,
 }
 
@@ -29,17 +29,17 @@ public sealed record CsvImportRequest
 
     public required string Table { get; init; }
 
-    /// <summary>Colunas marcadas, pela ordem da lista: o campo k vai para a k-ésima (mapeamento posicional).</summary>
+    /// <summary>Checked columns, in list order: field k goes to the k-th one (positional mapping).</summary>
     public required IReadOnlyList<CsvTargetColumn> Columns { get; init; }
 
-    /// <summary>Separadores já sem as sequências de barra invertida (<see cref="CsvOptions.Unescape"/>).</summary>
+    /// <summary>Separators already without the backslash sequences (<see cref="CsvOptions.Unescape"/>).</summary>
     public CsvOptions Csv { get; init; } = new();
 
     public CsvDuplicates Duplicates { get; init; } = CsvDuplicates.Replace;
 
     public bool LowPriority { get; init; } = true;
 
-    /// <summary>"Input file contains local formatted numbers": o formato é o de <see cref="NumberFormat"/>.</summary>
+    /// <summary>"Input file contains local formatted numbers": the format is <see cref="NumberFormat"/>'s.</summary>
     public bool LocalNumbers { get; init; }
 
     public NumberFormatInfo NumberFormat { get; init; } = CultureInfo.CurrentCulture.NumberFormat;
@@ -51,7 +51,7 @@ public sealed record CsvImportRequest
 
 public sealed record CsvImportProgress(long BytesRead, long TotalBytes, long Rows, TimeSpan Elapsed);
 
-/// <summary>O servidor não aceita <c>LOAD DATA LOCAL</c>: a mensagem diz como seguir.</summary>
+/// <summary>The server does not accept <c>LOAD DATA LOCAL</c>: the message says how to proceed.</summary>
 public sealed class CsvLocalInfileDisabledException(string serverMessage, Exception inner)
     : Exception(serverMessage + "\n\nThe server does not accept LOAD DATA LOCAL (local_infile is OFF, the default in MySQL 8). "
         + "Use \"Client parses file contents\", or enable it on the server with SET GLOBAL local_infile = 1.", inner);
@@ -59,13 +59,13 @@ public sealed class CsvLocalInfileDisabledException(string serverMessage, Except
 public sealed record CsvImportResult(bool Cancelled, long Rows, long Warnings, long BytesRead, long TotalBytes, TimeSpan Elapsed);
 
 /// <summary>
-/// CSV import (FAM-E07, PR-15; secção 13.2; anexo B §3): no modo servidor, <c>LOAD DATA LOCAL INFILE</c> numa ligação
-/// dedicada (a única com <c>AllowLoadLocalInfile</c>, fechada no fim), alimentado pelo ficheiro em streaming e
-/// convertido para UTF-8 no caminho (o <c>LOAD DATA</c> não aceita UTF-16); com números locais, as colunas numéricas
-/// passam por <c>@variáveis</c> e <c>REPLACE</c>, como no HeidiSQL. No modo cliente, o <see cref="CsvReader"/> lê em
-/// paralelo com o envio (canal limitado) e o <see cref="CsvInsertBatcher"/> faz INSERT multi-row numa ligação de job
-/// com <c>SQL_MODE=''</c>; o primeiro erro pára, com os lotes anteriores gravados. Progresso por bytes e cancel nos dois
-/// modos.
+/// CSV import (FAM-E07, PR-15; section 13.2; appendix B §3): in server mode, <c>LOAD DATA LOCAL INFILE</c> on a dedicated
+/// connection (the only one with <c>AllowLoadLocalInfile</c>, closed at the end), fed by the file in streaming and
+/// converted to UTF-8 on the way (<c>LOAD DATA</c> does not accept UTF-16); with local numbers, the numeric columns
+/// go through <c>@variables</c> and <c>REPLACE</c>, as in HeidiSQL. In client mode, the <see cref="CsvReader"/> reads in
+/// parallel with the sending (bounded channel) and the <see cref="CsvInsertBatcher"/> runs multi-row INSERTs on a job
+/// connection with <c>SQL_MODE=''</c>; the first error stops, with the earlier batches saved. Progress by bytes and
+/// cancel in both modes.
 /// </summary>
 public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
 {
@@ -111,7 +111,7 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
         return result;
     }
 
-    // ---------- Servidor ----------
+    // ---------- Server ----------
 
     private async Task<long> RunServerAsync(CancellationToken cancellationToken)
     {
@@ -165,13 +165,13 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
         }
     }
 
-    /// <summary>ER_CLIENT_LOCAL_FILES_DISABLED: o servidor tem <c>local_infile</c> desligado (omissão no MySQL 8).</summary>
+    /// <summary>ER_CLIENT_LOCAL_FILES_DISABLED: the server has <c>local_infile</c> off (the MySQL 8 default).</summary>
     private const int LocalInfileDisabled = 3948;
 
-    /// <summary>ER_NOT_ALLOWED_COMMAND: o mesmo no MariaDB até 10.4 e em MySQL antigos.</summary>
+    /// <summary>ER_NOT_ALLOWED_COMMAND: the same on MariaDB up to 10.4 and on older MySQL.</summary>
     private const int NotAllowedCommand = 1148;
 
-    /// <summary>ER_LOAD_INFILE_CAPABILITY_DISABLED: o mesmo no MariaDB 10.5+.</summary>
+    /// <summary>ER_LOAD_INFILE_CAPABILITY_DISABLED: the same on MariaDB 10.5+.</summary>
     private const int InfileCapabilityDisabled = 4166;
 
     private Task<long> LoadAsync(IDbConnectionHandle handle, Stream source, List<string> columns, List<string> expressions, CsvOptions csv, CancellationToken cancellationToken) =>
@@ -198,7 +198,7 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
             CharacterSet = "utf8mb4",
         }, cancellationToken);
 
-    // ---------- Cliente ----------
+    // ---------- Client ----------
 
     private sealed record Batch(string Sql, long LastRecord);
 
@@ -209,7 +209,7 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var channel = Channel.CreateBounded<Batch>(new BoundedChannelOptions(2) { SingleReader = true, SingleWriter = true });
 
-        // Parsing em paralelo com o envio (secção 13.4); a inserção é sequencial.
+        // Parsing in parallel with the sending (section 13.4); inserting is sequential.
         var producer = Task.Run(
             async () =>
             {
@@ -281,7 +281,7 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
                             }
                             catch (Exception e) when (host.StatementError(e) is not null)
                             {
-                                // A ligação de job volta a ser reposta no próximo uso.
+                                // The job connection is reset again on its next use.
                             }
                         }
                     }
@@ -298,13 +298,13 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
             }
             catch (Exception) when (linked.IsCancellationRequested)
             {
-                // O produtor parou porque o envio parou.
+                // The producer stopped because the sending stopped.
             }
             await _counter.DisposeAsync().ConfigureAwait(false);
         }
     }
 
-    /// <summary>"Truncate destination table before import": <c>TRUNCATE TABLE</c>, senão <c>DELETE FROM</c>.</summary>
+    /// <summary>"Truncate destination table before import": <c>TRUNCATE TABLE</c>, otherwise <c>DELETE FROM</c>.</summary>
     private async Task TruncateAsync(IDbConnectionHandle handle, CancellationToken cancellationToken)
     {
         var table = new DbObjectRef(request.Database, request.Database, request.Table, DbObjectKind.Table);
@@ -330,7 +330,7 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
         }
         catch (OperationCanceledException)
         {
-            // Fim do job.
+            // End of the job.
         }
     }
 }

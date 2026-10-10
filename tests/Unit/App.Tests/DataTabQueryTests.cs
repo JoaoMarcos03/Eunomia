@@ -5,7 +5,7 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>SELECT e label do Data tab (anexo D B2, B3, B6, B7, B8; FAM-G02, G03, G04).</summary>
+/// <summary>Data tab SELECT and label (appendix D B2, B3, B6, B7, B8; FAM-G02, G03, G04).</summary>
 public sealed class DataTabQueryTests
 {
     private static readonly MySqlDialect Dialect = new(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));
@@ -61,7 +61,7 @@ public sealed class DataTabQueryTests
         var select = DataTabQuery.Build(Dialect, table, ["note", "code"], null, [], 0, 1000);
 
         Assert.Equal(["code"], select.KeyColumns);
-        // A chave oculta continua no SELECT; a coluna oculta que não é chave sai.
+        // The hidden key stays in the SELECT; the hidden column that is not a key goes.
         Assert.Equal("SELECT `code`, `name` FROM `shop`.`products` LIMIT 1000", select.Sql);
     }
 

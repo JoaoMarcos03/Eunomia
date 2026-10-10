@@ -4,7 +4,7 @@ using Eunomia.UI.Controls.Common.Input;
 
 namespace Eunomia.UI.Shell.Input;
 
-/// <summary>Conversão entre <see cref="KeyChord"/> (sem UI, camada App) e as teclas do Avalonia.</summary>
+/// <summary>Conversion between <see cref="KeyChord"/> (no UI, App layer) and Avalonia keys.</summary>
 public static class KeyChordMapper
 {
     public static KeyChord? FromKey(Key key, KeyModifiers modifiers)
@@ -14,7 +14,7 @@ public static class KeyChordMapper
         {
             return null;
         }
-        // No macOS o Command (⌘) faz de Ctrl.
+        // On macOS, Command (⌘) acts as Ctrl.
         modifiers = PlatformKeys.Normalize(modifiers);
         var m = ChordModifiers.None;
         if (modifiers.HasFlag(KeyModifiers.Control))
@@ -54,7 +54,7 @@ public static class KeyChordMapper
         return new KeyGesture(key, PlatformKeys.ForDisplay(m));
     }
 
-    /// <summary>Nome canónico da tecla (o de <see cref="KeyChord"/>), ou <c>null</c> para teclas sem atalho (modificadores).</summary>
+    /// <summary>Canonical key name (the <see cref="KeyChord"/> one), or <c>null</c> for keys without a shortcut (modifiers).</summary>
     public static string? NameOf(Key key) => key switch
     {
         >= Key.A and <= Key.Z => ((char)('A' + (key - Key.A))).ToString(),

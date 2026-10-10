@@ -2,7 +2,7 @@ using Avalonia.Media;
 
 namespace Eunomia.UI.Controls.Common.TreeList;
 
-/// <summary>Coluna de uma <see cref="TreeListControl"/> (como as colunas do VirtualStringTree do HeidiSQL).</summary>
+/// <summary>Column of a <see cref="TreeListControl"/> (like the columns of HeidiSQL's VirtualStringTree).</summary>
 public sealed class TreeListColumn(string header, double width, TextAlignment alignment = TextAlignment.Left)
 {
     public string Header { get; } = header;
@@ -15,11 +15,11 @@ public sealed class TreeListColumn(string header, double width, TextAlignment al
 
     public TextAlignment Alignment { get; } = alignment;
 
-    /// <summary>Comparação para ordenar (por omissão: texto natural sem maiúsculas; números se ambos o forem).</summary>
+    /// <summary>Comparison for sorting (by default: natural case-insensitive text; numbers if both are numbers).</summary>
     public Comparison<string>? Compare { get; init; }
 }
 
-/// <summary>Nó de uma <see cref="TreeListControl"/>: texto por coluna, ícone, cores e filhos.</summary>
+/// <summary>Node of a <see cref="TreeListControl"/>: text per column, icon, colours and children.</summary>
 public sealed class TreeListNode
 {
     private readonly List<TreeListNode> _children = [];
@@ -29,32 +29,32 @@ public sealed class TreeListNode
         Cells = cells;
     }
 
-    /// <summary>Texto por coluna (falta = vazio).</summary>
+    /// <summary>Text per column (missing = empty).</summary>
     public string[] Cells { get; set; }
 
-    /// <summary>Chave do <see cref="Icons.IconSet"/>.</summary>
+    /// <summary>Key in the <see cref="Icons.IconSet"/>.</summary>
     public string? Icon { get; set; }
 
-    /// <summary>Cor de fundo da linha inteira 0xRRGGBB (cor de sessão); <c>null</c> = sem cor.</summary>
+    /// <summary>Background colour of the whole row 0xRRGGBB (session colour); <c>null</c> = no colour.</summary>
     public uint? Background { get; set; }
 
     public bool Bold { get; set; }
 
-    /// <summary>Texto esbatido (sessões inativas, objetos sem cache).</summary>
+    /// <summary>Dimmed text (inactive sessions, objects without a cache).</summary>
     public bool Muted { get; set; }
 
-    /// <summary>Folder/grupo: fica no topo quando "folders at top" está ligado.</summary>
+    /// <summary>Folder/group: stays on top when "folders at top" is on.</summary>
     public bool IsGroup { get; set; }
 
     public bool IsExpanded { get; set; }
 
-    /// <summary>Barra proporcional (0–1) desenhada atrás do texto, por coluna (colunas Size e Time das listas do HeidiSQL).</summary>
+    /// <summary>Proportional bar (0–1) drawn behind the text, per column (Size and Time columns of HeidiSQL's lists).</summary>
     public Dictionary<int, double>? Bars { get; set; }
 
-    /// <summary>Células destacadas (Host tab › Variables: valor da sessão diferente do global).</summary>
+    /// <summary>Highlighted cells (Host tab › Variables: session value different from the global one).</summary>
     public HashSet<int>? Highlighted { get; set; }
 
-    /// <summary>Valor de ordenação por coluna (tamanhos, números, datas); sem valor, ordena pelo texto da célula.</summary>
+    /// <summary>Sort value per column (sizes, numbers, dates); without a value, sorts by the cell text.</summary>
     public Dictionary<int, IComparable>? SortKeys { get; set; }
 
     public object? Tag { get; set; }
@@ -118,7 +118,7 @@ public sealed class TreeListNode
     }
 }
 
-/// <summary>Pedido de drag &amp; drop: <see cref="Target"/> é o nó onde se largou (<c>null</c> = raiz).</summary>
+/// <summary>Drag &amp; drop request: <see cref="Target"/> is the node it was dropped on (<c>null</c> = root).</summary>
 public sealed class TreeListDropEventArgs(TreeListNode source, TreeListNode? target) : EventArgs
 {
     public TreeListNode Source { get; } = source;
@@ -126,7 +126,7 @@ public sealed class TreeListDropEventArgs(TreeListNode source, TreeListNode? tar
     public TreeListNode? Target { get; } = target;
 }
 
-/// <summary>Rename in-place: o handler valida e devolve a mensagem de erro em <see cref="Error"/> (ou deixa <c>null</c>).</summary>
+/// <summary>In-place rename: the handler validates and returns the error message in <see cref="Error"/> (or leaves it <c>null</c>).</summary>
 public sealed class TreeListRenameEventArgs(TreeListNode node, string text) : EventArgs
 {
     public TreeListNode Node { get; } = node;

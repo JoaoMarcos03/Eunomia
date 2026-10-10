@@ -13,10 +13,10 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.UI.Shell;
 
-/// <summary>Handlers dos comandos do shell e keymap (secção 21.2).</summary>
+/// <summary>Handlers of the shell commands and keymap (section 21.2).</summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Context menu do SQL log (<c>popupSqlLog</c>, anexo C §3.6).</summary>
+    /// <summary>SQL log context menu (<c>popupSqlLog</c>, appendix C §3.6).</summary>
     private static readonly IReadOnlyList<MenuEntry> SqlLogMenu =
     [
         new CommandEntry("edit.copy"), new CommandEntry("log.copyLineToNewTab"), new CommandEntry("log.clear"),
@@ -24,7 +24,7 @@ public sealed partial class MainWindow
         new CommandEntry("tools.preferencesLogging"),
     ];
 
-    /// <summary>Context menu da barra de tabs (<c>popupMainTabs</c>, anexo C §3.13).</summary>
+    /// <summary>Tab bar context menu (<c>popupMainTabs</c>, appendix C §3.13).</summary>
     private static readonly IReadOnlyList<MenuEntry> TabStripMenu =
     [
         new CommandEntry("query.newTab"), new CommandEntry("query.closeTab"), new CommandEntry("tabs.closeToRight"), new CommandEntry("query.closeAllTabs"),
@@ -34,10 +34,10 @@ public sealed partial class MainWindow
 
     private IInputElement? _lastFocused;
 
-    /// <summary>Elemento com o foco de teclado, ignorando menus e toolbar (que não ficam com o foco).</summary>
+    /// <summary>Element with the keyboard focus, ignoring menus and the toolbar (which do not keep the focus).</summary>
     public IInputElement? FocusedElement => FocusManager?.GetFocusedElement() ?? _lastFocused;
 
-    /// <summary>Contextos de foco atuais, do mais interior para o mais exterior.</summary>
+    /// <summary>Current focus contexts, from the innermost to the outermost.</summary>
     public IReadOnlyList<string> FocusContexts => CommandScope.ContextsOf(FocusedElement);
 
     private void RegisterCommands()
@@ -45,7 +45,7 @@ public sealed partial class MainWindow
         var c = _context.Commands;
         var settings = _context.Settings;
 
-        // Edit: encaminhado para o controlo focado (grid, editor, log, caixas de texto).
+        // Edit: routed to the focused control (grid, editor, log, text boxes).
         c.SetHandler("edit.copy", _ => new ValueTask(EditTarget()!.CopyAsync()), () => EditTarget()?.CanCopy == true);
         c.SetHandler("edit.cut", _ => new ValueTask(EditTarget()!.CutAsync()), () => EditTarget()?.CanCut == true);
         c.SetHandler("edit.paste", _ => new ValueTask(EditTarget()!.PasteAsync()), () => EditTarget()?.CanPaste == true);
@@ -113,7 +113,7 @@ public sealed partial class MainWindow
             }
         });
         Toggle("query.stopOnErrors", () => settings.Query.StopOnErrors, v => settings.Query.StopOnErrors = v);
-        // Code folding (secção 6): regiões #region/#endregion em todas as query tabs.
+        // Code folding (section 6): #region/#endregion regions in every query tab.
         Toggle("query.codeFolding", () => settings.Query.CodeFolding, v =>
         {
             settings.Query.CodeFolding = v;
@@ -147,7 +147,7 @@ public sealed partial class MainWindow
             QueryEditorOf(tab).Text = line;
         }, () => _log.LineCount > 0);
 
-        // Ferramentas, ajuda e ficheiro.
+        // Tools, help and file.
         c.SetHandler("tools.preferences", _ => new ValueTask(ShowPreferencesAsync(null)));
         c.SetHandler("tools.preferencesLogging", _ => new ValueTask(ShowPreferencesAsync(PreferencesWindow.LoggingPage)));
         c.SetHandler("tools.preferencesData", _ => new ValueTask(ShowPreferencesAsync(PreferencesWindow.DataPage)));
@@ -183,7 +183,7 @@ public sealed partial class MainWindow
         _ => [],
     };
 
-    /// <summary>F6: alterna o foco entre o editor e o grid de resultados da query tab ativa.</summary>
+    /// <summary>F6: toggles the focus between the editor and the results grid of the active query tab.</summary>
     private void SwitchQueryResults()
     {
         var view = ActiveQueryView!;
@@ -245,8 +245,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Keymap (FAM-K01): os atalhos do registo são vistos antes do controlo focado, como as actions do HeidiSQL;
-    /// um atalho cujo comando não pode correr não é consumido e segue para o controlo.
+    /// Keymap (FAM-K01): the registry's shortcuts are seen before the focused control, like HeidiSQL's actions;
+    /// a shortcut whose command cannot run is not consumed and goes on to the control.
     /// </summary>
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
@@ -264,7 +264,7 @@ public sealed partial class MainWindow
         _ui.Execute(command.Id);
     }
 
-    /// <summary>Executa o atalho como se fosse premido (testes e automação).</summary>
+    /// <summary>Runs the shortcut as if it were pressed (tests and automation).</summary>
     public bool TryExecuteShortcut(string shortcut)
     {
         var command = _context.Commands.ResolveExecutable(KeyChord.Parse(shortcut), FocusContexts);

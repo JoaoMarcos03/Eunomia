@@ -3,9 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 namespace Eunomia.Engine.Results;
 
 /// <summary>
-/// Fonte de linhas por índice (secções 11 e 15.1). O grid lê só blocos residentes, sem bloquear
-/// (<see cref="TryGetBlock"/>), e pede ranges de forma assíncrona; quando chegam blocos novos,
-/// <see cref="BlocksAvailable"/> é disparado numa thread qualquer.
+/// Row source by index (sections 11 and 15.1). The grid only reads resident blocks, without blocking
+/// (<see cref="TryGetBlock"/>), and requests ranges asynchronously; when new blocks arrive,
+/// <see cref="BlocksAvailable"/> is raised on any thread.
 /// </summary>
 public interface IRowSource
 {
@@ -13,22 +13,22 @@ public interface IRowSource
 
     RowCountState RowCount { get; }
 
-    /// <summary>Linhas por bloco. O bloco <c>b</c> contém as linhas <c>[b * BlockSize, (b + 1) * BlockSize)</c>.</summary>
+    /// <summary>Rows per block. Block <c>b</c> holds rows <c>[b * BlockSize, (b + 1) * BlockSize)</c>.</summary>
     int BlockSize { get; }
 
-    /// <summary>Devolve o bloco se estiver residente. Nunca bloqueia nem faz I/O.</summary>
+    /// <summary>Returns the block if it is resident. Never blocks or does I/O.</summary>
     bool TryGetBlock(int blockIndex, [NotNullWhen(true)] out RowBlock? block);
 
-    /// <summary>Devolve o bloco, carregando-o (ou refazendo-o) se não estiver residente.</summary>
+    /// <summary>Returns the block, loading it (or rebuilding it) if it is not resident.</summary>
     ValueTask<RowBlock> GetBlockAsync(int blockIndex, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Garante que as linhas <c>[firstRow, firstRow + count)</c> ficam residentes e protegidas de despejo
-    /// até ao próximo pedido (visível + prefetch). Termina quando todos os blocos do range estiverem residentes.
+    /// Makes sure rows <c>[firstRow, firstRow + count)</c> stay resident and protected from eviction
+    /// until the next request (visible + prefetch). Completes when every block of the range is resident.
     /// </summary>
     Task RequestRangeAsync(long firstRow, int count, CancellationToken cancellationToken = default);
 
-    /// <summary>Blocos novos residentes. Pode ser disparado fora da UI thread.</summary>
+    /// <summary>New resident blocks. May be raised off the UI thread.</summary>
     event EventHandler<BlocksAvailableEventArgs>? BlocksAvailable;
 }
 
@@ -46,7 +46,7 @@ public static class RowSourceExtensions
     public static int BlockCount(this IRowSource source) =>
         (int)((source.RowCount.Count + source.BlockSize - 1) / source.BlockSize);
 
-    /// <summary>Bloco e linha local de uma linha global, se o bloco estiver residente.</summary>
+    /// <summary>Block and local row of a global row, if the block is resident.</summary>
     public static bool TryGetRow(this IRowSource source, long row, [NotNullWhen(true)] out RowBlock? block, out int localRow)
     {
         var blockIndex = (int)(row / source.BlockSize);

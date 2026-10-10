@@ -16,7 +16,7 @@ using Eunomia.UI.Shell.Views;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Shell da Fase 2: layout (FAM-L01), menus e toolbar (L02, L03), keymap (K01), painéis (L07), log e status bar.</summary>
+/// <summary>Phase 2 shell: layout (FAM-L01), menus and toolbar (L02, L03), keymap (K01), panels (L07), log and status bar.</summary>
 public sealed class ShellTests
 {
     private static MainWindow Open(AppSettings? settings = null, ThemeVariant? theme = null)
@@ -78,7 +78,7 @@ public sealed class ShellTests
         Assert.Equal(MainMenuLayout.Toolbar.Count(t => !t.IsSeparator), buttons.Count);
         Assert.All(buttons, b => Assert.Equal(registry.StateOf(b.Name!["tb_".Length..]).IsImplemented, b.IsVisible));
 
-        // Menus: cada item visível tem handler; nenhum separador visível no início, no fim ou repetido.
+        // Menus: every visible item has a handler; no visible separator at the start, at the end or repeated.
         var menu = window.GetLogicalDescendants().OfType<Menu>().First();
         foreach (var top in menu.Items.OfType<MenuItem>())
         {
@@ -181,7 +181,7 @@ public sealed class ShellTests
     [AvaloniaFact]
     public void AtalhoDeComandoSemHandlerSegueParaOControlo()
     {
-        // Ins (Insert row) ainda não está implementado: o grid recebe a tecla e o keymap não a consome.
+        // Ins (Insert row) is not implemented yet: the grid gets the key and the keymap does not consume it.
         var window = Open();
         window.ShowDataTab();
         window.DataGrid.Focus();
@@ -276,7 +276,7 @@ public sealed class ShellTests
         var window = Open();
         var prefs = new PreferencesWindow(window.Context, PreferencesWindow.ShortcutsPage);
 
-        // Ctrl+D é do "Database tree": "No" mantém tudo; "Yes" tira-o de lá.
+        // Ctrl+D belongs to "Database tree": "No" keeps everything; "Yes" takes it from there.
         await prefs.AssignAsync("query.newTab", KeyChord.Parse("Ctrl+D"), _ => Task.FromResult(MessageDialogResult.No));
         Assert.Equal(KeyChord.Parse("Ctrl+T"), prefs.PendingShortcuts.ShortcutOf("query.newTab"));
 

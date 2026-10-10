@@ -2,10 +2,10 @@ using System.Globalization;
 
 namespace Eunomia.App.Sessions;
 
-/// <summary>Pedido de ligação vindo da linha de comandos (FAM-S06; anexo A §9).</summary>
+/// <summary>Connection request from the command line (FAM-S06; appendix A §9).</summary>
 public sealed record CommandLineRequest
 {
-    /// <summary><c>-d</c> / <c>--description</c>: caminho de uma sessão gravada.</summary>
+    /// <summary><c>-d</c> / <c>--description</c>: path of a saved session.</summary>
     public string? SessionPath { get; init; }
 
     public string? Host { get; init; }
@@ -34,10 +34,10 @@ public sealed record CommandLineRequest
 
     public string? SshKey { get; init; }
 
-    /// <summary>Ficheiros <c>.sql</c> a abrir em query tabs.</summary>
+    /// <summary><c>.sql</c> files to open in query tabs.</summary>
     public IReadOnlyList<string> SqlFiles { get; init; } = [];
 
-    /// <summary>Algum parâmetro de ligação (então cria-se uma sessão ad hoc por cima da <c>-d</c> ou dos defaults).</summary>
+    /// <summary>Any connection parameter (then an ad hoc session is created on top of <c>-d</c> or the defaults).</summary>
     public bool HasConnectionOverrides =>
         Host is not null || Port is not null || User is not null || Password is not null || Databases is not null || NetType is not null || SshHost is not null;
 
@@ -45,9 +45,9 @@ public sealed record CommandLineRequest
 }
 
 /// <summary>
-/// Linha de comandos compatível com o HeidiSQL (FAM-S06): <c>-x=valor</c>, <c>--longo=valor</c>, <c>-x valor</c> e
-/// <c>-x"valor"</c>; um valor não pode começar por <c>-</c>. Parâmetros de ligação criam uma sessão ad hoc
-/// (<c>host-xxxx</c>) que não é gravada. Opções próprias (<c>--theme</c>, <c>--startup-probe</c>…) são ignoradas aqui.
+/// HeidiSQL-compatible command line (FAM-S06): <c>-x=value</c>, <c>--long=value</c>, <c>-x value</c> and
+/// <c>-x"value"</c>; a value cannot start with <c>-</c>. Connection parameters create an ad hoc session
+/// (<c>host-xxxx</c>) that is not saved. Eunomia's own options (<c>--theme</c>, <c>--startup-probe</c>…) are ignored here.
 /// </summary>
 public static class CommandLine
 {
@@ -113,7 +113,7 @@ public static class CommandLine
         };
     }
 
-    /// <summary>Sessão a ligar: a gravada (<c>-d</c>) com os parâmetros por cima, ou uma ad hoc nova.</summary>
+    /// <summary>Session to connect: the saved one (<c>-d</c>) with the parameters on top, or a new ad hoc one.</summary>
     public static SessionDefinition? Resolve(CommandLineRequest request, SessionCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(request);

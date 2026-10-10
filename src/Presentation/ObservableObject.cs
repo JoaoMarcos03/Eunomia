@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Eunomia.Presentation;
 
-/// <summary>Base mínima de <see cref="INotifyPropertyChanged"/> para view models (sem reflection, segura para AOT).</summary>
+/// <summary>Minimal <see cref="INotifyPropertyChanged"/> base for view models (no reflection, safe for AOT).</summary>
 public abstract class ObservableObject : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;

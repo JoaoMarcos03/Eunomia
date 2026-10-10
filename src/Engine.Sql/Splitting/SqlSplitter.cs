@@ -1,22 +1,22 @@
 namespace Eunomia.Engine.Sql.Splitting;
 
-/// <summary>Uma instrução separada, com a posição no texto original (para erros e "Run current query").</summary>
+/// <summary>A split statement, with its position in the original text (for errors and "Run current query").</summary>
 public sealed record SqlStatement(string Text, int Start, int End, int Line)
 {
-    /// <summary>Delimitador em vigor quando a instrução acabou (para o SQL log).</summary>
+    /// <summary>Delimiter in effect when the statement ended (for the SQL log).</summary>
     public string Delimiter { get; init; } = ";";
 }
 
 /// <summary>
-/// Separa um script em instruções com as regras do HeidiSQL (FAM-Q02; anexo C §4.4): o delimitador (por omissão
-/// <c>;</c>) só conta fora de strings (<c>'</c>, <c>"</c> e <c>`</c> com escapes por barra invertida ou aspas
-/// duplicadas) e de comentários (<c>-- </c>, <c>#</c>, <c>/* */</c>); <c>DELIMITER xyz</c> no início de uma linha
-/// muda o delimitador e não é enviado. Instruções só com espaços e comentários não são enviadas (os comentários
-/// condicionais <c>/*! */</c> são executáveis e ficam).
+/// Splits a script into statements with HeidiSQL's rules (FAM-Q02; appendix C §4.4): the delimiter (by default
+/// <c>;</c>) only counts outside strings (<c>'</c>, <c>"</c> and <c>`</c> with backslash escapes or doubled
+/// quotes) and comments (<c>-- </c>, <c>#</c>, <c>/* */</c>); <c>DELIMITER xyz</c> at the start of a line
+/// changes the delimiter and is not sent. Statements with only whitespace and comments are not sent (conditional
+/// comments <c>/*! */</c> are executable and stay).
 /// </summary>
 public static class SqlSplitter
 {
-    /// <summary>Delimitador válido: não vazio e sem comentários nem aspas (como o "Set delimiter" do HeidiSQL).</summary>
+    /// <summary>Valid delimiter: not empty and without comments or quotes (like HeidiSQL's "Set delimiter").</summary>
     public static bool IsValidDelimiter(string? delimiter) =>
         !string.IsNullOrWhiteSpace(delimiter)
         && !delimiter.Contains("/*", StringComparison.Ordinal)
@@ -45,7 +45,7 @@ public static class SqlSplitter
             {
                 Add(result, text, start, i, startLine, delimiter);
                 delimiter = newDelimiter;
-                // A linha do DELIMITER não é enviada.
+                // The DELIMITER line is not sent.
                 i = commandEnd;
                 start = i;
                 startLine = line;
@@ -100,8 +100,8 @@ public static class SqlSplitter
     }
 
     /// <summary>
-    /// "Run current query" (Ctrl+Shift+F9): a instrução que contém o caret; se o caret está entre instruções (ou numa
-    /// vazia), a anterior.
+    /// "Run current query" (Ctrl+Shift+F9): the statement containing the caret; if the caret is between statements (or in
+    /// an empty one), the previous one.
     /// </summary>
     public static SqlStatement? StatementAt(IReadOnlyList<SqlStatement> statements, int caret)
     {
@@ -123,7 +123,7 @@ public static class SqlSplitter
 
     private static void Add(List<SqlStatement> result, string text, int start, int end, int line, string delimiter)
     {
-        // Avança espaços e quebras de linha iniciais para a posição e a linha apontarem para o texto.
+        // Skips leading whitespace and line breaks so the position and the line point at the text.
         var s = start;
         while (s < end && char.IsWhiteSpace(text[s]))
         {
@@ -147,7 +147,7 @@ public static class SqlSplitter
 
     private static bool IsOnlyComments(string text, int start, int end) => IsOnlyComments(text.AsSpan(start, end - start));
 
-    /// <summary>Só espaços e comentários (os condicionais <c>/*! */</c> e <c>/*M! */</c> são executáveis).</summary>
+    /// <summary>Only whitespace and comments (the conditional <c>/*! */</c> and <c>/*M! */</c> ones are executable).</summary>
     internal static bool IsOnlyComments(ReadOnlySpan<char> text)
     {
         var start = 0;
@@ -169,7 +169,7 @@ public static class SqlSplitter
             }
             else if (c == '/' && i + 1 < end && text[i + 1] == '*')
             {
-                // Comentários condicionais do MySQL/MariaDB são executáveis.
+                // MySQL/MariaDB conditional comments are executable.
                 if (i + 2 < end && (text[i + 2] == '!' || (text[i + 2] == 'M' && i + 3 < end && text[i + 3] == '!')))
                 {
                     return false;
@@ -219,7 +219,7 @@ public static class SqlSplitter
         return text.Length;
     }
 
-    /// <summary><c>DELIMITER xyz</c> no início da linha (sem distinguir maiúsculas); o fim é o fim da linha.</summary>
+    /// <summary><c>DELIMITER xyz</c> at the start of the line (case-insensitive); it ends at the end of the line.</summary>
     private static bool TryReadDelimiterCommand(string text, int i, out string delimiter, out int end)
     {
         delimiter = string.Empty;

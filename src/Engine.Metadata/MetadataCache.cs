@@ -4,20 +4,20 @@ using Eunomia.Engine.Execution;
 
 namespace Eunomia.Engine.Metadata;
 
-/// <summary>Opções da sessão que mudam a lista de bases e o custo das queries (anexo A §5, §6).</summary>
+/// <summary>Session options that change the database list and the cost of the queries (appendix A §5, §6).</summary>
 public sealed record MetadataOptions
 {
-    /// <summary>"Get full table status": tamanhos e linhas em background depois dos nomes.</summary>
+    /// <summary>"Get full table status": sizes and rows in the background after the names.</summary>
     public bool FullTableStatus { get; init; } = true;
 
-    /// <summary>Campo Databases: lista literal separada por <c>;</c> que substitui o <c>SHOW DATABASES</c>.</summary>
+    /// <summary>Databases field: a literal list separated by <c>;</c> that replaces <c>SHOW DATABASES</c>.</summary>
     public string Databases { get; init; } = string.Empty;
 
-    /// <summary>"Hide database pattern": regex que retira bases da lista.</summary>
+    /// <summary>"Hide database pattern": regex that removes databases from the list.</summary>
     public string HideDatabasePattern { get; init; } = string.Empty;
 }
 
-/// <summary>Objetos de uma base em cache e o nível de detalhe já lido (<see cref="HasStatistics"/>: há tamanhos e linhas).</summary>
+/// <summary>Cached objects of a database and the level of detail already read (<see cref="HasStatistics"/>: sizes and rows are there).</summary>
 public sealed record DatabaseObjects(string Database, IReadOnlyList<DbObjectInfo> Objects, ObjectDetail Detail, DateTimeOffset LoadedAt)
 {
     public bool HasStatistics => Detail == ObjectDetail.Statistics;
@@ -31,7 +31,7 @@ public enum MetadataScope
     All,
 }
 
-/// <summary>Metadata mudou (carregado, estatísticas chegaram, invalidado). Disparado em qualquer thread.</summary>
+/// <summary>Metadata changed (loaded, statistics arrived, invalidated). Raised on any thread.</summary>
 public sealed class MetadataChangedEventArgs(MetadataScope scope, string? database = null, string? objectName = null) : EventArgs
 {
     public MetadataScope Scope { get; } = scope;
@@ -42,11 +42,11 @@ public sealed class MetadataChangedEventArgs(MetadataScope scope, string? databa
 }
 
 /// <summary>
-/// Cache de metadata de uma sessão (secção 21.1 <c>Engine.Metadata</c>; 12.3; PR-08). As bases e os objetos são pedidos na
-/// ligação de metadata e ficam em cache até um refresh. Os objetos chegam em duas fases: primeiro só os nomes (query leve
-/// ao <c>information_schema</c>, para a árvore aparecer logo) e, com "Get full table status", as estatísticas em
-/// background (prioridade baixa), que atualizam a cache e disparam <see cref="Changed"/>. Pedidos iguais em simultâneo
-/// partilham a mesma ida ao servidor. Thread-safe.
+/// Metadata cache of a session (section 21.1 <c>Engine.Metadata</c>; 12.3; PR-08). Databases and objects are requested on the
+/// metadata connection and stay cached until a refresh. Objects arrive in two phases: first only the names (a light query
+/// on <c>information_schema</c>, so the tree shows right away) and, with "Get full table status", the statistics in
+/// the background (low priority), which update the cache and raise <see cref="Changed"/>. Identical concurrent requests
+/// share the same round trip. Thread-safe.
 /// </summary>
 public sealed class MetadataCache(SessionHost host, MetadataOptions options)
 {
@@ -63,12 +63,12 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
     private readonly Dictionary<string, Task> _serverLists = new(StringComparer.Ordinal);
     private int _generation;
 
-    /// <summary>Sobe em cada invalidação: uma definição pedida antes não entra na cache.</summary>
+    /// <summary>Goes up on every invalidation: a definition requested before does not enter the cache.</summary>
     private int _tableEpoch;
 
     /// <summary>
-    /// Tempo que uma leitura de definição abandonada a meio (outra escolha na árvore) tem para acabar antes do
-    /// <c>KILL QUERY</c>: é curta, fica na cache, e cancelá-la abria outra ligação. Só uma leitura presa é cancelada.
+    /// Time a definition read abandoned halfway (another choice in the tree) has to finish before the
+    /// <c>KILL QUERY</c>: it is short, it ends up in the cache, and cancelling it opened another connection. Only a stuck read is cancelled.
     /// </summary>
     public static readonly TimeSpan CancelGrace = TimeSpan.FromSeconds(3);
 
@@ -78,7 +78,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
 
     public event EventHandler<MetadataChangedEventArgs>? Changed;
 
-    /// <summary>Bases já em cache, ou <c>null</c>.</summary>
+    /// <summary>Databases already cached, or <c>null</c>.</summary>
     public IReadOnlyList<string>? CachedDatabases
     {
         get
@@ -106,7 +106,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
         }
     }
 
-    /// <summary>Bases da sessão (whitelist e Hide database pattern aplicados), pela ordem do servidor.</summary>
+    /// <summary>The session's databases (whitelist and Hide database pattern applied), in the server's order.</summary>
     public Task<IReadOnlyList<string>> GetDatabasesAsync(CancellationToken cancellationToken)
     {
         lock (_gate)
@@ -142,7 +142,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
                 }
                 catch (ArgumentException)
                 {
-                    // Regex inválida: a lista fica sem filtro (o HeidiSQL regista e continua).
+                    // Invalid regex: the list stays unfiltered (HeidiSQL logs it and carries on).
                 }
                 if (hide is not null)
                 {
@@ -170,8 +170,8 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
     }
 
     /// <summary>
-    /// Objetos de uma base. Sem cache, pede só os nomes (rápido) e, com "Get full table status", agenda as estatísticas em
-    /// background. <paramref name="forceStatistics"/> é o Shift+F5 ("Full status refresh").
+    /// Objects of a database. Without a cache, asks only for the names (fast) and, with "Get full table status", schedules the
+    /// statistics in the background. <paramref name="forceStatistics"/> is Shift+F5 ("Full status refresh").
     /// </summary>
     public Task<DatabaseObjects> GetObjectsAsync(string database, CancellationToken cancellationToken, bool forceStatistics = false)
     {
@@ -223,17 +223,17 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
     }
 
     /// <summary>
-    /// Segunda fase em background: estatísticas (tamanhos, linhas) ou só os detalhes (engine, datas, collation) quando "Get
-    /// full table status" está desligado. Numa base grande demoram (50 s o <c>SHOW TABLE STATUS</c> de 5.000 tabelas InnoDB
-    /// no MariaDB 10.4, 7 s os detalhes): correm numa ligação de job, para não prenderem a de metadata, onde esperavam as
-    /// definições das tabelas (Data tab, table editor) e a árvore. No modo de ligação única ficam na fila de baixa
-    /// prioridade da ligação de metadata, como antes.
+    /// Second phase in the background: statistics (sizes, rows) or only the details (engine, dates, collation) when "Get
+    /// full table status" is off. On a large database they take time (50 s for <c>SHOW TABLE STATUS</c> of 5,000 InnoDB tables
+    /// on MariaDB 10.4, 7 s for the details): they run on a job connection, so they do not hold the metadata one, where the
+    /// table definitions (Data tab, table editor) and the tree were waiting. In single-connection mode they stay in the
+    /// low-priority queue of the metadata connection, as before.
     /// </summary>
     private void StartStatistics(string database, int generation, ObjectDetail detail)
     {
         if (_loadingStatistics.ContainsKey(database))
         {
-            // Shift+F5 durante a leitura dos detalhes: as estatísticas seguem-se.
+            // Shift+F5 while the details are being read: the statistics follow.
             if (detail == ObjectDetail.Statistics && _loadingDetail.GetValueOrDefault(database) != ObjectDetail.Statistics)
             {
                 _pendingStatistics.Add(database);
@@ -258,7 +258,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
                 }
                 Changed?.Invoke(this, new MetadataChangedEventArgs(MetadataScope.Objects, database));
             }
-#pragma warning disable CA1031 // Estatísticas são opcionais: um erro (permissões, sessão a fechar) não pode derrubar nada.
+#pragma warning disable CA1031 // Statistics are optional: an error (permissions, session closing) must not bring anything down.
             catch (Exception)
 #pragma warning restore CA1031
             {
@@ -267,7 +267,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
             {
                 lock (_gate)
                 {
-                    // Depois de um refresh (geração nova), as entradas já são de outra leitura.
+                    // After a refresh (new generation), the entries already come from another read.
                     if (generation == _generation)
                     {
                         _loadingStatistics.Remove(database);
@@ -282,7 +282,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
         });
     }
 
-    /// <summary>Espera pelas estatísticas pedidas para a base (testes e medições).</summary>
+    /// <summary>Waits for the statistics requested for the database (tests and measurements).</summary>
     public Task WaitForStatisticsAsync(string database)
     {
         lock (_gate)
@@ -291,7 +291,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
         }
     }
 
-    /// <summary>Collation por omissão de cada base (Host tab), pedida uma vez até ao próximo refresh.</summary>
+    /// <summary>Default collation of each database (Host tab), requested once until the next refresh.</summary>
     public Task<IReadOnlyDictionary<string, string>> GetDatabaseCollationsAsync(CancellationToken cancellationToken)
     {
         lock (_gate)
@@ -305,8 +305,8 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
     }
 
     /// <summary>
-    /// Todas as tabelas da base com colunas, chaves e FKs, de uma vez (Schema Visualizer). Não fica em cache: o
-    /// diagrama relê-o no refresh (SV-16).
+    /// Every table of the database with columns, keys and FKs, at once (Schema Visualizer). It is not cached: the
+    /// diagram reads it again on refresh (SV-16).
     /// </summary>
     public Task<IReadOnlyList<TableDefinition>> GetSchemaAsync(string database, CancellationToken cancellationToken)
     {
@@ -314,7 +314,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
         return Host.RunMetadataAsync((h, ct) => h.Metadata.GetSchemaAsync(database, database, ct), cancellationToken);
     }
 
-    /// <summary>Colunas, índices, chaves estrangeiras e checks de uma tabela (em cache até refresh da base).</summary>
+    /// <summary>Columns, indexes, foreign keys and checks of a table (cached until the database is refreshed).</summary>
     public async Task<TableDefinition> GetTableAsync(DbObjectRef table, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(table);
@@ -324,8 +324,8 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
         }
         var (definition, fetched) = await Host.RunMetadataAsync(async (h, ct) =>
         {
-            // Pedidos seguidos da mesma tabela (pré-carga da navegação, Data tab, table editor) esperam na mesma fila: o
-            // seguinte usa a definição que o anterior acabou de trazer, em vez de voltar ao servidor.
+            // Consecutive requests for the same table (navigation preload, Data tab, table editor) wait in the same queue: the
+            // next one uses the definition the previous one just brought, instead of going back to the server.
             if (CachedTable(table) is { } loaded)
             {
                 return (loaded, false);
@@ -338,7 +338,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
             var fresh = await h.Metadata.GetTableAsync(table, ct).ConfigureAwait(false);
             lock (_gate)
             {
-                // Um refresh ou um ALTER durante o pedido deixam-no fora da cache (quem pediu recebe-o na mesma).
+                // A refresh or an ALTER during the request keeps it out of the cache (the caller still gets it).
                 if (epoch == _tableEpoch)
                 {
                     _tables[table] = fresh;
@@ -354,8 +354,8 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
     }
 
     /// <summary>
-    /// Listas do servidor que não mudam durante a sessão (collations, engines): pedidas uma vez e partilhadas até um
-    /// refresh completo. O pedido não depende de quem o fez primeiro; cancelar só deixa de esperar por ele.
+    /// Server lists that do not change during the session (collations, engines): requested once and shared until a
+    /// full refresh. The request does not depend on whoever made it first; cancelling only stops waiting for it.
     /// </summary>
     public Task<T> GetServerListAsync<T>(string key, Func<IDbConnectionHandle, CancellationToken, Task<T>> load, CancellationToken cancellationToken)
     {
@@ -378,8 +378,8 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
     }
 
     /// <summary>
-    /// Refresh (F5): sem base, esquece tudo (lista de bases incluída); com base, só essa base e as suas tabelas
-    /// (Database tab). Pedidos em curso de antes do refresh são descartados ao chegar.
+    /// Refresh (F5): without a database, forgets everything (database list included); with a database, only that database and
+    /// its tables (Database tab). Requests in flight from before the refresh are discarded when they arrive.
     /// </summary>
     public void Invalidate(string? database = null)
     {
@@ -414,7 +414,7 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
         Changed?.Invoke(this, new MetadataChangedEventArgs(database is null ? MetadataScope.All : MetadataScope.Objects, database));
     }
 
-    /// <summary>Esquece só a definição de uma tabela (depois de um ALTER).</summary>
+    /// <summary>Forgets only the definition of one table (after an ALTER).</summary>
     public void InvalidateTable(DbObjectRef table)
     {
         lock (_gate)

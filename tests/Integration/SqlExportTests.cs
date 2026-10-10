@@ -10,7 +10,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>SQL export contra o servidor (Fase 8; FAM-E06; secção 13.2): o dump reimporta-se e dá os mesmos dados.</summary>
+/// <summary>SQL export against the server (phase 8; FAM-E06; section 13.2): the dump re-imports and gives the same data.</summary>
 public sealed class SqlExportTests : IAsyncLifetime
 {
     private const int BigRows = 25_000;
@@ -56,8 +56,8 @@ public sealed class SqlExportTests : IAsyncLifetime
                 "(WITH RECURSIVE s(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM s WHERE n < 9) SELECT n FROM s) c",
             $"CREATE TABLE {db}.nokey (a INT, b VARCHAR(10))",
             $"INSERT INTO {db}.nokey VALUES (1, 'x'), (1, 'x'), (2, NULL)");
-        // Sem o nome da base, como é costume: o SHOW CREATE TRIGGER devolve o texto original, com os nomes qualificados
-        // se o tiverem sido (e o dump recriava o trigger na base de origem, como no HeidiSQL e no mysqldump).
+        // Without the database name, as usual: SHOW CREATE TRIGGER returns the original text, with qualified names
+        // if they were qualified (and the dump recreated the trigger in the source database, as in HeidiSQL and mysqldump).
         await using var handle = await TestServer.OpenAsync(_database);
         foreach (var sql in new[]
         {
@@ -116,7 +116,7 @@ public sealed class SqlExportTests : IAsyncLifetime
         };
     }
 
-    /// <summary>Corre o dump numa base nova com o Run SQL file e compara os dados tabela a tabela.</summary>
+    /// <summary>Runs the dump on a new database with Run SQL file and compares the data table by table.</summary>
     private async Task ReimportAndCompareAsync(string dump)
     {
         var copy = _database + "_c" + _cleanup.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -167,7 +167,7 @@ public sealed class SqlExportTests : IAsyncLifetime
         Assert.Contains("-- Dumping data for table " + _database + ".big: ~", dump, StringComparison.Ordinal);
         Assert.Contains("_binary 0xCAFE", dump, StringComparison.Ordinal);
         Assert.DoesNotContain("`gen`", dump.Split("-- Dumping data for table " + _database + ".typed")[1].Split("\r\n\r\n")[0], StringComparison.Ordinal);
-        // 25.000 linhas com 64 KB por INSERT: vários INSERT; nunca mais de 10.000 linhas cada.
+        // 25,000 rows with 64 KB per INSERT: several INSERTs; never more than 10,000 rows each.
         Assert.True(dump.Split("INSERT INTO `big`").Length - 1 >= 3);
         Assert.All(result.Items.Where(i => i.Kind == DbObjectKind.Table), i => Assert.Equal(SqlExportItemState.Done, i.State));
         Assert.Equal(BigRows, result.Items.Single(i => i.Name == "big").Rows);
@@ -186,7 +186,7 @@ public sealed class SqlExportTests : IAsyncLifetime
         TestServer.RequireServer();
         var sequential = Path.Combine(_directory, "seq.sql");
         var zip = Path.Combine(_directory, "par.zip");
-        // O mesmo pedido (as estimativas de linhas do InnoDB podem mudar entre leituras).
+        // The same request (InnoDB row estimates may change between reads).
         var request = await RequestAsync(SqlExportTarget.File, sequential, snapshot: true);
         await new SqlExportJob(_host, request).RunAsync(null, Ct);
         var result = await new SqlExportJob(_host, request with { Target = SqlExportTarget.Zip, Path = zip, ConsistentSnapshot = false }).RunAsync(null, Ct);
@@ -229,11 +229,11 @@ public sealed class SqlExportTests : IAsyncLifetime
             Assert.False(File.Exists(path));
             Assert.False(File.Exists(path + ".partial"));
         }
-        // A ligação de job foi reposta e continua a servir.
+        // The job connection was reset and still works.
         Assert.Equal(1L, Convert.ToInt64(await _host.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT 1", ct), Ct), System.Globalization.CultureInfo.InvariantCulture));
     }
 
-    /// <summary>IProgress que chama já, na thread que reporta (o Progress&lt;T&gt; precisa de um contexto de sincronização).</summary>
+    /// <summary>IProgress that calls right away, on the reporting thread (Progress&lt;T&gt; needs a synchronisation context).</summary>
     private sealed class SyncProgress<T>(Action<T> report) : IProgress<T>
     {
         public void Report(T value) => report(value);

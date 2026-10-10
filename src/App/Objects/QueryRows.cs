@@ -3,10 +3,10 @@ using Eunomia.Engine.Results;
 
 namespace Eunomia.App.Objects;
 
-/// <summary>Linhas de uma consulta pequena (listas do servidor, resultados de manutenção) em texto bruto, NULL = <c>null</c>.</summary>
+/// <summary>Rows of a small query (server lists, maintenance results) as raw text, NULL = <c>null</c>.</summary>
 internal static class QueryRows
 {
-    /// <summary>Lê todas as linhas na ligação dada; um erro do servidor vira <see cref="DbOperationException"/>.</summary>
+    /// <summary>Reads every row on the given connection; a server error becomes a <see cref="DbOperationException"/>.</summary>
     public static async Task<List<string?[]>> ReadAsync(IDbConnectionHandle h, string sql, CancellationToken cancellationToken)
     {
         var rows = new List<string?[]>();

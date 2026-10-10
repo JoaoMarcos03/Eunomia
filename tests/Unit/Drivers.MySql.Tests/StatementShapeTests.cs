@@ -1,6 +1,6 @@
 namespace Eunomia.Drivers.MySql.Tests;
 
-/// <summary>Forma das instruções para juntar o SHOW WARNINGS (PR-10) e limpeza das mensagens de erro.</summary>
+/// <summary>Shape of statements for appending SHOW WARNINGS (PR-10) and cleaning up error messages.</summary>
 public sealed class StatementShapeTests
 {
     [Theory]

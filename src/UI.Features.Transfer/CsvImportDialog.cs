@@ -17,15 +17,15 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Features.Transfer;
 
-/// <summary>Corre o import pedido pelo diálogo (o shell junta a sessão).</summary>
+/// <summary>Runs the import requested by the dialog (the shell adds the session).</summary>
 public delegate Task<CsvImportResult> CsvImportRunner(CsvImportRequest request, IProgress<CsvImportProgress> progress, CancellationToken cancellationToken);
 
 /// <summary>
-/// Tools › Import CSV file (FAM-E07; anexo B §3.1): ficheiro e codificação, Ignore first N lines, Low priority, números
-/// locais, Truncate, Keep dialog open; separadores com sequências de barra invertida (<c>;</c>, <c>"</c> opcional,
-/// <c>"</c>, <c>\r\n</c>); duplicados INSERT, INSERT IGNORE ou REPLACE (omissão); servidor (<c>LOAD DATA</c>) ou cliente;
-/// base, tabela e colunas marcadas com Up/Down/All (mapeamento posicional). Durante o import, Import passa a Cancel e
-/// a barra mostra os bytes lidos.
+/// Tools › Import CSV file (FAM-E07; appendix B §3.1): file and encoding, Ignore first N lines, Low priority, local
+/// numbers, Truncate, Keep dialog open; separators with backslash sequences (<c>;</c>, optional <c>"</c>,
+/// <c>"</c>, <c>\r\n</c>); duplicates INSERT, INSERT IGNORE or REPLACE (default); server (<c>LOAD DATA</c>) or client;
+/// database, table and checked columns with Up/Down/All (positional mapping). During the import, Import becomes Cancel
+/// and the bar shows the bytes read.
 /// </summary>
 public sealed class CsvImportDialog : Window
 {
@@ -89,7 +89,7 @@ public sealed class CsvImportDialog : Window
         FontFamily = UiFonts.Ui;
         FontSize = 12;
 
-        // Valores gravados (o Truncate começa sempre desligado).
+        // Saved values (Truncate always starts off).
         _file.Text = settings.FileName;
         _encoding.SelectedItem = SqlFile.LoadEncodings.Contains(settings.Encoding) ? settings.Encoding : SqlFile.AutoDetect;
         _ignoreLines.Value = Math.Max(0, settings.IgnoreLines);
@@ -126,7 +126,7 @@ public sealed class CsvImportDialog : Window
             }
         };
 
-        // Linhas compactas na lista das colunas (o ListBoxItem do Fluent é alto).
+        // Compact rows in the columns list (Fluent's ListBoxItem is tall).
         _columns.Styles.Add(new Style(x => x.OfType<ListBoxItem>())
         {
             Setters =
@@ -151,7 +151,7 @@ public sealed class CsvImportDialog : Window
         }
     }
 
-    // ---------- Para testes ----------
+    // ---------- For tests ----------
 
     internal TextBox FileBox => _file;
 
@@ -167,14 +167,14 @@ public sealed class CsvImportDialog : Window
 
     internal IReadOnlyList<(CsvTargetColumn Column, CheckBox Check)> ColumnItems => _columnItems;
 
-    /// <summary>Carregamento de tabelas ou colunas em curso.</summary>
+    /// <summary>Loading of tables or columns in progress.</summary>
     internal Task Loading { get; private set; } = Task.CompletedTask;
 
     private string? InitialTable { get; set; }
 
     internal void MoveColumn(int index, int delta) => Move(index, delta);
 
-    // ---------- Destino ----------
+    // ---------- Target ----------
 
     private Task LoadTablesAsync(string? select)
     {
@@ -235,7 +235,7 @@ public sealed class CsvImportDialog : Window
         }
     }
 
-    /// <summary>Todas as colunas marcadas, pela ordem da tabela.</summary>
+    /// <summary>Every checked column, in table order.</summary>
     private void SetColumns(IReadOnlyList<CsvTargetColumn> columns)
     {
         _columnItems = [.. columns.Select(c => (c, new CheckBox { Content = Text(c.Name), IsChecked = true, MinHeight = 22 }))];
@@ -270,7 +270,7 @@ public sealed class CsvImportDialog : Window
         }
     }
 
-    /// <summary>"optionally" só conta para o LOAD DATA, como no HeidiSQL.</summary>
+    /// <summary>"optionally" only counts for LOAD DATA, as in HeidiSQL.</summary>
     private void UpdateEnabled() => _optionally.IsEnabled = _server.IsChecked == true && _running is null;
 
     private async Task BrowseAsync()

@@ -2,7 +2,7 @@ using Eunomia.App.Secrets;
 
 namespace Eunomia.Infra.Secrets.Windows.Tests;
 
-/// <summary>Credential Manager e DPAPI reais (só em Windows). Usam um prefixo próprio de teste.</summary>
+/// <summary>Real Credential Manager and DPAPI (Windows only). They use a test prefix of their own.</summary>
 public sealed class SecretStoreTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "eunomia-secrets-" + Guid.NewGuid().ToString("N"));

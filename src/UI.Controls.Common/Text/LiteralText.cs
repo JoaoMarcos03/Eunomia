@@ -4,17 +4,17 @@ using Avalonia.Layout;
 namespace Eunomia.UI.Controls.Common.Text;
 
 /// <summary>
-/// Conteúdo de botões, caixas e itens de menu com texto vindo de dados (nomes de tabelas, colunas, bases, valores,
-/// ficheiros): uma string direta passa pelo AccessText do tema e o primeiro <c>_</c> vira tecla de acesso e desaparece
-/// ("prd_products" aparecia como "prdproducts"). Um <see cref="TextBlock"/> mostra o texto tal como é.
+/// Content of buttons, check boxes and menu items with text that comes from data (table, column and database names, values,
+/// files): a plain string goes through the theme's AccessText and the first <c>_</c> becomes an access key and disappears
+/// ("prd_products" showed as "prdproducts"). A <see cref="TextBlock"/> shows the text as it is.
 /// </summary>
 public static class LiteralText
 {
     public static TextBlock Of(string text) => new() { Text = text, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>
-    /// Para um <c>Header</c> ou <c>Content</c> que tem de ficar string (menus): cada <c>_</c> passa a <c>__</c>, que o
-    /// AccessText desenha como um <c>_</c>. Nunca para ler o valor de volta: o valor fica na variável ou no <c>Tag</c>.
+    /// For a <c>Header</c> or <c>Content</c> that has to stay a string (menus): each <c>_</c> becomes <c>__</c>, which
+    /// AccessText draws as a <c>_</c>. Never for reading the value back: the value stays in the variable or in <c>Tag</c>.
     /// </summary>
     public static string Escaped(string text)
     {

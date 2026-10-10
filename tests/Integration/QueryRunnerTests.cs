@@ -6,7 +6,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Execução de batches nas query tabs contra o servidor (Fase 6; anexo C §4.4; FAM-Q01–Q04, Q11).</summary>
+/// <summary>Running batches in the query tabs against the server (phase 6; appendix C §4.4; FAM-Q01–Q04, Q11).</summary>
 public sealed class QueryRunnerTests : IAsyncLifetime
 {
     private SessionHost _host = null!;

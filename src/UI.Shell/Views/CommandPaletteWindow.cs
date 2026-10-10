@@ -12,9 +12,9 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Paleta de comandos (Tools ▸ Command palette, Ctrl+Shift+P; roadmap 1.x #11): uma caixa de pesquisa por cima da lista
-/// dos comandos que podem correr agora (legenda, categoria e atalho). ↑/↓ escolhem, Enter ou duplo clique fecham com o id
-/// do comando, Esc fecha sem nada. Não substitui menus nem atalhos do HeidiSQL: só os encontra pelo nome.
+/// Command palette (Tools ▸ Command palette, Ctrl+Shift+P; roadmap 1.x #11): a search box above the list of the commands
+/// that can run now (caption, category and shortcut). ↑/↓ choose, Enter or double click close with the command's id,
+/// Esc closes with nothing. It does not replace HeidiSQL's menus or shortcuts: it just finds them by name.
 /// </summary>
 public sealed class CommandPaletteWindow : Window
 {
@@ -35,7 +35,7 @@ public sealed class CommandPaletteWindow : Window
         FontFamily = UiFonts.Ui;
         FontSize = 12;
 
-        // A mudança da propriedade é síncrona (o TextChanged chega depois, despachado).
+        // The property change is synchronous (TextChanged arrives later, dispatched).
         _search.PropertyChanged += (_, e) =>
         {
             if (e.Property == TextBox.TextProperty)
@@ -73,10 +73,10 @@ public sealed class CommandPaletteWindow : Window
 
     public TextBox SearchBox => _search;
 
-    /// <summary>Ids dos comandos mostrados, pela ordem (testes).</summary>
+    /// <summary>Ids of the commands shown, in order (tests).</summary>
     public IReadOnlyList<string> Shown => [.. _list.Items.OfType<ListBoxItem>().Select(i => ((CommandMatch)i.Tag!).Id)];
 
-    /// <summary>Fecha com o comando escolhido (o primeiro, se nenhum estiver escolhido).</summary>
+    /// <summary>Closes with the chosen command (the first one, if none is chosen).</summary>
     public void Accept()
     {
         var item = _list.SelectedItem as ListBoxItem ?? _list.Items.OfType<ListBoxItem>().FirstOrDefault();

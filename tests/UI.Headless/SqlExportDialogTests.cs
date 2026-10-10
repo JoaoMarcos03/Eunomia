@@ -9,7 +9,7 @@ using Eunomia.UI.Features.Transfer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Diálogo Export database as SQL (Fase 8; FAM-E06; anexo B §2.3.1).</summary>
+/// <summary>Export database as SQL dialog (phase 8; FAM-E06; appendix B §2.3.1).</summary>
 public sealed class SqlExportDialogTests
 {
     private static DbObjectInfo O(string database, string name, DbObjectKind kind) => new(new DbObjectRef(database, database, name, kind), RowsEstimate: 10);
@@ -44,7 +44,7 @@ public sealed class SqlExportDialogTests
         dialog.Show();
         await dialog.Loading;
 
-        // A base focada vem toda marcada; o recente do output escolhido preenche o nome.
+        // The focused database comes fully checked; the recent entry of the chosen output fills in the name.
         var loja = (CheckBox)((TreeViewItem)dialog.Tree.Items[0]!).Header!;
         Assert.Equal("loja", ((TextBlock)loja.Content!).Text);
         Assert.True(loja.IsChecked);
@@ -52,7 +52,7 @@ public sealed class SqlExportDialogTests
         dialog.OutputCombo.SelectedIndex = 1;
         Assert.Equal(@"C:\dumps\loja.zip", dialog.PathBox.Text);
 
-        // Drop implica Create e fica a bold como "Drop!!"; desligar Create desliga Drop.
+        // Drop implies Create and shows in bold as "Drop!!"; turning Create off turns Drop off.
         dialog.DropTablesBox.IsChecked = true;
         Assert.Equal("Drop!!", dialog.DropTablesBox.Content);
         dialog.CreateTablesBox.IsChecked = false;
@@ -60,7 +60,7 @@ public sealed class SqlExportDialogTests
         Assert.Equal("Drop", dialog.DropTablesBox.Content);
         dialog.CreateTablesBox.IsChecked = true;
 
-        // Desmarcar um objeto deixa a base em "alguns".
+        // Unchecking an object leaves the database at "some".
         dialog.SetObjectChecked("loja", "p1", false);
         Assert.Null(loja.IsChecked);
 

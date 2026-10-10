@@ -1,59 +1,59 @@
 name: Feedback
-description: Sugestões, coisas que estranhaste ao vir do HeidiSQL, o que falta ou o que podia ser mais simples.
+description: Suggestions, things that felt odd coming from HeidiSQL, what is missing or what could be simpler.
 title: "[Feedback] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Obrigado pelo feedback. Se algo não funciona ou a aplicação fechou, usa antes o formulário **Erro**.
+        Thanks for the feedback. If something does not work or the app closed, please use the **Bug** form instead.
 
   - type: input
-    id: versao
+    id: version
     attributes:
-      label: Versão do Eunomia
-      description: Em Help › About, ou no título da janela.
-      placeholder: "0.13.1"
+      label: Eunomia version
+      description: In Help › About, or in the window title.
+      placeholder: "1.0.0-beta.1"
     validations:
       required: true
 
   - type: dropdown
     id: area
     attributes:
-      label: Área
+      label: Area
       options:
-        - Sessões e ligação (Session Manager, SSH)
-        - Árvore de objetos
-        - Data tab e grid
-        - Query tab e editor SQL
+        - Sessions and connection (Session Manager, SSH)
+        - Object tree
+        - Data tab and grid
+        - Query tab and SQL editor
         - Table editor
-        - Import e export
+        - Import and export
         - Schema visualizer
-        - Aspeto (tema, ícones, tamanhos)
-        - Desempenho
-        - Outra
+        - Look and feel (theme, icons, sizes)
+        - Performance
+        - Other
     validations:
       required: true
 
   - type: textarea
     id: feedback
     attributes:
-      label: O teu feedback
-      description: O que fizeste, o que esperavas e o que sugeres. Uma captura de ecrã ajuda muito.
+      label: Your feedback
+      description: What you did, what you expected and what you suggest. A screenshot helps a lot.
     validations:
       required: true
 
   - type: textarea
     id: heidisql
     attributes:
-      label: Como é no HeidiSQL
-      description: Se vens do HeidiSQL, como funciona lá e o que estranhaste aqui.
+      label: How HeidiSQL does it
+      description: If you come from HeidiSQL, how it works there and what felt odd here.
 
   - type: dropdown
-    id: impacto
+    id: impact
     attributes:
-      label: Quanto te afeta
+      label: How much it affects you
       options:
-        - Impede-me de trocar o HeidiSQL pelo Eunomia
-        - Incomoda no dia a dia
-        - Seria bom ter
+        - It stops me from switching from HeidiSQL to Eunomia
+        - It gets in the way every day
+        - Nice to have

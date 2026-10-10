@@ -4,7 +4,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Data;
 
-/// <summary>Operador de um item do Quick Filter (anexo D B10).</summary>
+/// <summary>Operator of a Quick Filter item (appendix D B10).</summary>
 public enum QuickFilterOperator
 {
     Equal,
@@ -15,25 +15,25 @@ public enum QuickFilterOperator
     Greater,
     Less,
 
-    /// <summary>Clipboard: <c>col IN (&lt;texto tal como está&gt;)</c>, sem escaping.</summary>
+    /// <summary>Clipboard: <c>col IN (&lt;text as is&gt;)</c>, without escaping.</summary>
     InVerbatim,
     IsNull,
     IsNotNull,
 }
 
 /// <summary>
-/// SQL dos filtros do Data tab (anexo D B9, B10): multi column filter (<c>LIKE '%x%'</c> em todas as colunas, OR) e
-/// Quick Filter (valores das linhas selecionadas, valor pedido, clipboard), com o escaping do HeidiSQL: números sem aspas,
-/// binário em hex, BIT como <c>b'…'</c>, texto entre aspas.
+/// SQL of the Data tab filters (appendix D B9, B10): multi-column filter (<c>LIKE '%x%'</c> on every column, OR) and
+/// Quick Filter (values of the selected rows, a typed value, clipboard), with HeidiSQL's escaping: numbers unquoted,
+/// binary as hex, BIT as <c>b'…'</c>, text quoted.
 /// </summary>
 public static partial class DataFilters
 {
-    /// <summary>Limite dos valores recolhidos das linhas selecionadas (1 KB).</summary>
+    /// <summary>Limit of the values collected from the selected rows (1 KB).</summary>
     public const int MaxValuesLength = 1024;
 
     /// <summary>
-    /// "Create multi column filter": <c>CastAsText(col) LIKE '%texto%'</c> para todas as colunas (ocultas incluídas),
-    /// unidas por OR com quebras de linha; <c>ILIKE</c> onde o motor o tiver. Texto vazio dá filtro vazio.
+    /// "Create multi column filter": <c>CastAsText(col) LIKE '%text%'</c> for every column (hidden ones included),
+    /// joined by OR with line breaks; <c>ILIKE</c> where the engine has it. Empty text gives an empty filter.
     /// </summary>
     public static string MultiColumn(IDialect dialect, IEnumerable<ColumnDefinition> columns, string text)
     {
@@ -70,9 +70,9 @@ public static partial class DataFilters
     }
 
     /// <summary>
-    /// Lista do "IN (clipboard)" do Quick Filter: o texto do clipboard separado por vírgulas, tabs e quebras de linha (as
-    /// aspas à volta de um item saem) e cada item como literal da coluna. Antes ia tal e qual para o SQL: um texto colado
-    /// com <c>)</c> e <c>;</c> fechava o IN e corria outra instrução.
+    /// List for the Quick Filter's "IN (clipboard)": the clipboard text split on commas, tabs and line breaks (quotes
+    /// around an item are removed), each item as a literal of the column. It used to go into the SQL as is: pasted text
+    /// with <c>)</c> and <c>;</c> closed the IN and ran another statement.
     /// </summary>
     public static string InList(IDialect dialect, ColumnDefinition column, string clipboard)
     {
@@ -125,9 +125,9 @@ public static partial class DataFilters
     }
 
     /// <summary>
-    /// Padrão LIKE em que <paramref name="text"/> conta letra a letra (<c>%</c>, <c>_</c> e <c>!</c> escapados com
-    /// <c>ESCAPE '!'</c>, que vale em qualquer <c>sql_mode</c>): <c>'%texto%' ESCAPE '!'</c>. Sem isto, um valor com
-    /// <c>_</c> ou <c>%</c> encontrava outras linhas e <c>C:\temp</c> nunca era encontrado.
+    /// LIKE pattern in which <paramref name="text"/> matches character by character (<c>%</c>, <c>_</c> and <c>!</c> escaped
+    /// with <c>ESCAPE '!'</c>, which works under any <c>sql_mode</c>): <c>'%text%' ESCAPE '!'</c>. Without it, a value with
+    /// <c>_</c> or <c>%</c> matched other rows and <c>C:\temp</c> was never found.
     /// </summary>
     public static string LikePattern(IDialect dialect, string text, bool anyBefore, bool anyAfter)
     {
@@ -137,7 +137,7 @@ public static partial class DataFilters
         return dialect.StringLiteral((anyBefore ? "%" : string.Empty) + escaped + (anyAfter ? "%" : string.Empty)) + " ESCAPE '!'";
     }
 
-    /// <summary>Valor como literal SQL segundo o tipo da coluna (<c>EscapeString(v, Datatype)</c>).</summary>
+    /// <summary>Value as an SQL literal according to the column type (<c>EscapeString(v, Datatype)</c>).</summary>
     public static string Escape(IDialect dialect, ColumnDefinition column, string value)
     {
         ArgumentNullException.ThrowIfNull(dialect);
@@ -158,9 +158,9 @@ public static partial class DataFilters
     }
 
     /// <summary>
-    /// Bloco 1 do Quick Filter: valores da coluna focada em todas as linhas selecionadas (sem repetidos, até 1 KB).
-    /// <c>=</c> dá <c>col IN (…)</c> (+ <c>OR col IS NULL</c>), <c>!=</c> dá <c>col NOT IN (…)</c> (+ <c>AND col IS NOT NULL</c>);
-    /// os outros juntam uma condição por valor com OR. <c>null</c> se não houver valores para o operador.
+    /// Quick Filter block 1: values of the focused column in every selected row (no duplicates, up to 1 KB).
+    /// <c>=</c> gives <c>col IN (…)</c> (+ <c>OR col IS NULL</c>), <c>!=</c> gives <c>col NOT IN (…)</c> (+ <c>AND col IS NOT NULL</c>);
+    /// the others join one condition per value with OR. <c>null</c> if there are no values for the operator.
     /// </summary>
     public static string? FromValues(IDialect dialect, ColumnDefinition column, IEnumerable<string?> values, QuickFilterOperator op)
     {
@@ -204,7 +204,7 @@ public static partial class DataFilters
         }
     }
 
-    /// <summary>Blocos 2 e 3 do Quick Filter: um valor escrito ou do clipboard.</summary>
+    /// <summary>Quick Filter blocks 2 and 3: a typed value or one from the clipboard.</summary>
     public static string Single(IDialect dialect, ColumnDefinition column, QuickFilterOperator op, string value)
     {
         ArgumentNullException.ThrowIfNull(dialect);
@@ -227,8 +227,8 @@ public static partial class DataFilters
     }
 
     /// <summary>
-    /// Shift ao escolher um Quick Filter: junta com AND ao filtro atual, salvo se um já contiver o outro. Cada parte vai
-    /// entre parênteses quando tem OR, para o AND não mudar o sentido.
+    /// Shift when choosing a Quick Filter: joins it to the current filter with AND, unless one already contains the other.
+    /// Each part goes in parentheses when it has an OR, so the AND does not change its meaning.
     /// </summary>
     public static string Combine(string? existing, string added)
     {
@@ -250,7 +250,7 @@ public static partial class DataFilters
             ? "(" + condition + ")"
             : condition;
 
-    /// <summary>Caption de um item do menu: o SQL, cortado a 100 caracteres (<c>StrEllipsis(Hint, 100)</c>).</summary>
+    /// <summary>Caption of a menu item: the SQL, cut at 100 characters (<c>StrEllipsis(Hint, 100)</c>).</summary>
     public static string Caption(string sql)
     {
         ArgumentNullException.ThrowIfNull(sql);

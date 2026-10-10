@@ -6,7 +6,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Seleção na árvore → tabs, captions e visibilidade (FAM-L04, L08; anexo D A11) contra o servidor real.</summary>
+/// <summary>Tree selection → tabs, captions and visibility (FAM-L04, L08; appendix D A11) against the real server.</summary>
 public sealed class NavigationTests
 {
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
@@ -32,7 +32,7 @@ public sealed class NavigationTests
             await model.ExpandAsync(dbNode);
             var open = connector.Open[0];
 
-            // Sessão → Host (caption = sessão); só Host e Query visíveis.
+            // Session → Host (caption = session); only Host and Query visible.
             window.Tree.Tree.FocusedNode = root;
             await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.HostTab) ? "ok" : null);
             Assert.Equal("it", Caption(tabs.HostTab));
@@ -40,7 +40,7 @@ public sealed class NavigationTests
             Assert.False(tabs.TableTab.IsVisible);
             Assert.False(tabs.DataTab.IsVisible);
 
-            // Base → USE e Database tab.
+            // Database → USE and the Database tab.
             window.Tree.Tree.FocusedNode = dbNode;
             await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.DatabaseTab) ? "ok" : null);
             Assert.Equal(db, open.Host.CurrentDatabase);
@@ -48,7 +48,7 @@ public sealed class NavigationTests
             Assert.Equal("Database: " + db, Caption(tabs.DatabaseTab));
             Assert.False(tabs.DataTab.IsVisible);
 
-            // Tabela vinda do Database tab → Table tab com o CREATE code; Data visível.
+            // Table coming from the Database tab → Table tab with the CREATE code; Data visible.
             window.Tree.Tree.FocusedNode = Child(dbNode, "people");
             await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.TableTab) ? "ok" : null);
             Assert.Equal("Table: people", Caption(tabs.TableTab));
@@ -56,7 +56,7 @@ public sealed class NavigationTests
             await WaitAsync(() => (tabs.TableTab.Content as UI.Features.TableEditor.TableEditorView)?.CreateCodeText.Contains("CREATE TABLE", StringComparison.Ordinal) == true ? "ok" : null);
             await WaitAsync(() => open.Metadata.CachedTable(((Shell.Sessions.TreeObjectTag)Child(dbNode, "people").Tag!).Object!));
 
-            // No Data tab, outra tabela mantém o Data tab e carrega os dados.
+            // In the Data tab, another table keeps the Data tab and loads the data.
             tabs.SelectedItem = tabs.DataTab;
             window.Tree.Tree.FocusedNode = Child(dbNode, "pets");
             await WaitAsync(() => window.DataGrid.RowCount == 0 && ReferenceEquals(tabs.SelectedItem, tabs.DataTab) ? "ok" : null);
@@ -64,13 +64,13 @@ public sealed class NavigationTests
             await WaitAsync(() => window.DataGrid.RowCount == 2 ? "ok" : null);
             Assert.Same(tabs.DataTab, tabs.SelectedItem);
 
-            // Procedure: sem Data tab, passa para o Table tab com o tipo na caption.
+            // Procedure: no Data tab, it switches to the Table tab with the kind in the caption.
             window.Tree.Tree.FocusedNode = Child(dbNode, "p");
             await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.TableTab) ? "ok" : null);
             Assert.Equal("Procedure: p", Caption(tabs.TableTab));
             Assert.False(tabs.DataTab.IsVisible);
 
-            // Com uma query tab ativa, a seleção não muda de tab.
+            // With a query tab active, the selection does not switch tab.
             tabs.SelectedItem = tabs.QueryTabs[0].Item;
             window.Tree.Tree.FocusedNode = dbNode;
             window.Tree.Tree.FocusedNode = root;
@@ -110,7 +110,7 @@ public sealed class NavigationTests
 
             await WaitAsync(() => ReferenceEquals(window.Tree.Tree.FocusedNode, first) ? "ok" : null);
             Assert.Contains(log.Snapshot(), l => l.Text.Contains("Unknown database", StringComparison.OrdinalIgnoreCase));
-            // Anexo D A11: o erro do USE abre um diálogo antes de voltar ao nó anterior.
+            // Appendix D A11: the USE error opens a dialog before going back to the previous node.
             Assert.Contains(UnexpectedDialogGuardAttribute.TakeOpened(), d => d.Contains("Unknown database", StringComparison.OrdinalIgnoreCase));
             Assert.Equal(db, connector.Open[0].Host.CurrentDatabase);
 

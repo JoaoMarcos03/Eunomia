@@ -3,10 +3,10 @@ using System.Text.RegularExpressions;
 namespace Eunomia.Engine.Sql.Filters;
 
 /// <summary>
-/// Expressão do Database filter e do Table filter (secção 4.3, ADR-18):
-/// <c>"(" + texto com ';' trocado por '|' + ")"</c>, case-insensitive, correspondência parcial ao nome,
-/// sem trim. Uma regex inválida não esconde nada (o nó fica visível) e a mensagem é dada uma vez em
-/// <see cref="Error"/>. Motor: Regex .NET com <c>IgnoreCase | CultureInvariant</c> e timeout de 50 ms.
+/// Expression of the Database filter and the Table filter (section 4.3, ADR-18):
+/// <c>"(" + text with ';' replaced by '|' + ")"</c>, case-insensitive, partial match on the name,
+/// no trim. An invalid regex hides nothing (the node stays visible) and the message is given once in
+/// <see cref="Error"/>. Engine: .NET Regex with <c>IgnoreCase | CultureInvariant</c> and a 50 ms timeout.
 /// </summary>
 public sealed class TreeFilterExpression
 {
@@ -36,19 +36,19 @@ public sealed class TreeFilterExpression
         }
     }
 
-    /// <summary>Texto tal como foi escrito na caixa.</summary>
+    /// <summary>Text as it was typed in the box.</summary>
     public string Text { get; }
 
-    /// <summary>Padrão construído, ou <c>null</c> se a caixa estiver vazia.</summary>
+    /// <summary>Built pattern, or <c>null</c> if the box is empty.</summary>
     public string? Pattern { get; }
 
-    /// <summary>Mensagem de erro se a regex for inválida (vai uma vez para o SQL log).</summary>
+    /// <summary>Error message if the regex is invalid (goes to the SQL log once).</summary>
     public string? Error { get; }
 
-    /// <summary>Há filtro ativo (caixa com texto e regex válida).</summary>
+    /// <summary>There is an active filter (box with text and a valid regex).</summary>
     public bool IsActive => _regex is not null;
 
-    /// <summary>Indica se o nome passa no filtro. Sem filtro, regex inválida ou timeout: passa.</summary>
+    /// <summary>Whether the name passes the filter. Without a filter, with an invalid regex or on timeout: it passes.</summary>
     public bool IsMatch(string name)
     {
         if (_regex is null)

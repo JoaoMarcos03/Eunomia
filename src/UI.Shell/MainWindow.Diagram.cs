@@ -10,10 +10,10 @@ using Eunomia.UI.Features.SchemaVisualizer;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Schema Visualizer no shell (Fase 9; secção 17.3): "Show in schema visualizer" na árvore abre (ou ativa) o tab
-/// "Diagram: base" da sessão, com a tabela focada realçada. Selecionar uma tabela na árvore realça e centra o nó sem
-/// roubar o foco; selecionar um nó seleciona a tabela na árvore ("Sync with tree"). Duplo clique abre o Data tab,
-/// Alt+Enter o table editor; F5 relê o schema mantendo as posições; o layout fica guardado no <c>app.db</c>.
+/// Schema Visualizer in the shell (phase 9; section 17.3): "Show in schema visualizer" in the tree opens (or activates) the
+/// session's "Diagram: database" tab, with the focused table highlighted. Selecting a table in the tree highlights and centres
+/// the node without stealing the focus; selecting a node selects the table in the tree ("Sync with tree"). Double click opens
+/// the Data tab, Alt+Enter the table editor; F5 reads the schema again keeping the positions; the layout is saved in <c>app.db</c>.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -54,7 +54,7 @@ public sealed partial class MainWindow
         return ShowDiagramAsync(target.Session, dbNode.Name, table);
     }
 
-    /// <summary>Abre o diagrama da base (ou ativa o que já está aberto) com <paramref name="table"/> realçada.</summary>
+    /// <summary>Opens the database's diagram (or activates the one already open) with <paramref name="table"/> highlighted.</summary>
     internal async Task ShowDiagramAsync(OpenSession session, string database, string? table)
     {
         if (_diagrams.FirstOrDefault(d => ReferenceEquals(d.Session, session) && d.Database == database) is { } open)
@@ -114,7 +114,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>O diagrama do tab ativo, se for um.</summary>
+    /// <summary>The active tab's diagram, if it is one.</summary>
     private DiagramEntry? ActiveDiagram() => _diagrams.FirstOrDefault(d => ReferenceEquals(d.Tab, _tabs.SelectedItem));
 
     private Task RefreshDiagramAsync(DiagramEntry diagram) => LoadDiagramAsync(diagram, null);
@@ -127,7 +127,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Visualizer → árvore: foca a tabela sem que a árvore volte a centrar o diagrama.</summary>
+    /// <summary>Visualizer → tree: focuses the table without the tree centring the diagram again.</summary>
     private async Task<bool> FocusFromDiagramAsync(DiagramEntry entry, string table)
     {
         _syncingFromDiagram = true;
@@ -141,7 +141,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Árvore → visualizer: a tabela focada é realçada e centrada nos diagramas abertos da base.</summary>
+    /// <summary>Tree → visualizer: the focused table is highlighted and centred in the database's open diagrams.</summary>
     private void SyncDiagramsWithTree(TreeNode node)
     {
         if (_syncingFromDiagram || node.Kind != TreeNodeKind.Table || node.Database is not { } dbNode || node.Session?.Tag is not Guid id)

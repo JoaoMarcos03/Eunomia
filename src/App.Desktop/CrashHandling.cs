@@ -7,9 +7,9 @@ using Eunomia.UI.Controls.Common.Dialogs;
 namespace Eunomia.App.Desktop;
 
 /// <summary>
-/// Exceções não tratadas (Fase 12; secção 21.5): na UI thread ficam no log de diagnóstico, mostram um diálogo (no
-/// máximo um a cada 10 s) e a aplicação continua; numa tarefa não observada só ficam no log; no domínio (o processo vai
-/// terminar) ficam num crash report e o log é despejado. As query tabs voltam no arranque seguinte pelo journal.
+/// Unhandled exceptions (phase 12; section 21.5): on the UI thread they go to the diagnostic log, show a dialog (at
+/// most one every 10 s) and the application carries on; in an unobserved task they only go to the log; in the domain (the
+/// process is about to end) they go to a crash report and the log is flushed. Query tabs come back on the next start via the journal.
 /// </summary>
 internal static class CrashHandling
 {

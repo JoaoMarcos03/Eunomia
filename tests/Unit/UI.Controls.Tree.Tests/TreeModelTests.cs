@@ -35,7 +35,7 @@ public sealed class TreeModelTests
     [Fact]
     public async Task ExpandirDuranteOCarregamentoEsperaPelosFilhos()
     {
-        // Antes, o segundo ExpandAsync voltava logo com o placeholder como único filho.
+        // Before, the second ExpandAsync returned right away with the placeholder as its only child.
         var provider = new SyntheticTreeProvider(latency: TimeSpan.FromMilliseconds(100));
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(1), provider);
         var session = model.Roots[0];
@@ -113,7 +113,7 @@ public sealed class TreeModelTests
         var db0 = session.Children![0];
         await model.ExpandAsync(db0, TestContext.Current.CancellationToken);
         Assert.Equal(db0.Children!.Sum(t => t.SizeBytes ?? 0), db0.SizeBytes);
-        // A sessão só soma quando todas as bases estão em cache.
+        // The session only sums when every database is cached.
         Assert.Null(session.SizeBytes);
 
         var db1 = session.Children[1];

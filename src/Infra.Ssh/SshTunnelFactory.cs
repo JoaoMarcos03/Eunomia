@@ -7,9 +7,9 @@ using Renci.SshNet.Common;
 namespace Eunomia.Infra.Ssh;
 
 /// <summary>
-/// Túneis SSH in-process com SSH.NET (ADR-09; D7; PR-07). Autenticação por agent (OpenSSH ou Pageant), chave
-/// privada com passphrase do cofre, e password (também keyboard-interactive); nada em linha de comandos. A host key
-/// é verificada contra o known_hosts da aplicação antes de qualquer autenticação.
+/// In-process SSH tunnels with SSH.NET (ADR-09; D7; PR-07). Authentication by agent (OpenSSH or Pageant), private
+/// key with a passphrase from the vault, and password (also keyboard-interactive); nothing on a command line. The host key
+/// is checked against the application's known_hosts before any authentication.
 /// </summary>
 public sealed class SshTunnelFactory(KnownHostsStore knownHosts, Func<SshAgentClient?>? agentFactory = null) : ISshTunnelFactory
 {
@@ -41,7 +41,7 @@ public sealed class SshTunnelFactory(KnownHostsStore knownHosts, Func<SshAgentCl
             }
             catch (IOException)
             {
-                // Agent indisponível: segue para chave e password.
+                // Agent unavailable: moves on to key and password.
             }
         }
         if (!string.IsNullOrEmpty(options.PrivateKeyPath))
@@ -125,7 +125,7 @@ public sealed class SshTunnelFactory(KnownHostsStore knownHosts, Func<SshAgentCl
         KnownHosts.Trust(hostKey.Host, hostKey.Port, hostKey.KeyType, hostKey.Key);
     }
 
-    /// <summary>Porta livre em 127.0.0.1 escolhida pelo sistema (sem a sondagem de portas do HeidiSQL).</summary>
+    /// <summary>Free port on 127.0.0.1 chosen by the system (without HeidiSQL's port probing).</summary>
     public static int FreeLocalPort()
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);
@@ -150,7 +150,7 @@ public sealed class SshTunnelFactory(KnownHostsStore knownHosts, Func<SshAgentCl
     }
 }
 
-/// <summary>Túnel aberto: avisa quando o cliente SSH ou o forward falham.</summary>
+/// <summary>Open tunnel: reports when the SSH client or the forward fails.</summary>
 internal sealed class SshTunnel : ISshTunnel
 {
     private readonly SshClient _client;

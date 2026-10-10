@@ -7,13 +7,13 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Restauro das query tabs (anexo C §4.3; secção 21.4; FAM-Q07; PR-21): o texto e o estado de cada tab (caption, *,
-/// ficheiro, sessão fixada, cursor, tab ativa) vão para o journal de 2 em 2 s e ao fechar; no arranque, as tabs
-/// gravadas que não são de outra instância voltam pela ordem. Fechar uma tab apaga-a do journal.
+/// Query tab restore (appendix C §4.3; section 21.4; FAM-Q07; PR-21): each tab's text and state (caption, *,
+/// file, pinned session, cursor, active tab) go to the journal every 2 s and on closing; on startup, the saved
+/// tabs that do not belong to another instance come back in order. Closing a tab removes it from the journal.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Intervalo do flush (PR-21: no máximo 2 s de texto perdido num crash).</summary>
+    /// <summary>Flush interval (PR-21: at most 2 s of text lost in a crash).</summary>
     public static readonly TimeSpan JournalInterval = TimeSpan.FromSeconds(2);
 
     private DispatcherTimer? _journalTimer;
@@ -33,7 +33,7 @@ public sealed partial class MainWindow
         Closing += (_, _) => SaveJournal(wait: true);
     }
 
-    /// <summary>Tabs do journal: a primeira vai para a tab "Query", as outras são criadas pela ordem.</summary>
+    /// <summary>Journal tabs: the first goes to the "Query" tab, the others are created in order.</summary>
     private void RestoreTabs()
     {
         var journal = _context.TabJournal!;
@@ -66,7 +66,7 @@ public sealed partial class MainWindow
             tab.SetCaption(saved.Caption, saved.Modified);
             if (state.FilePath is { } file && File.Exists(file))
             {
-                // Ficheiro restaurado: volta a ser vigiado; se mudou enquanto a aplicação estava fechada, pergunta já.
+                // Restored file: watched again; if it changed while the application was closed, it asks right away.
                 state.FileStamp = saved.FileWriteTicks is { } ticks && saved.FileLength is { } length
                     ? (new DateTime(ticks, DateTimeKind.Utc), length)
                     : null;
@@ -102,8 +102,8 @@ public sealed partial class MainWindow
     };
 
     /// <summary>
-    /// Estados que mudaram e texto pendente para o journal, em background; <paramref name="wait"/> espera (ao fechar a
-    /// janela e nos testes).
+    /// States that changed and pending text for the journal, in the background; <paramref name="wait"/> waits (when closing
+    /// the window and in tests).
     /// </summary>
     internal void SaveJournal(bool wait = false)
     {
@@ -132,7 +132,7 @@ public sealed partial class MainWindow
         {
             if (!wait)
             {
-                // O flush anterior ainda corre: os estados voltam a ser comparados no próximo tick.
+                // The previous flush is still running: the states are compared again on the next tick.
                 foreach (var s in changed)
                 {
                     ForgetSaved(s.Id);
@@ -174,7 +174,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A tab fechou: sai do journal.</summary>
+    /// <summary>The tab closed: it leaves the journal.</summary>
     private void ForgetJournal(Guid id)
     {
         if (_context.TabJournal is not { } journal)

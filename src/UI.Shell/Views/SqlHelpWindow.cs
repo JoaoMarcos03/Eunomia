@@ -12,9 +12,9 @@ using Eunomia.UI.Controls.SqlEditor;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// SQL help (F1; anexo C, actSQLhelp): a ajuda do próprio servidor (<c>HELP 'termo'</c>). À esquerda, a lista de
-/// categorias e tópicos (duplo clique ou Enter numa categoria abre-a); à direita, a descrição e o exemplo do tópico.
-/// "Keyword" procura um termo; "Contents" volta às categorias. Não é modal, como no HeidiSQL.
+/// SQL help (F1; appendix C, actSQLhelp): the server's own help (<c>HELP 'term'</c>). On the left, the list of
+/// categories and topics (double click or Enter on a category opens it); on the right, the topic's description and example.
+/// "Keyword" looks up a term; "Contents" goes back to the categories. Not modal, as in HeidiSQL.
 /// </summary>
 public sealed class SqlHelpWindow : Window
 {
@@ -135,17 +135,17 @@ public sealed class SqlHelpWindow : Window
         Closed += (_, _) => _load?.Cancel();
     }
 
-    /// <summary>Entradas da lista (testes).</summary>
+    /// <summary>List entries (tests).</summary>
     public IReadOnlyList<SqlHelpEntry> Entries => _entries.ItemsSource as IReadOnlyList<SqlHelpEntry> ?? [];
 
-    /// <summary>Tópico mostrado (testes).</summary>
+    /// <summary>Topic shown (tests).</summary>
     public string? TopicName => _topic.Text;
 
     public string? DescriptionText => _description.Text;
 
     public string ExampleText => _example.Text;
 
-    /// <summary>Procura um termo: um tópico mostra-se logo; uma categoria ou vários tópicos enchem a lista.</summary>
+    /// <summary>Looks up a term: a topic shows right away; a category or several topics fill the list.</summary>
     public async Task ShowAsync(string term)
     {
         if (await LoadAsync(term) is not { } help)

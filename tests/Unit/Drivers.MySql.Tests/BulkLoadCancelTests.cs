@@ -1,8 +1,8 @@
 namespace Eunomia.Drivers.MySql.Tests;
 
 /// <summary>
-/// Cancel a meio de um <c>LOAD DATA LOCAL</c>: o MySqlConnector embrulha o cancel lido do stream num erro do
-/// <c>LOAD DATA</c>; o driver devolve-o como cancelamento (cancelar não é erro).
+/// Cancel in the middle of a <c>LOAD DATA LOCAL</c>: MySqlConnector wraps the cancel read from the stream in a
+/// <c>LOAD DATA</c> error; the driver returns it as a cancellation (cancelling is not an error).
 /// </summary>
 public sealed class BulkLoadCancelTests
 {

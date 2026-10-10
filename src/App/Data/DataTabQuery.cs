@@ -4,28 +4,28 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Data;
 
-/// <summary>Uma coluna do ORDER BY do Data tab.</summary>
+/// <summary>A column of the Data tab ORDER BY.</summary>
 public sealed record DataSort(string Column, bool Descending);
 
-/// <summary>SELECT de uma página do Data tab e as colunas que traz (nomes de origem, pela ordem do SELECT).</summary>
+/// <summary>SELECT of a Data tab page and the columns it returns (source names, in SELECT order).</summary>
 public sealed record DataSelect(string Sql, IReadOnlyList<string> Columns, IReadOnlySet<string> TruncatedColumns, IReadOnlyList<string> KeyColumns);
 
 /// <summary>
-/// SELECT do Data tab como o <c>DataGridBeforePaint</c> do HeidiSQL (anexo D B2, B3): colunas ocultas ficam de fora salvo
-/// se forem chave ou se a tabela não tiver chave; colunas longas cortadas a 256 só com chave; <c>*</c> quando nada é
-/// cortado nem escondido; <c>WHERE</c> do filtro, <c>ORDER BY</c> acumulado e <c>LIMIT off, n</c>.
+/// Data tab SELECT, like HeidiSQL's <c>DataGridBeforePaint</c> (appendix D B2, B3): hidden columns are left out unless
+/// they are part of the key or the table has no key; long columns cut at 256 only with a key; <c>*</c> when nothing is
+/// cut or hidden; the filter's <c>WHERE</c>, the accumulated <c>ORDER BY</c> and <c>LIMIT off, n</c>.
 /// </summary>
 public static class DataTabQuery
 {
-    /// <summary><c>GRIDMAXDATA</c>: limite fixo do texto carregado por célula.</summary>
+    /// <summary><c>GRIDMAXDATA</c>: fixed limit of the text loaded per cell.</summary>
     public const int MaxData = 256;
 
-    /// <summary>Linhas por passo (<c>DatagridRowsPerStep</c>) e máximo do Show all (<c>DatagridMaximumRows</c>).</summary>
+    /// <summary>Rows per step (<c>DatagridRowsPerStep</c>) and Show all maximum (<c>DatagridMaximumRows</c>).</summary>
     public const int DefaultRowsPerStep = 1000;
 
     public const int DefaultMaximumRows = 100_000;
 
-    /// <summary>Colunas da chave: a PK; senão a primeira UNIQUE com todas as colunas NOT NULL; senão nenhuma.</summary>
+    /// <summary>Key columns: the PK; otherwise the first UNIQUE whose columns are all NOT NULL; otherwise none.</summary>
     public static IReadOnlyList<string> KeyColumns(TableDefinition table)
     {
         ArgumentNullException.ThrowIfNull(table);
@@ -37,7 +37,7 @@ public static class DataTabQuery
         return table.Indexes.FirstOrDefault(i => i.Kind == IndexKind.Unique && i.Columns.All(c => !nullable.Contains(c)))?.Columns ?? [];
     }
 
-    /// <summary>Texto do filtro a usar no <c>WHERE</c>: sem um <c>WHERE</c> inicial; <c>null</c> se só tiver espaços ou comentários.</summary>
+    /// <summary>Filter text for the <c>WHERE</c>: without a leading <c>WHERE</c>; <c>null</c> if it only has whitespace or comments.</summary>
     public static string? NormalizeFilter(string? text)
     {
         if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(StripComments(text)))
@@ -53,9 +53,9 @@ public static class DataTabQuery
     }
 
     /// <summary>
-    /// Filtro pronto para o SQL do Data tab: o de <see cref="NormalizeFilter"/>, sem o <c>;</c> final, e só uma condição.
-    /// O WHERE vai na mesma ligação que aceita várias instruções: um <c>;</c> a meio (de um texto colado, por exemplo)
-    /// correria o resto como outra instrução, por isso é recusado (<see cref="InvalidOperationException"/>).
+    /// Filter ready for the Data tab SQL: the one from <see cref="NormalizeFilter"/>, without the trailing <c>;</c>, and a
+    /// single condition. The WHERE goes on the same connection that accepts several statements: a <c>;</c> in the middle
+    /// (from pasted text, for example) would run the rest as another statement, so it is refused (<see cref="InvalidOperationException"/>).
     /// </summary>
     public static string? WhereClause(string? text)
     {
@@ -70,7 +70,7 @@ public static class DataTabQuery
         return Eunomia.Engine.Sql.Splitting.SqlSplitter.Split(filter) is [{ } single] ? single.Text : filter;
     }
 
-    /// <summary>Erro de um filtro com mais de uma instrução (um <c>;</c> fora de strings e comentários), ou <c>null</c>.</summary>
+    /// <summary>Error for a filter with more than one statement (a <c>;</c> outside strings and comments), or <c>null</c>.</summary>
     public static string? FilterError(string? text) =>
         NormalizeFilter(text) is { } filter && Eunomia.Engine.Sql.Splitting.SqlSplitter.Split(filter).Count > 1
             ? "The filter must be a single WHERE condition: remove the \";\" that separates it into several statements."
@@ -102,8 +102,8 @@ public static class DataTabQuery
     }
 
     /// <summary>
-    /// SELECT de <paramref name="count"/> linhas a partir de <paramref name="offset"/>. Com <paramref name="fullRows"/>,
-    /// nada é cortado (Export e Copy as reexecutam assim, anexo D B4).
+    /// SELECT of <paramref name="count"/> rows starting at <paramref name="offset"/>. With <paramref name="fullRows"/>,
+    /// nothing is cut (Export and Copy as run it again this way, appendix D B4).
     /// </summary>
     public static DataSelect Build(IDialect dialect, TableDefinition table, IReadOnlyCollection<string> hidden, string? filter,
         IReadOnlyList<DataSort> sort, long offset, int count, bool fullRows = false)
@@ -158,7 +158,7 @@ public static class DataTabQuery
         return new DataSelect(sql.ToString(), columns, truncated, keys);
     }
 
-    /// <summary>Clique no header (anexo D B7): ASC → DESC → removida; coluna nova acrescentada (DESC com Shift).</summary>
+    /// <summary>Header click (appendix D B7): ASC → DESC → removed; a new column is appended (DESC with Shift).</summary>
     public static IReadOnlyList<DataSort> ToggleSort(IReadOnlyList<DataSort> sort, string column, bool shift)
     {
         ArgumentNullException.ThrowIfNull(sort);
@@ -179,7 +179,7 @@ public static class DataTabQuery
         return list;
     }
 
-    /// <summary>Valor <c>Sort</c> gravado por tabela: <c>&lt;ordem&gt;_&lt;coluna&gt;|…</c>, 0 = ASC.</summary>
+    /// <summary><c>Sort</c> value saved per table: <c>&lt;order&gt;_&lt;column&gt;|…</c>, 0 = ASC.</summary>
     public static string FormatSort(IReadOnlyList<DataSort> sort)
     {
         ArgumentNullException.ThrowIfNull(sort);
@@ -204,16 +204,16 @@ public static class DataTabQuery
         return result;
     }
 
-    /// <summary>Valor <c>HiddenColumns</c> gravado por tabela, separado por <c>|</c>.</summary>
+    /// <summary><c>HiddenColumns</c> value saved per table, separated by <c>|</c>.</summary>
     public static string FormatHidden(IEnumerable<string> hidden) => string.Join("|", hidden);
 
     public static IReadOnlyList<string> ParseHidden(string? value) =>
         string.IsNullOrEmpty(value) ? [] : value.Split('|', StringSplitOptions.RemoveEmptyEntries);
 
     /// <summary>
-    /// Label do Data tab (anexo D B6): "db.t: N rows total (exact)"; com limite ou filtro, o total vem da contagem
-    /// aproximada (ou exata) e acrescenta ", limited to N" ou ", N rows match to filter". O sufixo (exact/approximately)
-    /// só em InnoDB. Views: "db.v: N rows".
+    /// Data tab label (appendix D B6): "db.t: N rows total (exact)"; with a limit or a filter, the total comes from the
+    /// approximate (or exact) count and gets ", limited to N" or ", N rows match to filter" appended. The (exact/approximately)
+    /// suffix only on InnoDB. Views: "db.v: N rows".
     /// </summary>
     public static string CountLabel(string database, string table, DataCount count, CultureInfo? culture = null)
     {
@@ -243,12 +243,12 @@ public static class DataTabQuery
     }
 }
 
-/// <summary>Números da label do Data tab.</summary>
-/// <param name="Loaded">Linhas carregadas no grid.</param>
-/// <param name="Limited">O SELECT pode ter deixado linhas de fora (carregou tantas como pediu).</param>
-/// <param name="Filtered">Há filtro WHERE.</param>
-/// <param name="Total">Contagem da tabela (aproximada do <c>SHOW TABLE STATUS</c>, ou exata do <c>COUNT(*)</c>).</param>
-/// <param name="TotalExact">A contagem é exata.</param>
-/// <param name="InnoDb">Engine InnoDB (só aí aparece o sufixo).</param>
-/// <param name="IsView">View: só as linhas carregadas.</param>
+/// <summary>Numbers for the Data tab label.</summary>
+/// <param name="Loaded">Rows loaded in the grid.</param>
+/// <param name="Limited">The SELECT may have left rows out (it loaded as many as it asked for).</param>
+/// <param name="Filtered">There is a WHERE filter.</param>
+/// <param name="Total">Table count (approximate from <c>SHOW TABLE STATUS</c>, or exact from <c>COUNT(*)</c>).</param>
+/// <param name="TotalExact">The count is exact.</param>
+/// <param name="InnoDb">InnoDB engine (the suffix only appears there).</param>
+/// <param name="IsView">View: only the loaded rows.</param>
 public sealed record DataCount(long Loaded, bool Limited, bool Filtered, long? Total, bool TotalExact, bool InnoDb, bool IsView = false);

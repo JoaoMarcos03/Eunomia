@@ -3,10 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 namespace Eunomia.Engine.Results.Synthetic;
 
 /// <summary>
-/// Source sintético e determinístico para o spike e para benchmarks (secção 26.2): por omissão
-/// 1.000.000 linhas × 60 colunas de tipos mistos (INT, BIGINT, DECIMAL, DOUBLE, DATETIME, DATE,
-/// VARCHAR curto e longo, TEXT) com NULLs. O valor de cada célula é função só de (seed, linha, coluna),
-/// por isso um bloco despejado pode ser refeito igual (faz o papel do refetch por keyset).
+/// Synthetic, deterministic source for the spike and the benchmarks (section 26.2): by default
+/// 1,000,000 rows × 60 columns of mixed types (INT, BIGINT, DECIMAL, DOUBLE, DATETIME, DATE,
+/// short and long VARCHAR, TEXT) with NULLs. Each cell's value depends only on (seed, row, column),
+/// so an evicted block can be rebuilt identically (playing the part of the keyset refetch).
 /// </summary>
 public sealed class SyntheticRowSource : IRowSource, IFullValueSource
 {
@@ -14,10 +14,10 @@ public sealed class SyntheticRowSource : IRowSource, IFullValueSource
     public const int DefaultColumns = 60;
     public const int DefaultBlockSize = 1024;
 
-    /// <summary>Limite do Data tab para texto longo (<c>GRIDMAXDATA</c>, secção 4.4).</summary>
+    /// <summary>Data tab limit for long text (<c>GRIDMAXDATA</c>, section 4.4).</summary>
     public const int TextTruncateLength = 256;
 
-    /// <summary>Orçamento por resultado por omissão (secção 11.3).</summary>
+    /// <summary>Default per-result budget (section 11.3).</summary>
     public const long DefaultBudgetBytes = 256L * 1024 * 1024;
 
     private static readonly SyntheticKind[] KindCycle =
@@ -59,7 +59,7 @@ public sealed class SyntheticRowSource : IRowSource, IFullValueSource
 
     public int BlockSize { get; }
 
-    /// <summary>Cache de blocos (para inspeção em testes e benchmarks).</summary>
+    /// <summary>Block cache (for inspection in tests and benchmarks).</summary>
     public BlockStore Store => _store;
 
     public event EventHandler<BlocksAvailableEventArgs>? BlocksAvailable;
@@ -97,7 +97,7 @@ public sealed class SyntheticRowSource : IRowSource, IFullValueSource
         return pending.Count == 0 ? Task.CompletedTask : Task.WhenAll(pending);
     }
 
-    /// <summary>Produz o bloco de forma determinística. Público para benchmarks do custo de geração.</summary>
+    /// <summary>Produces the block deterministically. Public for benchmarks of the generation cost.</summary>
     public RowBlock BuildBlock(int blockIndex)
     {
         var firstRow = (long)blockIndex * BlockSize;
@@ -215,7 +215,7 @@ public sealed class SyntheticRowSource : IRowSource, IFullValueSource
         {
             var kind = KindCycle[(c - 1) % KindCycle.Length];
             kinds[c] = kind;
-            // Uma em cada cinco colunas é NOT NULL.
+            // One column in five is NOT NULL.
             var nullable = c % 5 != 0;
             var name = $"{SyntheticValues.Prefix(kind)}_{c:D2}";
             infos[c] = kind switch

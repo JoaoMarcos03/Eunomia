@@ -10,9 +10,9 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Image preview (Grid view options ▸ Image preview; anexo C, <c>pnlPreview</c> por baixo da árvore): a imagem da célula
-/// focada, reduzida para caber (nunca ampliada), uma linha com o tamanho e o formato, e os botões Save BLOB to file e
-/// Close preview. O bitmap anterior é libertado quando chega outro.
+/// Image preview (Grid view options ▸ Image preview; appendix C, <c>pnlPreview</c> below the tree): the image of the focused
+/// cell, shrunk to fit (never enlarged), a line with the size and the format, and the Save BLOB to file and Close preview
+/// buttons. The previous bitmap is released when another one arrives.
 /// </summary>
 public sealed class ImagePreviewPanel : DockPanel
 {
@@ -42,13 +42,13 @@ public sealed class ImagePreviewPanel : DockPanel
 
     public Button CloseButton { get; }
 
-    /// <summary>Imagem mostrada (testes).</summary>
+    /// <summary>Image shown (tests).</summary>
     public Bitmap? Bitmap => _image.Source as Bitmap;
 
-    /// <summary>Linha com o tamanho e o formato, ou o motivo de não haver imagem.</summary>
+    /// <summary>Line with the size and the format, or the reason there is no image.</summary>
     public string? Info => _info.Text;
 
-    /// <summary>Mostra uma imagem (ou nenhuma) com a linha de informação; liberta a anterior.</summary>
+    /// <summary>Shows an image (or none) with the information line; releases the previous one.</summary>
     public void Show(Bitmap? bitmap, string info)
     {
         var previous = _image.Source as Bitmap;

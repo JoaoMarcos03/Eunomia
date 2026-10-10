@@ -5,11 +5,11 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// DML do MySQL/MariaDB para a edição no grid (anexo D B15): números sem aspas quando o texto é um número, BIT como
-/// <c>b'0101'</c>, binário como <c>0x…</c>, datas e texto entre aspas, funções tal como estão; WHERE com
-/// <c>CastAsText</c> e <c>IS NULL</c>; UPDATE e DELETE sempre com <c>LIMIT 1</c>. Nas tabelas sem chave, o texto
-/// compara-se pela collation binária do charset da coluna (com a collation da coluna, <c>'a'</c> e <c>'A'</c> eram a
-/// mesma linha e o <c>LIMIT 1</c> podia mudar a outra); com chave, pela da coluna, para usar o índice.
+/// MySQL/MariaDB DML for grid editing (appendix D B15): numbers unquoted when the text is a number, BIT as
+/// <c>b'0101'</c>, binary as <c>0x…</c>, dates and text quoted, functions as they are; WHERE with
+/// <c>CastAsText</c> and <c>IS NULL</c>; UPDATE and DELETE always with <c>LIMIT 1</c>. On tables without a key, text
+/// is compared with the binary collation of the column's charset (with the column's collation, <c>'a'</c> and <c>'A'</c>
+/// were the same row and <c>LIMIT 1</c> could change the other one); with a key, with the column's, to use the index.
 /// </summary>
 public sealed partial class MySqlDmlComposer(MySqlDialect dialect) : IDmlComposer
 {
@@ -88,8 +88,8 @@ public sealed partial class MySqlDmlComposer(MySqlDialect dialect) : IDmlCompose
     }
 
     /// <summary>
-    /// <c> WHERE</c> com cada coluna: <c>IS NULL</c> ou <c>CastAsText(col)=literal</c> (anexo D B15). Com
-    /// <paramref name="exact"/> (tabela sem chave), o texto compara-se com <c>CONVERT(literal USING cs) COLLATE cs_bin</c>.
+    /// <c> WHERE</c> with every column: <c>IS NULL</c> or <c>CastAsText(col)=literal</c> (appendix D B15). With
+    /// <paramref name="exact"/> (a table without a key), text is compared with <c>CONVERT(literal USING cs) COLLATE cs_bin</c>.
     /// </summary>
     private string Where(IReadOnlyList<ColumnValue> where, bool exact = false)
     {
@@ -105,8 +105,8 @@ public sealed partial class MySqlDmlComposer(MySqlDialect dialect) : IDmlCompose
     }
 
     /// <summary>
-    /// Literal para comparar sem a collation da coluna: texto, ENUM e SET com charset conhecido passam para esse charset
-    /// com a collation <c>_bin</c> (maiúsculas, acentos e equivalências contam); o resto como <see cref="Literal"/>.
+    /// Literal to compare without the column's collation: text, ENUM and SET with a known charset are converted to that
+    /// charset with the <c>_bin</c> collation (case, accents and equivalences count); the rest as <see cref="Literal"/>.
     /// </summary>
     private string ExactLiteral(ColumnDefinition column, CellLiteral value)
     {

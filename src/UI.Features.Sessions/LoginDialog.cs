@@ -11,8 +11,8 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Features.Sessions;
 
 /// <summary>
-/// Login ("Prompt for credentials" ou password não gravada; anexo A §6): utilizador e password, preenchidos com os
-/// da sessão. Os valores não são gravados na sessão.
+/// Login ("Prompt for credentials" or a password that is not saved; appendix A §6): user and password, filled in with the
+/// session's. The values are not saved in the session.
 /// </summary>
 public sealed class LoginDialog : Window
 {

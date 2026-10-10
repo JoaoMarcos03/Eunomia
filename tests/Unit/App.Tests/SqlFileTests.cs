@@ -4,7 +4,7 @@ using Eunomia.App.Query;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Ficheiros SQL das query tabs (anexo C §4.3).</summary>
+/// <summary>SQL files of the query tabs (appendix C §4.3).</summary>
 public sealed class SqlFileTests
 {
     [Theory]

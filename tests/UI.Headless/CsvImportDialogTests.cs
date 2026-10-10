@@ -8,7 +8,7 @@ using Eunomia.UI.Features.Transfer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Diálogo Import CSV file (Fase 8; FAM-E07; anexo B §3.1).</summary>
+/// <summary>Import CSV file dialog (phase 8; FAM-E07; appendix B §3.1).</summary>
 public sealed class CsvImportDialogTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
@@ -39,14 +39,14 @@ public sealed class CsvImportDialogTests
             await dialog.Loading;
             await RealServer.WaitAsync(() => dialog.ColumnItems.Count == 3 ? "ok" : null);
 
-            // Defaults: ";", '"' opcional, '"', \r\n, REPLACE, servidor.
+            // Defaults: ";", optional '"', '"', \r\n, REPLACE, server.
             Assert.Equal("produtos", dialog.TableCombo.SelectedItem);
             Assert.All(dialog.ColumnItems, i => Assert.True(i.Check.IsChecked));
             Assert.True(dialog.OptionallyBox.IsEnabled);
             dialog.ClientRadio.IsChecked = true;
             Assert.False(dialog.OptionallyBox.IsEnabled);
 
-            // O campo k vai para a k-ésima coluna marcada: "preco" passa para cima de "nome" e "id" fica de fora.
+            // Field k goes to the k-th checked column: "preco" moves above "nome" and "id" is left out.
             dialog.MoveColumn(2, -1);
             dialog.ColumnItems[0].Check.IsChecked = false;
             dialog.ImportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -63,7 +63,7 @@ public sealed class CsvImportDialogTests
             Assert.Equal(CsvImportMethod.Client, requested.Method);
             Assert.True(requested.LowPriority);
             Assert.False(requested.Truncate);
-            // Sem "Keep dialog open", fecha depois de um import com linhas; o modo fica gravado.
+            // Without "Keep dialog open", it closes after an import with rows; the mode is saved.
             await RealServer.WaitAsync(() => dialog.IsVisible ? null : "closed");
             Assert.Equal(1, settings.Method);
             Assert.Equal(@"\r\n", settings.LineTerminator);

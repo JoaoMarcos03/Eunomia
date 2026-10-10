@@ -3,36 +3,36 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.Engine.Sql.Completion;
 
-/// <summary>O que o autocomplete deve listar no ponto do cursor.</summary>
+/// <summary>What the autocomplete should list at the caret.</summary>
 public enum CompletionScope
 {
-    /// <summary>Dentro de uma string ou comentário: nada.</summary>
+    /// <summary>Inside a string or a comment: nothing.</summary>
     Suppressed,
 
-    /// <summary><c>@@SESSION.</c> ou <c>@@GLOBAL.</c>: variáveis do servidor.</summary>
+    /// <summary><c>@@SESSION.</c> or <c>@@GLOBAL.</c>: server variables.</summary>
     Variables,
 
-    /// <summary><c>x.</c> ou <c>db.tbl.</c>: colunas ou objetos do qualificador.</summary>
+    /// <summary><c>x.</c> or <c>db.tbl.</c>: columns or objects of the qualifier.</summary>
     Qualified,
 
-    /// <summary>Sem qualificador: colunas da tabela selecionada, bases, objetos, funções e keywords.</summary>
+    /// <summary>No qualifier: columns of the selected table, databases, objects, functions and keywords.</summary>
     General,
 }
 
-/// <summary>Tabela referida na instrução atual (<c>FROM</c>, <c>JOIN</c>, <c>INTO</c>, <c>UPDATE</c>), com o alias.</summary>
+/// <summary>Table referenced in the current statement (<c>FROM</c>, <c>JOIN</c>, <c>INTO</c>, <c>UPDATE</c>), with its alias.</summary>
 public sealed record TableReference(string? Database, string Table, string? Alias);
 
 /// <summary>
-/// Contexto do autocomplete A (secção 16.1; anexo C §4.2): a palavra a substituir, os qualificadores antes dela e as
-/// tabelas da instrução atual, para resolver aliases.
+/// Context of autocomplete A (section 16.1; appendix C §4.2): the word to replace, the qualifiers before it and the
+/// tables of the current statement, to resolve aliases.
 /// </summary>
-/// <param name="Scope">O que listar.</param>
-/// <param name="ReplaceStart">Início do texto que a sugestão substitui (inclui a crase inicial, se houver).</param>
-/// <param name="Typed">O que já foi escrito da palavra, sem a crase.</param>
-/// <param name="Quoted">A palavra começa por uma crase: a sugestão entra sempre entre crases.</param>
-/// <param name="Qualifiers">Nomes antes do ponto: <c>[alias]</c>, <c>[db]</c> ou <c>[db, tbl]</c>.</param>
-/// <param name="GlobalVariables"><c>@@GLOBAL.</c> em vez de <c>@@SESSION.</c>.</param>
-/// <param name="Tables">Tabelas da instrução atual.</param>
+/// <param name="Scope">What to list.</param>
+/// <param name="ReplaceStart">Start of the text the suggestion replaces (includes the opening backtick, if any).</param>
+/// <param name="Typed">What has already been typed of the word, without the backtick.</param>
+/// <param name="Quoted">The word starts with a backtick: the suggestion always goes in backticks.</param>
+/// <param name="Qualifiers">Names before the dot: <c>[alias]</c>, <c>[db]</c> or <c>[db, tbl]</c>.</param>
+/// <param name="GlobalVariables"><c>@@GLOBAL.</c> instead of <c>@@SESSION.</c>.</param>
+/// <param name="Tables">Tables of the current statement.</param>
 public sealed record CompletionContext(
     CompletionScope Scope,
     int ReplaceStart,
@@ -43,9 +43,9 @@ public sealed record CompletionContext(
     IReadOnlyList<TableReference> Tables)
 {
     /// <summary>
-    /// Analisa o texto do editor no cursor: suprimido dentro de strings e comentários; <c>@@SESSION.</c> /
-    /// <c>@@GLOBAL.</c>; qualificadores <c>a.</c> e <c>a.b.</c>; e as tabelas de <c>FROM|INTO|UPDATE … (WHERE|HAVING|
-    /// ORDER|GROUP)</c> da instrução que contém o cursor, com os JOINs como vírgulas e os pares <c>tbl [AS] alias</c>.
+    /// Analyses the editor text at the caret: suppressed inside strings and comments; <c>@@SESSION.</c> /
+    /// <c>@@GLOBAL.</c>; <c>a.</c> and <c>a.b.</c> qualifiers; and the tables of <c>FROM|INTO|UPDATE … (WHERE|HAVING|
+    /// ORDER|GROUP)</c> of the statement containing the caret, with JOINs treated as commas and <c>tbl [AS] alias</c> pairs.
     /// </summary>
     public static CompletionContext Analyze(string text, int caret, string delimiter = ";")
     {
@@ -65,7 +65,7 @@ public sealed record CompletionContext(
         var quoted = start > 0 && text[start - 1] == '`';
         var replaceStart = quoted ? start - 1 : start;
 
-        // Qualificadores: até dois nomes separados por pontos antes da palavra.
+        // Qualifiers: up to two names separated by dots before the word.
         var qualifiers = new List<string>();
         var at = replaceStart;
         while (qualifiers.Count < 2 && at > 0 && text[at - 1] == '.' && ReadNameBackwards(text, at - 1) is { } name)
@@ -89,7 +89,7 @@ public sealed record CompletionContext(
 
     private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '_' or '$';
 
-    /// <summary>Nome simples ou entre crases que acaba antes de <paramref name="end"/>.</summary>
+    /// <summary>Plain or backticked name ending before <paramref name="end"/>.</summary>
     private static (string Name, int Start)? ReadNameBackwards(string text, int end)
     {
         if (end > 0 && text[end - 1] == '`')
@@ -105,7 +105,7 @@ public sealed record CompletionContext(
         return start < end ? (text[start..end], start) : null;
     }
 
-    /// <summary>O cursor está dentro de uma string ou de um comentário (o lexer corre até ao cursor).</summary>
+    /// <summary>The caret is inside a string or a comment (the lexer runs up to the caret).</summary>
     private static bool InsideStringOrComment(string text, int caret)
     {
         var state = LexerState.Normal;
@@ -123,7 +123,7 @@ public sealed record CompletionContext(
                 {
                     return true;
                 }
-                // Comentário de linha até ao cursor (um bloco fechado antes do cursor não conta).
+                // Line comment up to the caret (a block closed before the caret does not count).
                 return tokens.Count > 0 && tokens[^1] is { Kind: SqlTokenKind.Comment } last
                     && last.Start + last.Length == lineEnd - lineStart
                     && text[lineStart + last.Start] is '#' or '-';
@@ -137,18 +137,18 @@ public sealed record CompletionContext(
         "FROM", "JOIN", "STRAIGHT_JOIN", "INTO", "UPDATE",
     };
 
-    /// <summary>Fecham a lista de tabelas (uma vírgula depois deles já não separa tabelas).</summary>
+    /// <summary>They close the table list (a comma after them no longer separates tables).</summary>
     private static readonly HashSet<string> ClauseEnd = new(StringComparer.OrdinalIgnoreCase)
     {
         "WHERE", "HAVING", "ORDER", "GROUP", "LIMIT", "SET", "VALUES", "VALUE", "SELECT", "UNION", "WINDOW", "FOR",
         "PROCEDURE", "LOCK", "PARTITION",
     };
 
-    /// <summary>Não são nome de tabela nem alias: o fim da lista, as condições dos JOINs e os tipos de JOIN.</summary>
+    /// <summary>Neither a table name nor an alias: the end of the list, JOIN conditions and JOIN kinds.</summary>
     private static readonly HashSet<string> TableListEnd = new(ClauseEnd.Concat(
         ["ON", "USING", "LEFT", "RIGHT", "INNER", "OUTER", "CROSS", "NATURAL", "FULL"]), StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Tabelas e aliases de <c>FROM|JOIN|INTO|UPDATE</c> na instrução (sem olhar para subqueries à parte).</summary>
+    /// <summary>Tables and aliases of <c>FROM|JOIN|INTO|UPDATE</c> in the statement (without looking at subqueries separately).</summary>
     public static IReadOnlyList<TableReference> TablesOf(string statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
@@ -160,7 +160,7 @@ public sealed record CompletionContext(
             var (text, kind) = words[i];
             if (kind is SqlTokenKind.Operator or SqlTokenKind.Delimiter)
             {
-                // Vírgulas continuam a lista; parênteses são ignorados.
+                // Commas continue the list; parentheses are ignored.
                 if (text == "," && result.Count > 0 && expectTable is false && InTableList(words, i))
                 {
                     expectTable = true;
@@ -177,7 +177,7 @@ public sealed record CompletionContext(
                 expectTable = false;
                 continue;
             }
-            // nome [. nome] [[AS] alias]
+            // name [. name] [[AS] alias]
             var first = Unquote(text, kind);
             string? database = null;
             var table = first;
@@ -189,7 +189,7 @@ public sealed record CompletionContext(
             }
             else if (i + 1 < words.Count && words[i + 1].Text == ".")
             {
-                // "db." ainda a ser escrito: não é uma tabela.
+                // "db." still being typed: not a table.
                 expectTable = false;
                 continue;
             }
@@ -210,7 +210,7 @@ public sealed record CompletionContext(
         return result;
     }
 
-    /// <summary>A vírgula está numa lista de tabelas: a última palavra estrutural antes dela abriu uma.</summary>
+    /// <summary>The comma is in a table list: the last structural word before it opened one.</summary>
     private static bool InTableList(List<(string Text, SqlTokenKind Kind)> words, int comma)
     {
         for (var i = comma - 1; i >= 0; i--)
@@ -240,7 +240,7 @@ public sealed record CompletionContext(
             ? text[1..(text[^1] == '`' ? ^1 : ^0)].Replace("``", "`", StringComparison.Ordinal)
             : text;
 
-    /// <summary>Tokens sem espaços nem comentários, com o texto.</summary>
+    /// <summary>Tokens without whitespace or comments, with their text.</summary>
     private static List<(string Text, SqlTokenKind Kind)> Words(string statement)
     {
         var result = new List<(string, SqlTokenKind)>();

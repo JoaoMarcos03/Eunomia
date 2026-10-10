@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Cultura fixa durante um teste (snapshots iguais em qualquer máquina e no CI).</summary>
+/// <summary>Fixed culture during a test (identical snapshots on any machine and in CI).</summary>
 internal sealed class CultureScope : IDisposable
 {
     private readonly CultureInfo _culture = CultureInfo.CurrentCulture;

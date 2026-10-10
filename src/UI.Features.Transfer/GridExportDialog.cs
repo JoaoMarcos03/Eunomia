@@ -16,7 +16,7 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Features.Transfer;
 
-/// <summary>O que o diálogo Export grid rows pediu (o shell lê as linhas e escreve).</summary>
+/// <summary>What the Export grid rows dialog asked for (the shell reads the rows and writes them).</summary>
 public sealed record GridExportRequest(
     GridExportFormat Format,
     bool ToClipboard,
@@ -29,9 +29,9 @@ public sealed record GridExportRequest(
     bool OpenFile);
 
 /// <summary>
-/// Export grid rows (anexo B §1.4; FAM-C05): clipboard ou ficheiro (placeholders, 10 recentes, codificação), formato,
-/// linhas selecionadas ou todas as carregadas, opções e separadores do Delimited text, e "Save clipboard settings" (as
-/// opções do Copy as, separadas das do diálogo). As escolhas ficam gravadas no OK.
+/// Export grid rows (appendix B §1.4; FAM-C05): clipboard or file (placeholders, 10 recent, encoding), format,
+/// selected rows or every loaded row, Delimited text options and separators, and "Save clipboard settings" (the
+/// Copy as options, kept apart from the dialog's). The choices are saved on OK.
 /// </summary>
 public sealed class GridExportDialog : Window
 {
@@ -79,7 +79,7 @@ public sealed class GridExportDialog : Window
         _focusedOnly.Content = $"Only focused column ({focusedColumn ?? "-"})";
         _focusedOnly.IsEnabled = focusedColumn is not null;
 
-        // Valores gravados.
+        // Saved values.
         _toClipboard.IsChecked = settings.OutputToClipboard;
         _toFile.IsChecked = !settings.OutputToClipboard;
         _fileName.Text = settings.FileName;
@@ -98,7 +98,7 @@ public sealed class GridExportDialog : Window
         _terminator.Text = settings.Terminator;
         _null.Text = settings.NullValue;
 
-        // Escrever no nome escolhe "File"; o formato muda a extensão e a extensão escolhe o formato.
+        // Typing in the name selects "File"; the format changes the extension and the extension selects the format.
         _fileName.TextChanged += (_, _) =>
         {
             if (!string.IsNullOrWhiteSpace(_fileName.Text))
@@ -243,7 +243,7 @@ public sealed class GridExportDialog : Window
         return items;
     }
 
-    /// <summary>Delimited text: separadores editáveis; NULL também em Excel CSV e Markdown; codificação só para ficheiro.</summary>
+    /// <summary>Delimited text: editable separators; NULL also in Excel CSV and Markdown; encoding only for a file.</summary>
     private void UpdateEnabled()
     {
         var delimited = Format == GridExportFormat.DelimitedText;
@@ -283,7 +283,7 @@ public sealed class GridExportDialog : Window
         ToClipboard = _toClipboard.IsChecked == true,
     };
 
-    /// <summary>"Save clipboard settings": as opções atuais passam a ser as do Copy as.</summary>
+    /// <summary>"Save clipboard settings": the current options become the Copy as ones.</summary>
     private void SaveClipboardSettings()
     {
         _settings.ClipboardColumnNames = _columnNames.IsChecked == true;
@@ -314,7 +314,7 @@ public sealed class GridExportDialog : Window
             }
             _settings.RecentFiles = ExportFile.AddRecent(_settings.RecentFiles, fileName);
         }
-        // As escolhas ficam gravadas só no OK.
+        // The choices are only saved on OK.
         _settings.OutputToClipboard = toClipboard;
         _settings.FileName = fileName;
         _settings.Encoding = _encoding.SelectedItem as string ?? ExportFile.DefaultEncoding;

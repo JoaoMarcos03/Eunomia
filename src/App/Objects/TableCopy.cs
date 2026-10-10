@@ -5,8 +5,8 @@ using Eunomia.Drivers.Abstractions;
 namespace Eunomia.App.Objects;
 
 /// <summary>
-/// Pedido do Copy table: base e nome do destino, as colunas, índices e chaves estrangeiras escolhidos, se copia os dados
-/// e o filtro WHERE dos dados (anexo B §5.1).
+/// Copy table request: target database and name, the chosen columns, indexes and foreign keys, whether the data is
+/// copied and the data's WHERE filter (appendix B §5.1).
 /// </summary>
 public sealed record TableCopyRequest(
     string TargetDatabase,
@@ -18,25 +18,25 @@ public sealed record TableCopyRequest(
     string? Where);
 
 /// <summary>
-/// Copy table (Create new ▸ Table copy; anexo B §5.1): um <c>CREATE TABLE</c> pelo composer com os elementos escolhidos e,
-/// com os dados, um <c>INSERT … SELECT</c> que corre todo no servidor. O destino nunca é uma tabela que já existe: o
-/// <c>CREATE TABLE</c> não leva <c>IF NOT EXISTS</c> (o servidor recusa e o INSERT não corre) e quem pede é avisado antes
-/// (o HeidiSQL oferecia apagar o destino; aqui é preciso fazer Drop à parte).
+/// Copy table (Create new ▸ Table copy; appendix B §5.1): a <c>CREATE TABLE</c> from the composer with the chosen elements
+/// and, with the data, an <c>INSERT … SELECT</c> that runs entirely on the server. The target is never a table that
+/// already exists: the <c>CREATE TABLE</c> has no <c>IF NOT EXISTS</c> (the server refuses and the INSERT does not run)
+/// and the user is warned beforehand (HeidiSQL offered to drop the target; here that is a separate Drop).
 /// </summary>
 public static class TableCopy
 {
-    /// <summary>Comprimento máximo de um identificador (MySQL e MariaDB).</summary>
+    /// <summary>Maximum length of an identifier (MySQL and MariaDB).</summary>
     private const int MaxIdentifier = 64;
 
-    /// <summary>Nome por omissão do destino.</summary>
+    /// <summary>Default target name.</summary>
     public static string DefaultName(string source) => source + "_copy";
 
     /// <summary>
-    /// Estrutura do destino: só as colunas escolhidas; os índices e as chaves estrangeiras escolhidos cujas colunas foram
-    /// todas copiadas; os checks só quando todas as colunas foram copiadas (a expressão pode usar qualquer coluna). Uma
-    /// coluna AUTO_INCREMENT sem um índice copiado que comece por ela perde o AUTO_INCREMENT (senão o servidor recusa a
-    /// tabela, ER_WRONG_AUTO_KEY). Na mesma base, as chaves estrangeiras e os checks ficam com nomes novos a partir do
-    /// destino, porque os nomes destas restrições são únicos por base.
+    /// Target structure: only the chosen columns; the chosen indexes and foreign keys whose columns were all copied; checks
+    /// only when every column was copied (the expression may use any column). An AUTO_INCREMENT column without a copied
+    /// index starting with it loses the AUTO_INCREMENT (otherwise the server refuses the table, ER_WRONG_AUTO_KEY). In the
+    /// same database, foreign keys and checks get new names derived from the target, because the names of these
+    /// constraints are unique per database.
     /// </summary>
     public static TableDefinition TargetDefinition(TableDefinition source, TableCopyRequest request)
     {
@@ -71,9 +71,9 @@ public static class TableCopy
     }
 
     /// <summary>
-    /// <c>INSERT INTO destino (colunas) SELECT colunas FROM origem [WHERE filtro]</c>, sem as colunas geradas (o servidor
-    /// calcula-as); <c>null</c> se não houver colunas para copiar. O filtro passa pelas regras do filtro do Data tab (uma
-    /// só condição, sem <c>;</c> a meio).
+    /// <c>INSERT INTO target (columns) SELECT columns FROM source [WHERE filter]</c>, without the generated columns (the
+    /// server computes them); <c>null</c> if there are no columns to copy. The filter follows the Data tab filter rules (a
+    /// single condition, no <c>;</c> in the middle).
     /// </summary>
     public static string? InsertStatement(IDialect dialect, DbObjectRef source, TableDefinition target, string? where)
     {
@@ -90,7 +90,7 @@ public static class TableCopy
         return DataTabQuery.WhereClause(where) is { } filter ? sql + " WHERE " + filter : sql;
     }
 
-    /// <summary>Instruções do Copy table, por ordem: o CREATE e, com os dados, o INSERT … SELECT.</summary>
+    /// <summary>Copy table statements, in order: the CREATE and, with the data, the INSERT … SELECT.</summary>
     public static IReadOnlyList<string> Statements(IServerServices services, TableDefinition source, TableCopyRequest request)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -103,7 +103,7 @@ public static class TableCopy
         return statements;
     }
 
-    /// <summary>Nome de uma restrição copiada: <c>destino_ibfk_1</c>, <c>destino_chk_1</c> (como os gerados pelo servidor), até 64 caracteres.</summary>
+    /// <summary>Name of a copied constraint: <c>target_ibfk_1</c>, <c>target_chk_1</c> (like the server-generated ones), up to 64 characters.</summary>
     private static string ConstraintName(string table, string kind, int number)
     {
         var suffix = string.Create(CultureInfo.InvariantCulture, $"_{kind}_{number}");

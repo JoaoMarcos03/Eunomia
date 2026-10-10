@@ -4,7 +4,7 @@ using Eunomia.UI.Controls.Grid;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Caminho rápido de texto do grid: só texto simples; o resto tem de ir para o shaping completo.</summary>
+/// <summary>The grid's fast text path: plain text only; the rest has to go through full shaping.</summary>
 public sealed class GlyphRunFactoryTests
 {
     private static GlyphRunFactory Tahoma() => new(new Typeface("Tahoma"), 8 * 96.0 / 72.0);
@@ -22,9 +22,9 @@ public sealed class GlyphRunFactoryTests
 
     [AvaloniaTheory]
     [InlineData("مرحبا")]           // RTL
-    [InlineData("e\u0301")]         // marca combinada
+    [InlineData("e\u0301")]         // combining mark
     [InlineData("😀")]               // surrogate
-    [InlineData("a\tb")]            // controlo
+    [InlineData("a\tb")]            // control character
     [InlineData("")]
     public void TextoComplexoUsaShapingCompleto(string text)
     {

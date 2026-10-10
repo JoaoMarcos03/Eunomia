@@ -7,8 +7,8 @@ using Eunomia.Infra.Settings.HeidiImport;
 namespace Eunomia.Infra.Settings.Tests;
 
 /// <summary>
-/// Import das preferências e do estado do HeidiSQL (Fase 13): opções globais, estado por tabela (Filter, Sort,
-/// HiddenColumns, RecentFilters) e histórico de queries das sessões importadas.
+/// Import of HeidiSQL's preferences and state (phase 13): global options, per-table state (Filter, Sort,
+/// HiddenColumns, RecentFilters) and the query history of the imported sessions.
 /// </summary>
 public sealed class HeidiPreferencesImportTests : IDisposable
 {
@@ -61,7 +61,7 @@ public sealed class HeidiPreferencesImportTests : IDisposable
             Assert.Equal(ThemeNames.Dark, settings.Theme);
             Assert.True(result.ImportedPreferences >= 15);
 
-            // LastSessions e LastActiveSession pelos caminhos (a sessão que não existe fica de fora).
+            // LastSessions and LastActiveSession by their paths (the session that does not exist is left out).
             Assert.Equal([catalog.FindByPath("localhost")!.Id, catalog.FindByPath(@"Amberline\StagingAmberline")!.Id], settings.SessionManager.LastSessions);
             Assert.Equal(catalog.FindByPath(@"Amberline\StagingAmberline")!.Id, settings.SessionManager.LastActiveSession);
         }
@@ -79,11 +79,11 @@ public sealed class HeidiPreferencesImportTests : IDisposable
             Assert.Equal("notes|blob", db.GetTableState(budgets, "HiddenColumns"));
             Assert.Equal(["price > 10", "name LIKE 'a%'"], db.GetRecentFilters(budgets));
 
-            // A chave antiga "host|db|tabela" também serve.
+            // The old "host|db|table" key works too.
             Assert.Equal("id > 3", db.GetTableState(new TableKey(local.Id.ToString("D"), "elmwood", "prd_products"), "Filter"));
             Assert.Equal(2, result.ImportedTableStates);
 
-            // Histórico: o SQL com "|" fica inteiro; a linha sem o formato do HeidiSQL e a que tem uma password são ignoradas.
+            // History: the SQL with "|" stays whole; the line without HeidiSQL's format and the one with a password are ignored.
             var history = db.GetHistory(local.Name);
             Assert.Equal(2, result.ImportedHistory);
             Assert.Contains(history, h => h.Sql == "SELECT * FROM t WHERE a = 'x|y'" && h.Database == "elmwood" && h.Duration == TimeSpan.FromMilliseconds(12));

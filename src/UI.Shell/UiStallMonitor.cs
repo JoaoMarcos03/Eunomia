@@ -5,8 +5,8 @@ using Eunomia.App.Diagnostics;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Stalls da UI thread (secção 21.5; critério 27.3: 0 stalls &gt; 250 ms): um timer de 100 ms na UI thread mede o atraso
-/// com que corre; um atraso acima de <see cref="Threshold"/> é um stall, contado e registado no log de diagnóstico.
+/// UI thread stalls (section 21.5; criterion 27.3: 0 stalls &gt; 250 ms): a 100 ms timer on the UI thread measures how late
+/// it runs; a delay above <see cref="Threshold"/> is a stall, counted and recorded in the diagnostic log.
 /// </summary>
 public sealed class UiStallMonitor : IDisposable
 {

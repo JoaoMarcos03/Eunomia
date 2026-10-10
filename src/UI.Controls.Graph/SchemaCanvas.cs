@@ -12,12 +12,13 @@ using Eunomia.UI.Controls.Common.Theming;
 namespace Eunomia.UI.Controls.Graph;
 
 /// <summary>
-/// Canvas do Schema Visualizer (secção 17; SV-01–SV-04, SV-07, SV-08, SV-13–SV-15): tabelas como nós com as colunas,
-/// relações em curva da linha da FK para a linha referenciada, crow's foot no lado "muitos" e barra no lado "um" (1:1
-/// com barras nos dois). Zoom com a roda (e Ctrl+roda, +/−), pan arrastando o fundo, com espaço+arrastar e com as
-/// setas, F ajusta tudo ao ecrã e 0 volta a 100%. Clique seleciona (Ctrl junta ou tira), as relações da seleção ficam
-/// realçadas (a saída numa cor, a entrada noutra); arrastar move os nós selecionados, com snap opcional. Só desenha o
-/// que está visível; com zoom baixo mostra só os nomes (level of detail). Só leitura: nunca muda o schema (SV-18).
+/// Schema Visualizer canvas (section 17; SV-01–SV-04, SV-07, SV-08, SV-13–SV-15): tables as nodes with their columns,
+/// relations as curves from the FK row to the referenced row, a crow's foot on the "many" side and a bar on the "one" side
+/// (1:1 with bars on both). Zoom with the wheel (and Ctrl+wheel, +/−), pan by dragging the background, with space+drag and
+/// with the arrow keys, F fits everything to the screen and 0 goes back to 100%. Click selects (Ctrl adds or removes), the
+/// selection's relations are highlighted (outgoing in one colour, incoming in another); dragging moves the selected nodes,
+/// with optional snapping. Only draws what is visible; at low zoom it shows only the names (level of detail). Read-only: it
+/// never changes the schema (SV-18).
 /// </summary>
 public sealed class SchemaCanvas : Control
 {
@@ -60,7 +61,7 @@ public sealed class SchemaCanvas : Control
         };
     }
 
-    // ---------- Dados ----------
+    // ---------- Data ----------
 
     public IReadOnlyList<GraphNode> Nodes => _nodes;
 
@@ -68,13 +69,13 @@ public sealed class SchemaCanvas : Control
 
     public IReadOnlyCollection<GraphNode> SelectedNodes => _selected;
 
-    /// <summary>Cor de uma categoria de tipo (claro/escuro); por omissão, a cor do texto.</summary>
+    /// <summary>Colour of a type category (light/dark); by default, the text colour.</summary>
     public Func<int, bool, uint>? TypeColor { get; set; }
 
-    /// <summary>Cor da sessão: moldura do canvas (secção 17.3).</summary>
+    /// <summary>Session colour: the canvas frame (section 17.3).</summary>
     public uint SessionColor { get; set; }
 
-    /// <summary>Ao largar nós arrastados, as posições ficam numa grelha (SV-08).</summary>
+    /// <summary>When dragged nodes are dropped, their positions snap to a grid (SV-08).</summary>
     public bool SnapToGrid { get; set; }
 
     public double GridSize { get; set; } = 20;
@@ -85,15 +86,15 @@ public sealed class SchemaCanvas : Control
 
     public event EventHandler? SelectionChanged;
 
-    /// <summary>Duplo clique num nó (abre o Data tab).</summary>
+    /// <summary>Double click on a node (opens the Data tab).</summary>
     public event EventHandler<GraphNodeEventArgs>? NodeActivated;
 
     public event EventHandler<GraphNodeEventArgs>? NodeContextRequested;
 
-    /// <summary>Clique numa relação ou numa coluna FK (SV-15): o diagrama centra a tabela referenciada.</summary>
+    /// <summary>Click on a relation or an FK column (SV-15): the diagram centres the referenced table.</summary>
     public event EventHandler<GraphEdge>? RelationActivated;
 
-    /// <summary>Nós largados depois de arrastar (para guardar as posições).</summary>
+    /// <summary>Nodes dropped after dragging (to save their positions).</summary>
     public event EventHandler? NodesMoved;
 
     public event EventHandler? ViewChanged;
@@ -115,7 +116,7 @@ public sealed class SchemaCanvas : Control
         InvalidateVisual();
     }
 
-    /// <summary>Tamanho do nó para o layout (antes de estar no ecrã).</summary>
+    /// <summary>Node size for the layout (before it is on screen).</summary>
     public static Size Measure(GraphNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -130,7 +131,7 @@ public sealed class SchemaCanvas : Control
 
     private static string TypeText(GraphRow row) => (row.Flags & GraphRowFlags.Nullable) != 0 ? row.Type + " NULL" : row.Type;
 
-    // ---------- Seleção e vista ----------
+    // ---------- Selection and view ----------
 
     public void Select(IEnumerable<GraphNode> nodes, bool add = false)
     {
@@ -147,7 +148,7 @@ public sealed class SchemaCanvas : Control
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Centra um nó sem mudar o zoom (árvore → visualizer; navegação por FK).</summary>
+    /// <summary>Centres a node without changing the zoom (tree → visualizer; FK navigation).</summary>
     public void CenterOn(GraphNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -157,7 +158,7 @@ public sealed class SchemaCanvas : Control
         InvalidateVisual();
     }
 
-    /// <summary>Ajusta todos os nós visíveis ao ecrã (tecla F).</summary>
+    /// <summary>Fits every visible node to the screen (F key).</summary>
     public void FitToView()
     {
         var visible = _nodes.Where(n => !n.IsHidden).ToList();
@@ -172,7 +173,7 @@ public sealed class SchemaCanvas : Control
         InvalidateVisual();
     }
 
-    /// <summary>Muda o zoom mantendo o ponto <paramref name="anchor"/> (do controlo) no mesmo sítio.</summary>
+    /// <summary>Changes the zoom keeping the point <paramref name="anchor"/> (of the control) in the same place.</summary>
     public void ZoomTo(double zoom, Point? anchor = null)
     {
         var at = anchor ?? new Point(Bounds.Width / 2, Bounds.Height / 2);
@@ -194,7 +195,7 @@ public sealed class SchemaCanvas : Control
 
     public Point ToScreen(Point world) => new((world.X * _zoom) + _offset.X, (world.Y * _zoom) + _offset.Y);
 
-    /// <summary>Nó no ponto do controlo (o de cima primeiro).</summary>
+    /// <summary>Node at the control point (the topmost first).</summary>
     public GraphNode? NodeAt(Point point)
     {
         var world = ToWorld(point);
@@ -208,7 +209,7 @@ public sealed class SchemaCanvas : Control
         return null;
     }
 
-    /// <summary>Índice da coluna no ponto (−1 no cabeçalho).</summary>
+    /// <summary>Index of the column at the point (−1 on the header).</summary>
     public static int RowAt(GraphNode node, Point world)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -216,7 +217,7 @@ public sealed class SchemaCanvas : Control
         return y < 0 ? -1 : Math.Min(node.Rows.Count - 1, (int)(y / RowHeight));
     }
 
-    /// <summary>Relação perto do ponto do controlo (5 pixels).</summary>
+    /// <summary>Relation near the control point (5 pixels).</summary>
     public GraphEdge? EdgeAt(Point point)
     {
         foreach (var edge in _edges)
@@ -269,7 +270,7 @@ public sealed class SchemaCanvas : Control
         }
     }
 
-    /// <summary>Desenha os nós e relações que cruzam <paramref name="world"/> (coordenadas do diagrama).</summary>
+    /// <summary>Draws the nodes and relations that cross <paramref name="world"/> (diagram coordinates).</summary>
     private void RenderScene(DrawingContext context, Rect world, double zoom, Palette colors)
     {
         var detailed = zoom >= 0.45;
@@ -300,7 +301,7 @@ public sealed class SchemaCanvas : Control
             context.DrawGeometry(null, pen, geometry);
             if (detailed)
             {
-                // Lado "muitos" (a FK): crow's foot; lado "um": barra. 1:1 tem barra nos dois.
+                // "Many" side (the FK): crow's foot; "one" side: bar. 1:1 has a bar on both.
                 var fromSide = Math.Sign(c1.X - a.X);
                 var toSide = Math.Sign(c2.X - b.X);
                 if (edge.Cardinality == GraphCardinality.OneToMany)
@@ -403,7 +404,7 @@ public sealed class SchemaCanvas : Control
     private static FormattedText Text(string text, Typeface typeface, double size, IBrush brush) =>
         new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, size, brush);
 
-    /// <summary>Âncoras e pontos de controlo da curva: do lado de cada nó virado para o outro, à altura da coluna.</summary>
+    /// <summary>Anchors and control points of the curve: on the side of each node facing the other, at the column's height.</summary>
     private static (Point A, Point C1, Point C2, Point B) Curve(GraphEdge edge)
     {
         var from = edge.From.Bounds;
@@ -412,7 +413,7 @@ public sealed class SchemaCanvas : Control
         var toRow = edge.ToRows.Count > 0 ? edge.ToRows[0] : -1;
         double RowY(Rect r, int row) => row < 0 ? r.Y + (HeaderHeight / 2) : r.Y + HeaderHeight + (row * RowHeight) + (RowHeight / 2);
         var toRight = to.Center.X >= from.Center.X;
-        // Nós sobrepostos na horizontal: as duas pontas do mesmo lado (direito), curva para fora.
+        // Nodes overlapping horizontally: both ends on the same (right) side, curving outwards.
         var stacked = to.X < from.Right && from.X < to.Right;
         var a = new Point(stacked || toRight ? from.Right : from.X, RowY(from, fromRow));
         var b = new Point(stacked ? to.Right : toRight ? to.X : to.Right, RowY(to, toRow));
@@ -442,8 +443,8 @@ public sealed class SchemaCanvas : Control
     // ---------- Export ----------
 
     /// <summary>
-    /// PNG da vista atual ou do diagrama inteiro (SV-13), em escala 1:1; o diagrama inteiro fica limitado a 16.000 px de
-    /// lado (escala reduzida se for preciso).
+    /// PNG of the current view or of the whole diagram (SV-13), at 1:1 scale; the whole diagram is capped at 16,000 px per
+    /// side (scaled down if needed).
     /// </summary>
     public void ExportPng(Stream stream, bool wholeDiagram)
     {
@@ -475,7 +476,7 @@ public sealed class SchemaCanvas : Control
         bitmap.Save(stream, PngBitmapEncoderOptions.Default);
     }
 
-    // ---------- Entrada ----------
+    // ---------- Input ----------
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
@@ -608,7 +609,7 @@ public sealed class SchemaCanvas : Control
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
-        // Roda e Ctrl+roda fazem zoom no ponto do rato (SV-04); Shift+roda faz pan na horizontal.
+        // Wheel and Ctrl+wheel zoom at the mouse point (SV-04); Shift+wheel pans horizontally.
         if ((e.KeyModifiers & KeyModifiers.Shift) != 0)
         {
             PanBy(e.Delta.Y * 40, 0);
@@ -681,7 +682,7 @@ public sealed class SchemaCanvas : Control
         }
     }
 
-    // ---------- Cores ----------
+    // ---------- Colours ----------
 
     private sealed class Palette
     {

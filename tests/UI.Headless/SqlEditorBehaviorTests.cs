@@ -65,7 +65,7 @@ public sealed class SqlEditorBehaviorTests
         Assert.Same(palette.Keyword, BrushAt(1, 0));
         Assert.Same(palette.String, BrushAt(1, 7));
         Assert.Same(palette.Comment, BrushAt(1, 11));
-        // Comentário de bloco aberto na linha 2 continua na linha 3.
+        // A block comment opened on line 2 continues on line 3.
         Assert.Same(palette.Comment, BrushAt(3, 0));
         Assert.Same(palette.Number, BrushAt(3, 5));
         window.Close();

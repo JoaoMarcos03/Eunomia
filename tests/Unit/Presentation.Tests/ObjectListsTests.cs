@@ -4,7 +4,7 @@ using Eunomia.Presentation.Objects;
 
 namespace Eunomia.Presentation.Tests;
 
-/// <summary>Listas do Host e do Database tab (secção 4.9; anexo C §1.6, §1.8).</summary>
+/// <summary>Host and Database tab lists (section 4.9; appendix C §1.6, §1.8).</summary>
 public sealed class ObjectListsTests
 {
     private static DbObjectInfo Obj(string name, DbObjectKind kind, long? data = null, DateTime? updated = null, IReadOnlyDictionary<string, string?>? status = null) =>
@@ -69,7 +69,7 @@ public sealed class ObjectListsTests
         Assert.Equal("Table", DatabaseObjectList.Value(table, 7));
         Assert.Equal(42L, DatabaseObjectList.Value(table, 14));
         Assert.Equal("Dynamic", DatabaseObjectList.Value(table, 9));
-        // Views e routines não mostram linhas nem tamanho.
+        // Views and routines show neither rows nor size.
         Assert.Null(DatabaseObjectList.Value(Obj("v", DbObjectKind.View, 10), 2));
         Assert.Equal("Procedure", DatabaseObjectList.Value(Obj("p", DbObjectKind.Procedure), 7));
     }

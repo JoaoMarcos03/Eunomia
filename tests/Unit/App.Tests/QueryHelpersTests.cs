@@ -5,7 +5,7 @@ using Eunomia.Engine.Sql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Painel de helpers da query tab (anexo C §1.11, §3.9; FAM-Q06).</summary>
+/// <summary>Query tab helpers panel (appendix C §1.11, §3.9; FAM-Q06).</summary>
 public sealed class QueryHelpersTests
 {
     private static readonly DbObjectRef People = new("shop", "shop", "people", DbObjectKind.Table);

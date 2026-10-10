@@ -19,19 +19,19 @@ using Eunomia.UI.Controls.Common.TreeList;
 
 namespace Eunomia.UI.Features.Sessions;
 
-/// <summary>O que o Session Manager pede ao shell (ligar, import/export, preferências).</summary>
+/// <summary>What the Session Manager asks of the shell (connecting, import/export, preferences).</summary>
 public sealed class SessionManagerServices
 {
     public required SessionManagerModel Model { get; init; }
 
     public required SessionManagerOptions Options { get; init; }
 
-    /// <summary>Liga com os valores do formulário; devolve se ligou (erros já mostrados).</summary>
+    /// <summary>Connects with the form values; returns whether it connected (errors already shown).</summary>
     public required Func<Window, SessionDefinition, LoginCredentials?, Task<bool>> OpenAsync { get; init; }
 
     public Func<Window, Task>? ImportSettingsAsync { get; init; }
 
-    /// <summary>Importa as sessões do HeidiSQL instalado neste computador (só quando o há).</summary>
+    /// <summary>Imports the sessions of the HeidiSQL installed on this computer (only when there is one).</summary>
     public Func<Window, Task>? ImportHeidiSqlAsync { get; init; }
 
     public Func<Window, Task>? ExportSettingsAsync { get; init; }
@@ -40,16 +40,16 @@ public sealed class SessionManagerServices
 
     public Func<Window, Task>? ShowAboutAsync { get; init; }
 
-    /// <summary>Liga temporariamente com os valores do formulário e devolve as bases do servidor (dropdown do campo Databases).</summary>
+    /// <summary>Connects temporarily with the form values and returns the server's databases (Databases field drop-down).</summary>
     public Func<SessionDefinition, LoginCredentials?, Task<IReadOnlyList<string>>>? ListDatabasesAsync { get; init; }
 
     public string Version { get; init; } = string.Empty;
 }
 
 /// <summary>
-/// Session Manager (FAM-S01, S03; secção 5.5; anexo A §1): lista de sessões e folders com filtro, colunas, cores e
-/// drag &amp; drop; tabs Start, Settings, SSH tunnel, Advanced, SSL e Statistics; New / Save / Delete à esquerda,
-/// Open / Cancel / More à direita. Devolve <c>true</c> se ligou uma sessão.
+/// Session Manager (FAM-S01, S03; section 5.5; appendix A §1): list of sessions and folders with filter, columns, colours and
+/// drag &amp; drop; Start, Settings, SSH tunnel, Advanced, SSL and Statistics tabs; New / Save / Delete on the left,
+/// Open / Cancel / More on the right. Returns <c>true</c> if it connected a session.
 /// </summary>
 public sealed partial class SessionManagerWindow : Window
 {
@@ -84,7 +84,7 @@ public sealed partial class SessionManagerWindow : Window
         FontSize = 12;
         UpdateTitle();
 
-        // Lista de sessões.
+        // Session list.
         var list = _list.List;
         list.AllowDrag = true;
         list.AllowRename = true;
@@ -140,7 +140,7 @@ public sealed partial class SessionManagerWindow : Window
         _save.Click += (_, _) => Save();
         _delete = new Button { Content = "Delete", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, Name = "btnDelete" };
         _delete.Click += async (_, _) => await DeleteAsync();
-        // "New" tem a seta do split button: fica com a largura que precisa e os outros dois dividem o resto.
+        // "New" has the split button arrow: it takes the width it needs and the other two share the rest.
         newButton.MinWidth = 76;
         var leftButtons = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,4,*,4,*"), Margin = new Thickness(0, 6, 0, 0) };
         Grid.SetColumn(_save, 2);
@@ -156,7 +156,7 @@ public sealed partial class SessionManagerWindow : Window
         left.Children.Add(leftButtons);
         left.Children.Add(Themed.Bind(new Border { Child = _list, BorderThickness = new Thickness(1) }, Border.BorderBrushProperty, "border"));
 
-        // Tabs da sessão.
+        // Session tabs.
         _startTab = new TabItem { Header = "Start", Content = BuildStartTab() };
         _tabs.Items.Add(_startTab);
         foreach (var (header, icon, content) in new (string, string, Control)[]
@@ -228,7 +228,7 @@ public sealed partial class SessionManagerWindow : Window
         };
     }
 
-    /// <summary>Lista da sessões (testes).</summary>
+    /// <summary>The session list (tests).</summary>
     internal TreeListControl SessionList => _list.List;
 
     internal TextBox FilterBox => _filter;
@@ -237,7 +237,7 @@ public sealed partial class SessionManagerWindow : Window
 
     internal TabControl Tabs => _tabs;
 
-    /// <summary>Aplica o filtro já, sem o debounce de 500 ms (testes).</summary>
+    /// <summary>Applies the filter now, without the 500 ms debounce (tests).</summary>
     internal void ApplyFilterNow() => ApplyFilter();
 
     private static StackPanel Caption(string icon, string text)
@@ -264,7 +264,7 @@ public sealed partial class SessionManagerWindow : Window
         Title = $"Eunomia {_services.Version} - Session manager" + (path is null ? string.Empty : ": " + path);
     }
 
-    /// <summary>Reconstrói a lista a partir do catálogo (mantém seleção e folders abertos).</summary>
+    /// <summary>Rebuilds the list from the catalog (keeps the selection and open folders).</summary>
     internal void Reload()
     {
         var expanded = _list.List.AllNodes().Where(n => n.IsExpanded && n.Tag is SessionTreeNode { IsFolder: true }).Select(n => FolderKey((SessionTreeNode)n.Tag!)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -304,7 +304,7 @@ public sealed partial class SessionManagerWindow : Window
         };
     }
 
-    /// <summary>Ícone por tipo de rede e vendor da última ligação (anexo A §1.2).</summary>
+    /// <summary>Icon by network type and vendor of the last connection (appendix A §1.2).</summary>
     private static string VendorIcon(SessionDefinition s) =>
         NetTypes.IsMySqlFamily(s.NetType) ? "database" : s.NetType is NetType.Sqlite or NetType.SqliteEncrypted ? "table" : "session-manager";
 
@@ -371,7 +371,7 @@ public sealed partial class SessionManagerWindow : Window
         RefreshListMarkers();
     }
 
-    /// <summary>Start só com folder ou nada; os outros tabs só com uma sessão (anexo A §1.1).</summary>
+    /// <summary>Start only with a folder or nothing; the other tabs only with a session (appendix A §1.1).</summary>
     private void ShowTabsFor(SessionDefinition? draft)
     {
         _startTab.IsVisible = draft is null;
@@ -646,7 +646,7 @@ public sealed partial class SessionManagerWindow : Window
 
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        // "Save modifications?" também ao fechar (anexo A §1.5).
+        // "Save modifications?" also on closing (appendix A §1.5).
         if (!_closeConfirmed && _model.NeedsSavePrompt)
         {
             e.Cancel = true;

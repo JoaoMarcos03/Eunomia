@@ -11,8 +11,8 @@ using Eunomia.UI.Controls.Tree;
 namespace Eunomia.UI.Headless.Tests;
 
 /// <summary>
-/// Snapshots do grid, da árvore e do editor (passo 7 do spike), nos temas claro e escuro e a 100% e 150%.
-/// Dados determinísticos e cultura invariante; o editor não tem foco (o caret pisca).
+/// Snapshots of the grid, the tree and the editor (spike step 7), in the light and dark themes and at 100% and 150%.
+/// Deterministic data and invariant culture; the editor has no focus (the caret blinks).
 /// </summary>
 public sealed class SnapshotTests
 {
@@ -71,7 +71,7 @@ public sealed class SnapshotTests
         session.Children![5].Children![2].IsFavorite = true;
         view.DatabaseFilterBox.Text = databaseFilter;
         view.TableFilterBox.Text = tableFilter;
-        // O TextChanged da caixa pode chegar depois; aplica já para o nó focado ser um dos visíveis.
+        // The box's TextChanged may arrive later; applies it now so the focused node is one of the visible ones.
         model.SetDatabaseFilter(databaseFilter);
         model.SetTableFilter(tableFilter);
         view.Tree.FocusedNode = model.Visible.First(n => n.IsObject);

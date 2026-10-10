@@ -8,7 +8,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary><c>popupDB</c> contra o servidor real (Fase 4; anexo C §3.3): Drop, Empty, Select top rows, Create database, drag.</summary>
+/// <summary><c>popupDB</c> against the real server (phase 4; appendix C §3.3): Drop, Empty, Select top rows, Create database, drag.</summary>
 public sealed class TreeObjectCommandsTests
 {
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
@@ -36,26 +36,26 @@ public sealed class TreeObjectCommandsTests
             var dbNode = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db));
             await model.ExpandAsync(dbNode);
 
-            // O context menu é o popupDB, com os submenus.
+            // The context menu is popupDB, with its submenus.
             var menu = Assert.IsType<ContextMenu>(window.Tree.Tree.ContextMenu);
             var headers = menu.Items.OfType<MenuItem>().Select(i => i.Header as string).ToList();
             Assert.Contains("Create new", headers);
             Assert.Contains("Tree style options", headers);
 
-            // Drop de uma tabela: pergunta, apaga e volta a focar a base.
+            // Drop of a table: asks, drops it and focuses the database again.
             window.Tree.Tree.FocusedNode = Child(dbNode, "old");
             Assert.True(await context.Commands.ExecuteAsync("object.drop"));
             Assert.Contains($"Drop 1 object(s) in database \"{db}\"?", questions[^1], StringComparison.Ordinal);
             var refreshed = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db) is { Children: { } c } d && c.All(n => n.Name != "old") ? d : null);
             Assert.Same(refreshed, window.Tree.Tree.FocusedNode);
 
-            // Empty table(s) com a caixa "Disable foreign key checks".
+            // Empty table(s) with the "Disable foreign key checks" box.
             window.Tree.Tree.FocusedNode = Child(refreshed, "people");
             Assert.True(await context.Commands.ExecuteAsync("object.emptyTables"));
             Assert.StartsWith("Empty 1 table(s) and/or view(s)?", questions[^1], StringComparison.Ordinal);
             Assert.Contains(log.Snapshot(), l => l.Text.StartsWith("SET @OLD_FOREIGN_KEY_CHECKS", StringComparison.Ordinal));
 
-            // Select top 1000 rows: query tab nova com o SELECT, já executado.
+            // Select top 1000 rows: a new query tab with the SELECT, already run.
             var people = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db)?.Children?.FirstOrDefault(n => n.Name == "people"));
             window.Tree.Tree.FocusedNode = people;
             var tabs = window.Tabs.QueryTabs.Count;
@@ -64,7 +64,7 @@ public sealed class TreeObjectCommandsTests
             Assert.Equal("SELECT * FROM `people` LIMIT 1000;", window.SqlEditor.Text);
             await WaitAsync(() => log.Snapshot().Any(l => l.Text.StartsWith("SELECT * FROM `people` LIMIT 1000", StringComparison.Ordinal)) ? "ok" : null);
 
-            // Drag de uma tabela para o editor: com Shift, qualificada com a base.
+            // Dragging a table to the editor: with Shift, qualified with the database.
             window.SqlEditor.Text = string.Empty;
             var item = new DataTransferItem();
             item.Set(DatabaseTreeControl.NodeFormat, people);
@@ -74,7 +74,7 @@ public sealed class TreeObjectCommandsTests
             area.RaiseEvent(new DragEventArgs(DragDrop.DropEvent, data, area, new Point(5, 5), KeyModifiers.Shift));
             Assert.Equal($"{db}.people", window.SqlEditor.Text);
 
-            // Create database a partir do nó da sessão.
+            // Create database from the session node.
             window.Tree.Tree.FocusedNode = root;
             string? preselected = null;
             window.CreateDatabaseOverride = (collations, pre) =>

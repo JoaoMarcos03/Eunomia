@@ -8,7 +8,7 @@ using MySqlConnector;
 
 namespace Eunomia.Integration.Tests;
 
-/// <summary>Autocomplete A sobre a cache de metadata (Fase 6; anexo C §4.2; FAM-Q05).</summary>
+/// <summary>Autocomplete A on top of the metadata cache (phase 6; appendix C §4.2; FAM-Q05).</summary>
 public sealed class QueryCompletionTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -64,7 +64,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
         TestServer.RequireServer();
         Assert.Equal(_database, _host.CurrentDatabase);
 
-        // alias. → colunas pela ordem da tabela, com chave, tipo em minúsculas, comentário e crases quando é preciso.
+        // alias. → columns in table order, with key, lower-case type, comment and backticks when needed.
         var alias = await At("SELECT p.| FROM people p JOIN orders o ON o.person = p.id");
         Assert.NotNull(alias);
         Assert.Equal(["id", "name", "select"], alias.Items.Select(i => i.Text));
@@ -74,7 +74,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
         Assert.Equal("`select`", alias.Items[2].InsertText);
         Assert.Equal(["id", "person"], (await At("SELECT o.| FROM people p JOIN orders o ON o.person = p.id"))!.Items.Select(i => i.Text));
 
-        // db.tbl. → colunas; db. → tabelas, views e rotinas; tbl. da base atual.
+        // db.tbl. → columns; db. → tables, views and routines; tbl. from the current database.
         Assert.Equal(["id", "person"], (await At($"SELECT {_database}.orders.|"))!.Items.Select(i => i.Text));
         var objects = (await At($"SELECT * FROM {_database}.|"))!.Items;
         Assert.Equal(["orders", "p", "people", "v"], objects.Select(i => i.Text).Order(StringComparer.Ordinal));
@@ -82,7 +82,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
         Assert.Contains(objects, i => i is { Text: "p", Kind: CompletionKind.Routine, Detail: "procedure" });
         Assert.Equal(["id", "person"], (await At("SELECT orders.|"))!.Items.Select(i => i.Text));
 
-        // Dentro de strings: nada.
+        // Inside strings: nothing.
         Assert.Null(await At("SELECT 'p.|'"));
     }
 
@@ -92,7 +92,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
         TestServer.RequireServer();
         var people = new DbObjectRef(_database, _database, "people", DbObjectKind.Table);
 
-        // Colunas da tabela selecionada, depois bases, objetos da base atual, funções e keywords.
+        // Columns of the selected table, then databases, objects of the current database, functions and keywords.
         var general = (await At("SELECT |", people))!.Items.ToList();
         Assert.Equal(["id", "name", "select"], general.Take(3).Select(i => i.Text));
         int First(CompletionKind kind) => general.FindIndex(i => i.Kind == kind);
@@ -104,7 +104,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
         Assert.True(First(CompletionKind.Keyword) < First(CompletionKind.DataType));
         Assert.Contains(general, i => i is { Text: var t, Kind: CompletionKind.Database } && t == _database);
 
-        // @@SESSION. com o valor.
+        // @@SESSION. with the value.
         var variables = (await At("SELECT @@SESSION.|"))!.Items;
         Assert.Contains(variables, i => i is { Text: "autocommit", Kind: CompletionKind.Variable, Detail: "ON" });
     }

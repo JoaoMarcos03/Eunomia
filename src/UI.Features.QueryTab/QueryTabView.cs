@@ -14,9 +14,9 @@ using Eunomia.UI.Controls.SqlEditor;
 namespace Eunomia.UI.Features.QueryTab;
 
 /// <summary>
-/// Conteúdo de uma query tab (secção 4.7; anexo C §1.11): editor SQL, painel de helpers à direita e, por baixo, o tabset
-/// de resultados com um grid por result set ("nome (Nr × Mc)", tooltip com o SQL, Alt+←/→ entre eles). Os tamanhos
-/// dos painéis avisam quem os grava.
+/// Content of a query tab (section 4.7; appendix C §1.11): SQL editor, helpers panel on the right and, below, the results
+/// tabset with one grid per result set ("name (Nr × Mc)", tooltip with the SQL, Alt+←/→ between them). Panel sizes are
+/// reported to whoever saves them.
 /// </summary>
 public sealed class QueryTabView : Grid
 {
@@ -38,7 +38,7 @@ public sealed class QueryTabView : Grid
             },
         });
 
-        // Sessão onde a query vai correr (D9): nome e cor por cima do editor.
+        // Session the query will run on (D9): name and colour above the editor.
         _targetBar = new Border { Child = _target, IsVisible = false };
         ActualThemeVariantChanged += (_, _) => ApplyTargetColor();
         var editorPanel = new DockPanel();
@@ -70,7 +70,7 @@ public sealed class QueryTabView : Grid
 
     public TabControl Results { get; }
 
-    /// <summary>Painel de helpers (Columns, SQL functions, keywords, Snippets, History).</summary>
+    /// <summary>Helpers panel (Columns, SQL functions, keywords, Snippets, History).</summary>
     public Control? Helpers
     {
         get => _helpersHost.Content as Control;
@@ -81,13 +81,13 @@ public sealed class QueryTabView : Grid
 
     public event EventHandler<double>? HelpersWidthChanged;
 
-    /// <summary>Grids dos result tabs, pela ordem.</summary>
+    /// <summary>Grids of the result tabs, in order.</summary>
     public IReadOnlyList<DataGridView> ResultGrids => Results.Items.OfType<TabItem>().Select(t => (DataGridView)t.Content!).ToList();
 
-    /// <summary>Grid do result tab selecionado.</summary>
+    /// <summary>Grid of the selected result tab.</summary>
     public DataGridControl? ActiveGrid => (Results.SelectedItem as TabItem)?.Content is DataGridView view ? view.Control : null;
 
-    /// <summary>Cria o grid de um result set novo (a fonte vai enchendo) e seleciona o primeiro.</summary>
+    /// <summary>Creates the grid of a new result set (the source keeps filling) and selects the first one.</summary>
     public DataGridView AddResult(string caption, IRowSource source, string sql, uint sessionColor, Action<DataGridView>? setup = null)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -105,7 +105,7 @@ public sealed class QueryTabView : Grid
         return view;
     }
 
-    /// <summary>Caption final quando o result set acaba (linhas conhecidas).</summary>
+    /// <summary>Final caption when the result set ends (rows known).</summary>
     public void SetResultCaption(int index, string caption, string sql)
     {
         if (index >= 0 && index < Results.Items.Count && Results.Items[index] is TabItem item)
@@ -118,15 +118,15 @@ public sealed class QueryTabView : Grid
         }
     }
 
-    /// <summary>"c columns × r rows" e o SQL (primeiro 1 KiB), como o balão do HeidiSQL.</summary>
+    /// <summary>"c columns × r rows" and the SQL (first 1 KiB), like HeidiSQL's balloon.</summary>
     private static string Tooltip(IRowSource source, string sql) =>
         string.Create(CultureInfo.CurrentCulture, $"{source.Schema.Count} columns × {source.RowCount.Count:N0} rows") + Environment.NewLine +
         (sql.Length > 1024 ? sql[..1024] : sql);
 
-    /// <summary>Esquece os resultados da execução anterior (as fontes são largadas por quem as criou).</summary>
+    /// <summary>Forgets the results of the previous run (the sources are released by whoever created them).</summary>
     public void ClearResults() => Results.Items.Clear();
 
-    /// <summary>Alt+← / Alt+→: result tab anterior ou seguinte.</summary>
+    /// <summary>Alt+← / Alt+→: previous or next result tab.</summary>
     public void SelectResult(int delta)
     {
         if (Results.Items.Count == 0)
@@ -136,12 +136,12 @@ public sealed class QueryTabView : Grid
         Results.SelectedIndex = Math.Clamp(Results.SelectedIndex + delta, 0, Results.Items.Count - 1);
     }
 
-    /// <summary>Texto da barra da sessão alvo (null quando escondida).</summary>
+    /// <summary>Text of the target session bar (null when hidden).</summary>
     public string? TargetText => _targetBar.IsVisible ? _target.Text : null;
 
     /// <summary>
-    /// Sessão alvo (D9): nome e cor; <paramref name="pinned"/> diz que a tab está fixada. A cor da sessão fica numa
-    /// barra à esquerda e em tinta suave no fundo da barra e do tabset de resultados (como a árvore).
+    /// Target session (D9): name and colour; <paramref name="pinned"/> says the tab is pinned. The session colour goes in a
+    /// bar on the left and as a soft tint on the background of the bar and of the results tabset (like the tree).
     /// </summary>
     public void SetTarget(string? session, uint color, bool pinned)
     {

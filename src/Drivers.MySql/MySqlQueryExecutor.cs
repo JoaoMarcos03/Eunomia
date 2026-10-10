@@ -8,9 +8,9 @@ using MySqlConnector;
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// Execução em streaming (secção 14.1): cada instrução do batch corre em separado; os result sets saem em blocos
-/// colunares (<see cref="RowBlock"/>), nunca materializados por inteiro. As contagens de cada instrução (affected,
-/// found, warnings, duração e rede) são as que o SQL log do HeidiSQL mostra (FAM-Q04).
+/// Streaming execution (section 14.1): each statement of the batch runs separately; result sets come out in columnar
+/// blocks (<see cref="RowBlock"/>), never fully materialised. Each statement's counts (affected,
+/// found, warnings, duration and network) are the ones HeidiSQL's SQL log shows (FAM-Q04).
 /// </summary>
 public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExecutor
 {
@@ -50,8 +50,8 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
             {
                 if (!drained)
                 {
-                    // Quem lia parou a meio (exceção ou break): a leitura ficava presa no canal cheio com o reader aberto
-                    // e a ligação ocupada. Cancela a query no servidor e espera que o produtor largue a ligação.
+                    // The reader stopped halfway (exception or break): reading was stuck on the full channel with the reader open
+                    // and the connection busy. Cancels the query on the server and waits for the producer to release the connection.
                     await stop.CancelAsync().ConfigureAwait(false);
                     try
                     {
@@ -59,15 +59,15 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
                     }
                     catch (Exception)
                     {
-                        // Cancelado de propósito: o que interessa é a ligação ficar livre.
+                        // Cancelled on purpose: what matters is that the connection is free.
                     }
                     handle.Connection.InfoMessage -= OnInfo;
                 }
             }
             var outcome = await producer.ConfigureAwait(false);
             handle.Connection.InfoMessage -= OnInfo;
-            // O MySqlConnector só avisa de warnings em instruções sem result set; nas outras vêm do SHOW WARNINGS que
-            // seguiu no mesmo comando.
+            // MySqlConnector only reports warnings for statements without a result set; for the others they come from the
+            // SHOW WARNINGS that followed in the same command.
             if (outcome.Warnings is { } collected && warnings.Count == 0)
             {
                 warnings.AddRange(collected);
@@ -99,17 +99,17 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         long Affected, long Found, TimeSpan Duration, TimeSpan Network, DbError? Error, bool HadResultSet = false, int Skipped = 0,
         IReadOnlyList<(string Level, int Code, string Message)>? Warnings = null);
 
-    /// <summary>Junta-se às instruções que podem devolver linhas: os warnings chegam na mesma ida ao servidor (PR-10).</summary>
+    /// <summary>Appended to statements that may return rows: warnings arrive in the same round trip (PR-10).</summary>
     private const string WarningsSuffix = "\n;SHOW WARNINGS";
 
-    /// <summary>O result set tem a forma do <c>SHOW WARNINGS</c> (Level, Code, Message).</summary>
+    /// <summary>The result set has the shape of <c>SHOW WARNINGS</c> (Level, Code, Message).</summary>
     private static bool IsWarningsShape(MySqlDataReader reader) =>
         reader.FieldCount == 3
         && string.Equals(reader.GetName(0), "Level", StringComparison.Ordinal)
         && string.Equals(reader.GetName(1), "Code", StringComparison.Ordinal)
         && string.Equals(reader.GetName(2), "Message", StringComparison.Ordinal);
 
-    /// <summary>Corre uma instrução e escreve os eventos de resultado no canal (limitado: backpressure, secção 11.4).</summary>
+    /// <summary>Runs a statement and writes the result events to the channel (bounded: backpressure, section 11.4).</summary>
     private async Task<Outcome> RunStatementAsync(
         string sql, int index, int firstResultSet, ExecuteOptions options,
         System.Threading.Channels.ChannelWriter<ResultEvent> writer, CancellationToken cancellationToken)
@@ -120,8 +120,8 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         var resultSet = firstResultSet;
         var skipped = 0;
         MySqlCommand? cmd = null;
-        // O SHOW WARNINGS segue no mesmo comando (multi-statement): o último result set, se tiver a forma dele, são os
-        // warnings da instrução e não um resultado.
+        // SHOW WARNINGS follows in the same command (multi-statement): the last result set, if it has its shape, holds the
+        // statement's warnings and not a result.
         var withWarnings = options.CollectWarnings && MySqlStatementShape.MayReturnRows(sql) && MySqlStatementShape.EndsInCode(sql);
         List<(string Level, int Code, string Message)>? warnings = null;
         try
@@ -140,7 +140,7 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
                 var fetch = Stopwatch.StartNew();
                 var emit = resultSet < options.MaxResultSets;
                 var schema = BuildSchema(reader);
-                // Um result set com a forma do SHOW WARNINGS fica retido até se saber se é o último.
+                // A result set with the shape of SHOW WARNINGS is held back until we know whether it is the last one.
                 var held = withWarnings && IsWarningsShape(reader) ? new List<ResultEvent>() : null;
                 var heldWarnings = held is null ? null : new List<(string, int, string)>();
                 async ValueTask Write(ResultEvent e)
@@ -193,7 +193,7 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
                 more = await reader.NextResultAsync(cancellationToken).ConfigureAwait(false);
                 if (held is not null && !more)
                 {
-                    // Era o SHOW WARNINGS que juntámos.
+                    // It was the SHOW WARNINGS we appended.
                     warnings = heldWarnings;
                     break;
                 }
@@ -218,7 +218,7 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         }
         catch (DbOperationException refused)
         {
-            // Recusada pela guarda da ligação (sessão read-only): erro da instrução, nada foi enviado.
+            // Refused by the connection's guard (read-only session): a statement error, nothing was sent.
             return new Outcome(0, 0, clock.Elapsed, TimeSpan.Zero, refused.Error);
         }
         finally
@@ -233,8 +233,8 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
     }
 
     /// <summary>
-    /// Tira da mensagem o <c>SHOW WARNINGS</c> que o cliente juntou: os erros de sintaxe citam o resto do texto
-    /// (<c>near '…'</c>, cortado a 80 caracteres), que pode acabar no sufixo inteiro ou num pedaço dele.
+    /// Removes from the message the <c>SHOW WARNINGS</c> the client appended: syntax errors quote the rest of the text
+    /// (<c>near '…'</c>, cut at 80 characters), which may end with the whole suffix or a piece of it.
     /// </summary>
     internal static string StripWarningsSuffix(string message)
     {
@@ -265,7 +265,7 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         return new DbError(ex.Number != 0 ? ex.Number : (int)ex.ErrorCode, ex.SqlState, ex.Message);
     }
 
-    /// <summary>Esquema do resultado: nomes, tipo nativo, categoria de cor, armazenamento, PK e NULL.</summary>
+    /// <summary>Result schema: names, native type, colour category, storage, PK and NULL.</summary>
     internal static ResultSchema BuildSchema(MySqlDataReader reader)
     {
         var columns = reader.GetColumnSchema();
@@ -298,7 +298,7 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         return new ResultSchema(infos);
     }
 
-    /// <summary>Tipo nativo (como no header do grid) e tipo lógico de uma coluna do resultado.</summary>
+    /// <summary>Native type (as in the grid header) and logical type of a result column.</summary>
     internal static (string Native, LogicalType Logical) Describe(MySqlDbColumn column)
     {
         var precision = column.NumericPrecision ?? 0;
@@ -368,12 +368,12 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         }
     }
 
-    /// <summary>Texto de uma célula guardada como texto: datas e horas no formato do servidor, zero dates incluídas.</summary>
+    /// <summary>Text of a cell stored as text: dates and times in the server's format, zero dates included.</summary>
     private static string Text(MySqlDataReader reader, int ordinal, ColumnInfo info)
     {
         if (info.NativeType.StartsWith("DECIMAL", StringComparison.Ordinal))
         {
-            // DECIMAL acima de 28 dígitos não cabe em System.Decimal: lido como MySqlDecimal (texto do servidor).
+            // DECIMAL above 28 digits does not fit in System.Decimal: read as MySqlDecimal (the server's text).
             return reader.GetMySqlDecimal(ordinal).ToString();
         }
         var value = reader.GetValue(ordinal);
@@ -403,7 +403,7 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
     private static string ZeroDate(ColumnInfo info) =>
         info.NativeType == "DATE" ? "0000-00-00" : info.Scale > 0 ? "0000-00-00 00:00:00." + new string('0', info.Scale) : "0000-00-00 00:00:00";
 
-    /// <summary>TIME do MySQL: pode ser negativo e passar de 24 h (−838:59:59 a 838:59:59).</summary>
+    /// <summary>MySQL TIME: can be negative and exceed 24 h (−838:59:59 to 838:59:59).</summary>
     internal static string FormatTime(TimeSpan value, int fractionDigits)
     {
         var negative = value < TimeSpan.Zero;

@@ -1,6 +1,6 @@
 namespace Eunomia.Drivers.Abstractions;
 
-/// <summary>Tipos de objeto do modelo da secção 14.2.</summary>
+/// <summary>Object kinds of the section 14.2 model.</summary>
 public enum DbObjectKind
 {
     Table,
@@ -15,12 +15,12 @@ public enum DbObjectKind
 }
 
 /// <summary>
-/// Endereço de um objeto: <c>Server → Catalog → Schema → Object</c> (14.2). Em MySQL/MariaDB catalog e schema
-/// são a database; em PostgreSQL o catalog é a database da ligação.
+/// Address of an object: <c>Server → Catalog → Schema → Object</c> (14.2). On MySQL/MariaDB catalog and schema
+/// are the database; on PostgreSQL the catalog is the connection's database.
 /// </summary>
 public sealed record DbObjectRef(string Catalog, string Schema, string Name, DbObjectKind Kind);
 
-/// <summary>Um objeto como aparece na árvore (nome, tipo, tamanho, contagem estimada, comentário).</summary>
+/// <summary>An object as it shows in the tree (name, kind, size, estimated count, comment).</summary>
 public sealed record DbObjectInfo(
     DbObjectRef Ref,
     long? DataBytes = null,
@@ -30,22 +30,22 @@ public sealed record DbObjectInfo(
     string? Comment = null,
     DateTime? Updated = null)
 {
-    /// <summary>Data de criação (coluna Created do Database tab).</summary>
+    /// <summary>Creation date (Created column of the Database tab).</summary>
     public DateTime? Created { get; init; }
 
     /// <summary>
-    /// Todos os campos de estado do servidor (no MySQL, as colunas do <c>SHOW TABLE STATUS</c>), para as colunas opcionais
-    /// do Database tab (Version, Row format, Avg row length…).
+    /// Every server status field (on MySQL, the <c>SHOW TABLE STATUS</c> columns), for the optional columns
+    /// of the Database tab (Version, Row format, Avg row length…).
     /// </summary>
     public IReadOnlyDictionary<string, string?>? Status { get; init; }
 
-    /// <summary>Tamanho da árvore: Data_length + Index_length (secção 4.2).</summary>
+    /// <summary>Size in the tree: Data_length + Index_length (section 4.2).</summary>
     public long? SizeBytes => DataBytes is null && IndexBytes is null ? null : (DataBytes ?? 0) + (IndexBytes ?? 0);
 }
 
 /// <summary>
-/// Uma coluna. <see cref="DefaultExpression"/> é o SQL que vem depois de <c>DEFAULT</c>, igual em MySQL e MariaDB:
-/// texto entre aspas, número, <c>NULL</c> ou expressão (<see cref="DefaultIsExpression"/>); <c>null</c> = sem default.
+/// A column. <see cref="DefaultExpression"/> is the SQL that comes after <c>DEFAULT</c>, the same on MySQL and MariaDB:
+/// quoted text, a number, <c>NULL</c> or an expression (<see cref="DefaultIsExpression"/>); <c>null</c> = no default.
 /// </summary>
 public sealed record ColumnDefinition(
     string Name,
@@ -58,19 +58,19 @@ public sealed record ColumnDefinition(
     bool IsInvisible,
     string? Comment)
 {
-    /// <summary>O default é uma expressão (<c>CURRENT_TIMESTAMP</c>, <c>(uuid())</c>) e não um literal.</summary>
+    /// <summary>The default is an expression (<c>CURRENT_TIMESTAMP</c>, <c>(uuid())</c>) and not a literal.</summary>
     public bool DefaultIsExpression { get; init; }
 
-    /// <summary><c>ON UPDATE</c> (por exemplo <c>CURRENT_TIMESTAMP</c>).</summary>
+    /// <summary><c>ON UPDATE</c> (for example <c>CURRENT_TIMESTAMP</c>).</summary>
     public string? OnUpdate { get; init; }
 
-    /// <summary>Expressão de uma coluna gerada.</summary>
+    /// <summary>Expression of a generated column.</summary>
     public string? GenerationExpression { get; init; }
 
-    /// <summary>Coluna gerada guardada (STORED/PERSISTENT) em vez de VIRTUAL.</summary>
+    /// <summary>Stored generated column (STORED/PERSISTENT) instead of VIRTUAL.</summary>
     public bool IsStored { get; init; }
 
-    /// <summary>Nome no servidor antes de editar (table editor: CHANGE COLUMN); <c>null</c> numa coluna nova.</summary>
+    /// <summary>Name on the server before editing (table editor: CHANGE COLUMN); <c>null</c> for a new column.</summary>
     public string? OriginalName { get; init; }
 }
 
@@ -85,10 +85,10 @@ public enum IndexKind
 
 public sealed record IndexDefinition(string Name, IndexKind Kind, IReadOnlyList<string> Columns, bool IsVisible = true)
 {
-    /// <summary>Prefixo de cada coluna (<c>col(20)</c>), pela ordem das colunas; <c>null</c> sem prefixos.</summary>
+    /// <summary>Prefix of each column (<c>col(20)</c>), in column order; <c>null</c> without prefixes.</summary>
     public IReadOnlyList<int?>? SubParts { get; init; }
 
-    /// <summary>BTREE, HASH ou RTREE quando declarado; <c>null</c> = o do motor.</summary>
+    /// <summary>BTREE, HASH or RTREE when declared; <c>null</c> = the engine's.</summary>
     public string? Algorithm { get; init; }
 
     public string? Comment { get; init; }
@@ -113,7 +113,7 @@ public sealed record ForeignKeyDefinition(
 
 public sealed record CheckDefinition(string Name, string Expression);
 
-/// <summary>Estrutura completa de uma tabela, a unidade do table editor e do <see cref="IDdlComposer"/>.</summary>
+/// <summary>Full structure of a table, the unit of the table editor and of the <see cref="IDdlComposer"/>.</summary>
 public sealed record TableDefinition(
     DbObjectRef Ref,
     IReadOnlyList<ColumnDefinition> Columns,
@@ -124,12 +124,12 @@ public sealed record TableDefinition(
 
 public sealed record ServerVariable(string Name, string Value, bool IsSession);
 
-/// <summary>Uma entrada de uma lista do HELP do servidor: tópico ou categoria.</summary>
+/// <summary>An entry of a server HELP list: topic or category.</summary>
 public sealed record SqlHelpEntry(string Name, bool IsCategory);
 
 /// <summary>
-/// Resposta do HELP do servidor (SQL help, F1): um tópico (<see cref="Name"/>, descrição e exemplo) ou, quando o termo
-/// é uma categoria ou corresponde a vários tópicos, a lista em <see cref="Entries"/>.
+/// Server HELP answer (SQL help, F1): a topic (<see cref="Name"/>, description and example) or, when the term
+/// is a category or matches several topics, the list in <see cref="Entries"/>.
 /// </summary>
 public sealed record SqlHelp(string? Name, string? Description, string? Example, IReadOnlyList<SqlHelpEntry> Entries)
 {
@@ -139,26 +139,26 @@ public sealed record SqlHelp(string? Name, string? Description, string? Example,
 public sealed record ServerProcess(long Id, string User, string Host, string? Database, string Command, TimeSpan Time, string? State, string? Info);
 
 /// <summary>
-/// Quanto pedir ao ler os objetos de um schema (PR-08). Em servidores com ficheiros por tabela (MariaDB, MySQL 5.x), os
-/// detalhes obrigam a abrir cada tabela e custam o mesmo que as estatísticas; os nomes e o tipo não.
+/// How much to ask for when reading a schema's objects (PR-08). On servers with a file per table (MariaDB, MySQL 5.x), the
+/// details force opening every table and cost as much as the statistics; names and kinds do not.
 /// </summary>
 public enum ObjectDetail
 {
-    /// <summary>Nome e tipo (tabela ou view), routines, triggers e events: o que a árvore precisa.</summary>
+    /// <summary>Name and kind (table or view), routines, triggers and events: what the tree needs.</summary>
     Names,
 
-    /// <summary>Mais engine, datas, collation e comentário, sem tamanhos nem linhas ("Get full table status" desligado).</summary>
+    /// <summary>Plus engine, dates, collation and comment, without sizes or rows ("Get full table status" off).</summary>
     Details,
 
-    /// <summary>Tudo, com tamanhos e linhas estimadas (<c>SHOW TABLE STATUS</c>).</summary>
+    /// <summary>Everything, with sizes and estimated rows (<c>SHOW TABLE STATUS</c>).</summary>
     Statistics,
 }
 
 public sealed record CollationInfo(string Name, string Charset, bool IsDefault);
 
 /// <summary>
-/// Catálogo do servidor (secção 14.1). Queries em lote por base (#1672); estatísticas caras são pedidas à parte
-/// e são opcionais.
+/// Server catalog (section 14.1). Batched queries per database (#1672); expensive statistics are requested separately
+/// and are optional.
 /// </summary>
 public interface IMetadataProvider
 {
@@ -166,7 +166,7 @@ public interface IMetadataProvider
 
     Task<IReadOnlyList<string>> GetSchemasAsync(string catalog, CancellationToken cancellationToken);
 
-    /// <summary>Todos os objetos de um schema numa só ida ao servidor, com o nível de detalhe pedido.</summary>
+    /// <summary>Every object of a schema in a single round trip, with the requested level of detail.</summary>
     Task<IReadOnlyList<DbObjectInfo>> GetObjectsAsync(string catalog, string schema, ObjectDetail detail, CancellationToken cancellationToken);
 
     Task<TableDefinition> GetTableAsync(DbObjectRef table, CancellationToken cancellationToken);
@@ -174,30 +174,30 @@ public interface IMetadataProvider
     Task<string> GetCreateCodeAsync(DbObjectRef obj, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Todas as tabelas de um schema com colunas, chaves primárias e únicas e FKs, em poucas idas ao servidor (Schema
-    /// Visualizer, secção 17). Sem defaults, checks nem opções; as ações das FKs ficam em RESTRICT.
+    /// Every table of a schema with columns, primary and unique keys and FKs, in few round trips (Schema
+    /// Visualizer, section 17). No defaults, checks or options; FK actions are left as RESTRICT.
     /// </summary>
     Task<IReadOnlyList<TableDefinition>> GetSchemaAsync(string catalog, string schema, CancellationToken cancellationToken);
 
-    /// <summary><c>SHOW CREATE DATABASE</c> (bloco da base no SQL export).</summary>
+    /// <summary><c>SHOW CREATE DATABASE</c> (the database block in the SQL export).</summary>
     Task<string> GetCreateDatabaseAsync(string database, CancellationToken cancellationToken);
 
-    /// <summary>SQL_MODE com que o trigger foi criado (o SQL export repõe-no à volta do <c>CREATE TRIGGER</c>).</summary>
+    /// <summary>SQL_MODE the trigger was created with (the SQL export restores it around the <c>CREATE TRIGGER</c>).</summary>
     Task<string> GetTriggerSqlModeAsync(DbObjectRef trigger, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<ServerVariable>> GetVariablesAsync(bool session, CancellationToken cancellationToken);
 
-    /// <summary><c>HELP 'termo'</c>: o tópico, ou a lista de tópicos e categorias que correspondem (SQL help, F1).</summary>
+    /// <summary><c>HELP 'term'</c>: the topic, or the list of matching topics and categories (SQL help, F1).</summary>
     Task<SqlHelp> GetHelpAsync(string topic, CancellationToken cancellationToken);
 
-    /// <summary><c>SHOW GLOBAL STATUS</c> (Host tab: Status e Command-Statistics).</summary>
+    /// <summary><c>SHOW GLOBAL STATUS</c> (Host tab: Status and Command-Statistics).</summary>
     Task<IReadOnlyList<ServerVariable>> GetStatusAsync(CancellationToken cancellationToken);
 
     Task<IReadOnlyList<ServerProcess>> GetProcessesAsync(CancellationToken cancellationToken);
 
-    /// <summary>Collation por omissão de cada base (coluna "Default collation" do Host tab).</summary>
+    /// <summary>Default collation of each database ("Default collation" column of the Host tab).</summary>
     Task<IReadOnlyDictionary<string, string>> GetCatalogCollationsAsync(CancellationToken cancellationToken);
 
-    /// <summary>Collations do servidor (diálogo Create database).</summary>
+    /// <summary>Server collations (Create database dialog).</summary>
     Task<IReadOnlyList<CollationInfo>> GetCollationsAsync(CancellationToken cancellationToken);
 }

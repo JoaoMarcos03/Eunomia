@@ -7,7 +7,7 @@ using Avalonia.Styling;
 
 namespace Eunomia.UI.Controls.Common.Theming;
 
-/// <summary>Ficheiro de tokens de um tema (<c>assets/themes/*.json</c>): nome do token → cor <c>#RRGGBB</c>.</summary>
+/// <summary>Token file of a theme (<c>assets/themes/*.json</c>): token name → <c>#RRGGBB</c> colour.</summary>
 public sealed class ThemeFile
 {
     public string Name { get; set; } = string.Empty;
@@ -16,24 +16,24 @@ public sealed class ThemeFile
 
     public Dictionary<string, string> Tokens { get; set; } = [];
 
-    /// <summary>Cor de um token (magenta se faltar, para se ver logo nos snapshots).</summary>
+    /// <summary>Colour of a token (magenta if missing, so it shows right away in the snapshots).</summary>
     public Color Color(string token) => Tokens.TryGetValue(token, out var hex) ? Avalonia.Media.Color.Parse(hex) : Colors.Magenta;
 
-    /// <summary>Cor de um token em ARGB (<c>0xAARRGGBB</c>), para os controlos que desenham sozinhos.</summary>
+    /// <summary>Colour of a token as ARGB (<c>0xAARRGGBB</c>), for controls that draw themselves.</summary>
     public uint Argb(string token) => Color(token).ToUInt32();
 }
 
-/// <summary>Misturas de cores para tintas (cor da sessão sobre o fundo) e contraste do texto.</summary>
+/// <summary>Colour blends for tints (session colour over the background) and text contrast.</summary>
 public static class ColorMath
 {
-    /// <summary>Mistura <paramref name="color"/> com <paramref name="background"/>: 0 = só o fundo, 1 = só a cor.</summary>
+    /// <summary>Blends <paramref name="color"/> with <paramref name="background"/>: 0 = background only, 1 = colour only.</summary>
     public static uint Mix(uint color, uint background, double amount)
     {
         uint Channel(int shift) => (uint)Math.Round((((color >> shift) & 0xFF) * amount) + (((background >> shift) & 0xFF) * (1 - amount)));
         return 0xFF000000 | (Channel(16) << 16) | (Channel(8) << 8) | Channel(0);
     }
 
-    /// <summary>Luminância percebida abaixo de metade (texto claro por cima).</summary>
+    /// <summary>Perceived luminance below half (light text on top).</summary>
     public static bool IsDark(uint argb)
     {
         var r = (argb >> 16) & 0xFF;
@@ -42,15 +42,15 @@ public static class ColorMath
         return (0.299 * r) + (0.587 * g) + (0.114 * b) < 128;
     }
 
-    /// <summary>Tinta da cor da sessão sobre um fundo (linhas da árvore, gutter do grid): suave no claro e no escuro.</summary>
+    /// <summary>Tint of the session colour over a background (tree rows, grid gutter): soft in light and dark.</summary>
     public static uint SessionTint(uint sessionColor, uint background) =>
         Mix(sessionColor | 0xFF000000, background, IsDark(background) ? 0.32 : 0.22);
 }
 
 /// <summary>
-/// Tokens de tema claro e escuro (secção 5.6; secção 21.7: temas são dados). Cada token vira um
-/// <see cref="SolidColorBrush"/> nos <c>ThemeDictionaries</c> da aplicação, com a chave <c>eu.&lt;token&gt;</c>;
-/// os controlos ligam-se com <see cref="Themed.Bind"/> e mudam sozinhos quando o tema muda.
+/// Light and dark theme tokens (section 5.6; section 21.7: themes are data). Each token becomes a
+/// <see cref="SolidColorBrush"/> in the application's <c>ThemeDictionaries</c>, with the key <c>eu.&lt;token&gt;</c>;
+/// controls bind with <see cref="Themed.Bind"/> and change on their own when the theme changes.
 /// </summary>
 public static class ThemeTokens
 {
@@ -62,10 +62,10 @@ public static class ThemeTokens
 
     public static string Key(string token) => KeyPrefix + token;
 
-    /// <summary>Tokens da variante (escuro só quando a variante é <see cref="ThemeVariant.Dark"/>).</summary>
+    /// <summary>Tokens of the variant (dark only when the variant is <see cref="ThemeVariant.Dark"/>).</summary>
     public static ThemeFile Of(ThemeVariant? variant) => variant == ThemeVariant.Dark ? Dark : Light;
 
-    /// <summary>Instala os tokens claro e escuro nos recursos da aplicação.</summary>
+    /// <summary>Installs the light and dark tokens in the application resources.</summary>
     public static void Install(Application application)
     {
         ArgumentNullException.ThrowIfNull(application);
@@ -73,7 +73,7 @@ public static class ThemeTokens
         application.Resources.ThemeDictionaries[ThemeVariant.Dark] = ToDictionary(Dark);
     }
 
-    /// <summary>Cor de um token para uma variante (para controlos que desenham sozinhos).</summary>
+    /// <summary>Colour of a token for a variant (for controls that draw themselves).</summary>
     public static Color ColorOf(string token, ThemeVariant? variant) => Of(variant).Color(token);
 
     private static ResourceDictionary ToDictionary(ThemeFile file)
@@ -95,7 +95,7 @@ public static class ThemeTokens
     }
 }
 
-/// <summary>Liga propriedades de controlos a tokens de tema (atualizadas quando a variante muda).</summary>
+/// <summary>Binds control properties to theme tokens (updated when the variant changes).</summary>
 public static class Themed
 {
     public static T Bind<T>(T control, AvaloniaProperty property, string token)

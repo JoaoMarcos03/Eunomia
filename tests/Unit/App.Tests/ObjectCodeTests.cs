@@ -4,7 +4,7 @@ using Eunomia.Drivers.MySql;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Editor por código de views, rotinas, triggers e events (Fase 13).</summary>
+/// <summary>Code editor for views, routines, triggers and events (phase 13).</summary>
 public sealed class ObjectCodeTests
 {
     [Theory]

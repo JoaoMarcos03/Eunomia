@@ -43,7 +43,7 @@ public sealed class GridAutoScrollTests
     {
         var s = new GridAutoScroll();
         s.Start(0, 0);
-        s.Move(0, GridAutoScroll.DeadZone + 1); // 9 DIPs/s = meia linha por segundo
+        s.Move(0, GridAutoScroll.DeadZone + 1); // 9 DIPs/s = half a row per second
 
         long total = 0;
         for (var i = 0; i < 60; i++)

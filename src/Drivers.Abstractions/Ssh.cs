@@ -1,26 +1,26 @@
 namespace Eunomia.Drivers.Abstractions;
 
-/// <summary>Um túnel SSH aberto: a ligação à base de dados vai para <c>127.0.0.1:</c><see cref="LocalPort"/>.</summary>
+/// <summary>An open SSH tunnel: the database connection goes to <c>127.0.0.1:</c><see cref="LocalPort"/>.</summary>
 public interface ISshTunnel : IAsyncDisposable
 {
     int LocalPort { get; }
 
     bool IsConnected { get; }
 
-    /// <summary>O túnel caiu (erro de rede, servidor SSH fechou); o SessionHost passa a Reconnecting.</summary>
+    /// <summary>The tunnel dropped (network error, the SSH server closed it); the SessionHost moves to Reconnecting.</summary>
     event EventHandler<Exception?>? Closed;
 }
 
 /// <summary>
-/// Abre túneis SSH in-process (secção 23.2, ADR-09, D7): agent, chave e password, nunca em linha de comandos, host
-/// keys verificadas contra o known_hosts próprio. Implementado em <c>Infra.Ssh</c>.
+/// Opens in-process SSH tunnels (section 23.2, ADR-09, D7): agent, key and password, never on a command line, host
+/// keys checked against Eunomia's own known_hosts. Implemented in <c>Infra.Ssh</c>.
 /// </summary>
 public interface ISshTunnelFactory
 {
     /// <summary>
-    /// Liga ao servidor SSH e faz forward de uma porta local para <paramref name="targetHost"/>:<paramref name="targetPort"/>
-    /// (resolvido no servidor SSH, como o <c>-L</c> do HeidiSQL). Host key desconhecida ou mudada dá
-    /// <see cref="SshHostKeyException"/>: a UI pergunta e, se o utilizador aceitar, chama <see cref="TrustHostKey"/> e repete.
+    /// Connects to the SSH server and forwards a local port to <paramref name="targetHost"/>:<paramref name="targetPort"/>
+    /// (resolved on the SSH server, like HeidiSQL's <c>-L</c>). An unknown or changed host key gives an
+    /// <see cref="SshHostKeyException"/>: the UI asks and, if the user accepts, calls <see cref="TrustHostKey"/> and retries.
     /// </summary>
     Task<ISshTunnel> OpenAsync(
         SshTunnelOptions options,
@@ -29,26 +29,26 @@ public interface ISshTunnelFactory
         Func<SecretReference, CancellationToken, ValueTask<string>> resolveSecret,
         CancellationToken cancellationToken);
 
-    /// <summary>Grava a host key no known_hosts (depois de o utilizador confirmar).</summary>
+    /// <summary>Writes the host key to known_hosts (after the user confirms).</summary>
     void TrustHostKey(SshHostKeyException hostKey);
 }
 
 public enum SshHostKeyProblem
 {
-    /// <summary>Primeiro contacto: pedir confirmação.</summary>
+    /// <summary>First contact: ask for confirmation.</summary>
     Unknown,
 
-    /// <summary>A chave mudou: bloquear (possível ataque man-in-the-middle).</summary>
+    /// <summary>The key changed: block (possible man-in-the-middle attack).</summary>
     Changed,
 
     /// <summary>
-    /// Chave de um tipo novo num host que já tem outra gravada: pedir confirmação com aviso (pode ser uma chave nova do
-    /// servidor ou alguém a apresentar outro tipo para não dar o erro de chave mudada; como no OpenSSH).
+    /// Key of a new type on a host that already has another one saved: ask for confirmation with a warning (it may be a new
+    /// server key or someone presenting another type to avoid the changed-key error; as in OpenSSH).
     /// </summary>
     NewKeyType,
 }
 
-/// <summary>Host key por confirmar ou diferente da gravada.</summary>
+/// <summary>Host key not yet confirmed or different from the saved one.</summary>
 public sealed class SshHostKeyException(SshHostKeyProblem problem, string host, int port, string keyType, string fingerprintSha256, byte[] key)
     : Exception(problem switch
     {

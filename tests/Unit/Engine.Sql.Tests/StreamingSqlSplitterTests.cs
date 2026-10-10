@@ -3,7 +3,7 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.Engine.Sql.Tests;
 
-/// <summary>Splitter em streaming: o mesmo resultado do <see cref="SqlSplitter"/> com qualquer tamanho de pedaço, e retoma.</summary>
+/// <summary>Streaming splitter: the same result as <see cref="SqlSplitter"/> with any chunk size, and resume.</summary>
 public sealed class StreamingSqlSplitterTests
 {
     private static readonly string[] Scripts =
@@ -67,7 +67,7 @@ public sealed class StreamingSqlSplitterTests
     [Fact]
     public void DelimiterMantemSeNaFronteiraDoPedaco()
     {
-        // O bug do HeidiSQL (anexo B §4.3): o DELIMITER perde-se quando o bloco de 20 MB acaba dentro dele.
+        // HeidiSQL's bug (appendix B §4.3): DELIMITER is lost when the 20 MB block ends inside it.
         var body = new StringBuilder("DELIMITER //\n");
         for (var i = 0; i < 200; i++)
         {

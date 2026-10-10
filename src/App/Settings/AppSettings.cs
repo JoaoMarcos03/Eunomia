@@ -1,12 +1,12 @@
 namespace Eunomia.App.Settings;
 
 /// <summary>
-/// Settings globais da aplicação (secção 21.4): JSON versionado em <c>%APPDATA%\Eunomia\settings.json</c>, escrito
-/// de forma atómica. Os valores por omissão são os do HeidiSQL (anexo C, §1). Segredos nunca vêm para aqui.
+/// Global application settings (section 21.4): versioned JSON in <c>%APPDATA%\Eunomia\settings.json</c>, written
+/// atomically. Default values are HeidiSQL's (appendix C, §1). Secrets never come here.
 /// </summary>
 public sealed class AppSettings
 {
-    /// <summary>Versão do formato. Sobe quando um campo muda de significado; ver <c>SettingsMigrations</c>.</summary>
+    /// <summary>Format version. Goes up when a field changes meaning; see <c>SettingsMigrations</c>.</summary>
     public const int CurrentVersion = 1;
 
     public int Version { get; set; } = CurrentVersion;
@@ -17,12 +17,12 @@ public sealed class AppSettings
 
     public DisplayOptions Display { get; set; } = new();
 
-    /// <summary><see cref="ThemeNames"/>: claro, escuro ou o do sistema.</summary>
+    /// <summary><see cref="ThemeNames"/>: light, dark or the system's.</summary>
     public string Theme { get; set; } = ThemeNames.Light;
 
     /// <summary>
-    /// Atalhos redefinidos (Preferences › Shortcuts, FAM-K01): id do comando → atalho ("Ctrl+Shift+F9"), ou texto
-    /// vazio quando o utilizador removeu o atalho. Comandos ausentes usam o atalho por omissão.
+    /// Redefined shortcuts (Preferences › Shortcuts, FAM-K01): command id → shortcut ("Ctrl+Shift+F9"), or empty
+    /// text when the user removed the shortcut. Missing commands use the default shortcut.
     /// </summary>
     public Dictionary<string, string> Shortcuts { get; set; } = [];
 
@@ -48,7 +48,7 @@ public sealed class AppSettings
 
     public CsvImportSettings CsvImport { get; set; } = new();
 
-    /// <summary>Colunas visíveis das listas (Database tab…), por chave da lista.</summary>
+    /// <summary>Visible columns of the lists (Database tab…), by list key.</summary>
     public Dictionary<string, List<string>> Lists { get; set; } = [];
 }
 
@@ -59,7 +59,7 @@ public static class ThemeNames
     public const string System = "system";
 }
 
-/// <summary>Posição e tamanho da janela principal (<c>MainWin*</c> do HeidiSQL: 100, 100, 950 × 600).</summary>
+/// <summary>Position and size of the main window (HeidiSQL's <c>MainWin*</c>: 100, 100, 950 × 600).</summary>
 public sealed class WindowGeometry
 {
     public int Left { get; set; } = 100;
@@ -74,7 +74,7 @@ public sealed class WindowGeometry
 }
 
 /// <summary>
-/// Dimensões dos painéis (secção 5.1, FAM-L07), em pixels lógicos (96 DPI). <see cref="Reset"/> é o
+/// Panel dimensions (section 5.1, FAM-L07), in logical pixels (96 DPI). <see cref="Reset"/> is
 /// Display › Reset panel dimensions.
 /// </summary>
 public sealed class PanelLayout
@@ -110,7 +110,7 @@ public sealed class PanelLayout
     }
 }
 
-/// <summary>Toggles do menu Display (anexo C, §1.5) com os defaults do HeidiSQL.</summary>
+/// <summary>Display menu toggles (appendix C, §1.5) with HeidiSQL's defaults.</summary>
 public sealed class DisplayOptions
 {
     public bool ObjectSizes { get; set; } = true;
@@ -123,11 +123,11 @@ public sealed class DisplayOptions
 
     public bool ColumnsInTree { get; set; }
 
-    /// <summary>Barras nas colunas numéricas das listas do Host e do Database tab (<c>DisplayBars</c>).</summary>
+    /// <summary>Bars on the numeric columns of the Host and Database tab lists (<c>DisplayBars</c>).</summary>
     public bool Bars { get; set; } = true;
 }
 
-/// <summary>SQL log (anexo C, §1.10): <c>logsqlnum</c>, <c>logsqlwidth</c> e categorias.</summary>
+/// <summary>SQL log (appendix C, §1.10): <c>logsqlnum</c>, <c>logsqlwidth</c> and categories.</summary>
 public sealed class LogOptions
 {
     public int MaxLines { get; set; } = 300;
@@ -151,7 +151,7 @@ public sealed class LogOptions
     public bool Debug { get; set; }
 }
 
-/// <summary>Comportamento das tabs principais (<c>popupMainTabs</c>, anexo C §1.8).</summary>
+/// <summary>Main tabs behaviour (<c>popupMainTabs</c>, appendix C §1.8).</summary>
 public sealed class TabOptions
 {
     public bool CloseOnDoubleClick { get; set; } = true;
@@ -161,42 +161,42 @@ public sealed class TabOptions
     public bool MultipleLines { get; set; } = true;
 }
 
-/// <summary>Toggles do Query tab (toolbar e menu Query).</summary>
+/// <summary>Query tab toggles (toolbar and Query menu).</summary>
 public sealed class QueryOptions
 {
-    /// <summary><c>actQueryStopOnErrors</c>, ligado por omissão.</summary>
+    /// <summary><c>actQueryStopOnErrors</c>, on by default.</summary>
     public bool StopOnErrors { get; set; } = true;
 
     public bool WordWrap { get; set; }
 
-    /// <summary>Ligado por omissão (setting escondida <c>CodeFolding</c> do HeidiSQL).</summary>
+    /// <summary>On by default (HeidiSQL's hidden <c>CodeFolding</c> setting).</summary>
     public bool CodeFolding { get; set; } = true;
 
-    /// <summary>Send batch in one go (rádio com "Send queries one by one", que é a omissão).</summary>
+    /// <summary>Send batch in one go (radio with "Send queries one by one", which is the default).</summary>
     public bool BatchInOneGo { get; set; }
 
-    /// <summary><c>WarnUnsafeUpdates</c>: perguntar antes de UPDATE/DELETE sem WHERE.</summary>
+    /// <summary><c>WarnUnsafeUpdates</c>: ask before UPDATE/DELETE without WHERE.</summary>
     public bool WarnUnsafeUpdates { get; set; } = true;
 
-    /// <summary><c>MaxQueryResults</c>: result tabs por execução.</summary>
+    /// <summary><c>MaxQueryResults</c>: result tabs per run.</summary>
     public int MaxResults { get; set; } = 10;
 
-    /// <summary><c>Delimiter</c>: delimitador das instruções ("Set delimiter used in SQL execution").</summary>
+    /// <summary><c>Delimiter</c>: statement delimiter ("Set delimiter used in SQL execution").</summary>
     public string Delimiter { get; set; } = ";";
 
-    /// <summary>"Enable query history", ligado por omissão.</summary>
+    /// <summary>"Enable query history", on by default.</summary>
     public bool HistoryEnabled { get; set; } = true;
 
-    /// <summary>"Reopen previously used SQL files and unsaved content in tabs", ligado por omissão (precisa de reiniciar).</summary>
+    /// <summary>"Reopen previously used SQL files and unsaved content in tabs", on by default (needs a restart).</summary>
     public bool RestoreTabs { get; set; } = true;
 
-    /// <summary>"Prompt to save modified files on tab close", ligado por omissão.</summary>
+    /// <summary>"Prompt to save modified files on tab close", on by default.</summary>
     public bool PromptSaveOnClose { get; set; } = true;
 
-    /// <summary><c>SQLFile0..19</c>: ficheiros SQL recentes, o último primeiro.</summary>
+    /// <summary><c>SQLFile0..19</c>: recent SQL files, the latest first.</summary>
     public List<string> RecentFiles { get; set; } = [];
 
-    /// <summary>Preferences › SQL: fonte do editor (só de largura fixa) e tamanho em pontos.</summary>
+    /// <summary>Preferences › SQL: editor font (fixed-width only) and size in points.</summary>
     public string EditorFont { get; set; } = "Consolas";
 
     public int EditorFontSize { get; set; } = 9;
@@ -205,7 +205,7 @@ public sealed class QueryOptions
 
     public bool TabsToSpaces { get; set; }
 
-    /// <summary>"Auto completion proposal": ligado, com 500 ms depois de <c>.</c>.</summary>
+    /// <summary>"Auto completion proposal": on, 500 ms after <c>.</c>.</summary>
     public bool CompletionEnabled { get; set; } = true;
 
     public int CompletionDelayMs { get; set; } = 500;
@@ -213,45 +213,45 @@ public sealed class QueryOptions
     /// <summary>"Auto uppercase reserved words and functions".</summary>
     public bool AutoUppercase { get; set; } = true;
 
-    /// <summary>Pasta dos snippets; vazia = <c>Documents\Eunomia\Snippets</c>.</summary>
+    /// <summary>Snippets folder; empty = <c>Documents\Eunomia\Snippets</c>.</summary>
     public string? SnippetsDirectory { get; set; }
 }
 
-/// <summary>Opções do grid de dados.</summary>
+/// <summary>Data grid options.</summary>
 public sealed class DataOptions
 {
-    /// <summary><c>actBlobAsText</c>: binários como texto em vez de HEX.</summary>
+    /// <summary><c>actBlobAsText</c>: binaries as text instead of HEX.</summary>
     public bool BlobAsText { get; set; }
 
-    /// <summary><c>ForeignDropDown</c>: lista dos valores da tabela referida ao editar uma coluna com chave estrangeira.</summary>
+    /// <summary><c>ForeignDropDown</c>: list of the referenced table's values when editing a column with a foreign key.</summary>
     public bool ForeignDropDown { get; set; } = true;
 
-    /// <summary><c>DatagridRowsPerStep</c>: linhas por passo do Data tab e do "Select top N rows".</summary>
+    /// <summary><c>DatagridRowsPerStep</c>: rows per step of the Data tab and of "Select top N rows".</summary>
     public int RowsPerStep { get; set; } = 1000;
 
-    /// <summary><c>DatagridMaximumRows</c>: limite do Show all (D5: atingi-lo aparece na label).</summary>
+    /// <summary><c>DatagridMaximumRows</c>: Show all limit (D5: reaching it shows in the label).</summary>
     public int MaximumRows { get; set; } = 100_000;
 
-    /// <summary>Orçamento de memória por resultado em MB (secção 11.3); acima disso, spill para disco.</summary>
+    /// <summary>Memory budget per result in MB (section 11.3); above it, spill to disk.</summary>
     public int ResultMemoryMb { get; set; } = 256;
 
-    /// <summary>Quota do spill em disco por resultado, em MB.</summary>
+    /// <summary>Disk spill quota per result, in MB.</summary>
     public int SpillQuotaMb { get; set; } = 10 * 1024;
 
-    /// <summary>Orçamento global de todos os resultados em MB (PR-17); acima disso, os maiores vão para o spill.</summary>
+    /// <summary>Global budget for all results in MB (PR-17); above it, the largest ones spill.</summary>
     public int GlobalResultMemoryMb { get; set; } = 1024;
 
-    /// <summary>Largura máxima das colunas no ajuste automático, em pixels (<c>MaxColWidth</c>).</summary>
+    /// <summary>Maximum column width for automatic sizing, in pixels (<c>MaxColWidth</c>).</summary>
     public int MaxColumnWidth { get; set; } = 300;
 
-    /// <summary>Fonte do grid (<c>DataFontName</c>).</summary>
+    /// <summary>Grid font (<c>DataFontName</c>).</summary>
     public string FontName { get; set; } = "Tahoma";
 
-    /// <summary>Tamanho da fonte do grid em pontos (<c>DataFontSize</c>).</summary>
+    /// <summary>Grid font size in points (<c>DataFontSize</c>).</summary>
     public int FontSize { get; set; } = 8;
 }
 
-/// <summary>Session Manager (anexo A §1.1–1.2, §8): janela, largura da lista, colunas, folders no topo, última sessão.</summary>
+/// <summary>Session Manager (appendix A §1.1–1.2, §8): window, list width, columns, folders at top, last session.</summary>
 public sealed class SessionManagerOptions
 {
     public int WindowWidth { get; set; } = 749;
@@ -264,35 +264,35 @@ public sealed class SessionManagerOptions
     /// <summary><c>SessionManager_ListFoldersAtTop</c>.</summary>
     public bool FoldersAtTop { get; set; } = true;
 
-    /// <summary>Larguras por coluna (Session name, Host, Port, User, Version, Last connect, Counter, Comment).</summary>
+    /// <summary>Widths per column (Session name, Host, Port, User, Version, Last connect, Counter, Comment).</summary>
     public List<int> ColumnWidths { get; set; } = [165, 100, 50, 80, 80, 120, 60, 120];
 
-    /// <summary>Colunas visíveis (User, Version e Counter ocultas por omissão).</summary>
+    /// <summary>Visible columns (User, Version and Counter hidden by default).</summary>
     public List<bool> ColumnsVisible { get; set; } = [true, true, true, false, false, true, false, true];
 
     public int SortColumn { get; set; }
 
     public bool SortDescending { get; set; }
 
-    /// <summary><c>LastActiveSession</c>: id da última sessão aberta.</summary>
+    /// <summary><c>LastActiveSession</c>: id of the last session opened.</summary>
     public Guid? LastActiveSession { get; set; }
 
-    /// <summary><c>LastSessions</c>: sessões abertas no fecho (para "Automatically reconnect").</summary>
+    /// <summary><c>LastSessions</c>: sessions open at shutdown (for "Automatically reconnect").</summary>
     public List<Guid> LastSessions { get; set; } = [];
 
     /// <summary>"Automatically reconnect to previously opened sessions on startup" (off).</summary>
     public bool AutoReconnect { get; set; }
 
-    /// <summary>A última base usada de cada sessão volta a ficar selecionada ao ligar (<c>RestoreLastUsedDB</c>).</summary>
+    /// <summary>Each session's last database used is selected again on connecting (<c>RestoreLastUsedDB</c>).</summary>
     public bool RestoreLastUsedDatabase { get; set; } = true;
 
-    /// <summary>Já se perguntou, no primeiro arranque, se importa as sessões do HeidiSQL instalado.</summary>
+    /// <summary>On first start the user was already asked whether to import the sessions of the installed HeidiSQL.</summary>
     public bool HeidiImportOffered { get; set; }
 }
 
 /// <summary>
-/// Tree style options (anexo D A3) com os defaults do HeidiSQL. "Display size of objects" e "Columns below tables in
-/// tree" ficam em <see cref="DisplayOptions"/> (também estão no menu Display); "Show only favorites" não é gravado.
+/// Tree style options (appendix D A3) with HeidiSQL's defaults. "Display size of objects" and "Columns below tables in
+/// tree" live in <see cref="DisplayOptions"/> (they are also in the Display menu); "Show only favorites" is not saved.
 /// </summary>
 public sealed class TreeOptions
 {
@@ -303,18 +303,14 @@ public sealed class TreeOptions
     public bool DoubleClickInsertsNodeText { get; set; } = true;
 }
 
-/// <summary>Valores lembrados pelos diálogos (<c>asCreateDbCollation</c>…).</summary>
+/// <summary>Values remembered by the dialogs (<c>asCreateDbCollation</c>…).</summary>
 public sealed class DialogOptions
 {
-    /// <summary>Última collation escolhida no Create database.</summary>
+    /// <summary>Last collation chosen in Create database.</summary>
     public string? CreateDatabaseCollation { get; set; }
 }
 
-/// <summary>
-/// Export grid rows e Copy as (anexo B §1.4, §1.5): as opções do diálogo (<c>GridExport*</c>) e as do clipboard
-/// (<c>GridExportClp*</c>), separadas como no HeidiSQL.
-/// </summary>
-/// <summary>Último estado do "Search and replace text" (anexo C §4.7): recentes e opções.</summary>
+/// <summary>Last state of "Search and replace text" (appendix C §4.7): recent entries and options.</summary>
 public sealed class SearchSettings
 {
     /// <summary><c>FindDialogSearchHistory</c>.</summary>
@@ -336,8 +332,8 @@ public sealed class SearchSettings
 }
 
 /// <summary>
-/// SQL export (anexo B §2.3.1; <c>ExportSQL_*</c> do HeidiSQL): Create das bases e das tabelas, modo dos dados, Max
-/// INSERT size, output e as opções. Os Drop não se gravam (por segurança, como no HeidiSQL).
+/// SQL export (appendix B §2.3.1; HeidiSQL's <c>ExportSQL_*</c>): Create of databases and tables, data mode, Max
+/// INSERT size, output and the options. The Drop options are not saved (for safety, as in HeidiSQL).
 /// </summary>
 public sealed class SqlExportSettings
 {
@@ -350,10 +346,10 @@ public sealed class SqlExportSettings
 
     public int MaxInsertSizeKb { get; set; } = 1024;
 
-    /// <summary>0 ficheiro, 1 ZIP, 2 diretório, 3 clipboard.</summary>
+    /// <summary>0 file, 1 ZIP, 2 directory, 3 clipboard.</summary>
     public int Output { get; set; }
 
-    /// <summary>Recentes (até 20) por tipo de output.</summary>
+    /// <summary>Recent entries (up to 20) per output kind.</summary>
     public List<string> Filenames { get; set; } = [];
 
     public List<string> ZipFilenames { get; set; } = [];
@@ -368,18 +364,18 @@ public sealed class SqlExportSettings
 
     public bool RemoveDefiner { get; set; } = true;
 
-    /// <summary>Opção nova (secção 13.2): snapshot consistente numa ligação em vez de tabelas em paralelo.</summary>
+    /// <summary>New option (section 13.2): a consistent snapshot on one connection instead of tables in parallel.</summary>
     public bool ConsistentSnapshot { get; set; }
 
-    /// <summary>Filtros (expressões regulares) da árvore do diálogo.</summary>
+    /// <summary>Filters (regular expressions) of the dialog's tree.</summary>
     public string DatabaseFilter { get; set; } = string.Empty;
 
     public string TableFilter { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Import CSV file (anexo B §3.1; defaults do HeidiSQL em <c>apphelpers.pas</c>): separadores com sequências de barra
-/// invertida como o utilizador as escreve (<c>\r\n</c>), REPLACE e o servidor por omissão. O Truncate não se grava.
+/// Import CSV file (appendix B §3.1; HeidiSQL defaults in <c>apphelpers.pas</c>): separators with backslash sequences as
+/// the user types them (<c>\r\n</c>), REPLACE and the server by default. Truncate is not saved.
 /// </summary>
 public sealed class CsvImportSettings
 {
@@ -408,7 +404,7 @@ public sealed class CsvImportSettings
     /// <summary>0 INSERT, 1 INSERT IGNORE, 2 REPLACE.</summary>
     public int Duplicates { get; set; } = 2;
 
-    /// <summary>0 servidor (LOAD DATA), 1 cliente.</summary>
+    /// <summary>0 server (LOAD DATA), 1 client.</summary>
     public int Method { get; set; }
 }
 

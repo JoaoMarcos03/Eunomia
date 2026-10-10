@@ -1,21 +1,21 @@
 namespace Eunomia.App.Commands;
 
 /// <summary>
-/// Inventário de comandos (secção 21.2; anexo C §2): as 163 actions do <c>ActionList1</c> do HeidiSQL, as 16
-/// "Copy as" criadas em runtime e os atalhos definidos em itens de menu. A ordem e as categorias são as do
-/// HeidiSQL (as categorias dão os grupos do Preferences › Shortcuts). Itens fora do MVP (secção 27.2) têm
+/// Command inventory (section 21.2; appendix C §2): the 163 actions of HeidiSQL's <c>ActionList1</c>, the 16
+/// "Copy as" items created at runtime and the shortcuts defined on menu items. Order and categories are HeidiSQL's
+/// (the categories give the groups in Preferences › Shortcuts). Items outside the MVP (section 27.2) have
 /// <c>AvailableIn</c>.
 /// </summary>
 public static class HeidiSqlCatalog
 {
-    /// <summary>Versão em que entram os itens da secção 27.2 (Fases 10 e 11).</summary>
+    /// <summary>Version in which the items of section 27.2 arrive (phases 10 and 11).</summary>
     public const string AfterMvp = "1.1";
 
-    /// <summary>Categorias pela ordem do <c>ActionList1</c> (raízes do Preferences › Shortcuts).</summary>
+    /// <summary>Categories in <c>ActionList1</c> order (roots of Preferences › Shortcuts).</summary>
     public static readonly IReadOnlyList<string> Categories = ["File", "Various", "Tools", "Export/Import", "Database", "SQL", "Data"];
 
-    /// <summary>Os 16 formatos de "Copy as", pela ordem e com os nomes do HeidiSQL (FAM-C02, secção 4.6).</summary>
-    /// <summary>Itens do submenu "Insert value" depois de NULL, SQL function e Edit without lookup (anexo C §3.5).</summary>
+    /// <summary>The 16 "Copy as" formats, in HeidiSQL's order and with its names (FAM-C02, section 4.6).</summary>
+    /// <summary>"Insert value" submenu items after NULL, SQL function and Edit without lookup (appendix C §3.5).</summary>
     public static readonly IReadOnlyList<(string Id, string Caption)> InsertValues =
     [
         ("insertValue.default", "default"),
@@ -92,7 +92,7 @@ public static class HeidiSqlCatalog
 
     private static IEnumerable<CommandDescriptor> Build()
     {
-        // Ordem do ActionList1 (anexo C §2.1).
+        // ActionList1 order (appendix C §2.1).
         yield return C("session.manager", "Session manager", "File", null, "actSessionManager", "session-manager", "Display session manager");
         yield return C("file.newWindow", "New window", "File", "Ctrl+N", "actNewWindow", "new-window", "New window...");
         yield return C("file.exit", "Exit", "File", "Alt+F4", "actExitApplication", "exit", "Exit application");
@@ -138,7 +138,7 @@ public static class HeidiSqlCatalog
         yield return C("settings.export", "Export settings file ...", "Export/Import", null, "actExportSettings", "export-settings");
         yield return C("settings.import", "Import settings file ...", "Export/Import", null, "actImportSettings", "import-settings");
         yield return C("tools.preferences", "Preferences", "Tools", null, "actPreferences", "preferences");
-        // Não existe no HeidiSQL (roadmap 1.x #11): encontra qualquer comando pelo nome, sem mudar onde os outros estão.
+        // Not in HeidiSQL (roadmap 1.x #11): finds any command by name, without moving the others.
         yield return C("tools.commandPalette", "Command palette ...", "Tools", "Ctrl+Shift+P", null, "find", "Find a command by name and run it");
         yield return C("tools.preferencesLogging", "Logging preferences", "Tools", null, "actPreferencesLogging", "preferences");
         yield return C("tools.preferencesData", "Data grid preferences", "Tools", null, "actPreferencesData", "preferences");
@@ -230,14 +230,14 @@ public static class HeidiSqlCatalog
         yield return C("query.closeAllTabs", "Close all query tabs", "File", null, "actCloseAllQueryTabs", "close-tab");
         yield return C("editor.moveLineDown", "Move line down", "SQL", "Alt+Down", "actSynMoveDown", contexts: Editor);
         yield return C("editor.moveLineUp", "Move line up", "SQL", "Alt+Up", "actSynMoveUp", contexts: Editor);
-        // Teclas do SynMemoQuery (anexo C §2.3): ecUpperCaseBlock e ecLowerCaseBlock.
+        // SynMemoQuery keys (appendix C §2.3): ecUpperCaseBlock and ecLowerCaseBlock.
         yield return C("editor.upperCase", "Upper case", "SQL", "Ctrl+U", null, contexts: Editor);
         yield return C("editor.lowerCase", "Lower case", "SQL", "Ctrl+L", null, contexts: Editor);
         yield return C("tools.sequalSuggest", "Sequal Suggest", "Tools", null, "actSequalSuggest", availableIn: AfterMvp, hidden: true);
         yield return C("display.resetPanelDimensions", "Reset panel dimensions", "Tools", null, "actResetPanelDimensions", hint: "Reset and fix overlapping panels in main window");
         yield return C("edit.copyGridNodes", "Copy all lines from listing or tree in CSV format", "Various", null, "actCopyGridNodes", "copy");
         yield return C("object.selectTopRows", "Select top 1000 rows", "Database", null, "actQueryTable", "run", "Selects the first 1000 rows in a new query tab", TreeAndList);
-        // Schema Visualizer (secção 17.3): não existe no HeidiSQL.
+        // Schema Visualizer (section 17.3): not in HeidiSQL.
         yield return C("diagram.show", "Show in schema visualizer", "Database", null, null, "diagram", "Shows the tables of the database as a diagram", TreeAndList);
         yield return C("display.objectSizes", "Display size of objects", "Various", null, "actDisplayObjectSize", kind: CommandKind.Toggle);
         yield return C("display.logPanel", "Log panel", "Various", null, "actDisplayLogPanel", kind: CommandKind.Toggle);
@@ -247,20 +247,20 @@ public static class HeidiSqlCatalog
         yield return C("grid.editWithoutLookup", "Edit value without foreign key lookup", "Data", null, "actDataEditWithoutLookup", contexts: Grid);
         yield return C("display.columnsInTree", "Columns below tables in tree", "Various", null, "actTreeShowColumns", kind: CommandKind.Toggle);
 
-        // As 16 "Copy as" (criadas em runtime no HeidiSQL, categoria Export/Import, sem atalho).
+        // The 16 "Copy as" items (created at runtime in HeidiSQL, Export/Import category, no shortcut).
         foreach (var (id, caption) in CopyAsFormats)
         {
             yield return C(id, caption, "Export/Import", null, null, "copy", contexts: Grid);
         }
 
-        // Atalhos definidos em itens de menu, não em actions (anexo C §2.2).
+        // Shortcuts defined on menu items, not on actions (appendix C §2.2).
         yield return C("object.edit", "Edit", "Database", "Alt+Enter", null, "edit", contexts: TreeAndList);
         yield return C("host.killProcess", "Kill Process(es)...", "Various", "Del", null, "kill", contexts: HostList);
         yield return C("host.editVariable", "Edit ...", "Various", "Enter", null, "edit", contexts: HostList, availableIn: AfterMvp);
         yield return C("host.fetchDatabaseItems", "Fetch database items", "Various", null, null, "refresh", contexts: HostList);
         yield return C("host.explainProcess", "EXPLAIN query", "Various", null, null, "explain", contexts: HostList);
         yield return C("helpers.deleteSnippet", "Delete ...", "SQL", "Del", null, "delete", contexts: Helpers);
-        // popupQueryHelpers (anexo C §3.9).
+        // popupQueryHelpers (appendix C §3.9).
         yield return C("helpers.insert", "Insert at cursor", "SQL", null, null, contexts: Helpers);
         yield return C("helpers.loadSnippet", "Load", "SQL", null, null, "open", contexts: Helpers);
         yield return C("helpers.renameSnippet", "Rename", "SQL", null, null, "rename", contexts: Helpers);
@@ -271,8 +271,8 @@ public static class HeidiSqlCatalog
         yield return C("helpers.generateUpdate", "Generate UPDATE ...", "SQL", null, null, contexts: Helpers);
         yield return C("helpers.generateDelete", "Generate DELETE ...", "SQL", null, null, contexts: Helpers);
         yield return C("log.copyLineToNewTab", "Copy line to new query tab", "Various", null, null, "new-tab", contexts: Log);
-        // popupDB › Tree style options (anexo C §3.3): itens sem action.
-        // popupDataGrid › Insert value (anexo C §3.5): itens sem action; a edição chega na Fase 7.
+        // popupDB › Tree style options (appendix C §3.3): items without an action.
+        // popupDataGrid › Insert value (appendix C §3.5): items without an action; editing arrives in phase 7.
         foreach (var (id, caption) in InsertValues)
         {
             yield return C(id, caption, "Data", null, null, contexts: Grid);
@@ -282,7 +282,7 @@ public static class HeidiSqlCatalog
         yield return C("tree.collapseAll", "Collapse all", "Various", null, null, null);
         yield return C("tree.autoExpand", "Auto expand on click", "Various", null, null, kind: CommandKind.Toggle);
         yield return C("tree.doubleClickInsertsNodeText", "Doubleclick inserts node text", "Various", null, null, kind: CommandKind.Toggle);
-        // popupMainTabs (anexo C §3.13): itens sem action.
+        // popupMainTabs (appendix C §3.13): items without an action.
         yield return C("tabs.closeToRight", "Close query tabs to the right", "File", null, null, "close-tab");
         yield return C("tabs.closeOnDoubleClick", "Close tab on doubleclick", "Various", null, null, kind: CommandKind.Toggle);
         yield return C("tabs.closeOnMiddleClick", "Close tab on middleclick", "Various", null, null, kind: CommandKind.Toggle);
@@ -294,7 +294,7 @@ public static class HeidiSqlCatalog
 
     private static IEnumerable<CommandDescriptor> QuickFilters()
     {
-        // Quick Filter (FAM-G13): captions finais são dinâmicas (SQL real); estas são as do Shortcuts.
+        // Quick Filter (FAM-G13): the final captions are dynamic (real SQL); these are the ones in Shortcuts.
         string[] focused = ["Column = Focused", "Column != Focused", "Column LIKE Focused%", "Column LIKE %Focused", "Column LIKE %Focused%", "Column > Focused", "Column < Focused"];
         string?[] focusedKeys = ["Ctrl+Shift+1", "Ctrl+Shift+2", null, null, null, null, null];
         for (var i = 0; i < focused.Length; i++)

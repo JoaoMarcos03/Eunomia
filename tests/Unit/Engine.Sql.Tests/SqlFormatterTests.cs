@@ -2,7 +2,7 @@ using Eunomia.Engine.Sql.Formatting;
 
 namespace Eunomia.Engine.Sql.Tests;
 
-/// <summary>Reformat SQL (Ctrl+F8): formatter interno sobre o lexer.</summary>
+/// <summary>Reformat SQL (Ctrl+F8): internal formatter on top of the lexer.</summary>
 public sealed class SqlFormatterTests
 {
     private static string F(string sql) => SqlFormatter.Format(sql).Replace("\r\n", "\n", StringComparison.Ordinal);

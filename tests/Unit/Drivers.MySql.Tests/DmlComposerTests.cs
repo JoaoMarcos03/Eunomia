@@ -2,7 +2,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.Drivers.MySql.Tests;
 
-/// <summary>DML da edição no grid (anexo D B15).</summary>
+/// <summary>Grid editing DML (appendix D B15).</summary>
 public sealed class DmlComposerTests
 {
     private static readonly MySqlDmlComposer Dml = new(new MySqlDialect(new ServerIdentity(DbEngine.MariaDb, new Version(10, 4, 32), "10.4.32-MariaDB", null)));
@@ -41,7 +41,7 @@ public sealed class DmlComposerTests
         Assert.Equal("INSERT INTO `shop`.`people` (`name`, `created`) VALUES ('Ana', NOW())",
             Dml.Insert(People, [new ColumnValue(name, new CellLiteral("Ana")), new ColumnValue(created, new CellLiteral("NOW()", true))]));
         Assert.Equal("INSERT INTO `shop`.`people` () VALUES ()", Dml.Insert(People, []));
-        // Com chave: o WHERE usa a collation da coluna (índice) e leva LIMIT 1 na mesma.
+        // With a key: the WHERE uses the column's collation (index) and carries LIMIT 1 anyway.
         Assert.Equal("UPDATE `shop`.`people` SET `name`='Rui' WHERE `id`=1 LIMIT 1",
             Dml.Update(People, [new ColumnValue(name, new CellLiteral("Rui"))], [new ColumnValue(id, new CellLiteral("1"))], withoutKey: false));
         Assert.Equal("DELETE FROM `shop`.`people` WHERE `name` IS NULL AND CAST(`created` AS CHAR)='2026-01-01 00:00:00' LIMIT 1",
@@ -60,7 +60,7 @@ public sealed class DmlComposerTests
             "UPDATE `shop`.`people` SET `n`=2 WHERE `code`=CONVERT('Ab' USING latin1) COLLATE latin1_bin AND `raw`=0xCAFE AND `n`=1 LIMIT 1",
             Dml.Update(People, [new ColumnValue(n, new CellLiteral("2"))],
                 [new ColumnValue(code, new CellLiteral("Ab")), new ColumnValue(raw, new CellLiteral("0xCAFE")), new ColumnValue(n, new CellLiteral("1"))], withoutKey: true));
-        // Com chave, a mesma coluna fica com a collation dela.
+        // With a key, the same column keeps its own collation.
         Assert.Equal("DELETE FROM `shop`.`people` WHERE `code`='Ab' LIMIT 1", Dml.Delete(People, [new ColumnValue(code, new CellLiteral("Ab"))], withoutKey: false));
     }
 }

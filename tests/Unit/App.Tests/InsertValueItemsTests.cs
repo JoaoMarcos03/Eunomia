@@ -3,7 +3,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Insert value ▸ do grid (anexo D B16; FAM-G10).</summary>
+/// <summary>The grid's Insert value ▸ (appendix D B16; FAM-G10).</summary>
 public sealed class InsertValueItemsTests
 {
     [Fact]

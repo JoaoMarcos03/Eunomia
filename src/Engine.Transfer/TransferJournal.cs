@@ -12,8 +12,8 @@ public enum TransferJobKind
 }
 
 /// <summary>
-/// Estado de um job de import/export no journal (secção 13.1 e 13.3): o input (tamanho e impressão digital) e o último
-/// checkpoint confirmado. Os campos de checkpoint usados dependem do tipo de job.
+/// State of an import/export job in the journal (sections 13.1 and 13.3): the input (size and fingerprint) and the last
+/// confirmed checkpoint. Which checkpoint fields are used depends on the kind of job.
 /// </summary>
 public sealed record TransferJournalEntry
 {
@@ -21,12 +21,12 @@ public sealed record TransferJournalEntry
 
     public required TransferJobKind Kind { get; init; }
 
-    /// <summary>Nome da sessão gravada (a retoma liga-se de novo a ela).</summary>
+    /// <summary>Name of the saved session (resuming connects to it again).</summary>
     public required string Session { get; init; }
 
     public string? Database { get; init; }
 
-    /// <summary>Ficheiro de input (imports) ou de output (exports, o <c>.partial</c>).</summary>
+    /// <summary>Input file (imports) or output file (exports, the <c>.partial</c>).</summary>
     public required string Path { get; init; }
 
     public long InputSize { get; init; }
@@ -37,28 +37,28 @@ public sealed record TransferJournalEntry
 
     public DateTimeOffset Updated { get; init; }
 
-    /// <summary>Opções do job necessárias para retomar (encoding, Stop on errors, modo, tabela, colunas…).</summary>
+    /// <summary>Job options needed to resume (encoding, Stop on errors, mode, table, columns…).</summary>
     public IReadOnlyDictionary<string, string> Options { get; init; } = new Dictionary<string, string>();
 
-    /// <summary>Import SQL: bytes do input já confirmados (posição de retoma).</summary>
+    /// <summary>SQL import: input bytes already confirmed (resume position).</summary>
     public long Offset { get; init; }
 
-    /// <summary>Import SQL: posição de retoma em caracteres, linha e delimitador (o splitter recomeça com eles).</summary>
+    /// <summary>SQL import: resume position in characters, line and delimiter (the splitter starts again with them).</summary>
     public long CharOffset { get; init; }
 
     public long Line { get; init; } = 1;
 
     public string Delimiter { get; init; } = ";";
 
-    /// <summary>Instruções executadas e erros (import SQL), ou registos lidos (CSV, incluindo os ignorados).</summary>
+    /// <summary>Statements run and errors (SQL import), or records read (CSV, including skipped ones).</summary>
     public long Count { get; init; }
 
     public long Errors { get; init; }
 
-    /// <summary>Instrução em curso quando o job parou sem transação (a UI mostra-a antes de retomar).</summary>
+    /// <summary>Statement in progress when the job stopped without a transaction (the UI shows it before resuming).</summary>
     public string? LastStatement { get; init; }
 
-    /// <summary>Export: objetos já escritos por inteiro e bytes do <c>.partial</c> até ao fim do último.</summary>
+    /// <summary>Export: objects already fully written and the <c>.partial</c> bytes up to the end of the last one.</summary>
     public IReadOnlyList<string> CompletedObjects { get; init; } = [];
 }
 
@@ -67,8 +67,8 @@ public sealed record TransferJournalEntry
 internal sealed partial class TransferJournalJsonContext : JsonSerializerContext;
 
 /// <summary>
-/// Journal dos jobs de import/export: um JSON por job numa pasta (escrita atómica, temporário e rename), para retomar
-/// depois de um cancel ou de um crash ("Retomar" ou "Descartar" no arranque seguinte).
+/// Journal of the import/export jobs: one JSON per job in a folder (atomic write, temporary file and rename), to resume
+/// after a cancel or a crash ("Resume" or "Discard" on the next start).
 /// </summary>
 public sealed class TransferJournal
 {
@@ -104,7 +104,7 @@ public sealed class TransferJournal
         }
     }
 
-    /// <summary>Jobs por acabar; ficheiros ilegíveis são ignorados.</summary>
+    /// <summary>Unfinished jobs; unreadable files are ignored.</summary>
     public IReadOnlyList<TransferJournalEntry> List()
     {
         if (!Directory.Exists(_directory))
@@ -124,15 +124,15 @@ public sealed class TransferJournal
             }
             catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException)
             {
-                // Um journal cortado não impede os outros.
+                // A truncated journal does not get in the way of the others.
             }
         }
         return [.. result.OrderBy(e => e.Started)];
     }
 
     /// <summary>
-    /// Impressão digital do input: SHA-256 do tamanho, do primeiro e do último MiB. Ler um ficheiro de 10 GB inteiro só
-    /// para a retoma demoraria; uma alteração no meio com o mesmo tamanho não é detetada.
+    /// Input fingerprint: SHA-256 of the size, the first and the last MiB. Reading a whole 10 GB file just
+    /// to resume would take too long; a change in the middle with the same size is not detected.
     /// </summary>
     public static string Fingerprint(string path)
     {

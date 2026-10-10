@@ -1,8 +1,8 @@
 namespace Eunomia.App.Commands;
 
 /// <summary>
-/// Contextos de foco onde um comando está ativo (secção 21.2). <see cref="Global"/> vale em todos. A UI marca os
-/// controlos com o contexto; o foco atual dá uma lista do contexto mais interior para o mais exterior.
+/// Focus contexts in which a command is active (section 21.2). <see cref="Global"/> applies everywhere. The UI tags
+/// controls with their context; the current focus gives a list from the innermost context to the outermost.
 /// </summary>
 public static class CommandContexts
 {
@@ -11,23 +11,23 @@ public static class CommandContexts
     public const string Grid = "grid";
     public const string QueryEditor = "editor";
 
-    /// <summary>Editor WHERE do Data tab (Apply filter com F9, Clear com Ctrl+W).</summary>
+    /// <summary>Data tab WHERE editor (Apply filter with F9, Clear with Ctrl+W).</summary>
     public const string FilterPanel = "filterPanel";
 
     public const string TreeFilter = "treeFilter";
     public const string Log = "log";
 
-    /// <summary>Listas do Host tab (Del = Kill process).</summary>
+    /// <summary>Host tab lists (Del = Kill process).</summary>
     public const string HostList = "hostList";
 
-    /// <summary>Lista de objetos do Database tab (partilha o <c>popupDB</c> com a árvore).</summary>
+    /// <summary>Database tab object list (shares <c>popupDB</c> with the tree).</summary>
     public const string ObjectList = "objectList";
 
-    /// <summary>Painel de helpers do Query tab.</summary>
+    /// <summary>Query tab helpers panel.</summary>
     public const string Helpers = "helpers";
 }
 
-/// <summary>Tipo de item: ação simples, toggle (check) ou opção de um grupo de rádio.</summary>
+/// <summary>Item kind: plain action, toggle (check) or option of a radio group.</summary>
 public enum CommandKind
 {
     Action,
@@ -36,10 +36,10 @@ public enum CommandKind
 }
 
 /// <summary>
-/// Uma ação do utilizador (secção 21.2): id estável, caption, categoria, ícone, atalho por omissão, contextos e
-/// predicado. <see cref="HeidiSqlAction"/> guarda o nome da action do HeidiSQL quando é conhecido (para importar
-/// atalhos e testar que o inventário está completo). Sem handler, o comando aparece desativado, com
-/// <see cref="AvailableIn"/> no tooltip, para manter a geografia dos menus.
+/// A user action (section 21.2): stable id, caption, category, icon, default shortcut, contexts and predicate.
+/// <see cref="HeidiSqlAction"/> keeps the name of the HeidiSQL action when known (to import shortcuts and to test
+/// that the inventory is complete). Without a handler, the command shows disabled, with
+/// <see cref="AvailableIn"/> in the tooltip, to keep the menu geography.
 /// </summary>
 public sealed record CommandDescriptor(
     string Id,
@@ -51,15 +51,15 @@ public sealed record CommandDescriptor(
     string? HeidiSqlAction = null,
     string? AvailableIn = null)
 {
-    /// <summary>Texto de ajuda (hint do HeidiSQL), mostrado em tooltips e no Preferences › Shortcuts.</summary>
+    /// <summary>Help text (HeidiSQL hint), shown in tooltips and in Preferences › Shortcuts.</summary>
     public string? Hint { get; init; }
 
     public CommandKind Kind { get; init; }
 
-    /// <summary>Grupo de rádio (<see cref="CommandKind.Radio"/>).</summary>
+    /// <summary>Radio group (<see cref="CommandKind.Radio"/>).</summary>
     public string? RadioGroup { get; init; }
 
-    /// <summary>Escondido nos menus (actions com <c>Visible=False</c> no HeidiSQL), mas presente no inventário.</summary>
+    /// <summary>Hidden in the menus (actions with <c>Visible=False</c> in HeidiSQL), but present in the inventory.</summary>
     public bool Hidden { get; init; }
 
     public IReadOnlyList<string> ActiveIn => Contexts is { Count: > 0 } ? Contexts : [CommandContexts.Global];
@@ -67,18 +67,18 @@ public sealed record CommandDescriptor(
     public bool IsGlobal => ActiveIn.Contains(CommandContexts.Global);
 }
 
-/// <summary>Dois comandos com o mesmo atalho que podem estar ativos ao mesmo tempo.</summary>
+/// <summary>Two commands with the same shortcut that can be active at the same time.</summary>
 public sealed record ShortcutConflict(KeyChord Shortcut, string FirstId, string SecondId, string Context);
 
-/// <summary>Estado de um comando no contexto atual, para menus, toolbar e tooltips.</summary>
+/// <summary>State of a command in the current context, for menus, toolbar and tooltips.</summary>
 public sealed record CommandState(CommandDescriptor Command, bool IsImplemented, bool CanExecute, bool IsChecked, string? Tooltip, string Caption);
 
 /// <summary>
-/// Registo de comandos (secção 21.2): menus, toolbar, context menus e keymap são gerados daqui. Os atalhos
-/// resolvem-se pelo contexto de foco, como no HeidiSQL: um comando do contexto focado ganha a um global
-/// (F9 = Run no editor, Apply filter no filter panel), e um comando que não pode correr não consome o atalho
-/// (Esc = Cancel editing só com alterações pendentes, senão Cancel running operation). Atalhos redefinidos pelo
-/// utilizador (Preferences › Shortcuts, FAM-K01) substituem o atalho por omissão. Não é thread-safe: usar na UI thread.
+/// Command registry (section 21.2): menus, toolbar, context menus and the keymap are generated from it. Shortcuts
+/// resolve by focus context, as in HeidiSQL: a command of the focused context wins over a global one
+/// (F9 = Run in the editor, Apply filter in the filter panel), and a command that cannot run does not consume the shortcut
+/// (Esc = Cancel editing only with pending changes, otherwise Cancel running operation). Shortcuts redefined by the
+/// user (Preferences › Shortcuts, FAM-K01) replace the default shortcut. Not thread-safe: use it on the UI thread.
 /// </summary>
 public sealed class CommandRegistry : ICommandBus
 {
@@ -92,7 +92,7 @@ public sealed class CommandRegistry : ICommandBus
 
     public IEnumerable<CommandDescriptor> All => _order.Select(id => _commands[id]);
 
-    /// <summary>Algo mudou (handler, atalho, estado): menus e toolbar devem reler <see cref="StateOf"/>.</summary>
+    /// <summary>Something changed (handler, shortcut, state): menus and toolbar must read <see cref="StateOf"/> again.</summary>
     public event EventHandler? StatesInvalidated;
 
     public void Register(CommandDescriptor command)
@@ -110,11 +110,11 @@ public sealed class CommandRegistry : ICommandBus
 
     public bool TryGet(string id, out CommandDescriptor? command) => _commands.TryGetValue(id, out command);
 
-    /// <summary>Comando pelo nome da action do HeidiSQL (<c>actExecuteQuery</c>).</summary>
+    /// <summary>Command by the name of the HeidiSQL action (<c>actExecuteQuery</c>).</summary>
     public CommandDescriptor? FindByHeidiSqlAction(string action) =>
         All.FirstOrDefault(c => string.Equals(c.HeidiSqlAction, action, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Liga o comando a um handler; sem handler fica desativado ("disponível na versão X").</summary>
+    /// <summary>Binds the command to a handler; without a handler it stays disabled ("available in version X").</summary>
     public void SetHandler(string id, Func<CancellationToken, ValueTask> handler, Func<bool>? canExecute = null)
     {
         Get(id);
@@ -130,11 +130,11 @@ public sealed class CommandRegistry : ICommandBus
         InvalidateStates();
     }
 
-    /// <summary>Handler síncrono (atalho para a maioria dos comandos da UI).</summary>
+    /// <summary>Synchronous handler (shorthand for most UI commands).</summary>
     public void SetHandler(string id, Action handler, Func<bool>? canExecute = null) =>
         SetHandler(id, _ => { handler(); return ValueTask.CompletedTask; }, canExecute);
 
-    /// <summary>Estado de check de um toggle ou rádio.</summary>
+    /// <summary>Check state of a toggle or radio item.</summary>
     public void SetChecked(string id, Func<bool> isChecked)
     {
         Get(id);
@@ -142,8 +142,8 @@ public sealed class CommandRegistry : ICommandBus
     }
 
     /// <summary>
-    /// Caption calculada quando o menu abre (Quick Filter com o SQL real, "Select top N rows"); <c>null</c> usa a do
-    /// catálogo.
+    /// Caption computed when the menu opens (Quick Filter with the real SQL, "Select top N rows"); <c>null</c> uses the
+    /// catalog's.
     /// </summary>
     public void SetCaption(string id, Func<string?> caption)
     {
@@ -151,11 +151,11 @@ public sealed class CommandRegistry : ICommandBus
         _captions[id] = caption;
     }
 
-    /// <summary>Atalho efetivo: o redefinido pelo utilizador, se existir, senão o por omissão.</summary>
+    /// <summary>Effective shortcut: the one redefined by the user, if any, otherwise the default.</summary>
     public KeyChord? ShortcutOf(string id) =>
         _overrides.TryGetValue(id, out var custom) ? custom : Get(id).DefaultShortcut;
 
-    /// <summary>Redefine o atalho (<c>null</c> remove-o). Para voltar ao por omissão: <see cref="ResetShortcut"/>.</summary>
+    /// <summary>Redefines the shortcut (<c>null</c> removes it). To go back to the default: <see cref="ResetShortcut"/>.</summary>
     public void SetShortcut(string id, KeyChord? shortcut)
     {
         Get(id);
@@ -169,13 +169,13 @@ public sealed class CommandRegistry : ICommandBus
         InvalidateStates();
     }
 
-    /// <summary>Atalhos redefinidos, no formato das settings (id → "Ctrl+X", ou vazio quando removido).</summary>
+    /// <summary>Redefined shortcuts, in the settings format (id → "Ctrl+X", or empty when removed).</summary>
     public Dictionary<string, string> ExportShortcutOverrides() =>
         _overrides.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? string.Empty, StringComparer.Ordinal);
 
     /// <summary>
-    /// Aplica atalhos das settings. Ids desconhecidos (comando removido numa versão nova) e textos inválidos são
-    /// ignorados e devolvidos, para o log.
+    /// Applies shortcuts from the settings. Unknown ids (a command removed in a newer version) and invalid texts are
+    /// ignored and returned, for the log.
     /// </summary>
     public IReadOnlyList<string> ImportShortcutOverrides(IReadOnlyDictionary<string, string> overrides)
     {
@@ -217,15 +217,15 @@ public sealed class CommandRegistry : ICommandBus
     }
 
     /// <summary>
-    /// Comando para um atalho no contexto de foco: primeiro os que estão ativos nesse contexto, depois os globais.
-    /// Devolve <c>null</c> se nenhum corresponder. Não olha para <c>CanExecute</c>: ver <see cref="ResolveExecutable"/>.
+    /// Command for a shortcut in the focus context: first the ones active in that context, then the global ones.
+    /// Returns <c>null</c> if none matches. Does not look at <c>CanExecute</c>: see <see cref="ResolveExecutable"/>.
     /// </summary>
     public CommandDescriptor? Resolve(KeyChord shortcut, string focusContext) =>
         Candidates(shortcut, [focusContext]).FirstOrDefault();
 
     /// <summary>
-    /// Comando que o atalho executa agora: o primeiro que pode correr, procurando nos contextos de foco (do mais
-    /// interior para o mais exterior) e depois nos globais. Comandos desativados não consomem o atalho.
+    /// Command the shortcut runs now: the first one that can run, searching the focus contexts (from the innermost
+    /// to the outermost) and then the global ones. Disabled commands do not consume the shortcut.
     /// </summary>
     public CommandDescriptor? ResolveExecutable(KeyChord shortcut, IReadOnlyList<string> focusContexts) =>
         Candidates(shortcut, focusContexts).FirstOrDefault(c => StateOf(c.Id).CanExecute);
@@ -253,9 +253,9 @@ public sealed class CommandRegistry : ICommandBus
     }
 
     /// <summary>
-    /// Conflitos que o Preferences tem de mostrar (FAM-K01): mesmo atalho em dois comandos ativos no mesmo
-    /// contexto, ou ambos globais. Um comando de contexto com o mesmo atalho de um global não é conflito:
-    /// ganha o do contexto.
+    /// Conflicts that Preferences has to show (FAM-K01): the same shortcut on two commands active in the same
+    /// context, or both global. A context command with the same shortcut as a global one is not a conflict:
+    /// the context one wins.
     /// </summary>
     public IReadOnlyList<ShortcutConflict> FindConflicts()
     {
@@ -281,7 +281,7 @@ public sealed class CommandRegistry : ICommandBus
         return result;
     }
 
-    /// <summary>Comandos que já usam <paramref name="shortcut"/> num contexto partilhado com <paramref name="id"/>.</summary>
+    /// <summary>Commands that already use <paramref name="shortcut"/> in a context shared with <paramref name="id"/>.</summary>
     public IReadOnlyList<CommandDescriptor> ConflictsFor(string id, KeyChord shortcut)
     {
         var command = Get(id);
@@ -305,9 +305,9 @@ public sealed class CommandRegistry : ICommandBus
     public void InvalidateStates() => StatesInvalidated?.Invoke(this, EventArgs.Empty);
 }
 
-/// <summary>Barramento de comandos (secção 21.1).</summary>
+/// <summary>Command bus (section 21.1).</summary>
 public interface ICommandBus
 {
-    /// <summary>Executa se o comando estiver implementado e puder correr; devolve se correu.</summary>
+    /// <summary>Runs the command if it is implemented and can run; returns whether it ran.</summary>
     ValueTask<bool> ExecuteAsync(string id, CancellationToken cancellationToken = default);
 }

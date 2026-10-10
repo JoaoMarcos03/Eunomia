@@ -4,7 +4,7 @@
     <AssemblyName>Eunomia.Engine.Metadata</AssemblyName>
   </PropertyGroup>
 
-  <!-- Cache de metadata por sessão (secção 21.1: Engine.Metadata -> Drivers.Abstractions; usa o SessionHost). -->
+  <!-- Per-session metadata cache (section 21.1: Engine.Metadata -> Drivers.Abstractions; uses the SessionHost). -->
   <ItemGroup>
     <ProjectReference Include="..\Engine.Execution\Engine.Execution.csproj" />
   </ItemGroup>

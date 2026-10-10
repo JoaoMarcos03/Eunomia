@@ -33,7 +33,7 @@ public sealed class RowBlockTests
 
         b.SetInt64(2, 0, 0);
         b.SetDecimalUnscaled(2, 1, -7);
-        // Linha 2 da coluna de texto não é escrita: fica vazia.
+        // Row 2 of the text column is not written: it stays empty.
         return b.Build();
     }
 
@@ -67,7 +67,7 @@ public sealed class RowBlockTests
     {
         var block = Sample();
 
-        // 5 colunas de 3 valores de 8 bytes + texto (6 bytes UTF-8 + 4 offsets de 4 bytes) + bitmaps.
+        // 5 columns of 3 values of 8 bytes + text (6 UTF-8 bytes + 4 offsets of 4 bytes) + bitmaps.
         Assert.Equal((5 * 3 * 8) + 6 + (4 * 4) + (6 * 2 * 8), block.ByteSize);
     }
 

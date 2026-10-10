@@ -11,16 +11,16 @@ using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Shell.Views;
 
-/// <summary>Onde procurar: o editor ou o grid focado; os grids só procuram (a edição chega na Fase 7).</summary>
+/// <summary>Where to search: the focused editor or grid; grids only search (editing arrives in phase 7).</summary>
 public sealed record SearchTarget(string Caption, bool CanReplace, bool HasSelection);
 
-/// <summary>O que o utilizador pediu: as opções, o alvo e se é "Replace all".</summary>
+/// <summary>What the user asked for: the options, the target and whether it is "Replace all".</summary>
 public sealed record SearchRequest(SearchOptions Options, int Target, bool ReplaceAll);
 
 /// <summary>
-/// "Search and replace text" (anexo C §4.7): Text to find e Replace com recentes e ajudas de regex, Search in, opções
-/// (Case sensitive, Whole words, Regular expression, Prompt on replace), Direction, Origin e Scope; OK, Replace all e
-/// Cancel. As opções e os recentes ficam nas settings.
+/// "Search and replace text" (appendix C §4.7): Text to find and Replace with recent entries and regex helpers, Search in,
+/// options (Case sensitive, Whole words, Regular expression, Prompt on replace), Direction, Origin and Scope; OK, Replace all
+/// and Cancel. The options and the recent entries are kept in the settings.
 /// </summary>
 public sealed class SearchReplaceDialog : Window
 {
@@ -145,7 +145,7 @@ public sealed class SearchReplaceDialog : Window
         }
     }
 
-    /// <summary>Botão com as ajudas (regex ou substituição): cada item acrescenta o texto ao campo.</summary>
+    /// <summary>Button with the helpers (regex or replacement): each item appends its text to the field.</summary>
     private static Button Hints(ComboBox target, IReadOnlyList<string> hints)
     {
         var flyout = new MenuFlyout();

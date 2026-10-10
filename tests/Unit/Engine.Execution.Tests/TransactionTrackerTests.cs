@@ -1,6 +1,6 @@
 namespace Eunomia.Engine.Execution.Tests;
 
-/// <summary>Estado da transação da ligação primária seguido pelas instruções (secção 14.5; Fase 14).</summary>
+/// <summary>Transaction state of the primary connection tracked from its statements (section 14.5; phase 14).</summary>
 public sealed class TransactionTrackerTests
 {
     [Theory]
@@ -77,7 +77,7 @@ public sealed class TransactionTrackerTests
         Assert.False(t.HasChanges);
         t.Observe(["DELETE FROM t"]);
         Assert.True(t.HasChanges);
-        // DDL faz commit implícito; a seguinte instrução abre outra (autocommit continua desligado).
+        // DDL commits implicitly; the next statement opens another one (autocommit stays off).
         t.Observe(["CREATE INDEX i ON t (a)"]);
         Assert.False(t.IsOpen);
         t.Observe(["INSERT INTO t VALUES (2)"]);

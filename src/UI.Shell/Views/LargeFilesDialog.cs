@@ -17,9 +17,9 @@ public enum LargeFilesChoice
 }
 
 /// <summary>
-/// "Opening large files" (anexo B §4.1): algum dos ficheiros escolhidos tem mais de 5 MiB. Três opções em botões
-/// grandes, como os command links do TaskDialog do HeidiSQL: correr os ficheiros sem os abrir no editor, abri-los no
-/// editor (pode gastar muita memória) ou cancelar; a lista dos ficheiros abre-se por baixo.
+/// "Opening large files" (appendix B §4.1): one of the chosen files is over 5 MiB. Three options as large buttons, like
+/// the command links of HeidiSQL's TaskDialog: run the files without opening them in the editor, open them in the
+/// editor (may use a lot of memory) or cancel; the file list opens below.
 /// </summary>
 public sealed class LargeFilesDialog : Window
 {

@@ -5,11 +5,11 @@ using System.Xml.Linq;
 namespace Eunomia.Architecture.Tests;
 
 /// <summary>
-/// "O core não conhece MySQL" (secção 21; roadmap 2.12): fora do driver (<c>Drivers.MySql</c>) e da camada de linguagem
-/// (<c>Engine.Sql</c>, que tem o lexer e as palavras do MySQL atrás de <c>ISqlLanguage</c>), nenhum projeto usa tipos
-/// <c>MySql*</c> nem o MySqlConnector. O <c>App.Desktop</c> (composition root) escolhe o provider e fica de fora. Lê as
-/// referências de tipos dos assemblies compilados, por isso apanha qualquer uso (nome qualificado, <c>using static</c>,
-/// atributo ou argumento genérico).
+/// "The core does not know MySQL" (section 21; roadmap 2.12): outside the driver (<c>Drivers.MySql</c>) and the language
+/// layer (<c>Engine.Sql</c>, which keeps the MySQL lexer and words behind <c>ISqlLanguage</c>), no project uses <c>MySql*</c>
+/// types or MySqlConnector. <c>App.Desktop</c> (the composition root) chooses the provider and is left out. Reads the type
+/// references of the compiled assemblies, so it catches any use (qualified name, <c>using static</c>, attribute or
+/// generic argument).
 /// </summary>
 public sealed class DialectBoundaryTests
 {
@@ -39,14 +39,14 @@ public sealed class DialectBoundaryTests
     [Fact]
     public void LeituraEncontraOsTiposDoMySqlNoDriver()
     {
-        // Controlo positivo: o driver usa o MySqlConnector; se a leitura dos metadados não os visse, o teste acima passava sempre.
+        // Positive control: the driver uses MySqlConnector; if reading the metadata did not see them, the test above would always pass.
         var (types, assemblies) = References("Drivers.MySql");
 
         Assert.Contains(types, t => t.Namespace == "MySqlConnector" && t.Name == "MySqlConnection");
         Assert.Contains("MySqlConnector", assemblies);
     }
 
-    /// <summary>Tipos de outros assemblies que o projeto referencia, e os assemblies que referencia.</summary>
+    /// <summary>Types from other assemblies that the project references, and the assemblies it references.</summary>
     private static (List<(string Namespace, string Name)> Types, List<string> Assemblies) References(string project)
     {
         var path = Path.Combine(AppContext.BaseDirectory, AssemblyName(project) + ".dll");
@@ -71,7 +71,7 @@ public sealed class DialectBoundaryTests
             .Where(name => File.Exists(Path.Combine(RepoRoot, "src", name, name + ".csproj")))
             .Order(StringComparer.Ordinal);
 
-    /// <summary><c>AssemblyName</c> do projeto, ou o nome do projeto.</summary>
+    /// <summary>The project's <c>AssemblyName</c>, or the project name.</summary>
     private static string AssemblyName(string project)
     {
         var csproj = XDocument.Load(Path.Combine(RepoRoot, "src", project, project + ".csproj"));

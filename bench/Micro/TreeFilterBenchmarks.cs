@@ -4,8 +4,8 @@ using Eunomia.UI.Controls.Tree;
 namespace Eunomia.Bench.Micro;
 
 /// <summary>
-/// PR-11: Table filter sobre 10.000 nós ≤ 50 ms. Árvore sintética completamente expandida
-/// (5 sessões × 20 bases × 100 objetos); cada operação aplica um filtro novo e reconstrói os visíveis.
+/// PR-11: Table filter over 10,000 nodes ≤ 50 ms. Fully expanded synthetic tree
+/// (5 sessions × 20 databases × 100 objects); each operation applies a new filter and rebuilds the visible list.
 /// </summary>
 [MemoryDiagnoser]
 public class TreeFilterBenchmarks
@@ -30,7 +30,7 @@ public class TreeFilterBenchmarks
     [Benchmark(Description = "Table filter b2b;prd_products|ecm_*product")]
     public int TableFilter()
     {
-        // Alterna entre dois textos para que cada chamada seja um filtro novo (sem cache).
+        // Alternates between two texts so each call is a new filter (no cache).
         _model.SetTableFilter((_toggle++ & 1) == 0 ? "b2b;prd_products|ecm_*product" : "b2b;prd_products|ecm_*produc");
         return _model.Visible.Count;
     }

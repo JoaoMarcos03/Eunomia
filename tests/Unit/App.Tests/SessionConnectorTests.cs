@@ -4,7 +4,7 @@ using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Conversão da sessão gravada para os parâmetros do SessionHost (TLS, SSH, segredos, timeouts).</summary>
+/// <summary>Conversion of the saved session into SessionHost parameters (TLS, SSH, secrets, timeouts).</summary>
 public sealed class SessionConnectorTests
 {
     private sealed class NoProvider : IDbProvider

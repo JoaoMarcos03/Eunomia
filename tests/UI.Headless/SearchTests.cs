@@ -7,7 +7,7 @@ using static Eunomia.UI.Headless.Tests.RealServer;
 
 namespace Eunomia.UI.Headless.Tests;
 
-/// <summary>Find, Replace e Find again no editor e no grid (anexo C §4.7; FAM-Q10).</summary>
+/// <summary>Find, Replace and Find again in the editor and the grid (appendix C §4.7; FAM-Q10).</summary>
 public sealed class SearchTests
 {
     private static MainWindow Window()
@@ -37,13 +37,13 @@ public sealed class SearchTests
             return options is null ? null : new SearchRequest(options, target, replaceAll);
         };
 
-        // Prefill com a palavra no cursor; Entire scope encontra a primeira.
+        // Prefilled with the word at the cursor; Entire scope finds the first one.
         options = new SearchOptions { Find = "people", WholeWords = true };
         Assert.True(await commands.ExecuteAsync("search.find"));
         Assert.Equal("name", prefills[^1]);
         Assert.Equal((17, 6), (editor.Editor.SelectionStart, editor.Editor.SelectionLength));
 
-        // F3 continua a partir da seleção; no fim, "not found" na status bar.
+        // F3 continues from the selection; at the end, "not found" in the status bar.
         Assert.True(await commands.ExecuteAsync("search.findAgain"));
         Assert.Equal(39, editor.Editor.SelectionStart);
         Assert.True(await commands.ExecuteAsync("search.findAgain"));
@@ -52,7 +52,7 @@ public sealed class SearchTests
         Assert.Equal(60, editor.Editor.SelectionStart);
         Assert.Equal("Search string \"people\" not found", window.Context.Status.Info);
 
-        // Replace all sem perguntar: uma só alteração no undo.
+        // Replace all without asking: a single undo step.
         options = new SearchOptions { Find = "people", Replace = "persons", PromptOnReplace = false };
         replaceAll = true;
         Assert.True(await commands.ExecuteAsync("search.replace"));
@@ -61,7 +61,7 @@ public sealed class SearchTests
         editor.Editor.Undo();
         Assert.Contains("FROM people;", editor.Text, StringComparison.Ordinal);
 
-        // Replace (OK) troca só a próxima, a partir do cursor.
+        // Replace (OK) replaces only the next one, from the cursor.
         options = new SearchOptions { Find = "name", Replace = "id", PromptOnReplace = false, EntireScope = false };
         replaceAll = false;
         editor.Editor.Select(0, 0);

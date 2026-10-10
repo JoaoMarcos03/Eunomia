@@ -3,7 +3,7 @@ using Eunomia.Engine.Sql.Splitting;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Regras de texto das query tabs (anexo C §4.4; FAM-Q03, Q04, Q08, Q11).</summary>
+/// <summary>Text rules of the query tabs (appendix C §4.4; FAM-Q03, Q04, Q08, Q11).</summary>
 public sealed class QueryTextTests
 {
     [Theory]

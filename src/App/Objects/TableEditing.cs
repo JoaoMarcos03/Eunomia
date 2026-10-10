@@ -7,17 +7,17 @@ using Eunomia.Engine.Results;
 namespace Eunomia.App.Objects;
 
 /// <summary>
-/// O que o table editor precisa do servidor (anexo C §5): as listas (collations, engines, tabelas da base) e a gravação
-/// (CREATE numa tabela nova, ALTER por diff numa existente), na ligação primária para o SQL ir para o log.
+/// What the table editor needs from the server (appendix C §5): the lists (collations, engines, tables of the database)
+/// and saving (CREATE for a new table, ALTER by diff for an existing one), on the primary connection so the SQL goes to the log.
 /// </summary>
 public static class TableEditing
 {
-    /// <summary>Collations (todas, ordenadas), engines disponíveis e tabelas da base.</summary>
+    /// <summary>Collations (all of them, sorted), available engines and the tables of the database.</summary>
     public static async Task<(IReadOnlyList<string> Collations, IReadOnlyList<string> Engines, IReadOnlyList<string> Tables)> ListsAsync(
         OpenSession session, string database, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session);
-        // Collations e engines não mudam na sessão: uma ida ao servidor na primeira tabela, não em cada uma.
+        // Collations and engines do not change during the session: one round trip for the first table, not for every one.
         var collations = await session.Metadata.GetServerListAsync("collations", (h, ct) => h.Metadata.GetCollationsAsync(ct), cancellationToken).ConfigureAwait(false);
         var engines = await session.Metadata.GetServerListAsync("engines", (h, ct) => QueryRows.ReadAsync(h, "SHOW ENGINES", ct), cancellationToken).ConfigureAwait(false);
         var objects = await session.Metadata.GetObjectsAsync(database, cancellationToken).ConfigureAwait(false);
@@ -27,7 +27,7 @@ public static class TableEditing
             [.. objects.Objects.Where(o => o.Ref.Kind == DbObjectKind.Table).Select(o => o.Ref.Name)]);
     }
 
-    /// <summary>Instruções da gravação: CREATE (sem <paramref name="baseline"/>) ou ALTER por diff.</summary>
+    /// <summary>Statements to save: CREATE (without <paramref name="baseline"/>) or ALTER by diff.</summary>
     public static IReadOnlyList<string> Statements(IServerServices services, TableDefinition? baseline, TableDesign design)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -37,9 +37,9 @@ public static class TableEditing
     }
 
     /// <summary>
-    /// Alterações que podem perder dados, para confirmar antes de gravar: colunas apagadas e colunas que mudam de tipo ou de
-    /// charset (o modo estrito do <see cref="ApplyAsync"/> faz falhar os cortes, mas não arredondamentos como DOUBLE →
-    /// FLOAT ou menos casas decimais).
+    /// Changes that may lose data, to confirm before saving: dropped columns and columns that change type or
+    /// charset (the strict mode of <see cref="ApplyAsync"/> makes truncations fail, but not rounding such as DOUBLE →
+    /// FLOAT or fewer decimal places).
     /// </summary>
     public static IReadOnlyList<string> DataLossWarnings(TableDefinition? baseline, TableDefinition wanted)
     {
@@ -77,7 +77,7 @@ public static class TableEditing
         static string? Charset(string? collation) => string.IsNullOrEmpty(collation) ? null : collation.Split('_')[0];
     }
 
-    /// <summary>Famílias em que cada tipo cabe no seguinte (mesmo sinal).</summary>
+    /// <summary>Families in which each type fits into the next (same signedness).</summary>
     private static readonly string[][] Widening =
     [
         ["tinyint", "smallint", "mediumint", "int", "integer", "bigint"],
@@ -87,8 +87,8 @@ public static class TableEditing
     ];
 
     /// <summary>
-    /// A mudança de tipo não perde valores: o mesmo tipo com comprimento, precisão, escala ou frações maiores, ou um tipo
-    /// maior da mesma família com o mesmo sinal (<c>int</c> → <c>bigint</c>, <c>varchar(20)</c> → <c>text</c>).
+    /// The type change loses no values: the same type with a larger length, precision, scale or fraction, or a larger
+    /// type of the same family with the same signedness (<c>int</c> → <c>bigint</c>, <c>varchar(20)</c> → <c>text</c>).
     /// </summary>
     internal static bool IsWidening(string before, string after)
     {
@@ -110,7 +110,7 @@ public static class TableEditing
             }
             if (oldArgs.Count == 0 || newArgs.Count == 0)
             {
-                // int(11) → int: a largura de display não conta; o resto sem argumentos é o mesmo tipo.
+                // int(11) → int: the display width does not count; the rest without arguments is the same type.
                 return oldName.EndsWith("int", StringComparison.Ordinal) || (oldArgs.Count == 0 && newArgs.Count == 0);
             }
             if (oldArgs.Count != newArgs.Count)
@@ -119,7 +119,7 @@ public static class TableEditing
             }
             if (oldName is "decimal" or "numeric" && oldArgs.Count == 2)
             {
-                // Casas inteiras e decimais têm de caber as duas.
+                // Both the integer and the decimal digits have to fit.
                 return newArgs[1] >= oldArgs[1] && newArgs[0] - newArgs[1] >= oldArgs[0] - oldArgs[1];
             }
             return oldArgs.Zip(newArgs).All(p => p.Second >= p.First) || oldName.EndsWith("int", StringComparison.Ordinal);
@@ -130,7 +130,7 @@ public static class TableEditing
             var to = Array.IndexOf(family, newName);
             if (from >= 0 && to > from)
             {
-                // char(n)/varchar(n) → text: cabe se n couber nos bytes do tipo de texto (utf8mb4: 4 bytes por carácter).
+                // char(n)/varchar(n) → text: fits if n fits in the text type's bytes (utf8mb4: 4 bytes per character).
                 return oldName is not ("char" or "varchar" or "binary" or "varbinary") || newName is "varchar" or "varbinary"
                     ? (newArgs.Count == 0 || oldArgs.Count == 0 || newArgs[0] >= oldArgs[0])
                     : (oldArgs.Count == 1 ? oldArgs[0] * 4 : 255) <= Capacity(newName);
@@ -176,8 +176,8 @@ public static class TableEditing
     }
 
     /// <summary>
-    /// ALTER que repõe as chaves estrangeiras que o primeiro ALTER do <see cref="IDdlComposer.Alter"/> larga (alteradas ou
-    /// apagadas), para o caso de o ALTER principal falhar a seguir; <c>null</c> se nenhuma é largada.
+    /// ALTER that restores the foreign keys that the first ALTER of <see cref="IDdlComposer.Alter"/> drops (changed or
+    /// deleted), in case the main ALTER fails afterwards; <c>null</c> if none is dropped.
     /// </summary>
     public static string? RestoreDroppedForeignKeys(IServerServices services, TableDefinition? baseline, TableDesign design)
     {
@@ -196,9 +196,9 @@ public static class TableEditing
     }
 
     /// <summary>
-    /// Corre as instruções por ordem na ligação primária (<see cref="SafeDdl"/>, em modo estrito: um ALTER que cortaria
-    /// valores falha; o modo anterior é sempre reposto). A primeira que falha pára e lança; se já tinham corrido
-    /// instruções e houver <paramref name="restoreForeignKeys"/>, este corre antes de lançar.
+    /// Runs the statements in order on the primary connection (<see cref="SafeDdl"/>, in strict mode: an ALTER that would
+    /// truncate values fails; the previous mode is always restored). The first one that fails stops and throws; if statements
+    /// had already run and there is a <paramref name="restoreForeignKeys"/>, it runs before throwing.
     /// </summary>
     public static async Task ApplyAsync(OpenSession session, IReadOnlyList<string> statements, CancellationToken cancellationToken, string? restoreForeignKeys = null)
     {
@@ -217,7 +217,7 @@ public static class TableEditing
             }
             catch (Exception) when (done > 0 && restoreForeignKeys is not null && !ct.IsCancellationRequested && h.IsOpen)
             {
-                // O primeiro ALTER largou chaves estrangeiras e o seguinte falhou: a tabela fica como estava.
+                // The first ALTER dropped foreign keys and the next one failed: the table is left as it was.
                 await h.ExecuteNonQueryAsync(restoreForeignKeys, ct).ConfigureAwait(false);
                 throw;
             }
@@ -225,7 +225,7 @@ public static class TableEditing
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Linhas de uma consulta pequena (texto bruto, NULL = <c>null</c>), na ligação de metadata.</summary>
+    /// <summary>Rows of a small query (raw text, NULL = <c>null</c>), on the metadata connection.</summary>
     public static Task<List<string?[]>> RowsAsync(SessionHost host, string sql, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(host);

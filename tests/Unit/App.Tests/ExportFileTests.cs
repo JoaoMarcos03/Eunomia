@@ -2,7 +2,7 @@ using Eunomia.App.Export;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Nome e codificação do ficheiro do Export grid rows (anexo B §1.4; FAM-C05).</summary>
+/// <summary>Name and encoding of the Export grid rows file (appendix B §1.4; FAM-C05).</summary>
 public sealed class ExportFileTests
 {
     [Fact]

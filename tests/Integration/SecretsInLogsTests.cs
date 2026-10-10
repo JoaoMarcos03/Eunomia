@@ -9,8 +9,8 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>
-/// Segredos fora dos logs (Fase 12; secção 23.2): a password de um utilizador criado pelo SQL, a de uma ligação certa
-/// e a de uma ligação recusada não aparecem no SQL log nem nas mensagens de erro.
+/// Secrets kept out of the logs (phase 12; section 23.2): the password of a user created through SQL, the one of a successful
+/// connection and the one of a refused connection do not show in the SQL log or in the error messages.
 /// </summary>
 public sealed class SecretsInLogsTests
 {
@@ -37,12 +37,12 @@ public sealed class SecretsInLogsTests
             await admin.ConnectAsync(Ct);
             var runner = new QueryRunner(admin);
             Task Run(string sql, CancellationToken ct) => runner.RunAsync(sql, SqlSplitter.Split(sql), new QueryRunOptions(), ct);
-            // Como numa query tab: o SQL vai para o log como SQL do utilizador.
+            // As in a query tab: the SQL goes to the log as user SQL.
             await Run($"CREATE USER '{user}'@'%' IDENTIFIED BY '{Secret}'", Ct);
             await Run($"ALTER USER '{user}'@'%' IDENTIFIED BY '{Secret}'", Ct);
             try
             {
-                // Ligação certa e ligação recusada com o utilizador novo.
+                // Successful and refused connections with the new user.
                 foreach (var password in new[] { Secret, Secret + "x" })
                 {
                     var options = TestServer.Options() with { User = user, Password = new Eunomia.Drivers.Abstractions.SecretReference("pw") };

@@ -1,13 +1,13 @@
 namespace Eunomia.Drivers.MySql;
 
 /// <summary>
-/// Forma de uma instrução, sem parser: a primeira keyword (depois de espaços, comentários e parênteses) e se o texto
-/// acaba fora de strings e comentários. Serve para juntar o <c>SHOW WARNINGS</c> à própria instrução (PR-10: zero
-/// round trips extra) só onde é seguro.
+/// Shape of a statement, without a parser: the first keyword (after whitespace, comments and parentheses) and whether the
+/// text ends outside strings and comments. Used to append <c>SHOW WARNINGS</c> to the statement itself (PR-10: zero
+/// extra round trips) only where it is safe.
 /// </summary>
 internal static class MySqlStatementShape
 {
-    /// <summary>Instruções que podem devolver linhas (e cujos warnings o MySqlConnector não reporta).</summary>
+    /// <summary>Statements that may return rows (and whose warnings MySqlConnector does not report).</summary>
     private static readonly HashSet<string> RowKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         "SELECT", "WITH", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "CALL", "VALUES", "TABLE", "HANDLER",
@@ -16,7 +16,7 @@ internal static class MySqlStatementShape
 
     public static bool MayReturnRows(string sql) => RowKeywords.Contains(LeadingKeyword(sql));
 
-    /// <summary>Primeira palavra fora de comentários e parênteses; vazia num comentário condicional <c>/*! */</c>.</summary>
+    /// <summary>First word outside comments and parentheses; empty in a <c>/*! */</c> conditional comment.</summary>
     public static string LeadingKeyword(string sql)
     {
         ArgumentNullException.ThrowIfNull(sql);
@@ -51,7 +51,7 @@ internal static class MySqlStatementShape
         return sql[start..i];
     }
 
-    /// <summary>O texto acaba fora de strings (<c>' " `</c>, com <c>\</c> e aspas duplicadas) e de comentários de bloco.</summary>
+    /// <summary>The text ends outside strings (<c>' " `</c>, with <c>\</c> and doubled quotes) and block comments.</summary>
     public static bool EndsInCode(string sql)
     {
         ArgumentNullException.ThrowIfNull(sql);

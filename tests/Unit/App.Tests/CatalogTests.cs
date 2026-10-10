@@ -2,7 +2,7 @@ using Eunomia.App.Commands;
 
 namespace Eunomia.App.Tests;
 
-/// <summary>Inventário de comandos (secção 21.2, FAM-L02, FAM-K01): completo face ao HeidiSQL e sem conflitos.</summary>
+/// <summary>Command inventory (section 21.2, FAM-L02, FAM-K01): complete against HeidiSQL and without conflicts.</summary>
 public sealed class CatalogTests
 {
     private static readonly CommandRegistry Registry = HeidiSqlCatalog.CreateRegistry();

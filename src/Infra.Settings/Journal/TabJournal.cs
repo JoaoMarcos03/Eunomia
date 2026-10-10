@@ -7,7 +7,7 @@ using Eunomia.App.Query;
 
 namespace Eunomia.Infra.Settings.Journal;
 
-/// <summary>Estado de uma tab no disco, com o dono (processo e hora de arranque, para não confundir PIDs reciclados).</summary>
+/// <summary>State of a tab on disk, with its owner (process and start time, so recycled PIDs are not confused).</summary>
 internal sealed record TabStateFile(TabState State, int Pid, long ProcessStart);
 
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -15,19 +15,19 @@ internal sealed record TabStateFile(TabState State, int Pid, long ProcessStart);
 internal sealed partial class TabJournalJsonContext : JsonSerializerContext;
 
 /// <summary>
-/// Journal das query tabs em disco (secção 21.4; TR-31; PR-21). Por tab, <c>query-tab-&lt;id&gt;.json</c> com o estado
-/// (escrita atómica) e <c>query-tab-&lt;id&gt;.journal</c> com o texto: registos append-only
-/// <c>[tamanho][crc32][tipo][dados]</c>, um snapshot e depois as alterações; o <see cref="Flush"/> acrescenta as
-/// pendentes e força para disco. Um registo cortado por um crash a meio da escrita falha o CRC e é ignorado, com tudo o
-/// que vem depois. Quando há muitas alterações, o journal é reescrito como um snapshot (temporário e rename). As tabs
-/// de outra instância a correr não são restauradas (como o <c>pid</c> do <c>tabs.ini</c> do HeidiSQL).
+/// Query tab journal on disk (section 21.4; TR-31; PR-21). Per tab, <c>query-tab-&lt;id&gt;.json</c> with the state
+/// (atomic write) and <c>query-tab-&lt;id&gt;.journal</c> with the text: append-only records
+/// <c>[size][crc32][type][data]</c>, a snapshot and then the changes; <see cref="Flush"/> appends the pending ones
+/// and forces them to disk. A record cut by a crash in the middle of a write fails the CRC and is ignored, along with
+/// everything after it. When there are many changes, the journal is rewritten as a snapshot (temporary file and rename).
+/// Tabs of another running instance are not restored (like the <c>pid</c> in HeidiSQL's <c>tabs.ini</c>).
 /// </summary>
 public sealed class TabJournal : ITabJournal
 {
     private const byte SnapshotRecord = 1;
     private const byte EditRecord = 2;
 
-    /// <summary>Alterações depois do último snapshot a partir das quais o journal é compactado.</summary>
+    /// <summary>Changes after the last snapshot from which the journal is compacted.</summary>
     public const int CompactAfterEdits = 2000;
 
     private readonly string _directory;
@@ -79,7 +79,7 @@ public sealed class TabJournal : ITabJournal
         return [.. result.OrderBy(t => t.State.Order)];
     }
 
-    /// <summary>Outra instância viva (não esta) com o mesmo PID e a mesma hora de arranque.</summary>
+    /// <summary>Another live instance (not this one) with the same PID and start time.</summary>
     private bool OwnedByOtherInstance(TabStateFile saved)
     {
         if (saved.Pid == _pid && saved.ProcessStart == _processStart)
@@ -197,7 +197,7 @@ public sealed class TabJournal : ITabJournal
         }
     }
 
-    /// <summary>Reescreve o journal só com um snapshot (temporário e rename: um crash deixa o anterior).</summary>
+    /// <summary>Rewrites the journal with just a snapshot (temporary file and rename: a crash leaves the previous one).</summary>
     private void WriteSnapshot(Guid tab, string text)
     {
         using var buffer = new MemoryStream();
@@ -229,7 +229,7 @@ public sealed class TabJournal : ITabJournal
         stream.Write(payload);
     }
 
-    /// <summary>Texto do journal: o último snapshot e as alterações a seguir, até ao primeiro registo inválido.</summary>
+    /// <summary>Journal text: the last snapshot and the changes after it, up to the first invalid record.</summary>
     public static string Replay(string path)
     {
         ArgumentNullException.ThrowIfNull(path);

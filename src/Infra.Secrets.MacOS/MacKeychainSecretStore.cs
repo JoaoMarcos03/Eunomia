@@ -6,10 +6,10 @@ using Eunomia.App.Secrets;
 namespace Eunomia.Infra.Secrets.MacOS;
 
 /// <summary>
-/// Segredos no Keychain do macOS (secção 21.8; Fase 14): itens <c>kSecClassGenericPassword</c> com o serviço
-/// <c>Eunomia</c> e a chave como conta (visíveis e removíveis pelo utilizador no Acesso a Porta-chaves). Usa a API
-/// <c>SecItem*</c> do Security.framework por P/Invoke (sem pacotes extra). Erros do Keychain (bloqueado, recusado)
-/// chegam como <see cref="SecretStoreException"/>.
+/// Secrets in the macOS Keychain (section 21.8; phase 14): <c>kSecClassGenericPassword</c> items with the service
+/// <c>Eunomia</c> and the key as the account (visible and removable by the user in Keychain Access). Uses the
+/// Security.framework <c>SecItem*</c> API through P/Invoke (no extra packages). Keychain errors (locked, refused)
+/// arrive as <see cref="SecretStoreException"/>.
 /// </summary>
 [SupportedOSPlatform("macos")]
 public sealed partial class MacKeychainSecretStore(string service = "Eunomia") : ISecretStore
@@ -42,7 +42,7 @@ public sealed partial class MacKeychainSecretStore(string service = "Eunomia") :
             var length = (int)CFDataGetLength(data);
             if (length == 0)
             {
-                // Dados vazios vêm sem ponteiro (CFDataGetBytePtr devolve NULL).
+                // Empty data comes without a pointer (CFDataGetBytePtr returns NULL).
                 return string.Empty;
             }
             var bytes = new byte[length];
@@ -67,7 +67,7 @@ public sealed partial class MacKeychainSecretStore(string service = "Eunomia") :
         var value = cf.Data(bytes);
         Array.Clear(bytes);
         var query = cf.Dictionary((s.Class, s.ClassGenericPassword), (s.AttrService, cf.String(Service)), (s.AttrAccount, cf.String(key)));
-        // O Keychain ignora um SecItemUpdate com dados vazios (a password antiga ficava): sem conteúdo, apaga e volta a criar.
+        // The Keychain ignores a SecItemUpdate with empty data (the old password stayed): without content, delete and create again.
         var status = secret.Length == 0 ? SecItemDelete(query) : SecItemUpdate(query, cf.Dictionary((s.ValueData, value)));
         if (secret.Length == 0 && status is 0 or ErrSecItemNotFound)
         {
@@ -103,7 +103,7 @@ public sealed partial class MacKeychainSecretStore(string service = "Eunomia") :
         }
     }
 
-    /// <summary>Constantes exportadas pelos frameworks (CFStringRef e as callbacks do CFDictionary).</summary>
+    /// <summary>Constants exported by the frameworks (CFStringRef and the CFDictionary callbacks).</summary>
     private sealed record Symbols(
         IntPtr Class, IntPtr ClassGenericPassword, IntPtr AttrService, IntPtr AttrAccount, IntPtr AttrLabel, IntPtr ValueData,
         IntPtr ReturnData, IntPtr MatchLimit, IntPtr MatchLimitOne, IntPtr True, IntPtr KeyCallBacks, IntPtr ValueCallBacks)
@@ -122,7 +122,7 @@ public sealed partial class MacKeychainSecretStore(string service = "Eunomia") :
         }
     }
 
-    /// <summary>Objetos Core Foundation criados para um pedido, libertados no fim.</summary>
+    /// <summary>Core Foundation objects created for a request, released at the end.</summary>
     private sealed class CfScope : IDisposable
     {
         private readonly List<IntPtr> _owned = [];

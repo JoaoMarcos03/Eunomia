@@ -6,13 +6,13 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Paleta de comandos (Ctrl+Shift+P; roadmap 1.x #11): a lista é feita antes de abrir, com o foco ainda na janela, para
-/// os comandos que dependem do controlo focado (grid, editor, árvore) aparecerem; ao escolher, o foco volta e o comando
-/// corre como se viesse do menu.
+/// Command palette (Ctrl+Shift+P; roadmap 1.x #11): the list is built before opening, with the focus still on the window,
+/// so commands that depend on the focused control (grid, editor, tree) show up; on choosing, the focus goes back and the
+/// command runs as if it came from the menu.
 /// </summary>
 public sealed partial class MainWindow
 {
-    /// <summary>Paleta aberta (testes).</summary>
+    /// <summary>Open palette (tests).</summary>
     internal CommandPaletteWindow? CommandPalette { get; private set; }
 
     private void InitCommandPalette()
