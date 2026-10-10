@@ -1,14 +1,14 @@
-﻿<#
+<#
 .SYNOPSIS
-  PR-04: scroll programático de 10 s no grid com 1M linhas x 60 colunas residentes.
+  PR-04: 10 s of programmatic scrolling in the grid with 1M rows x 60 resident columns.
 
 .DESCRIPTION
-  Corre o executável com --bench-scroll numa janela de 1280x800 DIPs e grava os tempos de frame:
-  intervalo entre frames (pacing), custo na UI thread e custo de desenho no render thread.
-  -Scale 1.5 aproxima 150% sem mudar a escala do Windows: o conteúdo é desenhado com escala 1,5
-  (mesmos pixels por célula que a 150%). A medição a 150% real é uma verificação manual.
-  Aprovação (PR-04): frame p95 <= 16,7 ms, com frame = max(UI thread, render thread), e pacing p95
-  <= 18,3 ms (16,7 ms + 10% de jitter do vsync).
+  Runs the executable with --bench-scroll in a 1280x800 DIP window and records the frame times:
+  interval between frames (pacing), cost on the UI thread and drawing cost on the render thread.
+  -Scale 1.5 approximates 150% without changing the Windows scale: the content is drawn at scale 1.5
+  (the same pixels per cell as at 150%). The measurement at a real 150% is a manual check.
+  Pass (PR-04): frame p95 <= 16.7 ms, with frame = max(UI thread, render thread), and pacing p95
+  <= 18.3 ms (16.7 ms + 10% vsync jitter).
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File bench\Scenarios\Measure-Scroll.ps1
@@ -52,11 +52,11 @@ $r = Get-Content $out -Raw | ConvertFrom-Json
 $frameP95 = [math]::Max([double]$r.uiMs.p95, [double]$r.renderThreadMs.p95)
 $result = [ordered]@{
     metric          = 'PR-04'
-    target          = 'frame p95 <= 16.7 ms (max UI/render thread) e pacing p95 <= 18.3 ms'
+    target          = 'frame p95 <= 16.7 ms (max UI/render thread) and pacing p95 <= 18.3 ms'
     scale           = $Scale
-    cores           = $(if ($Cores -gt 0) { "$Cores (afinidade 0x{0:X})" -f (Get-AffinityMask $Cores) } else { 'todos' })
+    cores           = $(if ($Cores -gt 0) { "$Cores (affinity 0x{0:X})" -f (Get-AffinityMask $Cores) } else { 'all' })
     render          = $Render
-    timerResolution = $(if ($TimerResolution -gt 0) { "$TimerResolution ms" } else { 'omissao do Windows' })
+    timerResolution = $(if ($TimerResolution -gt 0) { "$TimerResolution ms" } else { 'Windows default' })
     refreshHz       = $r.refreshHz
     appFps          = $r.appFramesPerSecond
     adapter         = $r.adapter
@@ -69,7 +69,7 @@ $result = [ordered]@{
     renderThreadMs  = $r.renderThreadMs
     droppedFrames   = $r.droppedFrames
     textLayouts     = $r.textLayoutsCreated
-    gc              = "gen0 $($r.gc0), gen1 $($r.gc1), gen2 $($r.gc2), $($r.allocatedMB) MB alocados"
+    gc              = "gen0 $($r.gc0), gen1 $($r.gc1), gen2 $($r.gc2), $($r.allocatedMB) MB allocated"
     viewportRows    = $r.viewportRows
     phases          = $r.phases
     frameP95Ms      = [math]::Round($frameP95, 2)

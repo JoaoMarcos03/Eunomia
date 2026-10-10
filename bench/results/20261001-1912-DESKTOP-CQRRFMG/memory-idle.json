@@ -1,6 +1,6 @@
 ﻿{
     "metric":  "PR-16",
-    "target":  "working set \u003c= 150 MB apos 60 s idle",
+    "target":  "working set \u003c= 150 MB after 60 s idle",
     "appArgs":  "",
     "idleSeconds":  15,
     "runs":  3,

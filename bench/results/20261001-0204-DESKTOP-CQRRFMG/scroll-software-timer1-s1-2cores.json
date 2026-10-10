@@ -1,8 +1,8 @@
 ﻿{
     "metric":  "PR-04",
-    "target":  "frame p95 \u003c= 16.7 ms (max UI/render thread) e pacing p95 \u003c= 18.3 ms",
+    "target":  "frame p95 \u003c= 16.7 ms (max UI/render thread) and pacing p95 \u003c= 18.3 ms",
     "scale":  1,
-    "cores":  "2 (afinidade 0x5)",
+    "cores":  "2 (affinity 0x5)",
     "render":  "software",
     "timerResolution":  "1 ms",
     "refreshHz":  60,
@@ -52,7 +52,7 @@
                        },
     "droppedFrames":  1,
     "textLayouts":  45244,
-    "gc":  "gen0 27, gen1 12, gen2 2, 146.5 MB alocados",
+    "gc":  "gen0 27, gen1 12, gen2 2, 146.5 MB allocated",
     "viewportRows":  31,
     "phases":  {
                    "wheel":  {

@@ -1,16 +1,16 @@
-"""Cobertura de linhas por projeto de src/ e limiares que só sobem (roadmap 2.2).
+"""Line coverage per src/ project, with thresholds that only go up (roadmap 2.2).
 
-Lê todos os *.cobertura.xml de uma pasta (o coletor "Code Coverage" do Microsoft.NET.Test.Sdk, com
-`dotnet test --collect "Code Coverage;Format=cobertura"`), junta as linhas de várias corridas (testes unitários e de
-integração: uma linha conta como coberta se alguma corrida a executou) e agrupa por projeto pelo caminho do ficheiro
-(src/<Projeto>/...). Código gerado (obj/) e o que está fora de src/ (testes, pacotes) fica de fora.
+Reads every *.cobertura.xml in a folder (the "Code Coverage" collector of Microsoft.NET.Test.Sdk, with
+`dotnet test --collect "Code Coverage;Format=cobertura"`), merges the lines of several runs (unit and integration
+tests: a line counts as covered if any run executed it) and groups them by project from the file path
+(src/<Project>/...). Generated code (obj/) and anything outside src/ (tests, packages) is left out.
 
-Os limiares estão em build/coverage-baseline.json ({"Projeto": percentagem}); só os projetos listados são verificados
-(começa pelo core: Engine.*, Drivers.*, App). Um projeto abaixo do limiar menos a tolerância faz falhar; acima do
-limiar mais 1 ponto, o relatório sugere subi-lo (--update grava os valores atuais, arredondados para baixo).
+The thresholds are in build/coverage-baseline.json ({"Project": percentage}); only the listed projects are checked
+(it starts with the core: Engine.*, Drivers.*, App). A project below its threshold minus the tolerance fails; above the
+threshold plus 1 point, the report suggests raising it (--update writes the current values, rounded down).
 
-Uso:
-    python build/coverage.py <pasta> [--baseline build/coverage-baseline.json] [--summary relatorio.md] [--update]
+Usage:
+    python build/coverage.py <folder> [--baseline build/coverage-baseline.json] [--summary report.md] [--update]
 """
 
 import argparse
@@ -26,7 +26,7 @@ PROJECTS = {name for name in os.listdir(SRC) if os.path.isfile(os.path.join(SRC,
 
 
 def project_of(filename):
-    """src/<Projeto>/... -> Projeto deste repositório; None fora de src/, em código gerado (obj/) ou nos pacotes."""
+    """src/<Project>/... -> a project of this repository; None outside src/, in generated code (obj/) or in packages."""
     path = filename.replace("\\", "/")
     marker = "/src/"
     index = path.rfind(marker)
@@ -40,7 +40,7 @@ def project_of(filename):
 
 
 def collect(folder):
-    """{projeto: {(ficheiro, linha): coberta}} a partir de todos os relatórios da pasta."""
+    """{project: {(file, line): covered}} from every report in the folder."""
     lines = {}
     reports = 0
     for root, _, files in os.walk(folder):
@@ -70,7 +70,7 @@ def main():
 
     lines, reports = collect(args.folder)
     if reports == 0:
-        print("Nenhum *.cobertura.xml em " + args.folder, file=sys.stderr)
+        print("No *.cobertura.xml in " + args.folder, file=sys.stderr)
         return 2
     with open(args.baseline, encoding="utf-8") as f:
         baseline = json.load(f)
@@ -88,10 +88,10 @@ def main():
         status = ""
         if threshold is not None:
             if percent < threshold - TOLERANCE:
-                status = "abaixo do limiar"
+                status = "below threshold"
                 failures.append(f"{project}: {percent:.1f}% < {threshold:.1f}%")
             elif percent > threshold + 1:
-                status = f"subir o limiar para {math.floor(percent * 10) / 10:.1f}"
+                status = f"raise the threshold to {math.floor(percent * 10) / 10:.1f}"
                 raises.append(project)
             else:
                 status = "ok"
@@ -99,16 +99,16 @@ def main():
         rows.append(f"| {project} | {valid} | {covered} | {percent:.1f}% | {shown} | {status} |")
     missing = [p for p in baseline if p not in lines]
     for project in missing:
-        failures.append(f"{project}: sem dados de cobertura (projeto removido ou renomeado? atualizar o limiar)")
+        failures.append(f"{project}: no coverage data (project removed or renamed? update the threshold)")
 
     report = "\n".join([
-        f"## Cobertura de linhas por projeto ({reports} relatório(s))",
+        f"## Line coverage per project ({reports} report(s))",
         "",
-        "| Projeto | Linhas | Cobertas | Cobertura | Limiar | Estado |",
+        "| Project | Lines | Covered | Coverage | Threshold | Status |",
         "| --- | ---: | ---: | ---: | ---: | --- |",
         *rows,
         "",
-        f"Limiares em `{args.baseline.replace(os.sep, '/')}`; tolerância de {TOLERANCE} pontos.",
+        f"Thresholds in `{args.baseline.replace(os.sep, '/')}`; tolerance of {TOLERANCE} points.",
     ])
     print(report)
     if args.summary:
@@ -120,13 +120,13 @@ def main():
         with open(args.baseline, "w", encoding="utf-8", newline="\n") as f:
             json.dump(updated, f, indent=2, sort_keys=True)
             f.write("\n")
-        print("Limiares atualizados em " + args.baseline)
+        print("Thresholds updated in " + args.baseline)
         return 0
     if failures:
-        print("\nCobertura abaixo do limiar:\n  " + "\n  ".join(failures), file=sys.stderr)
+        print("\nCoverage below the threshold:\n  " + "\n  ".join(failures), file=sys.stderr)
         return 1
     if raises:
-        print("\nCobertura acima do limiar em " + ", ".join(raises) + ": subir o limiar (--update).")
+        print("\nCoverage above the threshold in " + ", ".join(raises) + ": raise the threshold (--update).")
     return 0
 
 

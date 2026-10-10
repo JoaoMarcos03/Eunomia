@@ -1,8 +1,8 @@
 ﻿{
     "metric":  "PR-01",
-    "target":  "interativo \u003c= 1000 ms",
+    "target":  "interactive \u003c= 1000 ms",
     "mode":  "NativeAOT",
-    "cores":  "2 (afinidade 0x5)",
+    "cores":  "2 (affinity 0x5)",
     "appArgs":  "",
     "runs":  5,
     "firstMs":  836.6,

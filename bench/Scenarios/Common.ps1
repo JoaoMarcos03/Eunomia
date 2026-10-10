@@ -1,5 +1,5 @@
-﻿# Funções comuns dos cenários de benchmark (secção 26). Windows PowerShell 5.1.
-# Uso: . "$PSScriptRoot\Common.ps1"
+# Shared functions of the benchmark scenarios (spec section 26). Windows PowerShell 5.1.
+# Usage: . "$PSScriptRoot\Common.ps1"
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -11,9 +11,9 @@ function Get-ExePath([switch]$Jit) {
     return Join-Path $RepoRoot 'artifacts\aot\Eunomia.exe'
 }
 
-# Publica o executável. AOT: NativeAOT win-x64 (precisa das Build Tools de C++).
-# O findvcvarsall.bat do ILCompiler chama vswhere.exe sem caminho; acrescenta-se a pasta do instalador
-# do Visual Studio ao PATH deste processo (não muda nada fora do repo).
+# Publishes the executable. AOT: NativeAOT win-x64 (needs the C++ Build Tools).
+# The ILCompiler's findvcvarsall.bat calls vswhere.exe without a path; the Visual Studio installer folder is added
+# to this process's PATH (nothing changes outside the repo).
 function Publish-Eunomia([switch]$Jit) {
     $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer'
     if ((Test-Path $installer) -and ($env:PATH -notlike "*$installer*")) { $env:PATH = "$installer;$env:PATH" }
@@ -25,11 +25,11 @@ function Publish-Eunomia([switch]$Jit) {
         $out = Join-Path $RepoRoot 'artifacts\aot'
         & dotnet publish $project -c Release -r win-x64 -o $out | Out-Host
     }
-    if ($LASTEXITCODE -ne 0) { throw "dotnet publish falhou ($LASTEXITCODE)" }
+    if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
 }
 
-# Máscara de afinidade para N núcleos físicos: com Hyper-Threading usa um processador lógico por núcleo
-# físico (0, 2, 4...), para não pôr os dois "núcleos" no mesmo núcleo físico.
+# Affinity mask for N physical cores: with Hyper-Threading it uses one logical processor per physical core
+# (0, 2, 4...), so the two "cores" are not on the same physical core.
 function Get-AffinityMask([int]$Cores) {
     $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
     $step = 1
@@ -39,7 +39,7 @@ function Get-AffinityMask([int]$Cores) {
     return $mask
 }
 
-# Corre o exe e espera que termine. Com -Cores > 0, o processo arranca já com afinidade (start /affinity).
+# Runs the exe and waits for it to finish. With -Cores > 0, the process starts with the affinity already set (start /affinity).
 function Invoke-Eunomia([string]$Exe, [string]$Arguments, [int]$Cores = 0, [int]$TimeoutSeconds = 120) {
     if ($Cores -gt 0) {
         $mask = '{0:X}' -f (Get-AffinityMask $Cores)
@@ -49,7 +49,7 @@ function Invoke-Eunomia([string]$Exe, [string]$Arguments, [int]$Cores = 0, [int]
     }
     if (-not $p.WaitForExit($TimeoutSeconds * 1000)) {
         Get-Process -Name 'Eunomia' -ErrorAction SilentlyContinue | Stop-Process -Force
-        throw "Eunomia não terminou em $TimeoutSeconds s"
+        throw "Eunomia did not finish within $TimeoutSeconds s"
     }
 }
 
@@ -61,7 +61,7 @@ function Get-Percentile([double[]]$Values, [double]$P) {
     return [math]::Round($sorted[$lo] + ($sorted[$hi] - $sorted[$lo]) * ($rank - $lo), 1)
 }
 
-# Windows, CPU, RAM, GPU e escala do ecrã desta máquina (para o relatório).
+# Windows, CPU, RAM, GPU and display scale of this machine (for the report).
 function Get-MachineInfo {
     $os = Get-CimInstance Win32_OperatingSystem
     $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1

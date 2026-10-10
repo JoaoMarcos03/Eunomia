@@ -1,14 +1,14 @@
-﻿<#
+<#
 .SYNOPSIS
-  Corre todas as medições do spike (PR-01, PR-04, PR-16) e grava os resultados em bench\results\<data>-<máquina>\.
+  Runs every spike measurement (PR-01, PR-04, PR-16) and writes the results to bench\results\<date>-<machine>\.
 
 .DESCRIPTION
-  1. Publica o executável NativeAOT (e o JIT self-contained, só como indicação para o PR-01).
-  2. PR-01: 20 arranques AOT com todos os núcleos e 20 com 2 núcleos; 10 arranques AOT com WGL; 10 JIT.
-  3. PR-04: scroll de 10 s com a configuração por omissão do Avalonia e com as variantes
-     (WGL ou Software, timer de 1 ms), a 100% e com escala 1,5, com todos os núcleos e com 2.
-  4. PR-16: working set após 60 s em repouso, 3 corridas.
-  Escreve machine.json, um JSON por medição e summary.md.
+  1. Publishes the NativeAOT executable (and the self-contained JIT one, only as a reference for PR-01).
+  2. PR-01: 20 AOT starts with every core and 20 with 2 cores; 10 AOT starts with WGL; 10 JIT.
+  3. PR-04: 10 s of scrolling with Avalonia's default configuration and with the variants
+     (WGL or Software, 1 ms timer), at 100% and at scale 1.5, with every core and with 2.
+  4. PR-16: working set after 60 s idle, 3 runs.
+  Writes machine.json, one JSON per measurement and summary.md.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File bench\Scenarios\Run-All.ps1
@@ -17,10 +17,10 @@ param([switch]$Quick)
 . "$PSScriptRoot\Common.ps1"
 
 $dir = New-ResultDir
-Write-Host "Resultados em $dir"
+Write-Host "Results in $dir"
 Get-MachineInfo | ConvertTo-Json | Out-File -Encoding utf8 (Join-Path $dir 'machine.json')
 
-Write-Host 'A publicar (NativeAOT e JIT)...'
+Write-Host 'Publishing (NativeAOT and JIT)...'
 Publish-Eunomia
 Publish-Eunomia -Jit
 
@@ -54,30 +54,30 @@ $scroll['default-timer1-s1'] = Run 'scroll-default-timer1-s1' 'Measure-Scroll.ps
 $memory = Run 'memory-idle' 'Measure-IdleMemory.ps1' @{ Seconds = $idle; Runs = 3 }
 $memoryWgl = Run 'memory-idle-wgl' 'Measure-IdleMemory.ps1' @{ Seconds = $idle; Runs = 1; AppArgs = '--render wgl' }
 
-# Resumo em Markdown.
+# Summary in Markdown.
 $m = Get-Content (Join-Path $dir 'machine.json') -Raw | ConvertFrom-Json
 $lines = @()
-$lines += "# Resultados $(Split-Path $dir -Leaf)"
+$lines += "# Results $(Split-Path $dir -Leaf)"
 $lines += ''
-$lines += "Máquina: $($m.windows); $($m.cpu) ($($m.cores) núcleos, $($m.logical) lógicos); $($m.ramGB) GB; GPU $($m.gpu); $($m.resolution); escala $($m.scalePercent)%; .NET SDK $($m.dotnet)."
+$lines += "Machine: $($m.windows); $($m.cpu) ($($m.cores) cores, $($m.logical) logical); $($m.ramGB) GB; GPU $($m.gpu); $($m.resolution); scale $($m.scalePercent)%; .NET SDK $($m.dotnet)."
 $lines += ''
-$lines += '## PR-01 arranque (ms)'
+$lines += '## PR-01 startup (ms)'
 $lines += ''
-$lines += '| Variante | 1.ª corrida | Mediana | p95 | Mín. | Máx. | Passa (mediana <= 1000) |'
+$lines += '| Variant | First run | Median | p95 | Min | Max | Pass (median <= 1000) |'
 $lines += '| --- | --- | --- | --- | --- | --- | --- |'
 foreach ($k in $startup.Keys) { $s = $startup[$k]; $lines += "| $k | $($s.firstMs) | $($s.medianMs) | $($s.p95Ms) | $($s.minMs) | $($s.maxMs) | $($s.pass) |" }
 $lines += ''
 $lines += '## PR-04 scroll (ms)'
 $lines += ''
-$lines += '| Variante | Pacing p50 | Pacing p95 | UI p95 | Render thread p95 | Frame p95 | Perdidos | fps | Passa |'
+$lines += '| Variant | Pacing p50 | Pacing p95 | UI p95 | Render thread p95 | Frame p95 | Dropped | fps | Pass |'
 $lines += '| --- | --- | --- | --- | --- | --- | --- | --- | --- |'
 foreach ($k in $scroll.Keys) { $s = $scroll[$k]; $lines += "| $k | $($s.framePacingMs.p50) | $($s.framePacingMs.p95) | $($s.uiThreadMs.p95) | $($s.renderThreadMs.p95) | $($s.frameP95Ms) | $($s.droppedFrames) | $($s.appFps) | $($s.pass) |" }
 $lines += ''
-$lines += '## PR-16 memória em repouso'
+$lines += '## PR-16 idle memory'
 $lines += ''
-$lines += "| Variante | Working set mediana (MB) | Máx. (MB) | Passa (<= 150 MB) |"
+$lines += "| Variant | Median working set (MB) | Max (MB) | Pass (<= 150 MB) |"
 $lines += '| --- | --- | --- | --- |'
-$lines += "| omissão | $($memory.workingSetMB.median) | $($memory.workingSetMB.max) | $($memory.pass) |"
+$lines += "| default | $($memory.workingSetMB.median) | $($memory.workingSetMB.max) | $($memory.pass) |"
 $lines += "| wgl | $($memoryWgl.workingSetMB.median) | $($memoryWgl.workingSetMB.max) | $($memoryWgl.pass) |"
 $lines | Out-File -Encoding utf8 (Join-Path $dir 'summary.md')
 Get-Content (Join-Path $dir 'summary.md')

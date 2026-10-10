@@ -1,10 +1,10 @@
 ﻿{
     "metric":  "PR-04",
-    "target":  "frame p95 \u003c= 16.7 ms (max UI/render thread) e pacing p95 \u003c= 18.3 ms",
+    "target":  "frame p95 \u003c= 16.7 ms (max UI/render thread) and pacing p95 \u003c= 18.3 ms",
     "scale":  1.5,
-    "cores":  "2 (afinidade 0x5)",
+    "cores":  "2 (affinity 0x5)",
     "render":  "default",
-    "timerResolution":  "omissao do Windows",
+    "timerResolution":  "Windows default",
     "refreshHz":  60,
     "appFps":  34.3,
     "adapter":  "nvidia geforce gtx 750 ti",
@@ -52,7 +52,7 @@
                        },
     "droppedFrames":  117,
     "textLayouts":  15409,
-    "gc":  "gen0 10, gen1 3, gen2 1, 46.7 MB alocados",
+    "gc":  "gen0 10, gen1 3, gen2 1, 46.7 MB allocated",
     "viewportRows":  17,
     "phases":  {
                    "wheel":  {

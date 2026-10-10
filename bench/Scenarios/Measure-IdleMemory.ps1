@@ -1,12 +1,12 @@
-﻿<#
+<#
 .SYNOPSIS
-  PR-16: memória em repouso (working set após 60 s idle) com uma sessão aberta.
+  PR-16: idle memory (working set after 60 s idle) with a session open.
 
 .DESCRIPTION
-  Arranca o executável NativeAOT com --ready-file, espera que a janela esteja interativa (sessão
-  "localhost" expandida, Data tab com o grid de 1M x 60 no topo), deixa-o em repouso e lê de fora
-  o working set e os private bytes. O spike não liga a um servidor: a "sessão ligada" é o estado
-  equivalente da UI com dados sintéticos.
+  Starts the NativeAOT executable with --ready-file, waits for the window to be interactive ("localhost"
+  session expanded, Data tab with the 1M x 60 grid at the top), leaves it idle and reads the working set
+  and the private bytes from outside. The spike does not connect to a server: the "connected session" is
+  the equivalent UI state with synthetic data.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File bench\Scenarios\Measure-IdleMemory.ps1
@@ -31,7 +31,7 @@ for ($i = 1; $i -le $Runs; $i++) {
     $p = Start-Process -FilePath $exe -ArgumentList "--ready-file `"$ready`" $AppArgs" -PassThru
     $deadline = (Get-Date).AddSeconds(60)
     while (-not (Test-Path $ready)) {
-        if ((Get-Date) -gt $deadline) { $p | Stop-Process -Force; throw 'A janela não ficou pronta em 60 s' }
+        if ((Get-Date) -gt $deadline) { $p | Stop-Process -Force; throw 'The window was not ready within 60 s' }
         Start-Sleep -Milliseconds 100
     }
     Start-Sleep -Seconds $Seconds
@@ -46,13 +46,13 @@ for ($i = 1; $i -le $Runs; $i++) {
     $samples += [pscustomobject]$sample
     $p.CloseMainWindow() | Out-Null
     if (-not $p.WaitForExit(10000)) { $p | Stop-Process -Force }
-    Write-Host ("  corrida {0}: working set {1} MB, private {2} MB" -f $i, $sample.workingSetMB, $sample.privateMB)
+    Write-Host ("  run {0}: working set {1} MB, private {2} MB" -f $i, $sample.workingSetMB, $sample.privateMB)
 }
 
 $ws = $samples | ForEach-Object { $_.workingSetMB }
 $result = [ordered]@{
     metric        = 'PR-16'
-    target        = 'working set <= 150 MB apos 60 s idle'
+    target        = 'working set <= 150 MB after 60 s idle'
     appArgs       = $AppArgs
     idleSeconds   = $Seconds
     runs          = $Runs

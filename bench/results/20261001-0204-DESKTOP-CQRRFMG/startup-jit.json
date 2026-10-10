@@ -1,8 +1,8 @@
 ﻿{
     "metric":  "PR-01",
-    "target":  "interativo \u003c= 1000 ms",
+    "target":  "interactive \u003c= 1000 ms",
     "mode":  "JIT (self-contained)",
-    "cores":  "todos",
+    "cores":  "all",
     "appArgs":  "",
     "runs":  10,
     "firstMs":  5863.1,
