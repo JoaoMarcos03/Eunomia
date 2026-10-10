@@ -68,7 +68,7 @@ public sealed class GridExporterTests
     }
 
     [Fact]
-    public void LatexTextileEJira()
+    public void LatexTextileAndJira()
     {
         Assert.Equal("\\begin{tabular}{ c  c  c }\r\nid & name & note\\\\ \r\n$1$ & a\"b & \\\\ \r\n\\end{tabular}\r\n", Export(GridExportFormat.Latex));
         Assert.Equal("|_. id |_. name |_. note |\r\n| 1 | a\"b |  |\r\n", Export(GridExportFormat.Textile));
@@ -95,7 +95,7 @@ public sealed class GridExporterTests
     }
 
     [Fact]
-    public void JsonEJsonLines()
+    public void JsonAndJsonLines()
     {
         Assert.Equal(
             "{\r\n\t\"table\": \"t\",\r\n\t\"rows\":\r\n\t[\r\n\t\t{\r\n\t\t\t\"id\": 1,\r\n\t\t\t\"name\": \"a\\\"b\",\r\n\t\t\t\"note\": null\r\n\t\t}\r\n\t]\r\n}\r\n",
@@ -122,7 +122,7 @@ public sealed class GridExporterTests
     }
 
     [Fact]
-    public void NomesEValoresHostisNaoSaemDoFormato()
+    public void HostileNamesAndValuesDoNotEscapeTheFormat()
     {
         // Table and column names come from the server and can have any character.
         var columns = Sample().Columns.Select((c, i) => i == 1 ? c with { Name = "n\" onmouseover=\"alert(1)" } : c).ToList();
@@ -154,7 +154,7 @@ public sealed class GridExporterTests
     }
 
     [Fact]
-    public void OpcoesDasColunasEDasQuebrasDeLinha()
+    public void ColumnAndLineBreakOptions()
     {
         var noAutoInc = Export(GridExportFormat.DelimitedText, new GridExportOptions { IncludeAutoIncrement = false, ToClipboard = false });
         Assert.Equal("name;note\r\na\"b;\\N\r\n", noAutoInc);

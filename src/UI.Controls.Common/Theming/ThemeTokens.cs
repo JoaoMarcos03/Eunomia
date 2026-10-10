@@ -89,9 +89,9 @@ public static class ThemeTokens
     private static ThemeFile Load(string name)
     {
         using var stream = typeof(ThemeTokens).Assembly.GetManifestResourceStream($"Eunomia.Themes.{name}.json")
-            ?? throw new InvalidOperationException($"Tema embebido em falta: {name}.");
+            ?? throw new InvalidOperationException($"Missing embedded theme: {name}.");
         return JsonSerializer.Deserialize(stream, ThemeJsonContext.Default.ThemeFile)
-            ?? throw new InvalidOperationException($"Tema inválido: {name}.");
+            ?? throw new InvalidOperationException($"Invalid theme: {name}.");
     }
 }
 

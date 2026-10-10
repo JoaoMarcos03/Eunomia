@@ -15,7 +15,7 @@ public sealed class DateTimeStepTests
     [InlineData("12:00:00", 0, -1, "11:00:00")]
     [InlineData("", 0, 1, "")]
     [InlineData("abc", 1, 1, "abc")]
-    public void SomaNoSegmento(string text, int caret, int delta, string expected)
+    public void AddsToTheSegment(string text, int caret, int delta, string expected)
     {
         Assert.Equal(expected, DateTimeCellEditor.Step(text, caret, delta));
     }

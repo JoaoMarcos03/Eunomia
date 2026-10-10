@@ -45,12 +45,12 @@ public class LexerBenchmarks
         for (var i = 0; i < 1000; i++)
         {
             sb.Append("SELECT `id`, name, COUNT(*) AS n FROM `db`.`t").Append(i).Append("` WHERE x > ").Append(i)
-              .Append(" AND s = 'it''s' -- comentário\n");
+              .Append(" AND s = 'it''s' -- comment\n");
         }
         _lines = sb.ToString().Split('\n');
     }
 
-    [Benchmark(Description = "1000 linhas")]
+    [Benchmark(Description = "1000 lines")]
     public LexerState Tokenize()
     {
         var state = LexerState.Normal;

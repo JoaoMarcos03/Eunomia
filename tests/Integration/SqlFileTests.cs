@@ -57,7 +57,7 @@ public sealed class SqlFileTests : IAsyncLifetime
     private static string Script(int rows, string? broken = null)
     {
         var sb = new StringBuilder();
-        sb.Append("-- cabeçalho; com ponto e vírgula\r\n/*!40101 SET NAMES utf8mb4 */;\r\n");
+        sb.Append("-- header; with a semicolon\r\n/*!40101 SET NAMES utf8mb4 */;\r\n");
         sb.Append("CREATE TABLE t (id INT PRIMARY KEY, txt VARCHAR(100)) ENGINE=InnoDB;\r\n");
         sb.Append("DELIMITER //\r\nCREATE PROCEDURE p()\r\nBEGIN\r\n  SELECT 'a;b';\r\n  SELECT 2;\r\nEND//\r\nDELIMITER ;\r\n");
         for (var i = 1; i <= rows; i++)
@@ -66,9 +66,9 @@ public sealed class SqlFileTests : IAsyncLifetime
             {
                 sb.Append(broken).Append("\r\n");
             }
-            sb.Append(CultureInfo.InvariantCulture, $"INSERT INTO t VALUES ({i}, 'ação \"{i}\"; it''s # não -- é comentário');\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"INSERT INTO t VALUES ({i}, 'ação \"{i}\"; it''s # not -- a comment');\r\n");
         }
-        sb.Append("# fim\r\n");
+        sb.Append("# end\r\n");
         return sb.ToString();
     }
 
@@ -82,7 +82,7 @@ public sealed class SqlFileTests : IAsyncLifetime
     private SqlFileRequest Request(string path) => new() { Path = path, Database = _database, Session = "it" };
 
     [Fact]
-    public async Task BlocosPequenosNaoPerdemODelimiterNemOsAcentos()
+    public async Task SmallBlocksLoseNeitherTheDelimiterNorTheAccents()
     {
         TestServer.RequireServer();
         var path = Write("script.sql", Script(300), bom: true);
@@ -96,13 +96,13 @@ public sealed class SqlFileTests : IAsyncLifetime
         Assert.Equal(300, result.AffectedRows);
         Assert.Equal(new FileInfo(path).Length, result.BytesRead);
         Assert.Equal("300", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
-        Assert.Equal("ação \"7\"; it's # não -- é comentário", await ScalarAsync($"SELECT txt FROM `{_database}`.t WHERE id = 7"));
+        Assert.Equal("ação \"7\"; it's # not -- a comment", await ScalarAsync($"SELECT txt FROM `{_database}`.t WHERE id = 7"));
         Assert.Equal("1", await ScalarAsync($"SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = '{_database}' AND ROUTINE_NAME = 'p'"));
         Assert.NotEmpty(progress);
     }
 
     [Fact]
-    public async Task BatchEmPacotesDaOMesmoResultado()
+    public async Task BatchInPacketsGivesTheSameResult()
     {
         TestServer.RequireServer();
         var path = Write("batch.sql", Script(2000));
@@ -115,10 +115,10 @@ public sealed class SqlFileTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ParaNoErroERetomaNaInstrucaoQueFalhou()
+    public async Task StopsOnTheErrorAndResumesAtTheFailedStatement()
     {
         TestServer.RequireServer();
-        var path = Write("broken.sql", Script(100, broken: "INSERT INTO falta VALUES (1);"));
+        var path = Write("broken.sql", Script(100, broken: "INSERT INTO missing_table VALUES (1);"));
         var journal = new TransferJournal(Path.Combine(_directory, "jobs"));
 
         var first = await new SqlFileJob(_host, Request(path), journal) { ChunkSize = 64 }.RunAsync(null, Ct);
@@ -127,24 +127,24 @@ public sealed class SqlFileTests : IAsyncLifetime
         // Statements: SET NAMES, CREATE, PROCEDURE, 49 INSERTs; the 53rd fails. Line: 2 for the header + 1 + 7 for the DELIMITER + 49 + 1.
         Assert.Equal(53, error.Statement);
         Assert.Equal(60, error.Line);
-        Assert.Contains("falta", error.Message, StringComparison.Ordinal);
+        Assert.Contains("missing_table", error.Message, StringComparison.Ordinal);
         Assert.Equal("49", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
         var entry = Assert.Single(journal.List());
         Assert.Equal(52, entry.Count);
         Assert.Equal(";", entry.Delimiter);
 
         // With the problem fixed, resuming runs the statement that failed and the rest, without repeating the earlier ones.
-        await ExecAsync($"CREATE TABLE `{_database}`.falta (a INT)");
+        await ExecAsync($"CREATE TABLE `{_database}`.missing_table (a INT)");
         var resumed = await new SqlFileJob(_host, entry, journal) { ChunkSize = 64 }.RunAsync(null, Ct);
         Assert.True(resumed.Completed);
         Assert.Equal(first.JobId, resumed.JobId);
         Assert.Equal(104, resumed.Statements);
         Assert.Equal("100", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
-        Assert.Equal("1", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.falta"));
+        Assert.Equal("1", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.missing_table"));
         Assert.Empty(journal.List());
 
         // Without Stop on errors, the errors are counted and the file runs to the end.
-        await ExecAsync($"DROP TABLE `{_database}`.t, `{_database}`.falta");
+        await ExecAsync($"DROP TABLE `{_database}`.t, `{_database}`.missing_table");
         await ExecAsync($"DROP PROCEDURE `{_database}`.p");
         var lenient = await new SqlFileJob(_host, Request(path) with { StopOnErrors = false }).RunAsync(null, Ct);
         Assert.False(lenient.StoppedOnError);
@@ -154,10 +154,10 @@ public sealed class SqlFileTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FicheiroAlteradoNaoRetoma()
+    public async Task ChangedFileDoesNotResume()
     {
         TestServer.RequireServer();
-        var path = Write("changed.sql", Script(10, broken: "SELECT * FROM falta;"));
+        var path = Write("changed.sql", Script(10, broken: "SELECT * FROM missing_table;"));
         var journal = new TransferJournal(Path.Combine(_directory, "jobs2"));
         var first = await new SqlFileJob(_host, Request(path), journal).RunAsync(null, Ct);
         Assert.True(first.StoppedOnError);
@@ -167,7 +167,7 @@ public sealed class SqlFileTests : IAsyncLifetime
     }
 
     [Fact]
-    public void DetecaoDaCodificacao()
+    public void EncodingDetection()
     {
         Assert.Equal(("UTF-8", 3), TextFileEncoding.Detect([0xEF, 0xBB, 0xBF, 0x41], App.Query.SqlFile.AutoDetect));
         Assert.Equal(("Unicode", 2), TextFileEncoding.Detect([0xFF, 0xFE, 0x41, 0], "UTF-8"));

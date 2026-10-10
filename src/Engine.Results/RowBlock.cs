@@ -70,7 +70,7 @@ public sealed class RowBlock
     {
         if (schema is not null && schema.Count != Schema.Count)
         {
-            throw new ArgumentException("O schema tem de ter as mesmas colunas.", nameof(schema));
+            throw new ArgumentException("The schema must have the same columns.", nameof(schema));
         }
         return new RowBlock(blockIndex, firstRow, RowCount, schema ?? Schema, _columns);
     }
@@ -82,7 +82,7 @@ public sealed class RowBlock
         ArgumentNullException.ThrowIfNull(schema);
         if (schema.Count != columns.Count)
         {
-            throw new ArgumentException("O schema tem de ter as colunas projetadas.", nameof(schema));
+            throw new ArgumentException("The schema must have the projected columns.", nameof(schema));
         }
         return new RowBlock(BlockIndex, FirstRow, RowCount, schema, columns.Select(c => _columns[c]).ToArray());
     }

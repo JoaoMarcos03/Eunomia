@@ -23,7 +23,7 @@ public sealed class SessionConnectorTests
     private static SessionConnector Connector(ISecretStore secrets) => new(new NoProvider(), secrets, null, null);
 
     [Fact]
-    public void SemSslETlsPreferidoComPasswordDoCofre()
+    public void WithoutSslTlsPreferredWithPasswordFromTheVault()
     {
         var secrets = new MemorySecretStore();
         var s = new SessionDefinition { Name = "local", Host = "db.example.com", Port = 3307, User = "app", PasswordSaved = true, QueryTimeout = 0, KeepAlive = 0 };
@@ -44,7 +44,7 @@ public sealed class SessionConnectorTests
     [InlineData(0, TlsMode.Required)]
     [InlineData(1, TlsMode.VerifyCa)]
     [InlineData(2, TlsMode.VerifyFull)]
-    public void NiveisDeVerificacaoSsl(int verification, TlsMode expected)
+    public void SslVerificationLevels(int verification, TlsMode expected)
     {
         var s = new SessionDefinition();
         s.Ssl.Active = true;
@@ -58,7 +58,7 @@ public sealed class SessionConnectorTests
     }
 
     [Fact]
-    public void SshUsaOHostDaBaseQuandoVazioEOsSegredosGravados()
+    public void SshUsesTheDatabaseHostWhenEmptyAndTheSavedSecrets()
     {
         var secrets = new MemorySecretStore();
         var s = new SessionDefinition { Host = "10.0.0.5", Port = 3306, NetType = NetType.MySqlSshTunnel };
@@ -76,7 +76,7 @@ public sealed class SessionConnectorTests
     }
 
     [Fact]
-    public void PedeCredenciaisSemPasswordGravadaOuComPrompt()
+    public void AsksForCredentialsWithoutSavedPasswordOrWithPrompt()
     {
         var secrets = new MemorySecretStore();
         var connector = Connector(secrets);
@@ -90,7 +90,7 @@ public sealed class SessionConnectorTests
     }
 
     [Fact]
-    public void TimeoutsTimeZoneELigacoes()
+    public void TimeoutsTimeZoneAndConnections()
     {
         var s = new SessionDefinition { QueryTimeout = 30, KeepAlive = 20, LocalTimeZone = true, MetadataConnection = false, JobConnections = 0, StartupScript = "C:\\s.sql" };
 

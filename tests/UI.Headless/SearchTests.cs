@@ -19,7 +19,7 @@ public sealed class SearchTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FindReplaceEFindAgainNoEditor()
+    public async Task FindReplaceAndFindAgainInTheEditor()
     {
         var window = Window();
         var commands = window.Context.Commands;
@@ -72,14 +72,14 @@ public sealed class SearchTests
     }
 
     [AvaloniaFact]
-    public void DialogoMostraOsCamposEDesligaReplaceNoGrid()
+    public void DialogShowsTheFieldsAndDisablesReplaceInTheGrid()
     {
-        var settings = new Eunomia.App.Settings.SearchSettings { FindHistory = ["antigo"] };
-        var dialog = new SearchReplaceDialog("novo", replace: true, [new SearchTarget("Grid", false, false), new SearchTarget("SQL editor", true, true)], 0, settings);
+        var settings = new Eunomia.App.Settings.SearchSettings { FindHistory = ["old"] };
+        var dialog = new SearchReplaceDialog("new", replace: true, [new SearchTarget("Grid", false, false), new SearchTarget("SQL editor", true, true)], 0, settings);
         dialog.Show();
         dialog.CaptureRenderedFrame();
         var boxes = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(dialog).OfType<Avalonia.Controls.ComboBox>().ToList();
-        Assert.Equal("novo", boxes[0].Text);
+        Assert.Equal("new", boxes[0].Text);
         Assert.False(boxes[1].IsEnabled);
         boxes[2].SelectedIndex = 1;
         Assert.True(boxes[1].IsEnabled);
@@ -87,7 +87,7 @@ public sealed class SearchTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FindNoGrid()
+    public async Task FindInTheGrid()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();

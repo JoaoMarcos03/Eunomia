@@ -13,7 +13,7 @@ public sealed class SecretStoreTests
     private static string TestKey() => "test/" + Guid.NewGuid().ToString("D");
 
     [Fact]
-    public void RecursoEmMemoriaQuandoOCofreFalha()
+    public void InMemoryFallbackWhenTheVaultFails()
     {
         var warnings = new List<string>();
         var store = new ResilientSecretStore(new BrokenStore(), warnings.Add);
@@ -31,7 +31,7 @@ public sealed class SecretStoreTests
     }
 
     [Fact]
-    public void SemCofreFicaSoEmMemoria()
+    public void WithoutAVaultItStaysOnlyInMemory()
     {
         var store = new ResilientSecretStore(null);
         Assert.False(store.IsPersistent);
@@ -41,9 +41,9 @@ public sealed class SecretStoreTests
     }
 
     [Fact]
-    public void KeychainDoMacOS()
+    public void MacOSKeychain()
     {
-        Assert.SkipUnless(OperatingSystem.IsMacOS(), "Só em macOS.");
+        Assert.SkipUnless(OperatingSystem.IsMacOS(), "macOS only.");
         if (OperatingSystem.IsMacOS())
         {
             var store = new MacKeychainSecretStore("Eunomia Tests");
@@ -52,13 +52,13 @@ public sealed class SecretStoreTests
     }
 
     [Fact]
-    public void SecretServiceDoLinux()
+    public void LinuxSecretService()
     {
-        Assert.SkipUnless(OperatingSystem.IsLinux(), "Só em Linux.");
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
         if (OperatingSystem.IsLinux())
         {
             using var store = new SecretServiceStore("org.eunomia.Tests", "Eunomia Tests");
-            Assert.SkipUnless(store.IsAvailable, "libsecret não está instalada.");
+            Assert.SkipUnless(store.IsAvailable, "libsecret is not installed.");
             RoundTrip(store);
         }
     }
@@ -68,15 +68,15 @@ public sealed class SecretStoreTests
         var key = TestKey();
         try
         {
-            store.Set(key, "primeira");
+            store.Set(key, "first");
         }
         catch (SecretStoreException ex)
         {
-            Assert.Skip("Cofre do sistema indisponível: " + ex.Message);
+            Assert.Skip("System vault unavailable: " + ex.Message);
         }
         try
         {
-            Assert.Equal("primeira", store.Get(key));
+            Assert.Equal("first", store.Get(key));
             // Replacing, with non-ASCII characters and quotes.
             store.Set(key, "pá\"ss'wörd 🔑");
             Assert.Equal("pá\"ss'wörd 🔑", store.Get(key));

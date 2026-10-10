@@ -16,9 +16,9 @@ public sealed class SplitterFuzzTests
     [
         "SELECT 1", "INSERT INTO t VALUES (1, 'a')", ";", ";", " ", "\n", "\r\n", "\t",
         "'a;b'", "'it''s'", "'x\\'y'", "'\\\\'", "\"d;q\"", "\"say \\\"hi\\\"\"", "`c;d`", "`we``ird`",
-        "-- c;m\n", "--x", "# h;\n", "/* b; */", "/*! 40101 SET x=1 */", "/* sem fim",
+        "-- c;m\n", "--x", "# h;\n", "/* b; */", "/*! 40101 SET x=1 */", "/* no end",
         "DELIMITER //\n", "DELIMITER ;\n", "delimiter $$\n", "//", "$$",
-        "BEGIN SELECT 1; END", "CREATE PROCEDURE p() BEGIN SELECT ';'; END", "'sem fim", "ação", "😀", "\\",
+        "BEGIN SELECT 1; END", "CREATE PROCEDURE p() BEGIN SELECT ';'; END", "'no end", "ação", "😀", "\\",
     ];
 
     private static string RandomScript(Random random)
@@ -48,7 +48,7 @@ public sealed class SplitterFuzzTests
     }
 
     [Fact]
-    public void PedacosAleatoriosNaoMudamADivisao()
+    public void RandomChunksDoNotChangeTheSplit()
     {
         var random = new Random(20261009);
         for (var run = 0; run < 2000; run++)
@@ -75,7 +75,7 @@ public sealed class SplitterFuzzTests
     }
 
     [Fact]
-    public void RetomarAMeioDaAsMesmasInstrucoesSeguintes()
+    public void ResumingHalfwayGivesTheSameFollowingStatements()
     {
         var random = new Random(9102026);
         for (var run = 0; run < 1000; run++)
@@ -92,7 +92,7 @@ public sealed class SplitterFuzzTests
     }
 
     [Fact]
-    public void LexerNuncaRebentaETokensFicamNaLinha()
+    public void LexerNeverCrashesAndTokensStayOnTheLine()
     {
         var random = new Random(42);
         for (var run = 0; run < 2000; run++)

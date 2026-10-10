@@ -7,7 +7,7 @@ namespace Eunomia.Drivers.MySql.Tests;
 public sealed class BulkLoadCancelTests
 {
     [Fact]
-    public void CancelEmbrulhadoContaComoCancelamentoSoComOCancelPedido()
+    public void WrappedCancelCountsAsCancellationOnlyWhenRequested()
     {
         using var cts = new CancellationTokenSource();
         var wrapped = new InvalidOperationException("Error during LOAD DATA LOCAL INFILE", new OperationCanceledException());

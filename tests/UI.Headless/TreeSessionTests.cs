@@ -17,10 +17,10 @@ public sealed class TreeSessionTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task F5MantemBasesAbertasEOObjetoFocado()
+    public async Task F5KeepsDatabasesOpenAndTheFocusedObject()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db1 = NewDatabaseName("eunomia_t1_");
         var db2 = NewDatabaseName("eunomia_t2_");
         await ExecAsync(cs, $"CREATE DATABASE `{db1}`; CREATE DATABASE `{db2}`; CREATE TABLE `{db1}`.a (id INT); CREATE TABLE `{db1}`.b (id INT); CREATE TABLE `{db2}`.c (id INT);");
@@ -60,10 +60,10 @@ public sealed class TreeSessionTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task GruposColunasEOrdemNatural()
+    public async Task GroupsColumnsAndNaturalOrder()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_tg_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t10 (id INT PRIMARY KEY, name VARCHAR(20), born DATE, UNIQUE KEY u (name)); " +
             $"CREATE TABLE `{db}`.t2 (id INT) ENGINE=MEMORY; CREATE VIEW `{db}`.v AS SELECT 1 AS x; CREATE PROCEDURE `{db}`.p() SELECT 1;");
@@ -113,10 +113,10 @@ public sealed class TreeSessionTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FavoritosEstatisticasEEstados()
+    public async Task FavouritesStatisticsAndStates()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_tf_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT, v TEXT); INSERT INTO `{db}`.t VALUES (1, REPEAT('x', 5000)); CREATE TABLE `{db}`.u (id INT);");
         var dir = Path.Combine(Path.GetTempPath(), "eunomia-ui-" + Guid.NewGuid().ToString("N")[..8]);

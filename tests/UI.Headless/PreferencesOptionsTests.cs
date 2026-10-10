@@ -9,7 +9,7 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class PreferencesOptionsTests
 {
     [AvaloniaFact]
-    public void FonteDoGridELarguraMaximaAplicamSe()
+    public void GridFontAndMaximumWidthApply()
     {
         var settings = new AppSettings();
         var window = new MainWindow(TestShell.CreateContext(settings));
@@ -29,10 +29,10 @@ public sealed class PreferencesOptionsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ReconectaAsSessoesAbertasNoFechoEEscondeBarras()
+    public async Task ReconnectsTheSessionsOpenAtShutdownAndHidesBars()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var settings = new AppSettings();
         var (window, _, session, connector, _) = CreateShell(cs, string.Empty, settings);
 

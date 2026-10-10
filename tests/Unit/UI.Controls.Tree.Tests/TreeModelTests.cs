@@ -3,7 +3,7 @@ namespace Eunomia.UI.Controls.Tree.Tests;
 public sealed class TreeModelTests
 {
     [Fact]
-    public void ArrancaSoComAsSessoesSemCarregarNada()
+    public void StartsWithOnlyTheSessionsWithoutLoadingAnything()
     {
         var provider = new SyntheticTreeProvider();
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(), provider);
@@ -15,7 +15,7 @@ public sealed class TreeModelTests
     }
 
     [Fact]
-    public async Task ExpandirMostraPlaceholderEnquantoCarrega()
+    public async Task ExpandingShowsAPlaceholderWhileLoading()
     {
         var provider = new SyntheticTreeProvider(latency: TimeSpan.FromMilliseconds(100));
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(1), provider);
@@ -33,7 +33,7 @@ public sealed class TreeModelTests
     }
 
     [Fact]
-    public async Task ExpandirDuranteOCarregamentoEsperaPelosFilhos()
+    public async Task ExpandingWhileLoadingWaitsForTheChildren()
     {
         // Before, the second ExpandAsync returned right away with the placeholder as its only child.
         var provider = new SyntheticTreeProvider(latency: TimeSpan.FromMilliseconds(100));
@@ -50,7 +50,7 @@ public sealed class TreeModelTests
     }
 
     [Fact]
-    public async Task ExpandirDuasVezesCarregaUmaVez()
+    public async Task ExpandingTwiceLoadsOnce()
     {
         var provider = new SyntheticTreeProvider();
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(1), provider);
@@ -66,7 +66,7 @@ public sealed class TreeModelTests
     }
 
     [Fact]
-    public async Task ArvoreCompletaTemDezMilObjetos()
+    public async Task FullTreeHasTenThousandObjects()
     {
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(), new SyntheticTreeProvider());
         foreach (var s in model.Roots)
@@ -79,7 +79,7 @@ public sealed class TreeModelTests
     }
 
     [Fact]
-    public async Task ObjetosOrdenadosComComparacaoNatural()
+    public async Task ObjectsSortedWithNaturalComparison()
     {
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(1), new SyntheticTreeProvider());
         await model.ExpandAllAsync(model.Roots[0], TestContext.Current.CancellationToken);
@@ -97,13 +97,13 @@ public sealed class TreeModelTests
     [InlineData("a", "B", -1)]
     [InlineData("x007", "x7", 0)]
     [InlineData("abc", "abcd", -1)]
-    public void ComparacaoNatural(string a, string b, int sign)
+    public void NaturalComparison(string a, string b, int sign)
     {
         Assert.Equal(sign, Math.Sign(NaturalComparer.Instance.Compare(a, b)));
     }
 
     [Fact]
-    public async Task TamanhoDaBaseEhASomaDasTabelas()
+    public async Task DatabaseSizeIsTheSumOfTheTables()
     {
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(1), new SyntheticTreeProvider(databasesPerSession: 2));
         var session = model.Roots[0];
@@ -122,7 +122,7 @@ public sealed class TreeModelTests
     }
 
     [Fact]
-    public async Task PesquisaIncrementalPorPrefixoComVolta()
+    public async Task IncrementalPrefixSearchWithWrapAround()
     {
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(1), new SyntheticTreeProvider());
         await model.ExpandAsync(model.Roots[0], TestContext.Current.CancellationToken);
@@ -135,7 +135,7 @@ public sealed class TreeModelTests
     }
 
     [Fact]
-    public async Task GruposPorTipoQuandoLigado()
+    public async Task GroupsByKindWhenOn()
     {
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(1), new SyntheticTreeProvider(databasesPerSession: 3, groupByType: true));
         await model.ExpandAllAsync(model.Roots[0], TestContext.Current.CancellationToken);

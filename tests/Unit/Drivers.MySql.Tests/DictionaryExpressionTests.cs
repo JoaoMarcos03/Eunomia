@@ -13,9 +13,9 @@ public sealed class DictionaryExpressionTests
     [InlineData(@"(`s` <> _utf8mb4\'x\')", "(`s` <> _utf8mb4'x')")]
     [InlineData(@"\0\n\r\Z", "\0\n\r\u001A")]
     [InlineData("(`price` * 2)", "(`price` * 2)")]
-    [InlineData("concat(`nome`,_utf8mb4\\'çã😀\\')", "concat(`nome`,_utf8mb4'çã😀')")]
+    [InlineData("concat(`name`,_utf8mb4\\'çã😀\\')", "concat(`name`,_utf8mb4'çã😀')")]
     [InlineData("", "")]
-    public void DesfazOEscapeDoServidor(string escaped, string expected) =>
+    public void UndoesTheServerEscape(string escaped, string expected) =>
         Assert.Equal(expected, MySqlMetadataProvider.UnescapeDictionaryText(escaped));
 
     [Theory]
@@ -25,7 +25,7 @@ public sealed class DictionaryExpressionTests
     // A backslash followed by something String::print never writes, or at the end.
     [InlineData(@"`a\b`")]
     [InlineData(@"`a`\")]
-    public void TextoQueNaoVemEscapadoFicaComoEsta(string text) =>
+    public void TextThatIsNotEscapedStaysAsItIs(string text) =>
         Assert.Equal(text, MySqlMetadataProvider.UnescapeDictionaryText(text));
 
     [Theory]
@@ -33,6 +33,6 @@ public sealed class DictionaryExpressionTests
     [InlineData("8.4.3", "MySQL Community Server - GPL", true)]
     [InlineData("5.7.44", "MySQL Community Server (GPL)", false)]
     [InlineData("11.4.3-MariaDB", "mariadb.org binary distribution", false)]
-    public void SoOMySql8EscapaAsExpressoes(string version, string comment, bool escapes) =>
+    public void OnlyMySql8EscapesExpressions(string version, string comment, bool escapes) =>
         Assert.Equal(escapes, new MySqlCapabilities(MySqlConnectionFactory.ParseIdentity(version, comment)).EscapesDictionaryExpressions);
 }

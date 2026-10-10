@@ -15,10 +15,10 @@ public sealed class HostDatabaseTabTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task HostTabListaBasesFetchItemsEMataProcessos()
+    public async Task HostTabListsDatabasesFetchesItemsAndKillsProcesses()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ht_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.a (id INT); CREATE TABLE `{db}`.b (id INT); CREATE VIEW `{db}`.v AS SELECT id FROM `{db}`.a;");
         await using var victim = new MySqlConnection(cs);
@@ -88,10 +88,10 @@ public sealed class HostDatabaseTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DatabaseTabListaRenomeiaEsvaziaEAbreObjetos()
+    public async Task DatabaseTabListsRenamesEmptiesAndOpensObjects()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_dt_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.a (id INT); CREATE TABLE `{db}`.b (id INT); INSERT INTO `{db}`.a VALUES (1), (2); " +
             $"INSERT INTO `{db}`.b VALUES (3); CREATE VIEW `{db}`.v AS SELECT id FROM `{db}`.a;");

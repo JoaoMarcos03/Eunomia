@@ -13,7 +13,7 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class AvaloniaEditCompatibilityTests
 {
     [AvaloniaFact]
-    public void TextEditorRenderizaEAceitaInput()
+    public void TextEditorRendersAndAcceptsInput()
     {
         var editor = new TextEditor { Text = "SELECT 1;\nSELECT 2;", ShowLineNumbers = true };
         var window = new Window { Width = 400, Height = 200, Content = editor };

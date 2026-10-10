@@ -20,7 +20,7 @@ public sealed class TabJournalTests : IDisposable
     private static TabState State(Guid id, int order = 0, string caption = "Query") => new() { Id = id, Order = order, Caption = caption };
 
     [Fact]
-    public void AlteracoesSobrevivemAoReabrir()
+    public void ChangesSurviveReopening()
     {
         var id = Guid.NewGuid();
         var journal = new TabJournal(_dir);
@@ -37,7 +37,7 @@ public sealed class TabJournalTests : IDisposable
     }
 
     [Fact]
-    public void RegistoCortadoPorUmCrashEIgnorado()
+    public void RecordCutByACrashIsIgnored()
     {
         var id = Guid.NewGuid();
         var journal = new TabJournal(_dir);
@@ -63,25 +63,25 @@ public sealed class TabJournalTests : IDisposable
     }
 
     [Fact]
-    public void ResetCompactacaoERemove()
+    public void ResetCompactionAndRemove()
     {
         var id = Guid.NewGuid();
         var journal = new TabJournal(_dir);
         journal.SaveState(State(id));
-        journal.Append(id, new TextEdit(0, 0, "antigo"));
-        journal.Reset(id, "novo");
+        journal.Append(id, new TextEdit(0, 0, "old"));
+        journal.Reset(id, "test");
         journal.Append(id, new TextEdit(4, 0, "!"));
         journal.Flush();
         var path = Directory.GetFiles(_dir, "*.journal").Single();
-        Assert.Equal("novo!", TabJournal.Replay(path));
+        Assert.Equal("test!", TabJournal.Replay(path));
 
         for (var i = 0; i < TabJournal.CompactAfterEdits; i++)
         {
             journal.Append(id, new TextEdit(5, 0, "x"));
         }
         journal.Flush();
-        Assert.Equal("novo!" + new string('x', TabJournal.CompactAfterEdits), TabJournal.Replay(path));
-        Assert.True(new FileInfo(path).Length < 100 + TabJournal.CompactAfterEdits, "Compactado num snapshot.");
+        Assert.Equal("test!" + new string('x', TabJournal.CompactAfterEdits), TabJournal.Replay(path));
+        Assert.True(new FileInfo(path).Length < 100 + TabJournal.CompactAfterEdits, "Compacted into a snapshot.");
 
         journal.Remove(id);
         Assert.Empty(Directory.GetFiles(_dir));
@@ -89,7 +89,7 @@ public sealed class TabJournalTests : IDisposable
     }
 
     [Fact]
-    public void OrdemEStatesDeOutraInstanciaFicamDeFora()
+    public void OrderAndStatesOfAnotherInstanceAreLeftOut()
     {
         var journal = new TabJournal(_dir);
         var second = Guid.NewGuid();

@@ -142,7 +142,7 @@ public sealed class RowBlockBuilder
         ArgumentOutOfRangeException.ThrowIfGreaterThan(rowCount, _rowCount);
         if (_built)
         {
-            throw new InvalidOperationException("O bloco já foi construído.");
+            throw new InvalidOperationException("The block was already built.");
         }
         _built = true;
 
@@ -164,7 +164,7 @@ public sealed class RowBlockBuilder
     {
         if (row < _nextRow[column])
         {
-            throw new InvalidOperationException($"Texto da coluna {column} escrito fora de ordem (linha {row}).");
+            throw new InvalidOperationException($"Text of column {column} written out of order (row {row}).");
         }
         var offsets = _columns[column].Offsets!;
         for (var r = _nextRow[column]; r < row; r++)

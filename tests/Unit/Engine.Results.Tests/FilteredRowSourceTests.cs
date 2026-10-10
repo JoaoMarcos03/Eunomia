@@ -40,7 +40,7 @@ public sealed class FilteredRowSourceTests
     private static Regex Rx(string pattern) => new(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     [Fact]
-    public async Task FicamAsLinhasQuePassamPorOrdem()
+    public async Task MatchingRowsStayInOrder()
     {
         var filtered = await FilteredRowSource.CreateAsync(Source(100, 16), Rx("^ana"), TestContext.Current.CancellationToken);
 
@@ -55,7 +55,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task ComparaNumerosSemSeparadoresONumeroDaLinhaENull()
+    public async Task ComparesNumbersWithoutSeparatorsTheRowNumberAndNull()
     {
         var source = Source(30, 8);
         // 25000 without a thousands separator (the grid shows 25,000).
@@ -69,7 +69,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task FuncionaSobreBlocosEmSpill()
+    public async Task WorksOverSpilledBlocks()
     {
         var dir = Path.Combine(Path.GetTempPath(), "eunomia-filter-" + Guid.NewGuid().ToString("N")[..8]);
         try
@@ -98,7 +98,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task OrdenacaoLocalPorColunaComNullPrimeiro()
+    public async Task LocalSortByColumnWithNullFirst()
     {
         var ct = TestContext.Current.CancellationToken;
         var source = Source(30, 8);
@@ -124,7 +124,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task ProcuraNoGridParaAFrenteEParaTras()
+    public async Task SearchesTheGridForwardAndBackward()
     {
         var ct = TestContext.Current.CancellationToken;
         var source = Source(30, 8);
@@ -138,7 +138,7 @@ public sealed class FilteredRowSourceTests
     }
 
     [Fact]
-    public async Task OrdenacaoCancelada()
+    public async Task CancelledSort()
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();

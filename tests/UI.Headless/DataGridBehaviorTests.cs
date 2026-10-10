@@ -29,7 +29,7 @@ public sealed class DataGridBehaviorTests
         window.KeyPress(key, modifiers, PhysicalKey.None, null);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task HomeEndEControlHomeEnd()
+    public async Task HomeEndAndControlHomeEnd()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -47,7 +47,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SetasPaginasESelecaoComShift()
+    public async Task ArrowsPagesAndShiftSelection()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -67,7 +67,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CtrlAECtrlI()
+    public async Task CtrlAAndCtrlI()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -79,7 +79,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EnterEditaEnterTerminaEMudarDeLinhaGrava()
+    public async Task EnterEditsEnterEndsAndMovingRowSaves()
     {
         var (window, grid, _) = await ShowAsync();
         Press(window, Key.Right);
@@ -105,7 +105,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task F2EditaEEscCancela()
+    public async Task F2EditsAndEscCancels()
     {
         var (window, grid, _) = await ShowAsync();
         var before = grid.GetDisplayText(0, 2);
@@ -122,7 +122,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task TabEmEdicaoAvancaDeCelula()
+    public async Task TabWhileEditingMovesToTheNextCell()
     {
         var (window, grid, _) = await ShowAsync();
         Press(window, Key.Right);
@@ -139,7 +139,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EscForaDeEdicaoDescartaALinha()
+    public async Task EscOutsideEditingDiscardsTheRow()
     {
         var (window, grid, _) = await ShowAsync();
         var before = grid.GetDisplayText(0, 0);
@@ -156,7 +156,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SetaParaBaixoNaUltimaLinhaInsereLinha()
+    public async Task DownArrowOnTheLastRowInsertsARow()
     {
         var (window, grid, source) = await ShowAsync();
         await source.RequestRangeAsync(999_000, 1000);
@@ -176,7 +176,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PageDownNaUltimaLinhaPedeNext()
+    public async Task PageDownOnTheLastRowRequestsNext()
     {
         var (window, grid, _) = await ShowAsync();
         var requested = 0;
@@ -190,7 +190,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CtrlCCopiaSoACelulaFocadaComValorCompleto()
+    public async Task CtrlCCopiesOnlyTheFocusedCellWithTheFullValue()
     {
         var (window, grid, source) = await ShowAsync();
         var block = await source.GetBlockAsync(0);
@@ -224,7 +224,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ScrollPorRodaETeclasMantemFocoVisivel()
+    public async Task WheelAndKeyScrollKeepsTheFocusVisible()
     {
         var (window, grid, _) = await ShowAsync();
 
@@ -239,7 +239,7 @@ public sealed class DataGridBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CliqueSelecionaCtrlCliqueAlternaShiftCliqueEstende()
+    public async Task ClickSelectsCtrlClickTogglesShiftClickExtends()
     {
         var (window, grid, _) = await ShowAsync();
         var x = grid.CellBounds(0, 1).Center.X;

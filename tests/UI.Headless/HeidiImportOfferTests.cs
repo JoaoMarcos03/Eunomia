@@ -28,7 +28,7 @@ public sealed class HeidiImportOfferTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PerguntaUmaVezSemSessoesEImporta()
+    public async Task AsksOnceWithoutSessionsAndImports()
     {
         var settings = new AppSettings();
         var catalog = new SessionCatalog();
@@ -57,7 +57,7 @@ public sealed class HeidiImportOfferTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PreferenciasImportadasAplicamSeLogo()
+    public async Task ImportedPreferencesApplyRightAway()
     {
         var settings = new AppSettings();
         var catalog = new SessionCatalog();
@@ -81,7 +81,7 @@ public sealed class HeidiImportOfferTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ComSessoesNaoPergunta()
+    public async Task WithSessionsItDoesNotAsk()
     {
         var settings = new AppSettings();
         var catalog = new SessionCatalog();

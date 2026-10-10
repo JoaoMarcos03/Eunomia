@@ -21,10 +21,10 @@ public sealed class DataLoadCancelTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EscolherOutraCoisaCancelaACargaDoDataTab()
+    public async Task ChoosingSomethingElseCancelsTheDataTabLoad()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_dl_");
         var db2 = NewDatabaseName("eunomia_dl2_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE DATABASE `{db2}`; " +

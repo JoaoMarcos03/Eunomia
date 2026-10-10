@@ -18,13 +18,13 @@ public sealed class MaintenanceSqlTests
     [InlineData(MaintenanceOperation.Checksum, All, "CHECKSUM TABLE `shop`.`people` EXTENDED")]
     [InlineData(MaintenanceOperation.Optimize, All, "OPTIMIZE TABLE `shop`.`people`")]
     [InlineData(MaintenanceOperation.Repair, All, "REPAIR TABLE `shop`.`people` QUICK EXTENDED USE_FRM")]
-    public void SoAsOpcoesQueAOperacaoAceita(MaintenanceOperation operation, MaintenanceOptions options, string expected)
+    public void OnlyTheOptionsTheOperationAccepts(MaintenanceOperation operation, MaintenanceOptions options, string expected)
     {
         Assert.Equal(expected, Dialect.Maintenance(operation, People, options));
     }
 
     [Fact]
-    public void NomesComCrasesFicamCitados()
+    public void NamesWithBackticksAreQuoted()
     {
         var odd = new DbObjectRef("my`db", "my`db", "a b", DbObjectKind.View);
 

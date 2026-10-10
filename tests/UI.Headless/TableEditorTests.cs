@@ -23,12 +23,12 @@ public sealed class TableEditorTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EditarTabelaECriarOutra()
+    public async Task EditATableAndCreateAnother()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_te_");
-        await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20) NULL, PRIMARY KEY (id)) ENGINE=InnoDB COMMENT='pessoas';");
+        await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(20) NULL, PRIMARY KEY (id)) ENGINE=InnoDB COMMENT='people';");
         try
         {
             var (window, context, session, _, _) = CreateShell(cs, db);
@@ -46,7 +46,7 @@ public sealed class TableEditorTests
             var design = editor.Design;
             Assert.Equal(["id", "name"], design.Columns.Select(c => c.Name));
             Assert.Equal(DefaultKind.AutoIncrement, design.Columns[0].DefaultKind);
-            Assert.Equal("pessoas", design.Comment);
+            Assert.Equal("people", design.Comment);
             Assert.Equal("Indexes (1)", editor.IndexesTab.Header);
 
             // Changing: renames and resizes a column, adds another one and an index; the ALTER shows live.
@@ -86,10 +86,10 @@ public sealed class TableEditorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SairDoEditorComAlteracoesPergunta()
+    public async Task LeavingTheEditorWithChangesAsks()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_tl_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); CREATE TABLE `{db}`.pets (id INT);");
         try
@@ -116,7 +116,7 @@ public sealed class TableEditorTests
                 var editor = await WaitAsync(() => window.TableEditor is { Design.Name: "people" } e ? e : null);
                 await Task.Delay(300);
                 Dispatcher.UIThread.RunJobs();
-                Assert.False(editor.IsModified, "Editor marcado como alterado ao abrir.");
+                Assert.False(editor.IsModified, "Editor marked as changed on opening.");
                 editor.Design.Columns[1].Name = column;
                 editor.Refresh();
                 return editor;
@@ -145,7 +145,7 @@ public sealed class TableEditorTests
             Assert.Equal("full_name", await ScalarAsync(cs, $"SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{db}' AND TABLE_NAME = 'people' AND ORDINAL_POSITION = 2"));
 
             // Closing the window with changes: Cancel does not close; No closes.
-            await EditPeopleAsync("nome");
+            await EditPeopleAsync("given_name");
             answer = Eunomia.UI.Controls.Common.Dialogs.MessageDialogResult.Cancel;
             window.Close();
             Dispatcher.UIThread.RunJobs();

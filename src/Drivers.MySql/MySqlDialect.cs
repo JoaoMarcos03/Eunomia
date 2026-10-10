@@ -204,7 +204,7 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
         ArgumentNullException.ThrowIfNull(literalValues);
         if (columns.Count != literalValues.Count || columns.Count == 0)
         {
-            throw new ArgumentException("Colunas e valores do keyset têm de ter o mesmo tamanho.", nameof(literalValues));
+            throw new ArgumentException("Keyset columns and values must have the same length.", nameof(literalValues));
         }
         var op = descending ? "<" : ">";
         return columns.Count == 1
@@ -233,7 +233,7 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
         return obj.Kind switch
         {
             DbObjectKind.Table or DbObjectKind.View => $"RENAME TABLE {QualifiedName(obj)} TO {target}",
-            _ => throw new NotSupportedException($"Rename de {obj.Kind} não é suportado em MySQL/MariaDB."),
+            _ => throw new NotSupportedException($"Renaming a {obj.Kind} is not supported on MySQL/MariaDB."),
         };
     }
 

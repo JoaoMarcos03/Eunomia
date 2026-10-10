@@ -36,7 +36,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public void IdentificaOServidor()
+    public void IdentifiesTheServer()
     {
         TestServer.RequireServer();
 
@@ -47,7 +47,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TiposSemPerdasEmBlocosColunares()
+    public async Task LosslessTypesInColumnarBlocks()
     {
         TestServer.RequireServer();
         await TestServer.RunAsync(_db,
@@ -61,7 +61,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
             """
             INSERT INTO t VALUES
               (1, -9223372036854775808, 18446744073709551615, 1234567890.12, 123456789012345678901234567890.0123456789,
-               3.25, b'101', 'café ☕', 'linha1\nlinha2', 0x00FF10, '2024-02-29 13:45:01', '2024-02-29 13:45:01.123456',
+               3.25, b'101', 'café ☕', 'line1\nline2', 0x00FF10, '2024-02-29 13:45:01', '2024-02-29 13:45:01.123456',
                '2024-02-29', '-838:59:59', 2024, 'b c', '{"a":1}'),
               (2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0000-00-00 00:00:00', NULL, '0000-00-00', '25:00:00', NULL, NULL, NULL)
             """);
@@ -87,7 +87,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
         // BIT as binary digits (like HeidiSQL; the DML reads this form as b'101').
         Assert.Equal("101", Cell(0, "b"));
         Assert.Equal("café ☕", Cell(0, "v"));
-        Assert.Equal("linha1\nlinha2", Cell(0, "tx"));
+        Assert.Equal("line1\nline2", Cell(0, "tx"));
         Assert.Equal(StorageKind.Binary, schema[Col("bl")].Storage);
         Assert.Equal("0x00FF10", Cell(0, "bl"));
         Assert.Equal("2024-02-29 13:45:01", Cell(0, "dt"));
@@ -110,7 +110,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task BlocosDeTamanhoFixoComPrimeiraLinhaCerta()
+    public async Task FixedSizeBlocksWithTheRightFirstRow()
     {
         TestServer.RequireServer();
 
@@ -130,7 +130,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task VariasInstrucoesResultSetsEContagens()
+    public async Task SeveralStatementsResultSetsAndCounts()
     {
         TestServer.RequireServer();
 
@@ -151,7 +151,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ErroParaOBatchComStopOnErrors()
+    public async Task ErrorStopsTheBatchWithStopOnErrors()
     {
         TestServer.RequireServer();
 
@@ -168,7 +168,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task WarningsDoServidor()
+    public async Task ServerWarnings()
     {
         TestServer.RequireServer();
 
@@ -181,7 +181,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CancelInterrompeAQueryEAligacaoContinuaUtil()
+    public async Task CancelInterruptsTheQueryAndTheConnectionStaysUsable()
     {
         TestServer.RequireServer();
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
@@ -195,7 +195,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
             }
         });
 
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), $"Cancel demorou {clock.Elapsed}.");
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), $"Cancel took {clock.Elapsed}.");
         Assert.True(ex is OperationCanceledException || ex is null, ex?.ToString());
         await _db.PingAsync(Ct);
         var events = await TestServer.RunAsync(_db, "SELECT 42");
@@ -203,7 +203,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CancelCurrentComKillQuery()
+    public async Task CancelCurrentWithKillQuery()
     {
         TestServer.RequireServer();
         var run = Task.Run(async () => await TestServer.RunAsync(_db, "SELECT SLEEP(10)"));
@@ -219,7 +219,7 @@ public sealed class MySqlDriverTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PingFalhaDepoisDeMatarALigacao()
+    public async Task PingFailsAfterTheConnectionIsKilled()
     {
         TestServer.RequireServer();
         await using var other = await TestServer.OpenAsync();

@@ -20,10 +20,10 @@ public sealed class CellEditorsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EnumSetFkDataTextoLongoBinarioEFuncao()
+    public async Task EnumSetFkDateLongTextBinaryAndFunction()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ce_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
             $"CREATE TABLE `{db}`.cities (id INT PRIMARY KEY, name VARCHAR(20)) ENGINE=InnoDB; INSERT INTO `{db}`.cities VALUES (1, 'Porto'), (2, 'Braga'); " +
@@ -117,7 +117,7 @@ public sealed class CellEditorsTests
     }
 
     [AvaloniaFact]
-    public void EditorEmJanelaMostraALinhaDeEstado()
+    public void WindowEditorShowsTheStatusLine()
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var window = new Eunomia.UI.Shell.Views.TextEditorWindow("Edit note", "ab\ncd", 100, binary: false);

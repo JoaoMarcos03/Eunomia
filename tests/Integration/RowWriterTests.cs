@@ -59,7 +59,7 @@ public sealed class RowWriterTests : IAsyncLifetime
         values.ToDictionary(v => v.Name, v => new CellLiteral(v.Text), StringComparer.OrdinalIgnoreCase);
 
     [Fact]
-    public async Task InsertUpdateDeleteComRoundTripPorTipo()
+    public async Task InsertUpdateDeleteWithRoundTripPerType()
     {
         TestServer.RequireServer();
         var table = await TableAsync("typed");
@@ -68,12 +68,12 @@ public sealed class RowWriterTests : IAsyncLifetime
         // INSERT with only the changed columns; the auto-increment comes from LAST_INSERT_ID().
         var inserted = await writer.WriteAsync(table, new RowChange(RowChangeKind.Insert, Values(), Values(
             ("i", "-7"), ("d", "1234.5"), ("f", "0.25"), ("b", "0101"), ("bin", "0xCAFE"), ("dt", "2026-10-06 12:34:56.789"),
-            ("t", "it's \\ \"ok\"\nnova linha"), ("e", "b"), ("s", "x,y"), ("j", "{\"a\": 1}"))), Ct);
+            ("t", "it's \\ \"ok\"\nnew line"), ("e", "b"), ("s", "x,y"), ("j", "{\"a\": 1}"))), Ct);
         Assert.Equal(1, inserted.AffectedRows);
         var id = inserted.KeyAfter["id"].Text;
         Assert.Equal("1", id);
         var row = $"FROM `{_database}`.typed WHERE id = {id}";
-        Assert.Equal("-7|1234.500|0.25|5|cafe|2026-10-06 12:34:56.789|it's \\ \"ok\"\nnova linha|b|x,y",
+        Assert.Equal("-7|1234.500|0.25|5|cafe|2026-10-06 12:34:56.789|it's \\ \"ok\"\nnew line|b|x,y",
             await ScalarAsync($"SELECT CONCAT_WS('|', i, d, f, b + 0, LOWER(HEX(bin)), dt, t, e, s) {row}"));
 
         // UPDATE by key, with NULL and with a function.
@@ -96,7 +96,7 @@ public sealed class RowWriterTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TabelaSemChaveUsaTodasAsColunasELimit1()
+    public async Task TableWithoutKeyUsesEveryColumnAndLimit1()
     {
         TestServer.RequireServer();
         var table = await TableAsync("loose");

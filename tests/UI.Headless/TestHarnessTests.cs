@@ -10,7 +10,7 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class TestHarnessTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DialogoModalInesperadoEhFechadoERegistado()
+    public async Task UnexpectedModalDialogIsClosedAndRecorded()
     {
         var owner = new Window();
         owner.Show();
@@ -30,7 +30,7 @@ public sealed class TestHarnessTests
     }
 
     [AvaloniaFact]
-    public void JanelaNaoModalNaoEhFechada()
+    public void NonModalWindowIsNotClosed()
     {
         var window = new Window { Title = "Tool" };
         window.Show();
@@ -41,7 +41,7 @@ public sealed class TestHarnessTests
     }
 
     [Fact]
-    public void TestesAssincronosTemTimeout()
+    public void AsyncTestsHaveATimeout()
     {
         // Test code: runs without trimming.
 #pragma warning disable IL2026, IL2070
@@ -53,6 +53,6 @@ public sealed class TestHarnessTests
             .ToList();
 #pragma warning restore IL2026, IL2070
 
-        Assert.True(missing.Count == 0, "Sem Timeout = UiTimeouts.Default: " + string.Join(", ", missing));
+        Assert.True(missing.Count == 0, "Missing Timeout = UiTimeouts.Default: " + string.Join(", ", missing));
     }
 }

@@ -57,7 +57,7 @@ public sealed class QueryRunnerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UmaAUmaComResultTabsEResumo()
+    public async Task OneByOneWithResultTabsAndSummary()
     {
         TestServer.RequireServer();
         var (summary, results, _) = await Run($"SELECT 1 AS a;\nSELECT * FROM `{_database}`.people;\nUPDATE `{_database}`.people SET name = name WHERE id = 1;");
@@ -72,18 +72,18 @@ public sealed class QueryRunnerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task NomesDosResultTabsPorComentario()
+    public async Task ResultTabNamesFromComments()
     {
         TestServer.RequireServer();
-        var (_, named, _) = await Run("-- names: primeiro, segundo\nSELECT 1; SELECT 2;");
-        Assert.Equal(["primeiro (1r × 1c)", "segundo (1r × 1c)"], named.Select(r => r.Caption));
+        var (_, named, _) = await Run("-- names: first, second\nSELECT 1; SELECT 2;");
+        Assert.Equal(["first (1r × 1c)", "second (1r × 1c)"], named.Select(r => r.Caption));
 
         var (_, single, _) = await Run("SELECT 1;\n-- name: meu\nSELECT 2;");
         Assert.Equal(["Result #1 (1r × 1c)", "meu (1r × 1c)"], single.Select(r => r.Caption));
     }
 
     [Fact]
-    public async Task StopOnErrorsParaNoPrimeiroErroComALinhaCerta()
+    public async Task StopOnErrorsStopsAtTheFirstErrorWithTheRightLine()
     {
         TestServer.RequireServer();
         var sql = "SELECT 1;\nSELECT\n  1,\n  2 FORM x;\nSELECT 3;";
@@ -102,7 +102,7 @@ public sealed class QueryRunnerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task BatchInOneGoJuntaAsInstrucoes()
+    public async Task BatchInOneGoJoinsTheStatements()
     {
         TestServer.RequireServer();
         var (summary, results, _) = await Run("SELECT 1; SELECT 2; SELECT 3;", new QueryRunOptions { BatchInOneGo = true });
@@ -112,7 +112,7 @@ public sealed class QueryRunnerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task MaximoDeResultTabs()
+    public async Task MaximumResultTabs()
     {
         TestServer.RequireServer();
         var sql = string.Concat(Enumerable.Range(1, 12).Select(i => $"SELECT {i};\n"));
@@ -126,7 +126,7 @@ public sealed class QueryRunnerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DelimiterParaRoutines()
+    public async Task DelimiterForRoutines()
     {
         TestServer.RequireServer();
         var sql = $"USE `{_database}`;\nDELIMITER //\nCREATE PROCEDURE p() BEGIN SELECT 1; SELECT 2; END//\nDELIMITER ;\nCALL p();";
@@ -138,7 +138,7 @@ public sealed class QueryRunnerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task WarningsVaoParaOLog()
+    public async Task WarningsGoToTheLog()
     {
         TestServer.RequireServer();
         var (summary, _, messages) = await Run("SELECT CAST('x' AS SIGNED);");

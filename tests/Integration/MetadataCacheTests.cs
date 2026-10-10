@@ -47,7 +47,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task NomesPrimeiroEstatisticasDepois()
+    public async Task NamesFirstStatisticsLater()
     {
         TestServer.RequireServer();
         var cache = new MetadataCache(_host, new MetadataOptions { FullTableStatus = true });
@@ -75,7 +75,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SemFullTableStatusNaoPedeEstatisticasMasShiftF5Pede()
+    public async Task WithoutFullTableStatusNoStatisticsButShiftF5AsksForThem()
     {
         TestServer.RequireServer();
         var cache = new MetadataCache(_host, new MetadataOptions { FullTableStatus = false });
@@ -90,7 +90,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PedidosIguaisPartilhamAIdaAoServidor()
+    public async Task IdenticalRequestsShareTheRoundTrip()
     {
         TestServer.RequireServer();
         var cache = new MetadataCache(_host, new MetadataOptions { FullTableStatus = false });
@@ -107,7 +107,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InvalidateEsqueceERelê()
+    public async Task InvalidateForgetsAndReadsAgain()
     {
         TestServer.RequireServer();
         var cache = new MetadataCache(_host, new MetadataOptions { FullTableStatus = false });
@@ -125,7 +125,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task WhitelistEHidePattern()
+    public async Task WhitelistAndHidePattern()
     {
         TestServer.RequireServer();
         var white = new MetadataCache(_host, new MetadataOptions { Databases = $" {_database} ;mysql;{_database}" });
@@ -139,7 +139,7 @@ public sealed class MetadataCacheTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DefinicaoDaTabelaEmCache()
+    public async Task TableDefinitionIsCached()
     {
         TestServer.RequireServer();
         var cache = new MetadataCache(_host, new MetadataOptions());

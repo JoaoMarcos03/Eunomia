@@ -23,7 +23,7 @@ public sealed class SshTunnelTests : IDisposable
 
     private static void Require() =>
         Assert.SkipWhen(Ssh is not { Length: 4 } || Target is not { Length: 2 } || TestServer.ConnectionString is null,
-            "Sem servidor SSH de teste (EUNOMIA_IT_SSH e EUNOMIA_IT_SSH_TARGET).");
+            "No SSH test server (EUNOMIA_IT_SSH and EUNOMIA_IT_SSH_TARGET).");
 
     private static SshTunnelOptions Options(string? password = null) =>
         new(Ssh![0], int.Parse(Ssh[1], System.Globalization.CultureInfo.InvariantCulture), Ssh[2], new SecretReference("ssh"), null)
@@ -58,7 +58,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task HostKeyDesconhecidaPedeConfirmacao()
+    public async Task UnknownHostKeyAsksForConfirmation()
     {
         Require();
         var factory = new SshTunnelFactory(new KnownHostsStore(_knownHosts), () => null);
@@ -75,7 +75,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task ChaveMudadaEhBloqueada()
+    public async Task ChangedKeyIsBlocked()
     {
         Require();
         var store = new KnownHostsStore(_knownHosts);
@@ -93,7 +93,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task PasswordErradaFalha()
+    public async Task WrongPasswordFails()
     {
         Require();
         var factory = new SshTunnelFactory(new KnownHostsStore(_knownHosts), () => null);
@@ -106,7 +106,7 @@ public sealed class SshTunnelTests : IDisposable
     }
 
     [Fact]
-    public async Task SessaoMySqlAtravesDoTunel()
+    public async Task MySqlSessionThroughTheTunnel()
     {
         Require();
         var factory = new SshTunnelFactory(new KnownHostsStore(_knownHosts), () => null);

@@ -22,7 +22,7 @@ public sealed class CommandPaletteTests
     ];
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task AtalhoAbreAPaletaEOComandoEscolhidoCorre()
+    public async Task ShortcutOpensThePaletteAndTheChosenCommandRuns()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();

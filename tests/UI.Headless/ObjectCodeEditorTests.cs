@@ -18,10 +18,10 @@ public sealed class ObjectCodeEditorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CriarViewAlterarProcedureERepoOriginalComErro()
+    public async Task CreateViewAlterProcedureAndRestoreOriginalOnError()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_oc_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (a INT); CREATE PROCEDURE `{db}`.p() SELECT 1 AS one;");
         try

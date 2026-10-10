@@ -22,7 +22,7 @@ public sealed class LiteralTextTests
     }
 
     [AvaloniaFact]
-    public void EscapedDesenhaOUnderscoreNoAccessText()
+    public void EscapedDrawsTheUnderscoreInAccessText()
     {
         var literal = Width(new TextBlock { Text = "prd_products" });
 
@@ -33,7 +33,7 @@ public sealed class LiteralTextTests
     }
 
     [AvaloniaFact]
-    public void EditorDeSetLeOValorDoTagENaoDoTextoDesenhado()
+    public void SetEditorReadsTheValueFromTagNotTheDrawnText()
     {
         var editor = new SetCellEditor(["in_progress", "done"]);
         var control = editor.Create("in_progress", 12, FontFamily.Default);

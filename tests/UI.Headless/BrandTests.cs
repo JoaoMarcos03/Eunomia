@@ -16,14 +16,14 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class BrandTests
 {
     [AvaloniaFact]
-    public void IconeDasJanelasVemDosRecursos()
+    public void WindowIconComesFromTheResources()
     {
         Assert.True(AssetLoader.Exists(BrandAssets.IconUri));
         Assert.Same(BrandAssets.WindowIcon, BrandAssets.WindowIcon);
     }
 
     [AvaloniaFact]
-    public void LogoNoAboutENoStartDoSessionManager()
+    public void LogoInAboutAndInTheSessionManagerStartTab()
     {
         Assert.IsType<DrawingImage>(BrandAssets.Logo);
         Assert.Same(BrandAssets.Logo, BrandAssets.Logo);
@@ -42,7 +42,7 @@ public sealed class BrandTests
     }
 
     [AvaloniaFact]
-    public void TodasAsJanelasDeTopoTemOIconeDaMarca()
+    public void EveryTopLevelWindowHasTheBrandIcon()
     {
         var assemblies = new[] { typeof(MainWindow), typeof(MessageDialog), typeof(SessionManagerWindow), typeof(SqlExportDialog) }
             .Select(t => t.Assembly);
@@ -57,7 +57,7 @@ public sealed class BrandTests
         foreach (var (type, create) in AllWindows.Factories)
         {
             var window = create();
-            Assert.True(ReferenceEquals(BrandAssets.WindowIcon, window.Icon), $"{type.Name} sem o ícone da marca");
+            Assert.True(ReferenceEquals(BrandAssets.WindowIcon, window.Icon), $"{type.Name} without the brand icon");
             window.Close();
         }
     }

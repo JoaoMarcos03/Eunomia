@@ -47,14 +47,14 @@ public sealed class AccessibilityTests
 
     [AvaloniaTheory]
     [MemberData(nameof(WindowTypes))]
-    public void ControlosInterativosTemNome(string windowType)
+    public void InteractiveControlsHaveAName(string windowType)
     {
         var window = AllWindows.Factories.Single(f => f.Key.Name == windowType).Value();
         window.Show();
         try
         {
             var unnamed = Unnamed(window);
-            Assert.True(unnamed.Count == 0, $"{windowType}: sem nome acessível: {string.Join(", ", unnamed)}");
+            Assert.True(unnamed.Count == 0, $"{windowType}: no accessible name: {string.Join(", ", unnamed)}");
         }
         finally
         {
@@ -93,14 +93,14 @@ public sealed class AccessibilityTests
 
     [AvaloniaTheory]
     [MemberData(nameof(TabViewNames))]
-    public void VistasDasTabsTemNome(string view)
+    public void TabViewsHaveAName(string view)
     {
         var window = new Window { Content = TabViews[view](), Width = 1000, Height = 600 };
         window.Show();
         try
         {
             var unnamed = Unnamed(window);
-            Assert.True(unnamed.Count == 0, $"{view}: sem nome acessível: {string.Join(", ", unnamed)}");
+            Assert.True(unnamed.Count == 0, $"{view}: no accessible name: {string.Join(", ", unnamed)}");
         }
         finally
         {

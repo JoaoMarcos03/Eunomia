@@ -65,7 +65,7 @@ public sealed class TreeFilterRulesTests
     private static List<string> Names(TreeModel model) => model.Visible.Select(n => n.Name).ToList();
 
     [Fact]
-    public async Task SemFiltrosMostraTudoOQueEstaExpandido()
+    public async Task WithoutFiltersShowsEverythingExpanded()
     {
         var (model, _) = await BuildAsync();
 
@@ -76,7 +76,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task DatabaseFilterEscondeBasesEOsSeusFilhos()
+    public async Task DatabaseFilterHidesDatabasesAndTheirChildren()
     {
         var (model, _) = await BuildAsync();
 
@@ -86,7 +86,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task DatabaseFilterNaoSeAplicaAObjetos()
+    public async Task DatabaseFilterDoesNotApplyToObjects()
     {
         var (model, _) = await BuildAsync();
 
@@ -97,7 +97,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task TableFilterSoSeAplicaAObjetos()
+    public async Task TableFilterOnlyAppliesToObjects()
     {
         var (model, _) = await BuildAsync();
 
@@ -110,7 +110,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task BasesSemObjetosQueCorrespondamContinuamVisiveis()
+    public async Task DatabasesWithoutMatchingObjectsStayVisible()
     {
         var (model, _) = await BuildAsync();
 
@@ -120,7 +120,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task TableFilterComparaSoONomeDoObjetoSemABase()
+    public async Task TableFilterComparesOnlyTheObjectNameWithoutTheDatabase()
     {
         var (model, _) = await BuildAsync();
 
@@ -132,7 +132,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task GruposEColunasNuncaSaoEscondidos()
+    public async Task GroupsAndColumnsAreNeverHidden()
     {
         var db = new TreeNode(TreeNodeKind.Database, "shop");
         var group = new TreeNode(TreeNodeKind.Group, "Tables", db);
@@ -155,7 +155,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task FiltrosAtuamEmTodasAsSessoes()
+    public async Task FiltersActOnEverySession()
     {
         var (model, _) = await BuildAsync();
 
@@ -165,7 +165,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task SoFavoritosMostraSoObjetosFavoritos()
+    public async Task OnlyFavouritesShowsOnlyFavouriteObjects()
     {
         var (model, _) = await BuildAsync();
 
@@ -175,7 +175,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task FavoritosEFiltroCombinamComoE()
+    public async Task FavouritesAndFilterCombineAsAnd()
     {
         var (model, _) = await BuildAsync();
         var ecm = model.Visible.Single(n => n.Name == "ecm_orders");
@@ -189,7 +189,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task ToggleFavoriteNaoSeAplicaASessoesNemBases()
+    public async Task ToggleFavoriteDoesNotApplyToSessionsOrDatabases()
     {
         var (model, sessions) = await BuildAsync();
 
@@ -201,7 +201,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task BasesExpandidasDepoisDoFiltroSaoFiltradasAoExpandir()
+    public async Task DatabasesExpandedAfterTheFilterAreFilteredOnExpanding()
     {
         var (model, sessions) = await BuildAsync(expandAll: false);
         model.SetTableFilter("^b2b");
@@ -214,7 +214,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task LimparOFiltroRepoeTudo()
+    public async Task ClearingTheFilterRestoresEverything()
     {
         var (model, _) = await BuildAsync();
         var all = Names(model);
@@ -228,7 +228,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task RegexInvalidaMostraTudoEReportaUmaVez()
+    public async Task InvalidRegexShowsEverythingAndReportsOnce()
     {
         var (model, _) = await BuildAsync();
         var all = Names(model);
@@ -244,7 +244,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task PontoEVirgulaEhOrSobreNosDaArvore()
+    public async Task SemicolonIsOrOnTreeNodes()
     {
         var (model, _) = await BuildAsync();
 
@@ -254,7 +254,7 @@ public sealed class TreeFilterRulesTests
     }
 
     [Fact]
-    public async Task FiltroCaseInsensitiveSobreNosDaArvore()
+    public async Task CaseInsensitiveFilterOnTreeNodes()
     {
         var (model, _) = await BuildAsync();
 

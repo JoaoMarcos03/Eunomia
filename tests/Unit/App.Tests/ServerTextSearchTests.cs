@@ -23,7 +23,7 @@ public sealed class ServerTextSearchTests
         new(name, kind.ToString().ToLowerInvariant(), new LogicalType(kind), true, null, false, false, false, null);
 
     [Fact]
-    public void TextoSimplesSemMaiusculasEmTodasAsColunas()
+    public void PlainCaseInsensitiveTextOnEveryColumn()
     {
         var sql = ServerTextSearch.CountQuery(Dialect, Table, new ServerTextSearchOptions("Ana", false, null, ServerTextMatch.Contains, false));
 
@@ -33,7 +33,7 @@ public sealed class ServerTextSearchTests
     }
 
     [Fact]
-    public void CategoriaMaiusculasERegex()
+    public void CategoryCaseAndRegex()
     {
         var text = new ServerTextSearchOptions("An'a", false, TypeCategory.Text, ServerTextMatch.StartsWith, true);
         Assert.Equal("`name` LIKE BINARY 'An''a%' ESCAPE '!'", ServerTextSearch.Where(Dialect, Table, text));
@@ -43,7 +43,7 @@ public sealed class ServerTextSearchTests
     }
 
     [Fact]
-    public void ExactoNumericoEPredicadoSql()
+    public void ExactNumericAndSqlPredicate()
     {
         var exact = new ServerTextSearchOptions("42", false, TypeCategory.Integer, ServerTextMatch.Exact, false);
         Assert.Equal("`id` = 42", ServerTextSearch.Where(Dialect, Table, exact));
@@ -54,7 +54,7 @@ public sealed class ServerTextSearchTests
     }
 
     [Fact]
-    public void RelevanciaEmPercentagem()
+    public void RelevanceAsAPercentage()
     {
         Assert.Equal(25, new ServerTextSearchHit(Table.Ref, 5, 20).Relevance);
         Assert.Null(new ServerTextSearchHit(Table.Ref, 5, null).Relevance);

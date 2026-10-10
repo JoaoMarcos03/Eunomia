@@ -22,7 +22,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
         await h.ExecuteNonQueryAsync($"USE `{_database}`", Ct);
         string[] ddl =
         [
-            "CREATE TABLE parent (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(10) NOT NULL, UNIQUE KEY uq_code (code)) COMMENT='pais'",
+            "CREATE TABLE parent (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(10) NOT NULL, UNIQUE KEY uq_code (code)) COMMENT='parents'",
             """
             CREATE TABLE child (
               id INT NOT NULL, seq SMALLINT UNSIGNED NOT NULL, parent_id INT NULL, price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT 'preço',
@@ -54,7 +54,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SchemaInteiroParaODiagrama()
+    public async Task WholeSchemaForTheDiagram()
     {
         TestServer.RequireServer();
         var tables = await _db.Metadata.GetSchemaAsync(_database, _database, Ct);
@@ -77,7 +77,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ListaAsBases()
+    public async Task ListsTheDatabases()
     {
         TestServer.RequireServer();
 
@@ -91,7 +91,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     [InlineData(ObjectDetail.Statistics)]
     [InlineData(ObjectDetail.Details)]
     [InlineData(ObjectDetail.Names)]
-    public async Task TodosOsObjetosNumaSoIda(ObjectDetail detail)
+    public async Task AllObjectsInASingleRoundTrip(ObjectDetail detail)
     {
         TestServer.RequireServer();
 
@@ -113,7 +113,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
             Assert.Null(byName["parent"].Status);
             return;
         }
-        Assert.Equal("pais", byName["parent"].Comment);
+        Assert.Equal("parents", byName["parent"].Comment);
         Assert.Equal("InnoDB", byName["child"].Engine);
         Assert.NotNull(byName["parent"].Status);
         if (detail == ObjectDetail.Statistics)
@@ -128,7 +128,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task EstruturaDaTabelaComChavesFkECheck()
+    public async Task TableStructureWithKeysFksAndChecks()
     {
         TestServer.RequireServer();
 
@@ -185,7 +185,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessosEVariaveis()
+    public async Task ProcessesAndVariables()
     {
         TestServer.RequireServer();
 
@@ -197,7 +197,7 @@ public sealed class MySqlMetadataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DdlCreateReproduzATabela()
+    public async Task DdlCreateReproducesTheTable()
     {
         TestServer.RequireServer();
         var services = new MySqlProvider().ForServer(_db.Server);

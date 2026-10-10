@@ -25,13 +25,13 @@ public sealed class ContractTests
     [InlineData(LogicalTypeKind.Uuid, TypeCategory.Other)]
     [InlineData(LogicalTypeKind.Array, TypeCategory.Other)]
     [InlineData(LogicalTypeKind.Unknown, TypeCategory.Other)]
-    public void CategoriaDeCorSegueATabela144(LogicalTypeKind kind, TypeCategory expected)
+    public void ColourCategoryFollowsTable144(LogicalTypeKind kind, TypeCategory expected)
     {
         Assert.Equal(expected, new LogicalType(kind).Category);
     }
 
     [Fact]
-    public void TamanhoDoObjetoEhDadosMaisIndices()
+    public void ObjectSizeIsDataPlusIndexes()
     {
         var table = new DbObjectRef("shop", "shop", "orders", DbObjectKind.Table);
 
@@ -61,7 +61,7 @@ public sealed class ContractTests
     }
 
     [Fact]
-    public async Task StreamDeResultadosEntregaBlocosSemMaterializar()
+    public async Task ResultStreamDeliversBlocksWithoutMaterialising()
     {
         var executor = new FakeExecutor(new SyntheticRowSource(rows: 2500, columns: 5));
         var ct = TestContext.Current.CancellationToken;

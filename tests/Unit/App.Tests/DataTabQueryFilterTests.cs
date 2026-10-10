@@ -10,7 +10,7 @@ public sealed class DataTabQueryFilterTests
     [InlineData("id = 1", "id = 1")]
     [InlineData("WHERE id = 1;", "id = 1")]
     [InlineData("name = 'a;b' -- c;", "name = 'a;b' -- c;")]
-    public void FiltroDeUmaCondicao(string text, string expected)
+    public void SingleConditionFilter(string text, string expected)
     {
         Assert.Null(DataTabQuery.FilterError(text));
         Assert.Equal(expected, DataTabQuery.WhereClause(text));
@@ -19,14 +19,14 @@ public sealed class DataTabQueryFilterTests
     [Theory]
     [InlineData("1=1; DELETE FROM t")]
     [InlineData("id = 1; DROP TABLE x;")]
-    public void FiltroComVariasInstrucoesERecusado(string text)
+    public void FilterWithSeveralStatementsIsRefused(string text)
     {
         Assert.NotNull(DataTabQuery.FilterError(text));
         Assert.Throws<InvalidOperationException>(() => DataTabQuery.WhereClause(text));
     }
 
     [Fact]
-    public void NomesComVirgulasEBackticksVaoEVoltam()
+    public void NamesWithCommasAndBackticksRoundTrip()
     {
         string[] names = ["a,b", "c(10)", "`d`", " e", "plain"];
         var text = string.Join(", ", names.Select(TableDesign.FormatName)) + ", f(20)";

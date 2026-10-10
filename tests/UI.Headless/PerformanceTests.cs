@@ -43,14 +43,14 @@ public sealed class PerformanceTests
 
     /// <summary>PR-09: first 1,000 rows painted ≤ server time + 100 ms.</summary>
     [AvaloniaFact(Timeout = UiTimeouts.Measurement)]
-    public async Task Pr09AbrirTabelaNoDataTab()
+    public async Task Pr09OpenTableInTheDataTab()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         const string db = "eunomia_pr09";
         const string digits = "(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)";
         await ExecAsync(cs, $"CREATE DATABASE IF NOT EXISTS `{db}`; CREATE TABLE IF NOT EXISTS `{db}`.t (id INT PRIMARY KEY, a VARCHAR(40), b INT, c DECIMAL(12,2), d DATETIME, e TEXT, f DOUBLE, g VARCHAR(10), h DATE, i BIGINT) ENGINE=InnoDB; " +
-            $"INSERT IGNORE INTO `{db}`.t SELECT seq, CONCAT('nome ', seq), seq * 7, seq / 3, '2026-01-01' + INTERVAL seq MINUTE, REPEAT('x', seq % 300), seq / 7, 'abc', '2026-01-01' + INTERVAL (seq % 365) DAY, seq * 1000 " +
+            $"INSERT IGNORE INTO `{db}`.t SELECT seq, CONCAT('name ', seq), seq * 7, seq / 3, '2026-01-01' + INTERVAL seq MINUTE, REPEAT('x', seq % 300), seq / 7, 'abc', '2026-01-01' + INTERVAL (seq % 365) DAY, seq * 1000 " +
             $"FROM (SELECT a.n + (b.n * 10) + (c.n * 100) + (d.n * 1000) + 1 AS seq FROM {digits} a, {digits} b, {digits} c, {digits} d) s WHERE seq <= 5000;");
 
         var (window, context, session, connector, _) = CreateShell(cs, db);
@@ -94,7 +94,7 @@ public sealed class PerformanceTests
         var medianServer = server.Skip(1).Order().ElementAt(2);
         File.WriteAllText(Path.Combine(Path.GetTempPath(), "eunomia-pr09.txt"),
             string.Create(CultureInfo.InvariantCulture, $"grid_ms={medianUi:F1}\nserver_ms={medianServer:F1}\nruns_grid={string.Join(";", ui.Select(u => u.ToString("F1", CultureInfo.InvariantCulture)))}\nruns_server={string.Join(";", server.Select(u => u.ToString("F1", CultureInfo.InvariantCulture)))}\n"));
-        Assert.True(medianUi <= medianServer + 100, $"Grid {medianUi:F0} ms > servidor {medianServer:F0} ms + 100 ms");
+        Assert.True(medianUi <= medianServer + 100, $"Grid {medianUi:F0} ms > server {medianServer:F0} ms + 100 ms");
 
         await connector.DisconnectAllAsync();
         window.Close();
@@ -106,10 +106,10 @@ public sealed class PerformanceTests
     /// through the metadata connection.
     /// </summary>
     [AvaloniaFact(Timeout = UiTimeouts.Measurement)]
-    public async Task TabelaLogoDepoisDeAbrirUmaBaseGrande()
+    public async Task TableRightAfterOpeningALargeDatabase()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         await EnsureLargeSchemaAsync(cs);
 
         var (window, _, session, connector, _) = CreateShell(cs, Database);
@@ -125,7 +125,7 @@ public sealed class PerformanceTests
         await WaitAsync(() => window.DataBrowser?.Table.Ref.Name == "t00042" && window.DataBrowser.Source is not null && !host.IsPrimaryBusy ? "ok" : null, TimeSpan.FromMinutes(2));
         var elapsed = sw.Elapsed;
         File.WriteAllText(Path.Combine(Path.GetTempPath(), "eunomia-table-after-big-db.txt"), string.Create(CultureInfo.InvariantCulture, $"table_ms={elapsed.TotalMilliseconds:F0}\n"));
-        Assert.True(elapsed < TimeSpan.FromSeconds(5), $"A tabela levou {elapsed.TotalMilliseconds:F0} ms.");
+        Assert.True(elapsed < TimeSpan.FromSeconds(5), $"The table took {elapsed.TotalMilliseconds:F0} ms.");
 
         await connector.DisconnectAllAsync();
         window.Close();
@@ -133,10 +133,10 @@ public sealed class PerformanceTests
 
     /// <summary>PR-08: names visible ≤ server time + 300 ms; statistics in the background.</summary>
     [AvaloniaFact(Timeout = UiTimeouts.Measurement)]
-    public async Task Pr08AbrirBaseCom5000Tabelas()
+    public async Task Pr08OpenDatabaseWith5000Tables()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         await EnsureLargeSchemaAsync(cs);
 
         var (window, _, session, connector, _) = CreateShell(cs, Database);
@@ -172,10 +172,10 @@ public sealed class PerformanceTests
 
         var medianUi = ui.Skip(1).Order().ElementAt(2);
         var medianServer = server.Skip(1).Order().ElementAt(2);
-        TestContext.Current.SendDiagnosticMessage($"PR-08: árvore {medianUi:F0} ms, servidor {medianServer:F0} ms (corridas: {string.Join(", ", ui.Select(u => u.ToString("F0", CultureInfo.InvariantCulture)))})");
+        TestContext.Current.SendDiagnosticMessage($"PR-08: tree {medianUi:F0} ms, server {medianServer:F0} ms (runs: {string.Join(", ", ui.Select(u => u.ToString("F0", CultureInfo.InvariantCulture)))})");
         File.WriteAllText(Path.Combine(Path.GetTempPath(), "eunomia-pr08.txt"),
             string.Create(CultureInfo.InvariantCulture, $"tree_ms={medianUi:F1}\nserver_ms={medianServer:F1}\nruns_tree={string.Join(";", ui.Select(u => u.ToString("F1", CultureInfo.InvariantCulture)))}\nruns_server={string.Join(";", server.Select(u => u.ToString("F1", CultureInfo.InvariantCulture)))}\n"));
-        Assert.True(medianUi <= medianServer + 300, $"Árvore {medianUi:F0} ms > servidor {medianServer:F0} ms + 300 ms");
+        Assert.True(medianUi <= medianServer + 300, $"Tree {medianUi:F0} ms > server {medianServer:F0} ms + 300 ms");
 
         await connector.DisconnectAllAsync();
         window.Close();

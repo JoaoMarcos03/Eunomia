@@ -18,7 +18,7 @@ public sealed class KnownHostsTests : IDisposable
     }
 
     [Fact]
-    public void PrimeiroContactoConfiancaEMudancaDeChave()
+    public void FirstContactTrustAndKeyChange()
     {
         var store = new KnownHostsStore(_path);
         byte[] key = [1, 2, 3, 4];
@@ -39,7 +39,7 @@ public sealed class KnownHostsTests : IDisposable
     }
 
     [Fact]
-    public void FormatoDoOpenSsh()
+    public void OpenSshFormat()
     {
         var store = new KnownHostsStore(_path);
         store.Trust("db.example.com", 2222, "ssh-rsa", [7]);
@@ -49,7 +49,7 @@ public sealed class KnownHostsTests : IDisposable
     }
 
     [Fact]
-    public void PortaLocalLivre()
+    public void FreeLocalPort()
     {
         var port = SshTunnelFactory.FreeLocalPort();
 
@@ -108,7 +108,7 @@ public sealed class SshAgentTests
     }
 
     [Fact]
-    public void ListaChavesDoAgent()
+    public void ListsTheAgentKeys()
     {
         var agent = new SshAgentClient(new FakeAgent());
 
@@ -119,7 +119,7 @@ public sealed class SshAgentTests
     }
 
     [Fact]
-    public void RsaComSha2PrimeiroEAssinaturaPeloAgent()
+    public void RsaWithSha2FirstAndSigningThroughTheAgent()
     {
         var transport = new FakeAgent();
         var agent = new SshAgentClient(transport);

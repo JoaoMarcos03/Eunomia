@@ -62,9 +62,9 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
         }, Ct);
 
     [Fact]
-    public async Task Pr10OverheadPorInstrucao()
+    public async Task Pr10OverheadPerStatement()
     {
-        Assert.SkipUnless(Enabled, "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(Enabled, "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         var sql = string.Concat(Enumerable.Repeat("SELECT 1;\n", Statements));
         var statements = SqlSplitter.Split(sql);
 
@@ -105,18 +105,18 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
 
         var overhead = (oneByOne.Elapsed.TotalMilliseconds - raw.Elapsed.TotalMilliseconds) / Statements;
         TestContext.Current.SendDiagnosticMessage(string.Create(CultureInfo.InvariantCulture,
-            $"PR-10: {Statements} x SELECT 1 uma a uma {oneByOne.Elapsed.TotalMilliseconds:F0} ms, MySqlConnector sozinho {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms/instrução, {roundTrips} comandos ({questions} instruções no servidor); batch in one go {batch.Elapsed.TotalMilliseconds:F0} ms"));
+            $"PR-10: {Statements} x SELECT 1 one by one {oneByOne.Elapsed.TotalMilliseconds:F0} ms, MySqlConnector alone {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms/statement, {roundTrips} commands ({questions} statements on the server); batch in one go {batch.Elapsed.TotalMilliseconds:F0} ms"));
         Assert.Equal(Statements, summary.Executed);
-        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-10: uma a uma {oneByOne.Elapsed.TotalMilliseconds:F0} ms, sozinho {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms, {roundTrips} comandos, {questions} instruções no servidor, batch {batch.Elapsed.TotalMilliseconds:F0} ms"));
+        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-10: one by one {oneByOne.Elapsed.TotalMilliseconds:F0} ms, alone {raw.Elapsed.TotalMilliseconds:F0} ms, overhead {overhead:F3} ms, {roundTrips} commands, {questions} statements on the server, batch {batch.Elapsed.TotalMilliseconds:F0} ms"));
         // Zero extra round trips: one command per statement (SHOW WARNINGS follows in the same command).
         Assert.Equal(Statements, roundTrips);
-        Assert.True(overhead <= 1.0, $"Overhead {overhead:F3} ms por instrução.");
+        Assert.True(overhead <= 1.0, $"Overhead {overhead:F3} ms per statement.");
     }
 
     [Fact]
-    public async Task Pr20CancelDeUmSleep()
+    public async Task Pr20CancelOfASleep()
     {
-        Assert.SkipUnless(Enabled, "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(Enabled, "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         using var cts = new CancellationTokenSource();
         var run = new QueryRunner(_host).RunAsync("SELECT SLEEP(60);", SqlSplitter.Split("SELECT SLEEP(60);"), new QueryRunOptions(), cts.Token);
         await Task.Delay(500, Ct);
@@ -124,9 +124,9 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
         await cts.CancelAsync();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
         clock.Stop();
-        TestContext.Current.SendDiagnosticMessage(string.Create(CultureInfo.InvariantCulture, $"PR-20: SELECT SLEEP(60) parado {clock.Elapsed.TotalMilliseconds:F0} ms depois do cancel"));
-        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-20: parado {clock.Elapsed.TotalMilliseconds:F0} ms depois do cancel"));
-        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2), $"Cancel em {clock.Elapsed.TotalMilliseconds:F0} ms.");
+        TestContext.Current.SendDiagnosticMessage(string.Create(CultureInfo.InvariantCulture, $"PR-20: SELECT SLEEP(60) stopped {clock.Elapsed.TotalMilliseconds:F0} ms after the cancel"));
+        TestContext.Current.TestOutputHelper!.WriteLine(string.Create(CultureInfo.InvariantCulture, $"PR-20: stopped {clock.Elapsed.TotalMilliseconds:F0} ms after the cancel"));
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(2), $"Cancel in {clock.Elapsed.TotalMilliseconds:F0} ms.");
     }
 
     /// <summary>
@@ -135,9 +135,9 @@ public sealed class QueryPerformanceTests : IAsyncLifetime
     /// <c>%TEMP%\eunomia-read-throughput.txt</c>.
     /// </summary>
     [Fact]
-    public async Task LeituraDeUmResultadoGrande()
+    public async Task ReadingALargeResult()
     {
-        Assert.SkipUnless(Enabled, "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(Enabled, "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         const string db = "eunomia_read_perf";
         const string digits = "(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)";
         await _host.RunPrimaryAsync(async (h, ct) =>

@@ -24,7 +24,7 @@ public sealed class QueryFileLogTests : IDisposable
     }
 
     [Fact]
-    public void SoDdlEDmlDoUtilizadorComPasswordsMascaradas()
+    public void OnlyUserDdlAndDmlWithPasswordsMasked()
     {
         var inner = new Inner();
         var path = Path.Combine(_dir, "sub", "prod.sql");
@@ -47,7 +47,7 @@ public sealed class QueryFileLogTests : IDisposable
     }
 
     [Fact]
-    public void SoDmlEFalhaDeEscritaNaoParaNada()
+    public void OnlyDmlAndAWriteFailureStopsNothing()
     {
         var inner = new Inner();
         var log = new QueryFileLog(inner, Path.Combine(_dir, "dml.sql"), ddl: false, dml: true);
@@ -57,7 +57,7 @@ public sealed class QueryFileLogTests : IDisposable
 
         // Impossible path: one error line in the SQL log, only once, and the statements keep going through.
         Directory.CreateDirectory(_dir);
-        var blocked = Path.Combine(_dir, "pasta");
+        var blocked = Path.Combine(_dir, "folder");
         Directory.CreateDirectory(blocked);
         var broken = new QueryFileLog(inner, blocked, ddl: true, dml: true);
         broken.Write("s", SessionLogCategory.UserSql, "DELETE FROM t");

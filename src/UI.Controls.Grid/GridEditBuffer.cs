@@ -94,7 +94,7 @@ public sealed class GridEditBuffer
     {
         if (PendingRow >= 0 && PendingRow != row)
         {
-            throw new InvalidOperationException("Há alterações por gravar noutra linha; chamar Commit() primeiro.");
+            throw new InvalidOperationException("There are unsaved changes on another row; call Commit() first.");
         }
         PendingRow = row;
         _pending[column] = value;
@@ -105,7 +105,7 @@ public sealed class GridEditBuffer
     {
         if (HasPending)
         {
-            throw new InvalidOperationException("Gravar a linha pendente antes de inserir.");
+            throw new InvalidOperationException("Save the pending row before inserting.");
         }
         var row = sourceRows + InsertedRows;
         InsertedRows++;

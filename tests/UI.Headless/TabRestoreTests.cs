@@ -29,7 +29,7 @@ public sealed class TabRestoreTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void TabsVoltamComTextoCaptionCursorEFoco()
+    public void TabsComeBackWithTextCaptionCursorAndFocus()
     {
         Assert.Equal(TimeSpan.FromSeconds(2), MainWindow.JournalInterval);
         var first = Window();
@@ -38,9 +38,9 @@ public sealed class TabRestoreTests : IDisposable
         var second = first.Tabs.AddQueryTab();
         var view = Assert.IsType<QueryTabView>(second.Content);
         view.Editor.Text = "SELECT 2;\nSELECT 3;";
-        view.Editor.Editor.Document.Insert(0, "-- nota\n");
+        view.Editor.Editor.Document.Insert(0, "-- note\n");
         view.Editor.Editor.CaretOffset = 5;
-        second.SetCaption("Relatório", modified: true);
+        second.SetCaption("Report", modified: true);
         first.Tabs.SelectedItem = second.Item;
         first.SaveJournal(wait: true);
         // Crash: the window does not close and saves nothing more.
@@ -48,11 +48,11 @@ public sealed class TabRestoreTests : IDisposable
         var reopened = Window();
         Assert.Equal(2, reopened.Tabs.QueryTabs.Count);
         var restored = reopened.Tabs.QueryTabs[1];
-        Assert.Equal("Relatório", restored.Name);
+        Assert.Equal("Report", restored.Name);
         Assert.True(restored.IsModified);
         Assert.Same(restored.Item, reopened.Tabs.SelectedItem);
         var restoredView = Assert.IsType<QueryTabView>(restored.Content);
-        Assert.Equal("-- nota\nSELECT 2;\nSELECT 3;", restoredView.Editor.Text);
+        Assert.Equal("-- note\nSELECT 2;\nSELECT 3;", restoredView.Editor.Text);
         Assert.Equal(5, restoredView.Editor.Editor.CaretOffset);
         Assert.Equal("SELECT 1;", Assert.IsType<QueryTabView>(reopened.Tabs.QueryTabs[0].Content).Editor.Text);
 

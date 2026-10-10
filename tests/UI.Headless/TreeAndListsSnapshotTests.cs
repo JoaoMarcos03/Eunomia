@@ -85,7 +85,7 @@ public sealed class TreeAndListsSnapshotTests
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("tree-groups-light", "light")]
     [InlineData("tree-groups-dark", "dark")]
-    public async Task ArvoreComGruposColunasEEstados(string name, string theme)
+    public async Task TreeWithGroupsColumnsAndStates(string name, string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var view = new DatabaseTreeView();

@@ -19,7 +19,7 @@ public sealed class CsvFuzzTests
     [InlineData(",", "\n")]
     [InlineData("\t", "\r\n")]
     [InlineData("||", "<EOL>")]
-    public void BuffersPequenosDaoOsMesmosRegistos(string field, string line)
+    public void SmallBuffersGiveTheSameRecords(string field, string line)
     {
         var options = new CsvOptions { FieldTerminator = field, LineTerminator = line, IgnoreLines = 0 };
         var random = new Random(field.Length * 31 + line.Length);

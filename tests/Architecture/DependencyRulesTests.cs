@@ -29,14 +29,14 @@ public sealed class DependencyRulesTests
     }
 
     [Fact]
-    public void ExistemProjetosCoreParaVerificar()
+    public void ThereAreCoreProjectsToCheck()
     {
         Assert.NotEmpty(CoreProjects());
     }
 
     [Theory]
     [MemberData(nameof(CoreProjects))]
-    public void ProjetoCoreNaoUsaFrameworksDeUi(string project)
+    public void CoreProjectUsesNoUiFrameworks(string project)
     {
         var csproj = File.ReadAllText(Path.Combine(RepoRoot, "src", project, project + ".csproj"));
 
@@ -47,10 +47,10 @@ public sealed class DependencyRulesTests
 
     [Theory]
     [MemberData(nameof(CoreProjects))]
-    public void ProjetoCoreNaoTemDependenciasDeUi(string project)
+    public void CoreProjectHasNoUiDependencies(string project)
     {
         var assets = Path.Combine(RepoRoot, "src", project, "obj", "project.assets.json");
-        Assert.True(File.Exists(assets), $"{project} não foi restaurado: falta {assets}");
+        Assert.True(File.Exists(assets), $"{project} was not restored: {assets} is missing");
 
         using var doc = JsonDocument.Parse(File.ReadAllText(assets));
 
@@ -81,6 +81,6 @@ public sealed class DependencyRulesTests
         {
             dir = dir.Parent;
         }
-        return dir?.FullName ?? throw new InvalidOperationException("Raiz do repo (Eunomia.slnx) não encontrada.");
+        return dir?.FullName ?? throw new InvalidOperationException("Repository root (Eunomia.slnx) not found.");
     }
 }

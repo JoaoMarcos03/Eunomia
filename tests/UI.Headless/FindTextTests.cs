@@ -11,10 +11,10 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class FindTextTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ProcuraNasTabelasEAbreOsResultados()
+    public async Task SearchesTheTablesAndOpensTheResults()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         // The test drives the modal Find text on server dialog.
         UnexpectedDialogGuardAttribute.Allow(typeof(Eunomia.UI.Shell.Views.FindTextDialog));

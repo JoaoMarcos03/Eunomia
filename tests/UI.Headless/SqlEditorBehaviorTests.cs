@@ -21,7 +21,7 @@ public sealed class SqlEditorBehaviorTests
     }
 
     [AvaloniaFact]
-    public void CtrlSpaceAbreCompletionComOPrefixo()
+    public void CtrlSpaceOpensCompletionWithThePrefix()
     {
         var (window, editor) = Show("SEL");
         editor.Editor.CaretOffset = 3;
@@ -35,7 +35,7 @@ public sealed class SqlEditorBehaviorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PontoAbreCompletionDepoisDe500ms()
+    public async Task DotOpensCompletionAfter500ms()
     {
         var (window, editor) = Show("SELECT t");
         editor.Editor.CaretOffset = editor.Text.Length;
@@ -49,7 +49,7 @@ public sealed class SqlEditorBehaviorTests
     }
 
     [AvaloniaFact]
-    public void ColorizerPintaKeywordsStringsEComentarios()
+    public void ColorizerPaintsKeywordsStringsAndComments()
     {
         var (window, editor) = Show("SELECT 'a' -- c\n/* x\ny */ 42");
         var view = editor.Editor.TextArea.TextView;
@@ -72,7 +72,7 @@ public sealed class SqlEditorBehaviorTests
     }
 
     [AvaloniaFact]
-    public void AbrirComentarioMudaAsLinhasSeguintes()
+    public void OpeningACommentChangesTheFollowingLines()
     {
         var (window, editor) = Show("SELECT 1\nFROM t");
         var view = editor.Editor.TextArea.TextView;

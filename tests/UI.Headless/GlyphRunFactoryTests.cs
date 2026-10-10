@@ -13,7 +13,7 @@ public sealed class GlyphRunFactoryTests
     [InlineData("abc 123")]
     [InlineData("Größe ação café")]
     [InlineData("1,234,567.89")]
-    public void TextoSimplesViraGlyphRun(string text)
+    public void PlainTextBecomesAGlyphRun(string text)
     {
         Assert.True(Tahoma().TryCreate(text, 300, alignRight: false, out var run, out var offset));
         Assert.Equal(text.Length, run!.GlyphInfos.Count);
@@ -26,13 +26,13 @@ public sealed class GlyphRunFactoryTests
     [InlineData("😀")]               // surrogate
     [InlineData("a\tb")]            // control character
     [InlineData("")]
-    public void TextoComplexoUsaShapingCompleto(string text)
+    public void ComplexTextUsesFullShaping(string text)
     {
         Assert.False(Tahoma().TryCreate(text, 300, alignRight: false, out _, out _));
     }
 
     [AvaloniaFact]
-    public void TextoQueNaoCabeLevaReticencias()
+    public void TextThatDoesNotFitGetsAnEllipsis()
     {
         var factory = Tahoma();
         var text = new string('x', 200);
@@ -44,7 +44,7 @@ public sealed class GlyphRunFactoryTests
     }
 
     [AvaloniaFact]
-    public void AlinhamentoADireitaDesloca()
+    public void RightAlignmentShifts()
     {
         Assert.True(Tahoma().TryCreate("42", 100, alignRight: true, out var run, out var offset));
         Assert.Equal(100 - run!.Metrics.WidthIncludingTrailingWhitespace, offset, 1);

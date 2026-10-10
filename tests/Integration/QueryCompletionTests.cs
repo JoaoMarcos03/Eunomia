@@ -34,7 +34,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
         await _host.RunPrimaryAsync(async (h, ct) =>
         {
             await h.ExecuteNonQueryAsync($"CREATE DATABASE `{_database}`", ct);
-            await h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.people (id INT PRIMARY KEY, name VARCHAR(20) COMMENT 'nome', `select` INT)", ct);
+            await h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.people (id INT PRIMARY KEY, name VARCHAR(20) COMMENT 'the name', `select` INT)", ct);
             await h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.orders (id INT, person INT)", ct);
             await h.ExecuteNonQueryAsync($"CREATE VIEW `{_database}`.v AS SELECT id FROM `{_database}`.people", ct);
             await h.ExecuteNonQueryAsync($"CREATE PROCEDURE `{_database}`.p() SELECT 1", ct);
@@ -59,7 +59,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AliasesTabelasQualificadasEBases()
+    public async Task AliasesQualifiedTablesAndDatabases()
     {
         TestServer.RequireServer();
         Assert.Equal(_database, _host.CurrentDatabase);
@@ -70,7 +70,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
         Assert.Equal(["id", "name", "select"], alias.Items.Select(i => i.Text));
         Assert.True(alias.Items[0].IsKey);
         Assert.Equal("varchar(20)", alias.Items[1].Detail);
-        Assert.Equal("nome", alias.Items[1].Description);
+        Assert.Equal("the name", alias.Items[1].Description);
         Assert.Equal("`select`", alias.Items[2].InsertText);
         Assert.Equal(["id", "person"], (await At("SELECT o.| FROM people p JOIN orders o ON o.person = p.id"))!.Items.Select(i => i.Text));
 
@@ -87,7 +87,7 @@ public sealed class QueryCompletionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SemQualificadorEVariaveis()
+    public async Task WithoutQualifierAndVariables()
     {
         TestServer.RequireServer();
         var people = new DbObjectRef(_database, _database, "people", DbObjectKind.Table);

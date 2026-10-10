@@ -41,7 +41,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public async Task OrcamentoGlobalDespejaOsMaioresEDisposeTiraDoTotal()
+    public async Task GlobalBudgetSpillsTheLargestAndDisposeLeavesTheTotal()
     {
         var oneBlock = Block(0, 256).ByteSize;
         // Each result would accept 10 blocks; the global budget only allows 6 in total.
@@ -77,7 +77,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public async Task AcimaDoOrcamentoVaiParaDiscoEVoltaIgual()
+    public async Task AboveTheBudgetGoesToDiskAndComesBackIdentical()
     {
         var oneBlock = Block(0, 256).ByteSize;
         using var source = new MaterializedRowSource(Schema, 256, new ResultStorage(BudgetBytes: oneBlock * 3, SpillDirectory: _directory));
@@ -109,7 +109,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public async Task IntervaloPedidoPeloGridNaoVaiParaDisco()
+    public async Task RangeRequestedByTheGridDoesNotGoToDisk()
     {
         var oneBlock = Block(0, 128).ByteSize;
         using var source = new MaterializedRowSource(Schema, 128, new ResultStorage(BudgetBytes: oneBlock * 2, SpillDirectory: _directory));
@@ -125,7 +125,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public void SemPastaDeSpillFicaTudoEmMemoria()
+    public void WithoutASpillFolderEverythingStaysInMemory()
     {
         using var source = new MaterializedRowSource(Schema, 64);
         for (var i = 0; i < 5; i++)
@@ -138,7 +138,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public void QuotaDeDiscoEsgotadaParaOFetch()
+    public void ExhaustedDiskQuotaStopsTheFetch()
     {
         var oneBlock = Block(0, 64).ByteSize;
         using var source = new MaterializedRowSource(Schema, 64, new ResultStorage(oneBlock, _directory, SpillQuotaBytes: oneBlock * 2));
@@ -154,7 +154,7 @@ public sealed class SpillTests : IDisposable
     }
 
     [Fact]
-    public void FicheiroDesapareceAoFechar()
+    public void FileDisappearsOnClose()
     {
         var oneBlock = Block(0, 64).ByteSize;
         var source = new MaterializedRowSource(Schema, 64, new ResultStorage(oneBlock, _directory));

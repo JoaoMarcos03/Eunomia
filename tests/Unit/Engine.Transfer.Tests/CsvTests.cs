@@ -6,16 +6,16 @@ namespace Eunomia.Engine.Transfer.Tests;
 public sealed class CsvTests
 {
     [Fact]
-    public void DefaultsDoHeidiSqlComAspasDuplicadasENulls()
+    public void HeidiSqlDefaultsWithDoubledQuotesAndNulls()
     {
-        const string csv = "id;name;note\r\n1;\"a;b\";x\r\n2;\"diz \"\"olá\"\"\";\\N\r\n3;NULL;\"NULL\"\r\n4;\"linha\r\nnova\";\r\n";
+        const string csv = "id;name;note\r\n1;\"a;b\";x\r\n2;\"says \"\"olá\"\"\";\\N\r\n3;NULL;\"NULL\"\r\n4;\"two\r\nlines\";\r\n";
         var rows = ReadAll(csv, new CsvOptions());
 
         Assert.Equal(4, rows.Count);
         Same(["1", "a;b", "x"], rows[0]);
-        Same(["2", "diz \"olá\"", null], rows[1]);
+        Same(["2", "says \"olá\"", null], rows[1]);
         Same(["3", null, "NULL"], rows[2]);
-        Same(["4", "linha\r\nnova", ""], rows[3]);
+        Same(["4", "two\r\nlines", ""], rows[3]);
     }
 
     [Theory]
@@ -23,19 +23,19 @@ public sealed class CsvTests
     [InlineData(2)]
     [InlineData(3)]
     [InlineData(17)]
-    public void MesmoResultadoComQualquerBuffer(int buffer)
+    public void SameResultWithAnyBuffer(int buffer)
     {
-        const string csv = "h1;h2\r\n\"a\"\"\";b\r\n\"x\r\ny\";\"\"\r\n\r\nz;\"w\"\r\nfim";
+        const string csv = "h1;h2\r\n\"a\"\"\";b\r\n\"x\r\ny\";\"\"\r\n\r\nz;\"w\"\r\nend";
         var expected = ReadAll(csv, new CsvOptions(), 4096);
         var actual = ReadAll(csv, new CsvOptions(), Math.Max(16, buffer), chunk: buffer);
 
         Assert.Equal(expected, actual);
         Assert.Equal(4, actual.Count);
-        Same(["fim"], actual[^1]);
+        Same(["end"], actual[^1]);
     }
 
     [Fact]
-    public void EscapeComBarraInvertidaETerminadoresPersonalizados()
+    public void BackslashEscapeAndCustomTerminators()
     {
         var options = new CsvOptions
         {
@@ -44,14 +44,14 @@ public sealed class CsvTests
             Escaper = "\\",
             IgnoreLines = 0,
         };
-        var rows = ReadAll("a\\tb\t\"c\\\"d\"\t\\N\n\\Nx\tsem\\\\barra\t\n", options);
+        var rows = ReadAll("a\\tb\t\"c\\\"d\"\t\\N\n\\Nx\tno\\\\backslash\t\n", options);
 
         Same(["a\tb", "c\"d", null], rows[0]);
-        Same(["Nx", "sem\\barra", ""], rows[1]);
+        Same(["Nx", "no\\backslash", ""], rows[1]);
     }
 
     [Fact]
-    public void RetomaSaltaOsRegistosJaLidos()
+    public void ResumeSkipsTheRecordsAlreadyRead()
     {
         const string csv = "h\r\n1\r\n2\r\n3\r\n4\r\n";
         var reader = new CsvReader(new StringReader(csv), new CsvOptions());
@@ -69,21 +69,21 @@ public sealed class CsvTests
     }
 
     [Fact]
-    public void InsertMultiRowComTiposDaColunaDeDestino()
+    public void MultiRowInsertWithTargetColumnTypes()
     {
         CsvTargetColumn[] columns = [new("price", true), new("name", false), new("qty", true)];
-        var batcher = new CsvInsertBatcher("loja", "t", columns, CsvDuplicates.Replace, lowPriority: true, localNumbers: new CultureInfo("pt-PT").NumberFormat);
+        var batcher = new CsvInsertBatcher("shop", "t", columns, CsvDuplicates.Replace, lowPriority: true, localNumbers: new CultureInfo("pt-PT").NumberFormat);
 
-        Assert.Null(batcher.Add(["1 234,5", "O'Neil\\", "7", "a mais"]));
+        Assert.Null(batcher.Add(["1 234,5", "O'Neil\\", "7", "extra"]));
         Assert.Null(batcher.Add(["abc", null]));
         var sql = batcher.Flush();
 
-        Assert.Equal("REPLACE LOW_PRIORITY INTO `loja`.`t` (`price`, `name`, `qty`) VALUES (1234.5, 'O\\'Neil\\\\', 7), ('abc', NULL, NULL)", sql);
+        Assert.Equal("REPLACE LOW_PRIORITY INTO `shop`.`t` (`price`, `name`, `qty`) VALUES (1234.5, 'O\\'Neil\\\\', 7), ('abc', NULL, NULL)", sql);
         Assert.Null(batcher.Flush());
     }
 
     [Fact]
-    public void InsertFechaPorTamanhoOuPorLinhas()
+    public void InsertClosesBySizeOrByRows()
     {
         var byRows = new CsvInsertBatcher("d", "t", [new CsvTargetColumn("a", true)], CsvDuplicates.InsertIgnore, maxRows: 2);
         var statements = Enumerable.Range(1, 5).Select(i => byRows.Add([i.ToString(CultureInfo.InvariantCulture)])).ToList();
@@ -101,7 +101,7 @@ public sealed class CsvTests
     }
 
     [Fact]
-    public void JournalGuardaELeOEstado()
+    public void JournalSavesAndReadsTheState()
     {
         var directory = Path.Combine(Path.GetTempPath(), "eunomia-tests", Guid.NewGuid().ToString("N"));
         try
@@ -115,7 +115,7 @@ public sealed class CsvTests
                 Id = Guid.NewGuid(),
                 Kind = TransferJobKind.SqlImport,
                 Session = "local",
-                Database = "loja",
+                Database = "shop",
                 Path = input,
                 InputSize = 3 * 1024 * 1024,
                 InputFingerprint = TransferJournal.Fingerprint(input),
@@ -150,7 +150,7 @@ public sealed class CsvTests
     }
 
     private static void Same(string?[] expected, string?[]? actual) =>
-        Assert.Equal(Show(expected), actual is null ? "(fim)" : Show(actual));
+        Assert.Equal(Show(expected), actual is null ? "(end)" : Show(actual));
 
     private static string Show(string?[] row) => string.Join(" | ", row.Select(v => v ?? "<NULL>"));
 

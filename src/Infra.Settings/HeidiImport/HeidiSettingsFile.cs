@@ -73,14 +73,14 @@ public static class HeidiPassword
         var saltChar = unicode ? encoded[^2] : encoded[^1];
         if (!char.IsAsciiDigit(saltChar))
         {
-            throw new FormatException("Password do HeidiSQL inválida.");
+            throw new FormatException("Invalid HeidiSQL password.");
         }
         var salt = saltChar - '0';
         var body = encoded[..^(unicode ? 2 : 1)];
         var width = unicode ? 4 : 2;
         if (body.Length % width != 0)
         {
-            throw new FormatException("Password do HeidiSQL inválida.");
+            throw new FormatException("Invalid HeidiSQL password.");
         }
         var sb = new StringBuilder(body.Length / width);
         for (var i = 0; i < body.Length; i += width)

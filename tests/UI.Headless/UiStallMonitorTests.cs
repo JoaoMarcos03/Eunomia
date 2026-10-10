@@ -26,7 +26,7 @@ public sealed class UiStallMonitorTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task UmBloqueioDe400MsContaComoStall()
+    public async Task A400MsBlockCountsAsAStall()
     {
         var log = new Capture();
         using var monitor = new UiStallMonitor(log);

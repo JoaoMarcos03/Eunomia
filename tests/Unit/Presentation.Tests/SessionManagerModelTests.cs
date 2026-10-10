@@ -27,7 +27,7 @@ public sealed class SessionManagerModelTests
     }
 
     [Fact]
-    public void SaveSoComAlteracoes()
+    public void SaveOnlyWithChanges()
     {
         var (m, store, _) = Create();
         m.SelectSession(m.Catalog.Sessions[0]);
@@ -45,7 +45,7 @@ public sealed class SessionManagerModelTests
     }
 
     [Fact]
-    public void SoAPasswordMudadaNaoPerguntaENaoGrava()
+    public void OnlyAChangedPasswordDoesNotAskOrSave()
     {
         var (m, _, secrets) = Create();
         var s = m.Catalog.Sessions[0];
@@ -63,7 +63,7 @@ public sealed class SessionManagerModelTests
     }
 
     [Fact]
-    public void NovaSessaoNoFolderSelecionadoComPasswordVazia()
+    public void NewSessionInTheSelectedFolderWithAnEmptyPassword()
     {
         var (m, store, secrets) = Create();
         m.SelectSession(m.Catalog.Sessions[0]);
@@ -78,7 +78,7 @@ public sealed class SessionManagerModelTests
     }
 
     [Fact]
-    public void ApagarFolderLimpaCredenciais()
+    public void DeletingAFolderCleansUpCredentials()
     {
         var (m, _, secrets) = Create();
         var id = m.Catalog.Sessions[0].Id;
@@ -92,7 +92,7 @@ public sealed class SessionManagerModelTests
     }
 
     [Fact]
-    public void DuplicateGravaOsValoresDoFormulario()
+    public void DuplicateSavesTheFormValues()
     {
         var (m, _, secrets) = Create();
         m.SelectSession(m.Catalog.Sessions[0]);
@@ -108,7 +108,7 @@ public sealed class SessionManagerModelTests
     }
 
     [Fact]
-    public void PromptForCredentialsNaoGuardaPassword()
+    public void PromptForCredentialsDoesNotKeepThePassword()
     {
         var (m, _, secrets) = Create();
         var s = m.Catalog.Sessions[0];
@@ -123,7 +123,7 @@ public sealed class SessionManagerModelTests
     }
 
     [Fact]
-    public void RenameEMoveGravam()
+    public void RenameAndMoveSave()
     {
         var (m, store, _) = Create();
         var tree = m.Catalog.BuildTree();
@@ -141,7 +141,7 @@ public sealed class SessionManagerModelTests
     [InlineData(60, "1 minute ago")]
     [InlineData(7200, "2 hours ago")]
     [InlineData(86400 * 3, "3 days ago")]
-    public void LastConnectComoTextoRelativo(int seconds, string expected)
+    public void LastConnectAsRelativeText(int seconds, string expected)
     {
         var now = new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero);
 

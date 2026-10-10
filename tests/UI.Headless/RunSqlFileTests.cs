@@ -23,10 +23,10 @@ public sealed class RunSqlFileTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FicheiroGrandeCorreDiretoEParadoNumErroRetoma()
+    public async Task LargeFileRunsDirectlyAndResumesAfterStoppingOnAnError()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_rf_");
         var dir = Path.Combine(Path.GetTempPath(), "eunomia-it", "runfile-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(dir);
@@ -83,7 +83,7 @@ public sealed class RunSqlFileTests
 
             // "Run SQL file..." with Stop on errors: stops at the failing statement; Resume continues from it.
             var broken = Path.Combine(dir, "broken.sql");
-            await File.WriteAllTextAsync(broken, "INSERT INTO u VALUES (1);\r\nINSERT INTO u VALUES (2);\r\nINSERT INTO falta VALUES (1);\r\nINSERT INTO u VALUES (3);\r\n");
+            await File.WriteAllTextAsync(broken, "INSERT INTO u VALUES (1);\r\nINSERT INTO u VALUES (2);\r\nINSERT INTO missing_table VALUES (1);\r\nINSERT INTO u VALUES (3);\r\n");
             await ExecAsync(cs, $"CREATE TABLE `{db}`.u (a INT)");
             window.OpenSqlFilesOverride = () => [broken];
             var running = context.Commands.ExecuteAsync("query.runFile").AsTask();
@@ -93,12 +93,12 @@ public sealed class RunSqlFileTests
             Assert.Single(journal.List());
             Assert.Equal("2", await ScalarAsync(cs, $"SELECT COUNT(*) FROM `{db}`.u"));
 
-            await ExecAsync(cs, $"CREATE TABLE `{db}`.falta (a INT)");
+            await ExecAsync(cs, $"CREATE TABLE `{db}`.missing_table (a INT)");
             stopped.ResumeButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await WaitAsync(() => window.RunWindow is { Running: false } w && w.Line1.StartsWith("1 file(s) processed", StringComparison.Ordinal) ? "ok" : null);
             await running;
             Assert.Equal("3", await ScalarAsync(cs, $"SELECT COUNT(*) FROM `{db}`.u"));
-            Assert.Equal("1", await ScalarAsync(cs, $"SELECT COUNT(*) FROM `{db}`.falta"));
+            Assert.Equal("1", await ScalarAsync(cs, $"SELECT COUNT(*) FROM `{db}`.missing_table"));
             Assert.Empty(journal.List());
             window.RunWindow?.Close();
             window.Close();

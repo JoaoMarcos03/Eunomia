@@ -36,13 +36,13 @@ public sealed class TableEditingSafetyTests
     [InlineData("datetime(6)", "datetime", false)]
     [InlineData("enum('a','b')", "enum('a')", false)]
     [InlineData("varchar(10)", "int(11)", false)]
-    public void AlargarNaoPedeConfirmacao(string before, string after, bool widening)
+    public void WideningDoesNotAskForConfirmation(string before, string after, bool widening)
     {
         Assert.Equal(widening, TableEditing.IsWidening(before, after));
     }
 
     [Fact]
-    public void AvisaColunasApagadasTiposEstreitadosECharsets()
+    public void WarnsAboutDroppedColumnsNarrowedTypesAndCharsets()
     {
         var before = Table(Column("id", "int(11)"), Column("name", "varchar(60)", "utf8mb4_general_ci"), Column("notes", "text"), Column("price", "double"));
         var after = Table(
@@ -61,7 +61,7 @@ public sealed class TableEditingSafetyTests
     }
 
     [Fact]
-    public void ModoEstritoParaODdl()
+    public void StrictModeForTheDdl()
     {
         var dialect = new MySqlDialect(MySqlConnectionFactory.ParseIdentity("10.4.32-MariaDB", null));
         var (enter, restore) = dialect.DdlSession("NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION", 10)!.Value;

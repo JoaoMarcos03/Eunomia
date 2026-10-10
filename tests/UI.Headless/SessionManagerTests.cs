@@ -62,7 +62,7 @@ public sealed class SessionManagerTests
     [AvaloniaTheory]
     [InlineData("session-manager-start-light", "light")]
     [InlineData("session-manager-start-dark", "dark")]
-    public void AspetoDoStart(string name, string theme)
+    public void StartTabLook(string name, string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var (window, _, _) = Open(theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light);
@@ -78,7 +78,7 @@ public sealed class SessionManagerTests
     [AvaloniaTheory]
     [InlineData("session-manager-light", "light")]
     [InlineData("session-manager-dark", "dark")]
-    public void Aspeto(string name, string theme)
+    public void Look(string name, string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var (window, _, _) = Open(theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light);
@@ -92,7 +92,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void FoldersNoTopoEOrdenados()
+    public void FoldersOnTopAndSorted()
     {
         var (window, _, _) = Open();
 
@@ -102,7 +102,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void EditarAtivaOSaveECtrlSGrava()
+    public void EditingEnablesSaveAndCtrlSSaves()
     {
         var (window, model, store) = Open();
         window.SessionList.FocusedNode = Node(window, "localhost");
@@ -123,7 +123,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void FiltroMantemOsFoldersPais()
+    public void FilterKeepsTheParentFolders()
     {
         var (window, _, _) = Open();
 
@@ -136,7 +136,7 @@ public sealed class SessionManagerTests
     }
 
     [AvaloniaFact]
-    public void FolderSelecionadoMostraSoOStart()
+    public void SelectedFolderShowsOnlyStart()
     {
         var (window, _, _) = Open();
 

@@ -15,42 +15,42 @@ public sealed class SqlExportDialogTests
     private static DbObjectInfo O(string database, string name, DbObjectKind kind) => new(new DbObjectRef(database, database, name, kind), RowsEstimate: 10);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task BaseFocadaMarcadaOpcoesEProgresso()
+    public async Task FocusedDatabaseCheckedOptionsAndProgress()
     {
-        var settings = new SqlExportSettings { CreateTables = true, Data = 2, Filenames = [@"C:\dumps\loja.sql"], ZipFilenames = [@"C:\dumps\loja.zip"] };
+        var settings = new SqlExportSettings { CreateTables = true, Data = 2, Filenames = [@"C:\dumps\shop.sql"], ZipFilenames = [@"C:\dumps\shop.zip"] };
         var objects = new Dictionary<string, IReadOnlyList<DbObjectInfo>>
         {
-            ["loja"] = [O("loja", "clientes", DbObjectKind.Table), O("loja", "p1", DbObjectKind.Procedure), O("loja", "v", DbObjectKind.View)],
-            ["outra"] = [O("outra", "t", DbObjectKind.Table)],
+            ["shop"] = [O("shop", "customers", DbObjectKind.Table), O("shop", "p1", DbObjectKind.Procedure), O("shop", "v", DbObjectKind.View)],
+            ["other"] = [O("other", "t", DbObjectKind.Table)],
         };
         SqlExportRequest? requested = null;
         var dialog = new SqlExportDialog(
             settings,
-            ["loja", "outra"],
+            ["shop", "other"],
             (db, _) => Task.FromResult(objects[db]),
             (request, progress, _) =>
             {
                 requested = request;
                 SqlExportItemProgress[] items =
                 [
-                    new("loja", "clientes", DbObjectKind.Table, 5, 10, TimeSpan.FromSeconds(1.5), SqlExportItemState.Done, null),
-                    new("loja", "v", DbObjectKind.View, 0, 0, TimeSpan.FromSeconds(0.1), SqlExportItemState.Done, null),
+                    new("shop", "customers", DbObjectKind.Table, 5, 10, TimeSpan.FromSeconds(1.5), SqlExportItemState.Done, null),
+                    new("shop", "v", DbObjectKind.View, 0, 0, TimeSpan.FromSeconds(0.1), SqlExportItemState.Done, null),
                 ];
                 progress.Report(new SqlExportProgress(items, 1234, TimeSpan.FromSeconds(1)));
-                return Task.FromResult(new SqlExportResult(false, 2048, items, "texto", TimeSpan.FromSeconds(2)));
+                return Task.FromResult(new SqlExportResult(false, 2048, items, "text", TimeSpan.FromSeconds(2)));
             },
-            initialDatabase: "loja",
+            initialDatabase: "shop",
             initialObjects: null);
         dialog.Show();
         await dialog.Loading;
 
         // The focused database comes fully checked; the recent entry of the chosen output fills in the name.
-        var loja = (CheckBox)((TreeViewItem)dialog.Tree.Items[0]!).Header!;
-        Assert.Equal("loja", ((TextBlock)loja.Content!).Text);
-        Assert.True(loja.IsChecked);
-        Assert.Equal(@"C:\dumps\loja.sql", dialog.PathBox.Text);
+        var shop = (CheckBox)((TreeViewItem)dialog.Tree.Items[0]!).Header!;
+        Assert.Equal("shop", ((TextBlock)shop.Content!).Text);
+        Assert.True(shop.IsChecked);
+        Assert.Equal(@"C:\dumps\shop.sql", dialog.PathBox.Text);
         dialog.OutputCombo.SelectedIndex = 1;
-        Assert.Equal(@"C:\dumps\loja.zip", dialog.PathBox.Text);
+        Assert.Equal(@"C:\dumps\shop.zip", dialog.PathBox.Text);
 
         // Drop implies Create and shows in bold as "Drop!!"; turning Create off turns Drop off.
         dialog.DropTablesBox.IsChecked = true;
@@ -61,8 +61,8 @@ public sealed class SqlExportDialogTests
         dialog.CreateTablesBox.IsChecked = true;
 
         // Unchecking an object leaves the database at "some".
-        dialog.SetObjectChecked("loja", "p1", false);
-        Assert.Null(loja.IsChecked);
+        dialog.SetObjectChecked("shop", "p1", false);
+        Assert.Null(shop.IsChecked);
 
         dialog.OutputCombo.SelectedIndex = 3;
         Assert.False(dialog.PathBox.IsEnabled);
@@ -72,8 +72,8 @@ public sealed class SqlExportDialogTests
         Assert.NotNull(requested);
         Assert.Equal(SqlExportTarget.Clipboard, requested.Target);
         var database = Assert.Single(requested.Databases);
-        Assert.Equal("loja", database.Name);
-        Assert.Equal(["clientes", "v"], database.Objects.Select(o => o.Ref.Name));
+        Assert.Equal("shop", database.Name);
+        Assert.Equal(["customers", "v"], database.Objects.Select(o => o.Ref.Name));
         Assert.True(requested.Dump.CreateTables);
         Assert.False(requested.Dump.DropTables);
         Assert.Equal(DumpDataMode.Insert, requested.Dump.Data);
@@ -83,7 +83,7 @@ public sealed class SqlExportDialogTests
 
         var rows = dialog.ResultRows;
         Assert.Equal(2, rows.Count);
-        Assert.Equal("clientes", rows[0][1].Text);
+        Assert.Equal("customers", rows[0][1].Text);
         Assert.StartsWith("5 / 50%", rows[0][2].Text, StringComparison.Ordinal);
         Assert.Equal("v (view)", rows[1][1].Text);
         Assert.Equal("done", rows[1][2].Text);

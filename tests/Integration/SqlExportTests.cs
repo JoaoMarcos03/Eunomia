@@ -46,7 +46,7 @@ public sealed class SqlExportTests : IAsyncLifetime
                 "gen INT AS (i * 2) VIRTUAL)",
             $"INSERT INTO {db}.typed (i, d, f, fl, b, bin, bl, dt, ts, tm, t, e, s, u, pt) VALUES " +
                 "(-7, -1234.5, 0.1, 0.1, b'0101', 0xCAFE, '', '2026-10-06 12:34:56.789', '2026-10-06 12:00:00', '-01:02:03', " +
-                "'it''s \\\\ \"ok\"\\nnova linha\\0fim ação', 'b', 'x,y', 18446744073709551615, ST_GeomFromText('POINT(1 2)')), " +
+                "'it''s \\\\ \"ok\"\\nnew line\\0end ação', 'b', 'x,y', 18446744073709551615, ST_GeomFromText('POINT(1 2)')), " +
                 "(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL), " +
                 "(0, 0, 1e300, -3.5, b'0', '', 0x00FF00, '1000-01-01 00:00:00', NULL, '838:59:59', '', 'a', '', 0, NULL)",
             $"CREATE TABLE {db}.big (id INT PRIMARY KEY, txt VARCHAR(100))",
@@ -65,7 +65,7 @@ public sealed class SqlExportTests : IAsyncLifetime
             "CREATE VIEW v0 AS SELECT id FROM v1 WHERE id > 1",
             "CREATE FUNCTION f1(x INT) RETURNS INT DETERMINISTIC RETURN x + 1",
             "CREATE PROCEDURE p1() BEGIN SELECT 1; SELECT 2; END",
-            "CREATE TRIGGER trg BEFORE INSERT ON nokey FOR EACH ROW SET NEW.b = COALESCE(NEW.b, 'novo')",
+            "CREATE TRIGGER trg BEFORE INSERT ON nokey FOR EACH ROW SET NEW.b = COALESCE(NEW.b, 'new')",
         })
         {
             await handle.ExecuteNonQueryAsync(sql, Ct);
@@ -136,7 +136,7 @@ public sealed class SqlExportTests : IAsyncLifetime
         Assert.Equal(2L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM `{copy}`.v0"), System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal(8L, Convert.ToInt64(await ScalarAsync($"SELECT `{copy}`.f1(7)"), System.Globalization.CultureInfo.InvariantCulture));
         await ExecAsync($"INSERT INTO `{copy}`.nokey (a) VALUES (3)");
-        Assert.Equal("novo", await ScalarAsync($"SELECT b FROM `{copy}`.nokey WHERE a = 3"));
+        Assert.Equal("new", await ScalarAsync($"SELECT b FROM `{copy}`.nokey WHERE a = 3"));
     }
 
     private async Task<string> ChecksumAsync(string database, string table) =>
@@ -152,7 +152,7 @@ public sealed class SqlExportTests : IAsyncLifetime
             Ct);
 
     [Fact]
-    public async Task FicheiroComSnapshotReimportaIgual()
+    public async Task FileWithSnapshotReimportsIdentically()
     {
         TestServer.RequireServer();
         var path = Path.Combine(_directory, "dump.sql");
@@ -181,7 +181,7 @@ public sealed class SqlExportTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ZipEmParaleloTemOMesmoTextoQueOFicheiroSequencial()
+    public async Task ParallelZipHasTheSameTextAsTheSequentialFile()
     {
         TestServer.RequireServer();
         var sequential = Path.Combine(_directory, "seq.sql");
@@ -201,7 +201,7 @@ public sealed class SqlExportTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DiretorioClipboardECancel()
+    public async Task DirectoryClipboardAndCancel()
     {
         TestServer.RequireServer();
         var directory = Path.Combine(_directory, "dir");

@@ -42,7 +42,7 @@ public sealed class RawTextTests
     }
 
     [Fact]
-    public void RawNaoPerdeDigitosNemBytes()
+    public void RawLosesNoDigitsOrBytes()
     {
         var block = Sample();
         Assert.Equal("3.141592653589793", DisplayFormatter.FormatRaw(block, 0, 0));
@@ -62,7 +62,7 @@ public sealed class RawTextTests
     }
 
     [Fact]
-    public void RawNaoDependeDaCultura()
+    public void RawDoesNotDependOnCulture()
     {
         var previous = CultureInfo.CurrentCulture;
         try
@@ -78,7 +78,7 @@ public sealed class RawTextTests
     }
 
     [Fact]
-    public void DisplayMostraTodosOsDigitosDoDoubleEBitsEmBinario()
+    public void DisplayShowsEveryDoubleDigitAndBitsInBinary()
     {
         var block = Sample();
         var pt = new DisplayFormatter(CultureInfo.GetCultureInfo("pt-PT"));

@@ -10,18 +10,18 @@ public sealed class StreamingSqlSplitterTests
     [
         "SELECT 1; SELECT 2;\nSELECT 3",
         "INSERT INTO t VALUES ('a;b', \"c;d\", `e;f`);\nSELECT 'it''s', 'x\\'y;', \"q\"\"r;\";\n",
-        "-- comentário; com ponto e vírgula\nSELECT 1; # outro;\nSELECT 2 /* bloco ; \n continua; */ ;\n--\nSELECT 3;--x\nSELECT 4",
+        "-- comment; with a semicolon\nSELECT 1; # another;\nSELECT 2 /* block ; \n continues; */ ;\n--\nSELECT 3;--x\nSELECT 4",
         "SET @a = 1;\nDELIMITER //\nCREATE PROCEDURE p()\nBEGIN\n  SELECT 1;\n  SELECT 2;\nEND//\nDELIMITER ;\nCALL p();\n",
         "  DELIMITER $$\r\nSELECT 1; SELECT 2$$\r\n\tdelimiter ;\r\nSELECT 3;\r\n",
         "SELECT 1; DELIMITER //\nSELECT 2;",
-        "/*!40101 SET NAMES utf8 */;\n/* só comentário */;\n;;\nSELECT '\n;\n';\n",
+        "/*!40101 SET NAMES utf8 */;\n/* just a comment */;\n;;\nSELECT '\n;\n';\n",
         "DELIMITER\nSELECT 1;\nDELIMITERX //\nSELECT 2;\nDELIMITER '\nSELECT 3;",
-        "SELECT 'aberta; sem fim",
-        "SELECT 1 /* aberto ; ",
+        "SELECT 'open; no end",
+        "SELECT 1 /* open ; ",
         "SELECT a-b; SELECT a--b;\nSELECT c- -d; SELECT 1 --",
         "SELECT '\\\\'; SELECT '\\\n;'; SELECT `a\\`;",
         "DELIMITER ;;\nSELECT 1;;\nSELECT 2;\nSELECT 3;;\nDELIMITER ;\nSELECT 4;",
-        "SELECT 1;\n\n\n  SELECT 2  ;  \n\t-- fim\n",
+        "SELECT 1;\n\n\n  SELECT 2  ;  \n\t-- end\n",
         "DELIMITER //",
         "SELECT 'ação', \"€\"; SELECT `ü`;",
     ];
@@ -41,7 +41,7 @@ public sealed class StreamingSqlSplitterTests
 
     [Theory]
     [MemberData(nameof(Cases))]
-    public void IgualAoSplitterComQualquerTamanhoDePedaco(int script, int chunk)
+    public void SameAsTheSplitterWithAnyChunkSize(int script, int chunk)
     {
         var text = Scripts[script];
         var expected = SqlSplitter.Split(text);
@@ -52,7 +52,7 @@ public sealed class StreamingSqlSplitterTests
 
     [Theory]
     [MemberData(nameof(Cases))]
-    public void RetomaEmCadaPontoDaASequenciaQueFalta(int script, int chunk)
+    public void ResumingAtEachPointGivesTheMissingSequence(int script, int chunk)
     {
         var text = Scripts[script];
         var all = SplitInChunks(text, 100_000, new StreamingSqlSplitter());
@@ -65,7 +65,7 @@ public sealed class StreamingSqlSplitterTests
     }
 
     [Fact]
-    public void DelimiterMantemSeNaFronteiraDoPedaco()
+    public void DelimiterSurvivesTheChunkBoundary()
     {
         // HeidiSQL's bug (appendix B §4.3): DELIMITER is lost when the 20 MB block ends inside it.
         var body = new StringBuilder("DELIMITER //\n");
@@ -81,7 +81,7 @@ public sealed class StreamingSqlSplitterTests
     }
 
     [Fact]
-    public void RetomaDepoisDeUmaLinhaDelimiterUsaONovoDelimitador()
+    public void ResumingAfterADelimiterLineUsesTheNewDelimiter()
     {
         const string text = "SELECT 1\nDELIMITER //\nSELECT 2; SELECT 3//\n";
         var all = SplitInChunks(text, 100_000, new StreamingSqlSplitter());
@@ -94,7 +94,7 @@ public sealed class StreamingSqlSplitterTests
     }
 
     [Fact]
-    public void SoAInstrucaoPorAcabarFicaEmMemoria()
+    public void OnlyTheUnfinishedStatementStaysInMemory()
     {
         var splitter = new StreamingSqlSplitter();
         var output = new List<StreamedStatement>();

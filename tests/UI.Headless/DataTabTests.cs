@@ -21,10 +21,10 @@ public sealed class DataTabTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FiltroWhereRecentesEMultiColuna()
+    public async Task WhereFilterRecentAndMultiColumn()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_df_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT PRIMARY KEY, name VARCHAR(20)) ENGINE=InnoDB; " +
@@ -125,10 +125,10 @@ public sealed class DataTabTests
     /// filter again 500 ms later, with the focus and the scroll going back to the first row in the middle of the work.
     /// </summary>
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FiltroLocalVazioNaoMexeNoFocoNemNoScroll()
+    public async Task EmptyLocalFilterLeavesFocusAndScrollAlone()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_lf_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT PRIMARY KEY); " +
             $"INSERT INTO `{db}`.t SELECT a.n + (b.n * 10) + (c.n * 100) + 1 FROM {Digits} a, {Digits} b, {Digits} c;");
@@ -187,10 +187,10 @@ public sealed class DataTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task PaginaOrdenaEEscondeColunas()
+    public async Task PagesSortsAndHidesColumns()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_dt_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT PRIMARY KEY, name VARCHAR(20), body TEXT) ENGINE=InnoDB; " +

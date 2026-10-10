@@ -17,13 +17,13 @@ public sealed class LayeredLayoutTests
         {
             for (var j = i + 1; j < points.Count; j++)
             {
-                Assert.False(Overlap(points[i], sizes[i], points[j], sizes[j]), $"Nós {i} e {j} sobrepõem-se.");
+                Assert.False(Overlap(points[i], sizes[i], points[j], sizes[j]), $"Nodes {i} and {j} overlap.");
             }
         }
     }
 
     [Fact]
-    public void CadeiaDaEsquerdaParaADireitaSemSobreposicoes()
+    public void ChainLeftToRightWithoutOverlaps()
     {
         LayoutSize[] sizes = [new(120, 80), new(100, 200), new(140, 60), new(120, 120)];
         // 0 → 1 → 2, 0 → 3: the parent stays to the left of its children.
@@ -33,14 +33,14 @@ public sealed class LayeredLayoutTests
         AssertNoOverlap(points, sizes);
         foreach (var e in edges)
         {
-            Assert.True(points[e.From].X + sizes[e.From].Width <= points[e.To].X, $"{e.From} devia estar à esquerda de {e.To}.");
+            Assert.True(points[e.From].X + sizes[e.From].Width <= points[e.To].X, $"{e.From} should be to the left of {e.To}.");
         }
         Assert.Equal(0, points.Min(p => p.X));
         Assert.Equal(0, points.Min(p => p.Y));
     }
 
     [Fact]
-    public void CiclosArestasRepetidasEAutoLigacoes()
+    public void CyclesRepeatedEdgesAndSelfLinks()
     {
         LayoutSize[] sizes = [new(100, 50), new(100, 50), new(100, 50)];
         LayoutEdge[] edges = [new(0, 1), new(1, 2), new(2, 0), new(1, 1), new(0, 1), new(5, 0)];
@@ -51,7 +51,7 @@ public sealed class LayeredLayoutTests
     }
 
     [Fact]
-    public void ComponentesSeparadosEIsoladosNumaGrelha()
+    public void SeparateComponentsAndIsolatedNodesInAGrid()
     {
         var sizes = Enumerable.Range(0, 12).Select(i => new LayoutSize(100 + (i * 3), 40 + (i * 5))).ToArray();
         LayoutEdge[] edges = [new(0, 1), new(1, 2), new(3, 4), new(5, 4)];
@@ -64,7 +64,7 @@ public sealed class LayeredLayoutTests
     }
 
     [Fact]
-    public void FilhoAlinhadoComOPaiQuandoHaEspaco()
+    public void ChildAlignedWithParentWhenThereIsRoom()
     {
         LayoutSize[] sizes = [new(100, 300), new(100, 60)];
         var points = Layout.Layout(sizes, [new LayoutEdge(0, 1)], CancellationToken.None);
@@ -74,7 +74,7 @@ public sealed class LayeredLayoutTests
     }
 
     [Fact]
-    public void DeterministicoECancelavel()
+    public void DeterministicAndCancellable()
     {
         var (sizes, edges) = Schema(200, seed: 7);
         Assert.Equal(Layout.Layout(sizes, edges, CancellationToken.None), Layout.Layout(sizes, edges, CancellationToken.None));
@@ -84,7 +84,7 @@ public sealed class LayeredLayoutTests
     [Theory]
     [InlineData(300)]
     [InlineData(1000)]
-    public void EsquemasGrandesSemSobreposicoesEDentroDoTempo(int tables)
+    public void LargeSchemasWithoutOverlapsAndWithinTime(int tables)
     {
         var (sizes, edges) = Schema(tables, seed: tables);
         Layout.Layout(sizes, edges, CancellationToken.None);
@@ -93,7 +93,7 @@ public sealed class LayeredLayoutTests
         clock.Stop();
 
         AssertNoOverlap(points, sizes);
-        TestContext.Current.TestOutputHelper?.WriteLine($"{tables} tabelas, {edges.Length} FKs: {clock.ElapsedMilliseconds} ms");
+        TestContext.Current.TestOutputHelper?.WriteLine($"{tables} tables, {edges.Length} FKs: {clock.ElapsedMilliseconds} ms");
         // Section 17.5: 300 tables ≤ 2 s (with room for slow machines and Debug, 1,000 too).
         Assert.True(clock.Elapsed < TimeSpan.FromSeconds(tables <= 300 ? 2 : 6), $"{clock.ElapsedMilliseconds} ms");
     }

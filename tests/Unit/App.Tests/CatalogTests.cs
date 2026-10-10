@@ -13,7 +13,7 @@ public sealed class CatalogTests
             .ToList();
 
     [Fact]
-    public void AsCento163ActionsDoHeidiSqlTemComando()
+    public void All163HeidiSqlActionsHaveACommand()
     {
         var actions = HeidiSqlActions();
         Assert.Equal(163, actions.Count);
@@ -24,7 +24,7 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void CadaActionMapeiaParaUmSoComando()
+    public void EachActionMapsToASingleCommand()
     {
         var duplicated = Registry.All.Where(c => c.HeidiSqlAction is not null)
             .GroupBy(c => c.HeidiSqlAction, StringComparer.OrdinalIgnoreCase)
@@ -36,7 +36,7 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void Tem16CopyAsPelaOrdemDoHeidiSql()
+    public void Has16CopyAsInHeidiSqlOrder()
     {
         Assert.Equal(
             ["Excel CSV", "Delimited text", "HTML table", "XML", "SQL INSERTs", "SQL INSERT IGNOREs", "SQL REPLACEs", "SQL DELETEs/INSERTs",
@@ -45,7 +45,7 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void AtalhosPorOmissaoNaoTemConflitos()
+    public void DefaultShortcutsHaveNoConflicts()
     {
         Assert.Empty(Registry.FindConflicts());
     }
@@ -94,7 +94,7 @@ public sealed class CatalogTests
     [InlineData("actSQLhelp", "F1")]
     [InlineData("actPrintList", "Ctrl+P")]
     [InlineData("actNewWindow", "Ctrl+N")]
-    public void AtalhosMaisUsadosDaFamK01(string action, string shortcut)
+    public void MostUsedShortcutsOfFamK01(string action, string shortcut)
     {
         var command = Registry.FindByHeidiSqlAction(action);
 
@@ -103,7 +103,7 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void AtalhosDeItensDeMenu()
+    public void MenuItemShortcuts()
     {
         Assert.Equal(KeyChord.Parse("Alt+Enter"), Registry.Get("object.edit").DefaultShortcut);
         Assert.Equal(KeyChord.Parse("Del"), Registry.Get("host.killProcess").DefaultShortcut);
@@ -111,13 +111,13 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void CategoriasSaoAsDoHeidiSql()
+    public void CategoriesAreHeidiSqls()
     {
         Assert.All(Registry.All, c => Assert.Contains(c.Category, HeidiSqlCatalog.Categories));
     }
 
     [Fact]
-    public void MenusReferemComandosExistentes()
+    public void MenusReferToExistingCommands()
     {
         var unknown = MainMenuLayout.ReferencedCommandIds().Where(id => !Registry.TryGet(id, out _)).ToList();
 
@@ -125,13 +125,13 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void MenusPrincipaisPelaOrdemDoHeidiSql()
+    public void MainMenusInHeidiSqlOrder()
     {
         Assert.Equal(["_File", "_Edit", "_Display", "_Search", "_Query", "_Tools", "_Go to", "_Help"], MainMenuLayout.Menus.Select(m => m.Caption));
     }
 
     [Fact]
-    public void MenuFilePelaOrdemDoAnexoC()
+    public void FileMenuInAppendixCOrder()
     {
         var file = MainMenuLayout.Menus[0].Items.Select(Describe);
 
@@ -143,7 +143,7 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void ToolbarSoComOUsoDiario()
+    public void ToolbarOnlyWithEverydayUse()
     {
         var buttons = MainMenuLayout.Toolbar.Where(t => !t.IsSeparator).Select(t => t.CommandId).ToList();
 
@@ -156,7 +156,7 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void ItensForaDoMvpFicamComVersao()
+    public void ItemsOutsideTheMvpGetAVersion()
     {
         foreach (var id in new[] { "tools.userManager", "tools.flushHosts", "tools.bulkTableEditor" })
         {

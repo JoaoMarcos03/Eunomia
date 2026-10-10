@@ -22,7 +22,7 @@ public sealed class QueryHelpersPanelTests : IDisposable
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SeccoesFiltroInsertSnippetsEHistorico()
+    public async Task SectionsFilterInsertSnippetsAndHistory()
     {
         var settings = new AppSettings();
         settings.Query.SnippetsDirectory = Path.Combine(_dir, "snippets");

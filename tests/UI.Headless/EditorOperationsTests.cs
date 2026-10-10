@@ -21,7 +21,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void ComentaEDescomentaAsLinhasDaSelecao()
+    public void CommentsAndUncommentsTheSelectedLines()
     {
         var editor = Editor("SELECT 1;\n  SELECT 2;\n\nSELECT 3;");
         editor.Editor.Select(0, editor.Text.IndexOf("SELECT 3", StringComparison.Ordinal));
@@ -43,7 +43,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void MaiusculasMinusculasEMoverLinhas()
+    public void UpperLowerCaseAndMovingLines()
     {
         var editor = Editor("select name\nfrom people\nwhere 1");
         editor.Editor.CaretOffset = 2;
@@ -68,7 +68,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void AutoUppercaseForaDeStringsEComentarios()
+    public void AutoUppercaseOutsideStringsAndComments()
     {
         var editor = Editor(string.Empty);
         var window = (Window)TopLevel.GetTopLevel(editor)!;
@@ -92,7 +92,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void PreferencesSqlAplicaAsOpcoesAoEditor()
+    public void PreferencesSqlAppliesTheOptionsToTheEditor()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();
@@ -119,7 +119,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact]
-    public void AtalhosEMenuDoShell()
+    public void ShellShortcutsAndMenu()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();
@@ -144,7 +144,7 @@ public sealed class EditorOperationsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ReformatSqlComCtrlF8NumSoUndo()
+    public async Task ReformatSqlWithCtrlF8AsASingleUndo()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();

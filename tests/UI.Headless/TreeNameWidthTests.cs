@@ -9,7 +9,7 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class TreeNameWidthTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task NomeSoCortaQuandoNaoCabe()
+    public async Task NameIsOnlyCutWhenItDoesNotFit()
     {
         var model = new TreeModel(SyntheticTreeProvider.CreateSessions(), new SyntheticTreeProvider());
         var view = new DatabaseTreeView();

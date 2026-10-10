@@ -8,14 +8,14 @@ public sealed class SqlSplitterTests
     private static string[] Texts(string sql, string delimiter = ";") => [.. SqlSplitter.Split(sql, delimiter).Select(s => s.Text)];
 
     [Fact]
-    public void SeparaPeloDelimitador()
+    public void SplitsOnTheDelimiter()
     {
         Assert.Equal(["SELECT 1", "SELECT 2"], Texts("SELECT 1; SELECT 2"));
         Assert.Equal(["SELECT 1"], Texts("SELECT 1;;;"));
     }
 
     [Fact]
-    public void DelimitadorDentroDeStringsNaoConta()
+    public void DelimiterInsideStringsDoesNotCount()
     {
         var sql = "SELECT 'a;b', \"c;d\", `e;f`, 'it\\'s;', 'x''y;'; SELECT 3";
 
@@ -23,7 +23,7 @@ public sealed class SqlSplitterTests
     }
 
     [Fact]
-    public void DelimitadorDentroDeComentariosNaoConta()
+    public void DelimiterInsideCommentsDoesNotCount()
     {
         var sql = "SELECT 1 -- c; c\n; SELECT 2 # x;y\n; /* ; */ SELECT 3";
 
@@ -31,13 +31,13 @@ public sealed class SqlSplitterTests
     }
 
     [Fact]
-    public void DoisHifensSemEspacoNaoSaoComentario()
+    public void TwoHyphensWithoutSpaceAreNotAComment()
     {
         Assert.Equal(["SELECT 1--2", "SELECT 3"], Texts("SELECT 1--2; SELECT 3"));
     }
 
     [Fact]
-    public void DelimiterMudaODelimitadorENaoEhEnviado()
+    public void DelimiterChangesTheDelimiterAndIsNotSent()
     {
         var sql = "DELIMITER //\nCREATE PROCEDURE p() BEGIN SELECT 1; SELECT 2; END //\ndelimiter ;\nSELECT 3;";
 
@@ -49,14 +49,14 @@ public sealed class SqlSplitterTests
     }
 
     [Fact]
-    public void ApenasComentariosNaoSaoEnviadosMasCondicionaisSim()
+    public void OnlyCommentsAreNotSentButConditionalOnesAre()
     {
-        Assert.Equal(["SELECT 1"], Texts("SELECT 1;\n-- fim\n/* nada */\n"));
+        Assert.Equal(["SELECT 1"], Texts("SELECT 1;\n-- end\n/* nothing */\n"));
         Assert.Equal(["/*!40101 SET NAMES utf8 */", "/*M!100100 SET x = 1 */"], Texts("/*!40101 SET NAMES utf8 */;\n/*M!100100 SET x = 1 */;"));
     }
 
     [Fact]
-    public void PosicoesELinhas()
+    public void PositionsAndLines()
     {
         var sql = "\n\n  SELECT 1;\nSELECT\n2;";
 
@@ -69,7 +69,7 @@ public sealed class SqlSplitterTests
     }
 
     [Fact]
-    public void QuebrasDeLinhaEmStringsContamParaAsLinhas()
+    public void LineBreaksInStringsCountForTheLines()
     {
         var statements = SqlSplitter.Split("SELECT 'a\nb';\nSELECT 2;");
 
@@ -77,7 +77,7 @@ public sealed class SqlSplitterTests
     }
 
     [Fact]
-    public void InstrucaoNoCaretOuAAnterior()
+    public void StatementAtTheCaretOrThePreviousOne()
     {
         var sql = "SELECT 1;\n\nSELECT 2;\n";
         var statements = SqlSplitter.Split(sql);
@@ -97,20 +97,20 @@ public sealed class SqlSplitterTests
     [InlineData("#")]
     [InlineData("'")]
     [InlineData("a b")]
-    public void DelimitadoresInvalidos(string delimiter)
+    public void InvalidDelimiters(string delimiter)
     {
         Assert.False(SqlSplitter.IsValidDelimiter(delimiter));
         Assert.Throws<ArgumentException>(() => SqlSplitter.Split("SELECT 1", delimiter));
     }
 
     [Fact]
-    public void StringSemFimFicaNumaInstrucao()
+    public void UnterminatedStringStaysInOneStatement()
     {
         Assert.Equal(["SELECT 'abc; SELECT 2"], Texts("SELECT 'abc; SELECT 2"));
     }
 
     [Fact]
-    public void DelimitadorDeVariosCaracteres()
+    public void MultiCharacterDelimiter()
     {
         Assert.Equal(["SELECT 1", "SELECT 2"], Texts("SELECT 1 $$ SELECT 2 $$", "$$"));
     }

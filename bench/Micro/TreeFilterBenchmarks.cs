@@ -23,7 +23,7 @@ public class TreeFilterBenchmarks
         }
         if (_model.Visible.Count(n => n.IsObject) != 10_000)
         {
-            throw new InvalidOperationException("A árvore devia ter 10.000 objetos.");
+            throw new InvalidOperationException("The tree should have 10,000 objects.");
         }
     }
 
@@ -35,7 +35,7 @@ public class TreeFilterBenchmarks
         return _model.Visible.Count;
     }
 
-    [Benchmark(Description = "Table filter com lookahead ^(?!sys|tmp)")]
+    [Benchmark(Description = "Table filter with lookahead ^(?!sys|tmp)")]
     public int Lookahead()
     {
         _model.SetTableFilter((_toggle++ & 1) == 0 ? "^(?!sys|tmp)" : "^(?!sys|tm)");

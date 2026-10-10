@@ -28,7 +28,7 @@ public sealed class DataTabQueryTests
     ];
 
     [Fact]
-    public void ComChaveCortaAsColunasLongasMenosAChave()
+    public void WithAKeyCutsLongColumnsExceptTheKey()
     {
         var table = Table(Columns, new IndexDefinition("PRIMARY", IndexKind.Primary, ["id"]));
 
@@ -43,7 +43,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void SemChaveTrazTudoCompletoComAsterisco()
+    public void WithoutAKeyBringsEverythingCompleteWithAsterisk()
     {
         var select = DataTabQuery.Build(Dialect, Table(Columns), ["name"], null, [], 0, 1000);
 
@@ -53,7 +53,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void UniqueNotNullServeDeChaveEColunasOcultasSaemDoSelect()
+    public void UniqueNotNullServesAsKeyAndHiddenColumnsLeaveTheSelect()
     {
         var columns = new[] { Col("code", "varchar(20)", nullable: false), Col("name", "varchar(50)"), Col("note", "varchar(50)") };
         var table = Table(columns, new IndexDefinition("u_name", IndexKind.Unique, ["name"]), new IndexDefinition("u_code", IndexKind.Unique, ["code"]));
@@ -66,7 +66,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void FiltroOrdenacaoEPaginacao()
+    public void FilterSortingAndPaging()
     {
         var table = Table([Col("id", "int(11)", false), Col("name", "varchar(10)")], new IndexDefinition("PRIMARY", IndexKind.Primary, ["id"]));
         IReadOnlyList<DataSort> sort = [new("name", false), new("id", true), new("desaparecida", false)];
@@ -78,17 +78,17 @@ public sealed class DataTabQueryTests
 
     [Theory]
     [InlineData("", null)]
-    [InlineData("  -- só um comentário\n /* e outro */ ", null)]
+    [InlineData("  -- only a comment\n /* and another */ ", null)]
     [InlineData("WHERE", null)]
     [InlineData("where id = 1", "id = 1")]
     [InlineData("WHEREVER = 1", "WHEREVER = 1")]
-    public void NormalizaOFiltro(string text, string? expected)
+    public void NormalisesTheFilter(string text, string? expected)
     {
         Assert.Equal(expected, DataTabQuery.NormalizeFilter(text));
     }
 
     [Fact]
-    public void CliqueNoHeaderAcumulaOrdenacao()
+    public void HeaderClickAccumulatesSorting()
     {
         var sort = DataTabQuery.ToggleSort([], "a", shift: false);
         sort = DataTabQuery.ToggleSort(sort, "b", shift: true);
@@ -101,7 +101,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void FormatosGravadosPorTabela()
+    public void FormatsSavedPerTable()
     {
         IReadOnlyList<DataSort> sort = [new("name", false), new("created_at", true)];
         Assert.Equal("0_name|1_created_at", DataTabQuery.FormatSort(sort));
@@ -111,7 +111,7 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
-    public void VariantesDaLabel()
+    public void LabelVariants()
     {
         var c = CultureInfo.InvariantCulture;
         Assert.Equal("shop.products: 272 rows total (exact)", DataTabQuery.CountLabel("shop", "products", new DataCount(272, false, false, null, false, true), c));

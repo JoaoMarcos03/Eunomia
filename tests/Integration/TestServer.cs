@@ -45,7 +45,7 @@ internal static class TestServer
     }
 
     public static void RequireServer() =>
-        Assert.SkipWhen(ConnectionString is null, "Sem servidor de teste: correr tests/Integration/Start-TestServer.ps1 ou definir EUNOMIA_IT_MYSQL.");
+        Assert.SkipWhen(ConnectionString is null, "No test server: run tests/Integration/Start-TestServer.ps1 or set EUNOMIA_IT_MYSQL.");
 
     public static ConnectionOptions Options(string? database = null)
     {

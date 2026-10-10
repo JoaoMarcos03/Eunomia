@@ -60,7 +60,7 @@ public sealed class MaintenanceDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SoTabelasEViewsComOsEscolhidosNaArvoreMarcados()
+    public async Task OnlyTablesAndViewsWithTheTreeSelectionChecked()
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var dialog = await OpenAsync(Fake());
@@ -75,7 +75,7 @@ public sealed class MaintenanceDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task OpcoesAtivasConformeAOperacao()
+    public async Task EnabledOptionsDependOnTheOperation()
     {
         var dialog = await OpenAsync(Fake());
         bool Enabled(MaintenanceOptions option) => dialog.OptionBox(option).IsEnabled;
@@ -95,7 +95,7 @@ public sealed class MaintenanceDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ErroNumObjetoNaoParaOsOutrosESoAsOpcoesAtivasSeguem()
+    public async Task ErrorOnOneObjectDoesNotStopTheOthersAndOnlyEnabledOptionsAreSent()
     {
         var seen = new List<(string Table, MaintenanceOptions Options)>();
         var dialog = await OpenAsync(Fake((operation, table, options, _) =>
@@ -128,7 +128,7 @@ public sealed class MaintenanceDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task OptimizePerguntaENaoCorreSemOk()
+    public async Task OptimizeAsksAndDoesNotRunWithoutOk()
     {
         var questions = new List<string>();
         var runs = 0;
@@ -149,7 +149,7 @@ public sealed class MaintenanceDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CancelParaDepoisDoObjetoEmCurso()
+    public async Task CancelStopsAfterTheObjectInProgress()
     {
         var second = new TaskCompletionSource();
         var dialog = await OpenAsync(Fake(async (operation, table, _, ct) =>
@@ -209,10 +209,10 @@ public sealed class MaintenanceDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DaArvoreAoResultadoNoServidor()
+    public async Task FromTheTreeToTheResultOnTheServer()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_mu_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); INSERT INTO `{db}`.people VALUES (1, 'Ana'); " +
             $"CREATE TABLE `{db}`.orders (id INT PRIMARY KEY);");

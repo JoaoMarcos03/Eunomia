@@ -23,10 +23,10 @@ public sealed class RealShellReviewTests
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("light")]
     [InlineData("dark")]
-    public async Task EcrasDoDiaADia(string theme)
+    public async Task EverydayScreens(string theme)
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_rv_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +

@@ -31,12 +31,12 @@ public sealed class DdlComposerTests : IAsyncLifetime
         await ExecAsync($"CREATE DATABASE `{_database}`");
         await ExecAsync($"CREATE TABLE `{_database}`.parent (id INT PRIMARY KEY) ENGINE=InnoDB");
         await ExecAsync($"CREATE TABLE `{_database}`.t (id INT UNSIGNED NOT NULL AUTO_INCREMENT, " +
-            "name VARCHAR(40) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'sem nome' COMMENT 'o nome', " +
+            "name VARCHAR(40) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'no name' COMMENT 'the name', " +
             "price DECIMAL(10,2) NULL DEFAULT 0.00, created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
             "doubled DECIMAL(12,2) AS (price * 2) VIRTUAL, notes TEXT NULL, parent INT NULL, gone INT NULL, " +
             "PRIMARY KEY (id), UNIQUE INDEX uq_name (name(10)), INDEX ix_price (price), " +
             "CONSTRAINT fk_parent FOREIGN KEY (parent) REFERENCES parent (id) ON DELETE SET NULL) " +
-            "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='tabela'");
+            "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='a table'");
     }
 
     public async ValueTask DisposeAsync()
@@ -59,7 +59,7 @@ public sealed class DdlComposerTests : IAsyncLifetime
     private MySqlDdlComposer Ddl => (MySqlDdlComposer)_host.ServerServices!.Ddl;
 
     [Fact]
-    public async Task ExpressoesComPlicaEBarraSobrevivemALeitura()
+    public async Task ExpressionsWithQuotesAndBackslashesSurviveReading()
     {
         TestServer.RequireServer();
         // Generated column, expression default and CHECK with a quote and a backslash in the literals: MySQL 8 returns them escaped
@@ -91,12 +91,12 @@ public sealed class DdlComposerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task LeituraNormalizadaECreateQueReproduzATabela()
+    public async Task NormalisedReadAndACreateThatReproducesTheTable()
     {
         TestServer.RequireServer();
         var table = await ReadAsync("t");
         var name = table.Columns.Single(c => c.Name == "name");
-        Assert.Equal("'sem nome'", name.DefaultExpression);
+        Assert.Equal("'no name'", name.DefaultExpression);
         Assert.False(name.DefaultIsExpression);
         Assert.Equal("utf8mb4_unicode_ci", name.Type.Collation);
         var created = table.Columns.Single(c => c.Name == "created");
@@ -119,7 +119,7 @@ public sealed class DdlComposerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AlterPorDiffDeixaATabelaComoPedido()
+    public async Task AlterByDiffLeavesTheTableAsRequested()
     {
         TestServer.RequireServer();
         var before = await ReadAsync("t");
@@ -127,7 +127,7 @@ public sealed class DdlComposerTests : IAsyncLifetime
         var name = columns.Single(c => c.Name == "name");
         var notes = columns.Single(c => c.Name == "notes");
         columns.Remove(columns.Single(c => c.Name == "gone"));
-        columns[columns.IndexOf(name)] = name with { Name = "title", NativeType = "varchar(60)", Comment = "o título" };
+        columns[columns.IndexOf(name)] = name with { Name = "title", NativeType = "varchar(60)", Comment = "the title" };
         // notes moves to after id; new column at the end.
         columns.Remove(notes);
         columns.Insert(1, notes with { IsNullable = false, DefaultExpression = null });

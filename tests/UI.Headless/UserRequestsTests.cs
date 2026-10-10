@@ -28,7 +28,7 @@ public sealed class UserRequestsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task BotaoDoMeioArrastadoFazScrollNaDiagonalEParaAoLargar()
+    public async Task MiddleButtonDragScrollsDiagonallyAndStopsOnRelease()
     {
         var (window, grid) = await GridAsync();
         var origin = new Point(400, 250);
@@ -46,7 +46,7 @@ public sealed class UserRequestsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task BotaoDoMeioCliqueSimplesFicaAtivoAteAoProximoClique()
+    public async Task MiddleButtonSingleClickStaysActiveUntilTheNextClick()
     {
         var (window, grid) = await GridAsync();
         var origin = new Point(400, 250);
@@ -71,7 +71,7 @@ public sealed class UserRequestsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task TeclaTerminaOScrollLivre()
+    public async Task KeyEndsTheFreeScroll()
     {
         var (window, grid) = await GridAsync();
         grid.Focus();
@@ -111,7 +111,7 @@ public sealed class UserRequestsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DuploCliqueNumaTabelaInsereONomeNaQuery()
+    public async Task DoubleClickOnATableInsertsTheNameInTheQuery()
     {
         var (window, table, db) = await MainAsync();
         window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
@@ -131,7 +131,7 @@ public sealed class UserRequestsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CliqueNumaTabelaNaoTiraDaTabQuery()
+    public async Task ClickOnATableDoesNotLeaveTheQueryTab()
     {
         var (window, table, _) = await MainAsync();
         window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
@@ -143,7 +143,7 @@ public sealed class UserRequestsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task NaTabDataDuploCliqueNaoMexeNaQuery()
+    public async Task InTheDataTabDoubleClickDoesNotTouchTheQuery()
     {
         var (window, table, _) = await MainAsync();
         window.Tabs.SelectedIndex = 0;

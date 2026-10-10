@@ -14,10 +14,10 @@ public sealed class NavigationTests
     private static string Caption(TabItem tab) => ((StackPanel)tab.Header!).Children.OfType<TextBlock>().First().Text!;
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SelecaoEscolheATabComoNoHeidiSql()
+    public async Task SelectionChoosesTheTabAsInHeidiSql()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_nv_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY); INSERT INTO `{db}`.people VALUES (1), (2); " +
             $"CREATE TABLE `{db}`.pets (id INT); CREATE PROCEDURE `{db}`.p() SELECT 1;");
@@ -87,10 +87,10 @@ public sealed class NavigationTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task UseQueFalhaVoltaAoNoAnterior()
+    public async Task FailedUseGoesBackToThePreviousNode()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_nu_");
         var gone = db + "_gone";
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE DATABASE `{gone}`;");

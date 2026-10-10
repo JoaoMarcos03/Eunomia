@@ -21,11 +21,11 @@ public sealed class DataSafetyTests : IAsyncLifetime
     [
         @"C:\dir\file.txt",
         "it's",
-        "linha 1\nlinha 2\r\n",
+        "line 1\nline 2\r\n",
         @"barra-n literal \n e \\ dupla",
         "nul\0meio",
         "ctrl\u001Az",
-        "emoji 😀 e acentuação",
+        "emoji 😀 and accents (ação)",
         "\\",
         "'",
         "\"aspas\" `crases`",
@@ -79,7 +79,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ValoresDificeisGravamExatosComQualquerSqlMode(bool noBackslashEscapes)
+    public async Task HardValuesAreSavedExactlyUnderAnySqlMode(bool noBackslashEscapes)
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.v (k VARCHAR(100) PRIMARY KEY, t TEXT, c VARCHAR(100) COLLATE latin1_swedish_ci)");
@@ -109,7 +109,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SemChaveNaoMudaALinhaQueSoDifereEmMaiusculas()
+    public async Task WithoutAKeyTheRowThatOnlyDiffersInCaseIsNotChanged()
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.nokey (name VARCHAR(10) COLLATE utf8mb4_general_ci, latin VARCHAR(10) COLLATE latin1_general_ci, n INT)");
@@ -127,7 +127,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ChaveDesatualizadaNaCacheNuncaMudaMaisDeUmaLinha()
+    public async Task StaleCachedKeyNeverChangesMoreThanOneRow()
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.stale (id INT PRIMARY KEY, v VARCHAR(10))");
@@ -144,7 +144,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DuplicarPeloTextoBrutoGuardaOsMesmosValores()
+    public async Task DuplicatingThroughRawTextKeepsTheSameValues()
     {
         TestServer.RequireServer();
         // Zero dates (MySQL 8 refuses them in the default mode): the session runs without strict mode during the test.
@@ -191,7 +191,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     [InlineData("1.234,50")]
     [InlineData("true")]
     [InlineData("")]
-    public async Task NumerosInvalidosNaoSaoGravados(string typed)
+    public async Task InvalidNumbersAreNotSaved(string typed)
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.num (id INT PRIMARY KEY, amount DECIMAL(10,2), flag BOOL)");
@@ -210,11 +210,11 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AlterQueCortariaValoresFalhaSemModoEstrito()
+    public async Task AlterThatWouldTruncateValuesFailsWithoutStrictMode()
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.shrink (id INT PRIMARY KEY, name VARCHAR(40))");
-        await ExecAsync($"INSERT INTO `{_database}`.shrink VALUES (1, 'um nome comprido demais')");
+        await ExecAsync($"INSERT INTO `{_database}`.shrink VALUES (1, 'a name that is far too long')");
         // Session without strict mode: MySQL would truncate the value and only leave a warning.
         await ExecAsync("SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION'");
         var session = new Eunomia.App.Sessions.OpenSession(new Eunomia.App.Sessions.SessionDefinition(), _host);
@@ -225,7 +225,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         Assert.NotEmpty(Eunomia.App.Objects.TableEditing.DataLossWarnings(baseline, design.ToDefinition(_host.ServerServices!.Types, _host.ServerServices.Dialect)));
 
         await Assert.ThrowsAsync<Eunomia.Engine.Execution.SessionOperationException>(() => Eunomia.App.Objects.TableEditing.ApplyAsync(session, statements, Ct));
-        Assert.Equal("um nome comprido demais", await ScalarAsync($"SELECT name FROM `{_database}`.shrink"));
+        Assert.Equal("a name that is far too long", await ScalarAsync($"SELECT name FROM `{_database}`.shrink"));
         Assert.Equal("varchar(40)", await ScalarAsync(
             $"SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{_database}' AND TABLE_NAME = 'shrink' AND COLUMN_NAME = 'name'"));
         // The session mode goes back to the user's.
@@ -233,14 +233,14 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ChavesEstrangeirasVoltamSeOAlterPrincipalFalhar()
+    public async Task ForeignKeysComeBackIfTheMainAlterFails()
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.parent (id INT PRIMARY KEY) ENGINE=InnoDB");
         await ExecAsync($"CREATE TABLE `{_database}`.child (id INT PRIMARY KEY, parent_id INT, note VARCHAR(40), " +
             "CONSTRAINT fk_parent FOREIGN KEY (parent_id) REFERENCES parent (id) ON DELETE CASCADE) ENGINE=InnoDB");
         await ExecAsync($"INSERT INTO `{_database}`.parent VALUES (1)");
-        await ExecAsync($"INSERT INTO `{_database}`.child VALUES (1, 1, 'nota longa demais para cinco')");
+        await ExecAsync($"INSERT INTO `{_database}`.child VALUES (1, 1, 'a note too long for five')");
         var session = new Eunomia.App.Sessions.OpenSession(new Eunomia.App.Sessions.SessionDefinition(), _host);
         var baseline = await TableAsync("child");
         var design = Eunomia.App.Objects.TableDesign.From(baseline);
@@ -255,7 +255,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
         await Assert.ThrowsAsync<Eunomia.Engine.Execution.SessionOperationException>(() => Eunomia.App.Objects.TableEditing.ApplyAsync(session, statements, Ct, restore));
         Assert.Equal("fk_parent|CASCADE", await ScalarAsync(
             $"SELECT CONCAT(CONSTRAINT_NAME, '|', DELETE_RULE) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '{_database}' AND TABLE_NAME = 'child'"));
-        Assert.Equal("nota longa demais para cinco", await ScalarAsync($"SELECT note FROM `{_database}`.child"));
+        Assert.Equal("a note too long for five", await ScalarAsync($"SELECT note FROM `{_database}`.child"));
     }
 
     [Theory]
@@ -263,7 +263,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     [InlineData(DbObjectKind.Procedure, "CREATE PROCEDURE p_obj() SELECT 1", "CREATE PROCEDURE p_obj() SELEC 2")]
     [InlineData(DbObjectKind.Function, "CREATE FUNCTION f_obj() RETURNS INT DETERMINISTIC RETURN 1", "CREATE FUNCTION f_obj() RETURNS INT DETERMINISTIC RETURN")]
     [InlineData(DbObjectKind.Trigger, "CREATE TRIGGER t_obj BEFORE INSERT ON host FOR EACH ROW SET NEW.n = 1", "CREATE TRIGGER t_obj BEFORE INSERT ON host FOR EACH ROW SET NEW.nope = 1")]
-    public async Task GravarCodigoInvalidoDeixaOObjetoComoEstava(DbObjectKind kind, string original, string broken)
+    public async Task SavingInvalidCodeLeavesTheObjectAsItWas(DbObjectKind kind, string original, string broken)
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.host (n INT)");
@@ -286,7 +286,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OriginalQueNaoVoltaFicaNumFicheiro()
+    public async Task OriginalThatCannotComeBackGoesToAFile()
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.host (n INT)");
@@ -315,7 +315,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AlterAEsperaDeUmLockDeMetadataFalhaDepressa()
+    public async Task AlterWaitingForAMetadataLockFailsFast()
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.busy (id INT PRIMARY KEY, v VARCHAR(10)) ENGINE=InnoDB");
@@ -341,7 +341,7 @@ public sealed class DataSafetyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task EdicaoNaoApagaAlteracaoDeOutraSessaoSemPerguntar()
+    public async Task EditDoesNotWipeOutAnotherSessionsChangeWithoutAsking()
     {
         TestServer.RequireServer();
         await ExecAsync($"CREATE TABLE `{_database}`.shared (id INT PRIMARY KEY, v VARCHAR(20), w VARCHAR(20), f FLOAT)");
@@ -359,32 +359,32 @@ public sealed class DataSafetyTests : IAsyncLifetime
             new(RowChangeKind.Update, Values(("id", id)), Values((column, value))) { Expected = Values((column, expected)) };
 
         // Another session changes v after the grid read 'a': saving stops and does not wipe out its change.
-        await OtherAsync($"UPDATE `{_database}`.shared SET v = 'outra' WHERE id = 1");
+        await OtherAsync($"UPDATE `{_database}`.shared SET v = 'other' WHERE id = 1");
         await Assert.ThrowsAsync<RowConflictException>(() => writer.WriteAsync(table, Change("1", "v", "a", "minha"), Ct));
-        Assert.Equal("outra", await ScalarAsync($"SELECT v FROM `{_database}`.shared WHERE id = 1"));
+        Assert.Equal("other", await ScalarAsync($"SELECT v FROM `{_database}`.shared WHERE id = 1"));
         // Overwrite (the user confirmed): no check.
         await writer.WriteAsync(table, Change("1", "v", "a", "minha") with { Expected = null }, Ct);
         Assert.Equal("minha", await ScalarAsync($"SELECT v FROM `{_database}`.shared WHERE id = 1"));
 
         // The other session saved the same value: there is no conflict.
-        await OtherAsync($"UPDATE `{_database}`.shared SET v = 'igual' WHERE id = 2");
-        await writer.WriteAsync(table, Change("2", "v", "b", "igual"), Ct);
+        await OtherAsync($"UPDATE `{_database}`.shared SET v = 'same' WHERE id = 2");
+        await writer.WriteAsync(table, Change("2", "v", "b", "same"), Ct);
 
         // The other session changed another column: the save goes through and does not touch it.
-        await OtherAsync($"UPDATE `{_database}`.shared SET w = 'dela' WHERE id = 3");
-        await writer.WriteAsync(table, Change("3", "v", "c", "nova"), Ct);
-        Assert.Equal("nova|dela", await ScalarAsync($"SELECT CONCAT(v, '|', w) FROM `{_database}`.shared WHERE id = 3"));
+        await OtherAsync($"UPDATE `{_database}`.shared SET w = 'theirs' WHERE id = 3");
+        await writer.WriteAsync(table, Change("3", "v", "c", "new"), Ct);
+        Assert.Equal("new|theirs", await ScalarAsync($"SELECT CONCAT(v, '|', w) FROM `{_database}`.shared WHERE id = 3"));
 
         // FLOAT is left out of the check (the text read rounds): saves without a false conflict.
         await writer.WriteAsync(table, Change("3", "f", "0.3", "0.5"), Ct);
 
         // Row deleted by another session: error, nothing saved.
         await OtherAsync($"DELETE FROM `{_database}`.shared WHERE id = 2");
-        await Assert.ThrowsAsync<RowWriteException>(() => writer.WriteAsync(table, Change("2", "v", "igual", "x"), Ct));
+        await Assert.ThrowsAsync<RowWriteException>(() => writer.WriteAsync(table, Change("2", "v", "same", "x"), Ct));
     }
 
     [Fact]
-    public async Task SetDoSqlModeNaQueryTabMudaOEscapingDosComentarios()
+    public async Task SqlModeSetInAQueryTabChangesTheEscapingOfComments()
     {
         TestServer.RequireServer();
         var runner = new QueryRunner(_host);

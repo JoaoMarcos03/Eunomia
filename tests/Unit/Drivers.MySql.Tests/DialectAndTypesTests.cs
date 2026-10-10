@@ -15,7 +15,7 @@ public sealed class DialectAndTypesTests
     [InlineData("8.0.36", "MySQL Community Server - GPL", DbEngine.MySql, "8.0.36")]
     [InlineData("5.7.44-log", null, DbEngine.MySql, "5.7.44")]
     [InlineData("11.4.2-MariaDB-ubu2404", null, DbEngine.MariaDb, "11.4.2")]
-    public void IdentificaMotorEVersao(string text, string? comment, DbEngine engine, string version)
+    public void IdentifiesEngineAndVersion(string text, string? comment, DbEngine engine, string version)
     {
         var id = MySqlConnectionFactory.ParseIdentity(text, comment);
 
@@ -24,7 +24,7 @@ public sealed class DialectAndTypesTests
     }
 
     [Fact]
-    public void CitaIdentificadoresELiterais()
+    public void QuotesIdentifiersAndLiterals()
     {
         var d = new MySqlDialect(Maria);
 
@@ -41,11 +41,11 @@ public sealed class DialectAndTypesTests
         // Simple literals (COMMENT, SHOW LIKE, HELP): the escaping of the connection's mode.
         Assert.Equal(@"'it''s \\ a'", d.PlainStringLiteral(@"it's \ a"));
         Assert.Equal(@"'it''s \ a'", new MySqlDialect(Maria, noBackslashEscapes: true).PlainStringLiteral(@"it's \ a"));
-        Assert.Equal("'sem barras'", d.PlainStringLiteral("sem barras"));
+        Assert.Equal("'no backslashes'", d.PlainStringLiteral("no backslashes"));
     }
 
     [Fact]
-    public void PaginacaoKeysetEKill()
+    public void KeysetPagingAndKill()
     {
         var d = new MySqlDialect(MySql8);
 
@@ -75,7 +75,7 @@ public sealed class DialectAndTypesTests
     [InlineData("point", LogicalTypeKind.Spatial, StorageKind.Binary)]
     [InlineData("bit(8)", LogicalTypeKind.Bit, StorageKind.Int64)]
     [InlineData("json", LogicalTypeKind.Json, StorageKind.String)]
-    public void MapeiaTiposNativos(string native, LogicalTypeKind kind, StorageKind storage)
+    public void MapsNativeTypes(string native, LogicalTypeKind kind, StorageKind storage)
     {
         var mapper = new MySqlTypeMapper();
         var type = mapper.Map(native);
@@ -85,7 +85,7 @@ public sealed class DialectAndTypesTests
     }
 
     [Fact]
-    public void EnumESetComAspasEEspacos()
+    public void EnumAndSetWithQuotesAndSpaces()
     {
         var type = new MySqlTypeMapper().Map("enum('a','b c','it''s',' x ')");
 
@@ -95,7 +95,7 @@ public sealed class DialectAndTypesTests
     }
 
     [Fact]
-    public void FormataTimeDoMySql()
+    public void FormatsMySqlTime()
     {
         Assert.Equal("-00:00:03", MySqlQueryExecutor.FormatTime(TimeSpan.FromSeconds(-3), 0));
         Assert.Equal("00:00:01.500", MySqlQueryExecutor.FormatTime(TimeSpan.FromMilliseconds(1500), 3));
@@ -110,7 +110,7 @@ public sealed class DialectAndTypesTests
     [InlineData(1317, DbErrorCategory.Cancelled, false)]
     [InlineData(1062, DbErrorCategory.Constraint, false)]
     [InlineData(1142, DbErrorCategory.Permission, false)]
-    public void ClassificaErros(int code, DbErrorCategory category, bool reconnect)
+    public void ClassifiesErrors(int code, DbErrorCategory category, bool reconnect)
     {
         var c = new MySqlErrorClassifier().Classify(new DbError(code, null, "x"));
 
@@ -119,7 +119,7 @@ public sealed class DialectAndTypesTests
     }
 
     [Fact]
-    public void CapabilitiesPorVersao()
+    public void CapabilitiesPerVersion()
     {
         Assert.True(new MySqlCapabilities(Maria).Supports(Capability.InvisibleColumns));
         Assert.False(new MySqlCapabilities(Maria).Supports(Capability.IndexVisibility));

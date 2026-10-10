@@ -8,7 +8,7 @@ public sealed class TextSearchTests
     private const string Text = "SELECT name FROM people;\nselect Name, nameless FROM people WHERE name = 'x';";
 
     [Fact]
-    public void ParaAFrenteComMaiusculasEPalavrasInteiras()
+    public void ForwardWithCaseAndWholeWords()
     {
         var any = new SearchOptions { Find = "name" };
         Assert.Equal(7, TextSearch.FindNext(Text, 0, 0, Text.Length, any)!.Value.Start);
@@ -23,7 +23,7 @@ public sealed class TextSearchTests
     }
 
     [Fact]
-    public void ParaTrasEDentroDaSelecao()
+    public void BackwardAndWithinTheSelection()
     {
         var back = new SearchOptions { Find = "people", Backward = true };
         Assert.Equal(17, TextSearch.FindNext(Text, 40, 0, Text.Length, back)!.Value.Start);
@@ -37,7 +37,7 @@ public sealed class TextSearchTests
     }
 
     [Fact]
-    public void RegexESubstituicoes()
+    public void RegexAndReplacements()
     {
         var regex = new SearchOptions { Find = @"^(\w+) (\w+)", RegularExpression = true, Replace = @"$2\t$1" };
         var match = TextSearch.FindNext(Text, 0, 0, Text.Length, regex)!.Value;
@@ -57,13 +57,13 @@ public sealed class TextSearchTests
     }
 
     [Fact]
-    public void RegexInvalida()
+    public void InvalidRegex()
     {
         Assert.ThrowsAny<ArgumentException>(() => TextSearch.FindNext("abc", 0, 0, 3, new SearchOptions { Find = "(", RegularExpression = true }));
     }
 
     [Fact]
-    public void Recentes()
+    public void Recent()
     {
         var recent = new List<string> { "b", "a" };
         TextSearch.AddRecent(recent, "a", max: 2);

@@ -19,18 +19,18 @@ public sealed class DmlComposerTests
     [InlineData("BIT(4)", LogicalTypeKind.Bit, "0101", "b'0101'")]
     [InlineData("VARBINARY(4)", LogicalTypeKind.Binary, "0xCAFE", "0xCAFE")]
     [InlineData("VARBINARY(4)", LogicalTypeKind.Binary, "0x", "''")]
-    [InlineData("VARBINARY(4)", LogicalTypeKind.Binary, "texto", "'texto'")]
+    [InlineData("VARBINARY(4)", LogicalTypeKind.Binary, "text", "'text'")]
     [InlineData("DATETIME", LogicalTypeKind.DateTime, "0000-00-00 00:00:00", "'0000-00-00 00:00:00'")]
     [InlineData("VARCHAR(10)", LogicalTypeKind.Text, "it's", "'it''s'")]
     [InlineData("VARCHAR(10)", LogicalTypeKind.Text, "C:\\dir", "_utf8mb4 X'433A5C646972'")]
     [InlineData("TEXT", LogicalTypeKind.Text, "a\nb", "'a\nb'")]
-    public void LiteraisPorTipo(string type, LogicalTypeKind kind, string text, string expected)
+    public void LiteralsPerType(string type, LogicalTypeKind kind, string text, string expected)
     {
         Assert.Equal(expected, Dml.Literal(Column("c", type, kind), new CellLiteral(text)));
     }
 
     [Fact]
-    public void NullFuncaoEInstrucoes()
+    public void NullFunctionAndStatements()
     {
         var id = Column("id", "INT", LogicalTypeKind.Integer);
         var name = Column("name", "VARCHAR(20)", LogicalTypeKind.Text);
@@ -51,7 +51,7 @@ public sealed class DmlComposerTests
     }
 
     [Fact]
-    public void SemChaveOTextoComparaSeDeFormaExata()
+    public void WithoutAKeyTextIsComparedExactly()
     {
         var code = new ColumnDefinition("code", "varchar(10)", new LogicalType(LogicalTypeKind.Text, Charset: "latin1", Collation: "latin1_swedish_ci"), true, null, false, false, false, null);
         var raw = new ColumnDefinition("raw", "varbinary(10)", new LogicalType(LogicalTypeKind.Binary, Charset: "binary"), true, null, false, false, false, null);

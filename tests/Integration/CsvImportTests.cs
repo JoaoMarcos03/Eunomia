@@ -80,11 +80,11 @@ public sealed class CsvImportTests : IAsyncLifetime
     [Theory]
     [InlineData(CsvImportMethod.Server)]
     [InlineData(CsvImportMethod.Client)]
-    public async Task DefaultsDoHeidiSqlComAspasDuplicadasEReplace(CsvImportMethod method)
+    public async Task HeidiSqlDefaultsWithDoubledQuotesAndReplace(CsvImportMethod method)
     {
         TestServer.RequireServer();
-        await ExecAsync($"INSERT INTO `{_database}`.t VALUES (2, 'antigo', 1, 'x')");
-        const string csv = "id;name;price;note\r\n1;\"Ana; \"\"a\"\"\";10.5;NULL\r\n2;Rui;20;\"linha\r\nnova\"\r\n3;\"ação\";NULL;\r\n";
+        await ExecAsync($"INSERT INTO `{_database}`.t VALUES (2, 'old', 1, 'x')");
+        const string csv = "id;name;price;note\r\n1;\"Ana; \"\"a\"\"\";10.5;NULL\r\n2;Rui;20;\"two\r\nlines\"\r\n3;\"ação\";NULL;\r\n";
         var path = Write("a.csv", csv, new UTF8Encoding(false));
         var progress = new List<CsvImportProgress>();
         var result = await new CsvImportJob(_host, Request(path, method)).RunAsync(new SyncProgress<CsvImportProgress>(progress.Add), Ct);
@@ -93,18 +93,18 @@ public sealed class CsvImportTests : IAsyncLifetime
         // REPLACE counts 2 for the replaced row.
         Assert.Equal(4, result.Rows);
         Assert.Equal(new FileInfo(path).Length, result.BytesRead);
-        Assert.Equal("1|Ana; \"a\"|10.50|<NULL> ; 2|Rui|20.00|linha\r\nnova ; 3|ação|<NULL>|", await RowsAsync());
+        Assert.Equal("1|Ana; \"a\"|10.50|<NULL> ; 2|Rui|20.00|two\r\nlines ; 3|ação|<NULL>|", await RowsAsync());
         Assert.NotEmpty(progress);
     }
 
     [Theory]
     [InlineData(CsvImportMethod.Server)]
     [InlineData(CsvImportMethod.Client)]
-    public async Task Utf16ComNumerosLocaisETruncate(CsvImportMethod method)
+    public async Task Utf16WithLocalNumbersAndTruncate(CsvImportMethod method)
     {
         TestServer.RequireServer();
-        await ExecAsync($"INSERT INTO `{_database}`.t VALUES (99, 'apagar', 1, 'x')");
-        var path = Write("b.csv", "id\tname\tprice\tnote\n1\tZé\t1.234,56\tum\n2\tÿ€\t-0,5\tdois\n", new UnicodeEncoding(bigEndian: false, byteOrderMark: true));
+        await ExecAsync($"INSERT INTO `{_database}`.t VALUES (99, 'gone', 1, 'x')");
+        var path = Write("b.csv", "id\tname\tprice\tnote\n1\tZé\t1.234,56\tone\n2\tÿ€\t-0,5\ttwo\n", new UnicodeEncoding(bigEndian: false, byteOrderMark: true));
         var request = Request(path, method) with
         {
             Csv = new CsvOptions { FieldTerminator = "\t", LineTerminator = "\n", Encloser = string.Empty, Escaper = "\\" },
@@ -116,17 +116,17 @@ public sealed class CsvImportTests : IAsyncLifetime
         var result = await new CsvImportJob(_host, request).RunAsync(null, Ct);
 
         Assert.Equal(2, result.Rows);
-        Assert.Equal("1|Zé|1234.56|um ; 2|ÿ€|-0.50|dois", await RowsAsync());
+        Assert.Equal("1|Zé|1234.56|one ; 2|ÿ€|-0.50|two", await RowsAsync());
     }
 
     [Fact]
-    public async Task ClienteParaNoPrimeiroErroComOsLotesAnterioresGravados()
+    public async Task ClientStopsAtTheFirstErrorWithEarlierBatchesSaved()
     {
         TestServer.RequireServer();
         var sb = new StringBuilder("id;name;price;note\r\n");
         for (var i = 1; i <= 25_000; i++)
         {
-            sb.Append(CultureInfo.InvariantCulture, $"{i};n{i};{i}.25;nota\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"{i};n{i};{i}.25;note\r\n");
         }
         // Duplicate key at the end, with plain INSERT: an error after 2 batches of 10,000.
         sb.Append("5;dup;1;x\r\n");
@@ -141,7 +141,7 @@ public sealed class CsvImportTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task LocalInfileDesligadoNoServidorDaUmaMensagemClara()
+    public async Task LocalInfileOffOnTheServerGivesAClearMessage()
     {
         TestServer.RequireServer();
         var path = Write("e.csv", "id;name;price;note\r\n1;a;1;x\r\n", new UTF8Encoding(false));
@@ -160,13 +160,13 @@ public sealed class CsvImportTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CancelNoModoServidor()
+    public async Task CancelInServerMode()
     {
         TestServer.RequireServer();
         var sb = new StringBuilder("id;name;price;note\r\n");
         for (var i = 1; i <= 300_000; i++)
         {
-            sb.Append(CultureInfo.InvariantCulture, $"{i};nome {i};{i};{new string('x', 40)}\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"{i};name {i};{i};{new string('x', 40)}\r\n");
         }
         var path = Write("d.csv", sb.ToString(), new UTF8Encoding(false));
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
@@ -179,13 +179,13 @@ public sealed class CsvImportTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CancelAMeioDoLoadDataEhCancelamentoSemLinhasGravadas()
+    public async Task CancelDuringLoadDataIsACancellationWithNoRowsSaved()
     {
         TestServer.RequireServer();
         var sb = new StringBuilder("id;name;price;note\r\n");
         for (var i = 1; i <= 300_000; i++)
         {
-            sb.Append(CultureInfo.InvariantCulture, $"{i};nome {i};{i};{new string('x', 40)}\r\n");
+            sb.Append(CultureInfo.InvariantCulture, $"{i};name {i};{i};{new string('x', 40)}\r\n");
         }
         var path = Write("e.csv", sb.ToString(), new UTF8Encoding(false));
 

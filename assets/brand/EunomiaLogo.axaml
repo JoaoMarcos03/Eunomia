@@ -1,6 +1,6 @@
-<!-- Logo do Eunomia (símbolo) como DrawingImage vetorial.
-     Fonte: assets/brand/eunomia-mark.svg (viewBox 0 0 256 256). Gerado a partir do SVG; não editar à mão.
-     Uso: <Image Source="{StaticResource EunomiaLogo}" Width="64" Height="64" /> -->
+<!-- Eunomia logo (symbol) as a vector DrawingImage.
+     Source: assets/brand/eunomia-mark.svg (viewBox 0 0 256 256). Generated from the SVG; do not edit by hand.
+     Usage: <Image Source="{StaticResource EunomiaLogo}" Width="64" Height="64" /> -->
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <DrawingImage x:Key="EunomiaLogo">

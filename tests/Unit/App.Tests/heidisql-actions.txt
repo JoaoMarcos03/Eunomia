@@ -1,4 +1,4 @@
-# As 163 actions do ActionList1 do HeidiSQL 12.21 (anexo C, secção 2.1), uma por linha.
+# The 163 actions of HeidiSQL 12.21's ActionList1 (appendix C, section 2.1), one per line.
 actAboutBox
 actApplyFilter
 actAttachDatabase

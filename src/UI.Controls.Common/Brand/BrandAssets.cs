@@ -38,7 +38,7 @@ public static class BrandAssets
             _resources ??= new BrandResources();
             return _resources.TryGetResource(BrandResources.LogoKey, null, out var logo) && logo is IImage image
                 ? image
-                : throw new InvalidOperationException("Recurso EunomiaLogo em falta.");
+                : throw new InvalidOperationException("Missing EunomiaLogo resource.");
         }
     }
 }

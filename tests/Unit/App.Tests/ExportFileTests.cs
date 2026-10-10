@@ -16,7 +16,7 @@ public sealed class ExportFileTests
     }
 
     [Fact]
-    public void CodificacoesEBom()
+    public void EncodingsAndBom()
     {
         Assert.Equal([0x61], ExportFile.Encode("a", "UTF-8"));
         Assert.Equal([0xEF, 0xBB, 0xBF, 0x61], ExportFile.Encode("a", "UTF-8-BOM"));
@@ -27,9 +27,9 @@ public sealed class ExportFileTests
     }
 
     [Fact]
-    public void ExtensaoSegueOFormatoEOFormatoSegueAExtensao()
+    public void ExtensionFollowsTheFormatAndTheFormatFollowsTheExtension()
     {
-        Assert.Equal(@"C:\x\dados.json", ExportFile.WithExtension(@"C:\x\dados.csv", GridExportFormat.Json));
+        Assert.Equal(@"C:\x\data.json", ExportFile.WithExtension(@"C:\x\data.csv", GridExportFormat.Json));
         Assert.Equal(GridExportFormat.Markdown, ExportFile.FormatOf("x.md"));
         Assert.Equal(GridExportFormat.JiraTextile, ExportFile.FormatOf("x.jira-textile"));
         Assert.Null(ExportFile.FormatOf("x.zzz"));

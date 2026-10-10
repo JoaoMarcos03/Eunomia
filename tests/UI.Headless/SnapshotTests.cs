@@ -95,13 +95,13 @@ public sealed class SnapshotTests
     }
 
     private const string Sql = """
-        -- Consulta de teste do spike
+        -- Spike test query
         SELECT p.`id`, p.`name`, COUNT(*) AS total, SUM(p.price * 1.23) AS gross
         FROM `elmwood`.`prd_products` p
         WHERE p.created >= '2026-01-01' AND p.status IN ('active', "draft")
-          AND @@SESSION.sql_mode IS NOT NULL # comentário com #
-        /* comentário de bloco
-           em duas linhas */
+          AND @@SESSION.sql_mode IS NOT NULL # comment with #
+        /* block comment
+           on two lines */
         GROUP BY p.`id`
         HAVING total > 0x1F
         ORDER BY gross DESC

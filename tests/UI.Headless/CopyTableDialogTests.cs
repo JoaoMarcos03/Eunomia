@@ -32,7 +32,7 @@ public sealed class CopyTableDialogTests
         new(People, 1234, ["shop", "archive"], (db, name, _) => Task.FromResult(existing.Contains(db + "." + name, StringComparer.OrdinalIgnoreCase)));
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ValoresPorOmissaoEGruposComContagem()
+    public async Task DefaultsAndGroupsWithCounts()
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var dialog = new CopyTableDialog(Fake());
@@ -74,7 +74,7 @@ public sealed class CopyTableDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DestinoQueJaExisteFicaRecusadoNoDialogo()
+    public async Task ExistingTargetIsRefusedInTheDialog()
     {
         var dialog = new CopyTableDialog(Fake("shop.people_copy"));
         dialog.Show();
@@ -112,10 +112,10 @@ public sealed class CopyTableDialogTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DaArvoreATabelaNova()
+    public async Task FromTheTreeToTheNewTable()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ct_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(20)); " +
             $"INSERT INTO `{db}`.people (name) VALUES ('Ana'), ('Rui'), ('Eva');");

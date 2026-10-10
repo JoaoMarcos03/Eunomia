@@ -62,7 +62,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     private Task<object?> Scalar(string sql) => _host.RunPrimaryAsync((h, ct) => h.ExecuteScalarAsync(sql, ct), Ct);
 
     [Fact]
-    public void DropOrdenaTriggersViewsEDepoisORestoSemVerificacaoDeChaves()
+    public void DropOrdersTriggersViewsThenTheRestWithoutKeyChecks()
     {
         TestServer.RequireServer();
         var sql = ObjectActions.DropObjects(Services, [Ref("parent"), Ref("v", DbObjectKind.View), Ref("tr", DbObjectKind.Trigger)]);
@@ -78,7 +78,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     }
 
     [Fact]
-    public void SelectTopRowsEPreselecaoDaCollation()
+    public void SelectTopRowsAndCollationPreselection()
     {
         TestServer.RequireServer();
         Assert.Equal("SELECT * FROM `order` LIMIT 1000;", ObjectActions.SelectTopRows(Services.Dialect, Ref("order"), 1000, qualified: false));
@@ -93,7 +93,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task EmptyComChavesDesligadasEsvaziaAMaeEReporAsVerificacoes()
+    public async Task EmptyWithKeysOffEmptiesTheParentAndRestoresTheChecks()
     {
         TestServer.RequireServer();
         // Without turning off the key checks, TRUNCATE of a referenced table fails (InnoDB).
@@ -106,7 +106,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DropQueFalhaAMeioRepoeAsVerificacoesDeChaves()
+    public async Task DropFailingHalfwayRestoresTheKeyChecks()
     {
         TestServer.RequireServer();
         var sql = ObjectActions.DropObjects(Services, [Ref("nao_existe"), Ref("child")]);
@@ -119,7 +119,7 @@ public sealed class ObjectActionsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CriaEApagaBasesComCollation()
+    public async Task CreatesAndDropsDatabasesWithACollation()
     {
         TestServer.RequireServer();
         var collations = await _host.RunMetadataAsync((h, ct) => h.Metadata.GetCollationsAsync(ct), Ct);

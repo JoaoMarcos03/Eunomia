@@ -59,7 +59,7 @@ public sealed class TransactionTests : IAsyncLifetime
     private Task RunAsync(string sql) => new QueryRunner(_host).RunAsync(sql, SqlSplitter.Split(sql), new QueryRunOptions(), Ct);
 
     [Fact]
-    public async Task EstadoDaTransacaoSegueAsInstrucoesDaQueryTab()
+    public async Task TransactionStateFollowsTheQueryTabStatements()
     {
         TestServer.RequireServer();
         await RunAsync($"START TRANSACTION; INSERT INTO `{_database}`.t VALUES (4, 'd')");
@@ -78,7 +78,7 @@ public sealed class TransactionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task LigacaoQueCaiComAlteracoesAvisaQueSePerderam()
+    public async Task ConnectionDroppingWithChangesWarnsTheyWereLost()
     {
         TestServer.RequireServer();
         var lost = 0;
@@ -99,7 +99,7 @@ public sealed class TransactionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ApagarVariasLinhasETudoOuNada()
+    public async Task DeletingSeveralRowsIsAllOrNothing()
     {
         TestServer.RequireServer();
         var table = await new MetadataCache(_host, new MetadataOptions()).GetTableAsync(new DbObjectRef(_database, _database, "t", DbObjectKind.Table), Ct);

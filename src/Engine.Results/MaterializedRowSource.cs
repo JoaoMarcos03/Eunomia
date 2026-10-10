@@ -108,7 +108,7 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         {
             if (block.BlockIndex != _blocks.Count || block.FirstRow != _rows)
             {
-                throw new InvalidOperationException($"Bloco fora de ordem: {block.BlockIndex} (esperado {_blocks.Count}).");
+                throw new InvalidOperationException($"Block out of order: {block.BlockIndex} (expected {_blocks.Count}).");
             }
             if (_spill is not null && _spill.Length + block.ByteSize > _storage.SpillQuotaBytes && _resident + block.ByteSize > _storage.BudgetBytes)
             {

@@ -19,7 +19,7 @@ public sealed class TableDesignTests
         new DbObjectRef("shop", "shop", "items", DbObjectKind.Table),
         [
             new ColumnDefinition("id", "int(10) unsigned", Types.Map("int(10) unsigned"), false, null, true, false, false, null) { OriginalName = "id" },
-            Column("name", "varchar(40)", false, "'it''s'") with { Comment = "o nome", Type = Types.Map("varchar(40)") with { Collation = "utf8mb4_unicode_ci" } },
+            Column("name", "varchar(40)", false, "'it''s'") with { Comment = "the name", Type = Types.Map("varchar(40)") with { Collation = "utf8mb4_unicode_ci" } },
             Column("price", "decimal(10,2)", true, "0.00"),
             Column("created", "timestamp", false, "current_timestamp()", expression: true) with { OnUpdate = "current_timestamp()" },
             Column("notes", "text", true, "NULL"),
@@ -31,7 +31,7 @@ public sealed class TableDesignTests
         new Dictionary<string, string> { ["Engine"] = "InnoDB", ["Collation"] = "utf8mb4_unicode_ci", ["Comment"] = "itens", ["Create_options"] = "checksum=1 max_rows=100" });
 
     [Fact]
-    public void VaiEVemSemAlteracoes()
+    public void RoundTripsWithoutChanges()
     {
         var original = Sample();
         var design = TableDesign.From(original);
@@ -55,7 +55,7 @@ public sealed class TableDesignTests
     }
 
     [Fact]
-    public void DefaultComBarraVemEmHexEVoltaATexto()
+    public void DefaultWithBackslashComesAsHexAndBackToText()
     {
         // The metadata gives defaults with backslashes as _utf8mb4 X'…' (valid under any sql_mode); the editor shows the text.
         var table = Sample() with { Columns = [Column("path", "varchar(40)", false, "_utf8mb4 X'433A5C78'")] };
@@ -67,7 +67,7 @@ public sealed class TableDesignTests
     }
 
     [Fact]
-    public void AlteracoesDoEditorDaoOAlter()
+    public void EditorChangesGiveTheAlter()
     {
         var before = TableDesign.From(Sample()).ToDefinition(Types, Dialect);
         var design = TableDesign.From(Sample());
@@ -86,7 +86,7 @@ public sealed class TableDesignTests
     }
 
     [Fact]
-    public void Validacao()
+    public void Validation()
     {
         var design = TableDesign.New("shop");
         Assert.Contains("Please enter a table name.", design.Validate());

@@ -50,7 +50,7 @@ public sealed class SoakTests : IAsyncLifetime
             await h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.t (id INT PRIMARY KEY, a INT, b VARCHAR(100), c DATETIME) ENGINE=InnoDB", ct);
             const string digits = "(SELECT 0 d UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)";
             await h.ExecuteNonQueryAsync(
-                $"INSERT INTO `{_database}`.t SELECT n, n % 97, CONCAT('linha ', n), '2026-01-01' + INTERVAL n MINUTE FROM " +
+                $"INSERT INTO `{_database}`.t SELECT n, n % 97, CONCAT('row ', n), '2026-01-01' + INTERVAL n MINUTE FROM " +
                 $"(SELECT 1 + a.d + 10 * b.d + 100 * c.d + 1000 * e.d + 10000 * f.d AS n FROM {digits} a, {digits} b, {digits} c, {digits} e, {digits} f) s WHERE n <= 50000", ct);
             await h.ExecuteNonQueryAsync($"CREATE TABLE `{_database}`.imported (id INT PRIMARY KEY, name VARCHAR(50), price DECIMAL(10,2), note TEXT)", ct);
             return true;
@@ -128,7 +128,7 @@ public sealed class SoakTests : IAsyncLifetime
             var sb = new StringBuilder("id;name;price;note\r\n");
             for (var i = 1; i <= 2000; i++)
             {
-                sb.Append(CultureInfo.InvariantCulture, $"{i};nome {i};{i}.5;\"nota \"\"{i}\"\"\"\r\n");
+                sb.Append(CultureInfo.InvariantCulture, $"{i};name {i};{i}.5;\"note \"\"{i}\"\"\"\r\n");
             }
             File.WriteAllText(csv, sb.ToString(), new UTF8Encoding(false));
         }
@@ -143,9 +143,9 @@ public sealed class SoakTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SoakSemFugasDeMemoria()
+    public async Task SoakWithoutMemoryLeaks()
     {
-        Assert.SkipUnless(TestServer.ConnectionString is not null && SoakMinutes > 0, "Soak: EUNOMIA_SOAK_MINUTES=N e servidor de teste.");
+        Assert.SkipUnless(TestServer.ConnectionString is not null && SoakMinutes > 0, "Soak: needs EUNOMIA_SOAK_MINUTES=N and the test server.");
         await _hosts[0].RunPrimaryAsync((h, ct) => h.ExecuteNonQueryAsync("SET GLOBAL local_infile = 1", ct), Ct);
         var host = _hosts[0];
         var cache = new MetadataCache(host, new MetadataOptions());
@@ -176,13 +176,13 @@ public sealed class SoakTests : IAsyncLifetime
         var timeline = string.Join(" ", samples.Select(s => string.Create(CultureInfo.InvariantCulture, $"[{s.At.TotalMinutes:F1}m {s.Managed / 1048576}MB]")));
         Report(string.Create(CultureInfo.InvariantCulture,
             $"Soak {SoakMinutes} min, {rounds} voltas: gerida {startManaged / 1048576:F1} → {endManaged / 1048576:F1} MB; working set {samples[0].WorkingSet / 1048576} → {samples[^1].WorkingSet / 1048576} MB; {timeline}"));
-        Assert.True(endManaged <= (startManaged * 1.2) + (20 * 1048576), $"Memória gerida a crescer: {startManaged / 1048576:F1} → {endManaged / 1048576:F1} MB");
+        Assert.True(endManaged <= (startManaged * 1.2) + (20 * 1048576), $"Managed memory growing: {startManaged / 1048576:F1} → {endManaged / 1048576:F1} MB");
     }
 
     [Fact]
     public async Task StressB14()
     {
-        Assert.SkipUnless(TestServer.ConnectionString is not null && Stress, "Stress B14: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipUnless(TestServer.ConnectionString is not null && Stress, "Stress B14: needs EUNOMIA_PERF=1 and the test server.");
         await _hosts[0].RunPrimaryAsync((h, ct) => h.ExecuteNonQueryAsync("SET GLOBAL local_infile = 1", ct), Ct);
         for (var i = _hosts.Count; i < 10; i++)
         {
@@ -247,7 +247,7 @@ public sealed class SoakTests : IAsyncLifetime
         latencies.Sort();
         double P(double q) => latencies[(int)Math.Min(latencies.Count - 1, Math.Ceiling(q * latencies.Count) - 1)];
         Report(string.Create(CultureInfo.InvariantCulture,
-            $"B14 (motor): 10 sessões, 5 SLEEP(4), 2 exports, 1 import de 3.001 instruções; {latencies.Count} pedidos curtos: p50 {P(0.5):F1} ms, p95 {P(0.95):F1} ms, p99 {P(0.99):F1} ms, máx {latencies[^1]:F1} ms; erros {errors.Count}"));
+            $"B14 (engine): 10 sessions, 5 SLEEP(4), 2 exports, 1 import of 3,001 statements; {latencies.Count} short requests: p50 {P(0.5):F1} ms, p95 {P(0.95):F1} ms, p99 {P(0.99):F1} ms, max {latencies[^1]:F1} ms; errors {errors.Count}"));
         Assert.Empty(errors);
         Assert.True(P(0.99) < 1000, $"p99 {P(0.99):F0} ms");
     }

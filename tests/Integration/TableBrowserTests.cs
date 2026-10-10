@@ -57,7 +57,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
         _host.RunMetadataAsync((h, ct) => h.Metadata.GetTableAsync(new DbObjectRef(_database, _database, name, DbObjectKind.Table), ct), Ct);
 
     [Fact]
-    public async Task PaginaComNextShowAllAteAoMaximo()
+    public async Task PagesWithNextAndShowAllUpToTheMaximum()
     {
         TestServer.RequireServer();
         using var browser = new TableBrowser(_host, await Table("t"), new DataBrowseOptions { MaximumRows = 2200 });
@@ -86,7 +86,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CelulasCortadasMarcadasEValorCompletoPorChave()
+    public async Task CutCellsFlaggedAndFullValueByKey()
     {
         TestServer.RequireServer();
         using var browser = new TableBrowser(_host, await Table("t"), new DataBrowseOptions());
@@ -104,7 +104,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InteirosSemSeparadorDeMilhares()
+    public async Task IntegersWithoutThousandsSeparator()
     {
         TestServer.RequireServer();
         using var browser = new TableBrowser(_host, await Table("t"), new DataBrowseOptions());
@@ -114,7 +114,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FiltroOrdenacaoEContagens()
+    public async Task FilterSortingAndCounts()
     {
         TestServer.RequireServer();
         var options = new DataBrowseOptions { Filter = "WHERE id <= 30", Sort = [new DataSort("id", true)], RowsPerStep = 10 };
@@ -132,7 +132,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TabelaSemChaveVemCompleta()
+    public async Task TableWithoutKeyComesComplete()
     {
         TestServer.RequireServer();
         using var browser = new TableBrowser(_host, await Table("nokey"), new DataBrowseOptions());
@@ -144,7 +144,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ShowAllCanceladoGuardaAsLinhasENextContinua()
+    public async Task CancelledShowAllKeepsTheRowsAndNextContinues()
     {
         TestServer.RequireServer();
         // Rows 11 and 12 are slow: Show all is cancelled halfway through them (Esc or another choice in the tree).
@@ -171,7 +171,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ComSpillOsDadosContinuamAcessiveis()
+    public async Task WithSpillTheDataStaysReachable()
     {
         TestServer.RequireServer();
         var spill = Path.Combine(Path.GetTempPath(), "eunomia-it-spill-" + Guid.NewGuid().ToString("N")[..8]);

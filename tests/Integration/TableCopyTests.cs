@@ -94,7 +94,7 @@ public sealed class TableCopyTests : IAsyncLifetime
         await ObjectActions.RunAsync(_host, TableCopy.Statements(_host.ServerServices!, source, request), Ct);
 
     [Fact]
-    public async Task CopiaEstruturaEDadosSemPerdas()
+    public async Task CopiesStructureAndDataWithoutLoss()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -114,7 +114,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FiltroCopiaSoAsLinhasPedidas()
+    public async Task FilterCopiesOnlyTheRequestedRows()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -125,7 +125,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FiltroComVariasInstrucoesEhRecusadoAntesDeCriar()
+    public async Task FilterWithSeveralStatementsIsRefusedBeforeCreating()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -138,7 +138,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ColunasSemAChavePerdemOAutoIncrement()
+    public async Task ColumnsWithoutTheKeyLoseTheAutoIncrement()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -151,7 +151,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DestinoQueJaExisteNaoEhTocado()
+    public async Task ExistingTargetIsNotTouched()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -163,7 +163,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task OutraBaseMantemOsNomesDasRestricoes()
+    public async Task AnotherDatabaseKeepsTheConstraintNames()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();
@@ -177,7 +177,7 @@ public sealed class TableCopyTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SessaoReadOnlyRecusaACopia()
+    public async Task ReadOnlySessionRefusesTheCopy()
     {
         TestServer.RequireServer();
         var source = await PeopleAsync();

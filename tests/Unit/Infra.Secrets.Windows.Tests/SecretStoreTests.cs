@@ -27,16 +27,16 @@ public sealed class SecretStoreTests : IDisposable
     }
 
     [Fact]
-    public void GravaLeEApagaNoCredentialManager()
+    public void SavesReadsAndDeletesInCredentialManager()
     {
-        Assert.SkipUnless(OperatingSystem.IsWindows(), "Credential Manager só existe em Windows.");
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Credential Manager only exists on Windows.");
         Assert.Null(_store.Get(_key));
 
-        _store.Set(_key, "pässwörd \"com\" aspas e €");
-        Assert.Equal("pässwörd \"com\" aspas e €", _store.Get(_key));
+        _store.Set(_key, "pässwörd \"with\" quotes and €");
+        Assert.Equal("pässwörd \"with\" quotes and €", _store.Get(_key));
 
-        _store.Set(_key, "outra");
-        Assert.Equal("outra", _store.Get(_key));
+        _store.Set(_key, "other");
+        Assert.Equal("other", _store.Get(_key));
 
         _store.Delete(_key);
         Assert.Null(_store.Get(_key));
@@ -44,9 +44,9 @@ public sealed class SecretStoreTests : IDisposable
     }
 
     [Fact]
-    public void PasswordVazia()
+    public void EmptyPassword()
     {
-        Assert.SkipUnless(OperatingSystem.IsWindows(), "Credential Manager só existe em Windows.");
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Credential Manager only exists on Windows.");
 
         _store.Set(_key, string.Empty);
 
@@ -54,9 +54,9 @@ public sealed class SecretStoreTests : IDisposable
     }
 
     [Fact]
-    public void SegredoGrandeVaiParaDpapi()
+    public void LargeSecretGoesToDpapi()
     {
-        Assert.SkipUnless(OperatingSystem.IsWindows(), "DPAPI só existe em Windows.");
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "DPAPI only exists on Windows.");
         var big = new string('k', 4000);
 
         _store.Set(_key, big);
@@ -71,9 +71,9 @@ public sealed class SecretStoreTests : IDisposable
     }
 
     [Fact]
-    public void DpapiIdaEVolta()
+    public void DpapiRoundTrip()
     {
-        Assert.SkipUnless(OperatingSystem.IsWindows(), "DPAPI só existe em Windows.");
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "DPAPI only exists on Windows.");
         var data = "segredo"u8.ToArray();
 
         var protectedData = Dpapi.Protect(data);

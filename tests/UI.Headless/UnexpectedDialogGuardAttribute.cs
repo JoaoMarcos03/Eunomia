@@ -47,7 +47,7 @@ internal sealed class UnexpectedDialogGuardAttribute : BeforeAfterTestAttribute
         if (opened.Count > 0)
         {
             throw new InvalidOperationException(
-                "Diálogo modal inesperado (responder pelas *Override do MainWindow): " + string.Join(" | ", opened));
+                "Unexpected modal dialog (answer it through the MainWindow *Override hooks): " + string.Join(" | ", opened));
         }
     }
 

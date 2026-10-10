@@ -39,7 +39,7 @@ public sealed class SessionHostTests
         host.RunPrimaryAsync(async (h, ct) => Convert.ToInt64(await h.ExecuteScalarAsync(sql, ct), System.Globalization.CultureInfo.InvariantCulture), Ct);
 
     [Fact]
-    public async Task LigaComPrimariaEMetadataSeparadas()
+    public async Task ConnectsWithSeparatePrimaryAndMetadata()
     {
         TestServer.RequireServer();
         var (host, log) = Create();
@@ -65,7 +65,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task MetadataNaoEsperaPorUmaQueryLongaNaPrimaria()
+    public async Task MetadataDoesNotWaitForALongQueryOnThePrimary()
     {
         TestServer.RequireServer();
         var (host, _) = Create();
@@ -85,7 +85,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task ReconnectVisivelDepoisDeAPrimariaSerMorta()
+    public async Task VisibleReconnectAfterThePrimaryIsKilled()
     {
         TestServer.RequireServer();
         var (host, log) = Create();
@@ -118,7 +118,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task MetadataRepeteDepoisDeReligar()
+    public async Task MetadataRetriesAfterReconnecting()
     {
         TestServer.RequireServer();
         var (host, _) = Create();
@@ -136,7 +136,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task TimeoutDeClienteCancelaAQuery()
+    public async Task ClientTimeoutCancelsTheQuery()
     {
         TestServer.RequireServer();
         var (host, _) = Create(s => s with { QueryTimeout = TimeSpan.FromMilliseconds(500) });
@@ -152,11 +152,11 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task StartupScriptETimeZoneEmCadaLigacao()
+    public async Task StartupScriptAndTimeZoneOnEveryConnection()
     {
         TestServer.RequireServer();
         var script = Path.Combine(Path.GetTempPath(), "eunomia-startup-" + Guid.NewGuid().ToString("N") + ".sql");
-        await File.WriteAllTextAsync(script, "SET @startup = 42; SELEC erro; SET @other = 'ok'", Ct);
+        await File.WriteAllTextAsync(script, "SET @startup = 42; SELEC error; SET @other = 'ok'", Ct);
         var (host, log) = Create(s => s with { StartupScriptPath = script, TimeZone = "+03:00" });
         await host.ConnectAsync(Ct);
 
@@ -169,7 +169,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task JobsEmLigacoesProprias()
+    public async Task JobsOnTheirOwnConnections()
     {
         TestServer.RequireServer();
         var (host, _) = Create(s => s with { MaxJobConnections = 2 });
@@ -189,7 +189,7 @@ public sealed class SessionHostTests
     }
 
     [Fact]
-    public async Task PasswordErradaFalhaEFicaEmFailed()
+    public async Task WrongPasswordFailsAndStaysFailed()
     {
         TestServer.RequireServer();
         var settings = new SessionConnectionSettings("bad", TestServer.Options() with { User = "nao_existe_" + Guid.NewGuid().ToString("N")[..6] });

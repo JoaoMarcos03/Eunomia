@@ -87,7 +87,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         for (var start = 0; start < Rows; start += 100_000)
         {
             var numbers = $"SELECT {start + 1} + a.d + 10 * b.d + 100 * c.d + 1000 * e.d + 10000 * f.d AS n FROM {digits} a, {digits} b, {digits} c, {digits} e, {digits} f";
-            var sql = "INSERT INTO `eunomia_perf_src`.big SELECT n, n * 7 % 100000, CONCAT('nome ', n, ' ação'), '2026-01-01' + INTERVAL n SECOND, n / 100, REPEAT('texto ''x'' ', 1 + n % 5) FROM ("
+            var sql = "INSERT INTO `eunomia_perf_src`.big SELECT n, n * 7 % 100000, CONCAT('name ', n, ' ação'), '2026-01-01' + INTERVAL n SECOND, n / 100, REPEAT('text ''x'' ', 1 + n % 5) FROM ("
                 + numbers + ") s WHERE n <= " + Rows.ToString(CultureInfo.InvariantCulture);
             await ExecAsync(sql);
         }
@@ -164,9 +164,9 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ExportImportECsvContraAsFerramentasDoServidor()
+    public async Task ExportImportAndCsvAgainstTheServerTools()
     {
-        Assert.SkipUnless(Enabled, "Medição: EUNOMIA_PERF=1, servidor de teste e mysql.exe/mysqldump.exe do XAMPP.");
+        Assert.SkipUnless(Enabled, "Measurement: needs EUNOMIA_PERF=1, the test server and XAMPP's mysql.exe/mysqldump.exe.");
         await CreateSourceAsync();
         var objects = await _host.RunMetadataAsync((h, ct) => h.Metadata.GetObjectsAsync("eunomia_perf_src", "eunomia_perf_src", ObjectDetail.Statistics, ct), Ct);
         var ours = Path.Combine(_directory, "ours.sql");
@@ -204,7 +204,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         var theirsMb = new FileInfo(theirs).Length / (1024.0 * 1024);
         var pr13 = Median(exportTheirs) / Median(exportOurs);
         Report(string.Create(CultureInfo.InvariantCulture,
-            $"PR-13: {Rows} linhas; Eunomia {Median(exportOurs).TotalSeconds:F2} s ({oursMb:F0} MB, {oursMb / Median(exportOurs).TotalSeconds:F1} MB/s, pico +{exportPeak:F0} MB); mysqldump {Median(exportTheirs).TotalSeconds:F2} s ({theirsMb:F0} MB, {theirsMb / Median(exportTheirs).TotalSeconds:F1} MB/s); débito relativo {pr13 * 100:F0}%; corridas {All(exportOurs)} vs {All(exportTheirs)}"));
+            $"PR-13: {Rows} rows; Eunomia {Median(exportOurs).TotalSeconds:F2} s ({oursMb:F0} MB, {oursMb / Median(exportOurs).TotalSeconds:F1} MB/s, peak +{exportPeak:F0} MB); mysqldump {Median(exportTheirs).TotalSeconds:F2} s ({theirsMb:F0} MB, {theirsMb / Median(exportTheirs).TotalSeconds:F1} MB/s); relative throughput {pr13 * 100:F0}%; runs {All(exportOurs)} vs {All(exportTheirs)}"));
 
         // PR-14: the same file (the mysqldump one) through mysql and through Run SQL file.
         var importOurs = new List<TimeSpan>();
@@ -237,7 +237,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         }
         var pr14 = Median(importTheirs) / Median(importOurs);
         Report(string.Create(CultureInfo.InvariantCulture,
-            $"PR-14: Eunomia {Median(importOurs).TotalSeconds:F2} s (pico +{importPeak:F0} MB); mysql < ficheiro {Median(importTheirs).TotalSeconds:F2} s; débito relativo {pr14 * 100:F0}%; corridas {All(importOurs)} vs {All(importTheirs)}"));
+            $"PR-14: Eunomia {Median(importOurs).TotalSeconds:F2} s (peak +{importPeak:F0} MB); mysql < file {Median(importTheirs).TotalSeconds:F2} s; relative throughput {pr14 * 100:F0}%; runs {All(importOurs)} vs {All(importTheirs)}"));
 
         // PR-15: CSV with HeidiSQL's separators; LOAD DATA LOCAL through the mysql client, through server mode and through client mode.
         var csv = Path.Combine(_directory, "big.csv");
@@ -246,7 +246,7 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
             await writer.WriteAsync("id;a;b;c;d;e\r\n");
             for (var i = 1; i <= Rows; i++)
             {
-                await writer.WriteAsync(string.Create(CultureInfo.InvariantCulture, $"{i};{i * 7 % 100000};\"nome {i} ação\";2026-01-01 00:00:00;{i / 100.0:F2};\"texto \"\"x\"\" {i % 5}\"\r\n"));
+                await writer.WriteAsync(string.Create(CultureInfo.InvariantCulture, $"{i};{i * 7 % 100000};\"name {i} ação\";2026-01-01 00:00:00;{i / 100.0:F2};\"text \"\"x\"\" {i % 5}\"\r\n"));
             }
         }
         var csvMb = new FileInfo(csv).Length / (1024.0 * 1024);
@@ -285,6 +285,6 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
             }
         }
         Report(string.Create(CultureInfo.InvariantCulture,
-            $"PR-15: CSV {csvMb:F0} MB; mysql LOAD DATA LOCAL {Median(csvTheirs).TotalSeconds:F2} s; Eunomia servidor {Median(csvServer).TotalSeconds:F2} s ({Median(csvTheirs) / Median(csvServer) * 100:F0}%), cliente {Median(csvClient).TotalSeconds:F2} s; pico +{csvPeak:F0} MB; corridas {All(csvServer)} vs {All(csvTheirs)}"));
+            $"PR-15: CSV {csvMb:F0} MB; mysql LOAD DATA LOCAL {Median(csvTheirs).TotalSeconds:F2} s; Eunomia server {Median(csvServer).TotalSeconds:F2} s ({Median(csvTheirs) / Median(csvServer) * 100:F0}%), client {Median(csvClient).TotalSeconds:F2} s; peak +{csvPeak:F0} MB; runs {All(csvServer)} vs {All(csvTheirs)}"));
     }
 }

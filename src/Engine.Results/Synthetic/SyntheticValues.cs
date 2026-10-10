@@ -14,8 +14,8 @@ internal static class SyntheticValues
         "alpha", "beta", "gamma", "delta", "order", "stock", "price", "client", "store", "product",
         "discount", "budget", "status", "role", "account", "invoice", "line", "item", "value", "total",
         "north", "south", "east", "west", "red", "green", "blue", "black", "white", "large",
-        "small", "medium", "premium", "basic", "standard", "express", "ação", "preço", "coração", "café",
-        "Größe", "número", "lisboa", "porto", "braga", "faro", "coimbra", "aveiro", "setúbal", "évora",
+        "small", "medium", "premium", "basic", "standard", "express", "façade", "naïve", "résumé", "café",
+        "Größe", "jalapeño", "zürich", "oslo", "kraków", "malmö", "reykjavík", "córdoba", "genève", "tromsø",
         "server", "table", "index", "query", "filter", "export", "import", "session", "backup", "report",
         "2026", "v2", "id", "x",
     ];

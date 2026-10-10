@@ -14,10 +14,10 @@ public sealed class TreeObjectCommandsTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task DropEmptySelectTopRowsECreateDatabase()
+    public async Task DropEmptySelectTopRowsAndCreateDatabase()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_tc_");
         var created = db + "_new";
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT); INSERT INTO `{db}`.people VALUES (1), (2); CREATE TABLE `{db}`.old (id INT);");

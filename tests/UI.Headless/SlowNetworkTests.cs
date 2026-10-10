@@ -57,10 +57,10 @@ public sealed class SlowNetworkTests
     private static Task PauseAsync(TimeSpan duration) => PumpAsync(() => false, duration);
 
     [AvaloniaFact(Timeout = UiTimeouts.Measurement)]
-    public async Task UiFluidaECargaCanceladaComRedeLenta()
+    public async Task SmoothUiAndCancelledLoadOnASlowNetwork()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         var db = NewDatabaseName("eunomia_net_");
         var db2 = NewDatabaseName("eunomia_net2_");
         // 20,000 rows of 1.6 KB: the first page (1,000 rows) takes about 8 s through the proxy; Show all, minutes.
@@ -150,10 +150,10 @@ public sealed class SlowNetworkTests
     /// <c>%TEMP%\eunomia-roundtrips.txt</c>.
     /// </summary>
     [AvaloniaFact(Timeout = UiTimeouts.Measurement)]
-    public async Task IdasAoServidorPorAcao()
+    public async Task RoundTripsPerAction()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Medição: EUNOMIA_PERF=1 e servidor de teste.");
+        Assert.SkipWhen(cs is null || Environment.GetEnvironmentVariable("EUNOMIA_PERF") != "1", "Measurement: needs EUNOMIA_PERF=1 and the test server.");
         var db = NewDatabaseName("eunomia_rt_");
         var tables = string.Concat(Enumerable.Range(1, 30).Select(i => $"CREATE TABLE `{db}`.t{i:D2} (id INT PRIMARY KEY, name VARCHAR(40)); "));
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; {tables}" +

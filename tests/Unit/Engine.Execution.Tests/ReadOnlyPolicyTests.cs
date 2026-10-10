@@ -26,7 +26,7 @@ public sealed class ReadOnlyPolicyTests
     [InlineData("TABLE t")]
     [InlineData("SELECT 1; SELECT 2;")]
     [InlineData("")]
-    public void LeiturasPassam(string sql)
+    public void ReadsGoThrough(string sql)
     {
         Assert.True(ReadOnlyPolicy.IsAllowed(sql), sql);
     }
@@ -66,7 +66,7 @@ public sealed class ReadOnlyPolicyTests
     [InlineData("FLUSH PRIVILEGES")]
     [InlineData("XA START 'x'")]
     [InlineData("HANDLER t OPEN")]
-    public void EscritasSaoRecusadas(string sql)
+    public void WritesAreRefused(string sql)
     {
         Assert.False(ReadOnlyPolicy.IsAllowed(sql), sql);
     }

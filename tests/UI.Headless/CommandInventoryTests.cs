@@ -16,7 +16,7 @@ public sealed class CommandInventoryTests
     ];
 
     [AvaloniaFact]
-    public void SoFicamSemHandlerOsDaVersaoSeguinteEOsDecididos()
+    public void OnlyLaterVersionAndDecidedCommandsLackAHandler()
     {
         // Configured sessions (without connecting): session commands only exist with them.
         var shell = RealServer.CreateShell("Server=127.0.0.1;Port=1;User ID=x;Password=y", string.Empty);

@@ -38,7 +38,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void GuardaEDevolveValoresPorTipo()
+    public void StoresAndReturnsValuesPerType()
     {
         var block = Sample();
 
@@ -54,7 +54,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void TextoForaDeOrdemEhRejeitado()
+    public void OutOfOrderTextIsRejected()
     {
         var b = new RowBlockBuilder(Schema, 0, 0, 3);
         b.SetString(2, 5, "c");
@@ -63,7 +63,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void ByteSizeContaOsArrays()
+    public void ByteSizeCountsTheArrays()
     {
         var block = Sample();
 
@@ -72,7 +72,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void FormatterMostraNullSeparadorDeMilharesECasasDecimais()
+    public void FormatterShowsNullThousandsSeparatorAndDecimals()
     {
         var block = Sample();
         var f = new DisplayFormatter(CultureInfo.InvariantCulture);
@@ -90,7 +90,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void FormatterSemSeparadorDeMilhares()
+    public void FormatterWithoutThousandsSeparator()
     {
         var f = new DisplayFormatter(CultureInfo.InvariantCulture, thousandsSeparator: false);
 
@@ -99,7 +99,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void FormatterUsaOsSeparadoresDaCultura()
+    public void FormatterUsesTheCultureSeparators()
     {
         var f = new DisplayFormatter(CultureInfo.GetCultureInfo("de-DE"));
 
@@ -108,7 +108,7 @@ public sealed class RowBlockTests
     }
 
     [Fact]
-    public void TextoCortadoLevaSufixo()
+    public void CutTextGetsASuffix()
     {
         var schema = new ResultSchema([new ColumnInfo("t", "TEXT", TypeCategory.Text, StorageKind.String, false, true)]);
         var b = new RowBlockBuilder(schema, 0, 0, 2);

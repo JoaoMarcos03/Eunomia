@@ -44,7 +44,7 @@ public sealed class DialogSnapshotTests
 
     [AvaloniaTheory]
     [MemberData(nameof(Cases))]
-    public void Dialogo(string name, string theme)
+    public void Dialog(string name, string theme)
     {
         var window = Create(name);
         window.RequestedThemeVariant = theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light;

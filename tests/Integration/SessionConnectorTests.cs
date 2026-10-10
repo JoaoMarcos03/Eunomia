@@ -20,7 +20,7 @@ public sealed class SessionConnectorTests
     }
 
     [Fact]
-    public async Task LigaContaEstatisticasEMantemAListaDeAbertas()
+    public async Task ConnectsCountsStatisticsAndKeepsTheOpenList()
     {
         TestServer.RequireServer();
         var (connector, session) = Create();
@@ -41,7 +41,7 @@ public sealed class SessionConnectorTests
     }
 
     [Fact]
-    public async Task CredenciaisErradasContamComoFalha()
+    public async Task WrongCredentialsCountAsAFailure()
     {
         TestServer.RequireServer();
         var (connector, session) = Create();
@@ -53,7 +53,7 @@ public sealed class SessionConnectorTests
     }
 
     [Fact]
-    public async Task ListaAsBasesComUmaLigacaoTemporaria()
+    public async Task ListsTheDatabasesWithATemporaryConnection()
     {
         TestServer.RequireServer();
         var (connector, session) = Create();

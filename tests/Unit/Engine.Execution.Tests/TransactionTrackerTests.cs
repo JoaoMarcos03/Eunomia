@@ -39,13 +39,13 @@ public sealed class TransactionTrackerTests
     [InlineData("TRUNCATE t", TransactionEffect.ImplicitCommit)]
     [InlineData("LOCK TABLES t WRITE", TransactionEffect.ImplicitCommit)]
     [InlineData("", TransactionEffect.None)]
-    public void ClassificaPelasPrimeirasPalavras(string sql, TransactionEffect expected)
+    public void ClassifiesByTheFirstWords(string sql, TransactionEffect expected)
     {
         Assert.Equal(expected, TransactionTracker.Classify(sql));
     }
 
     [Fact]
-    public void BeginAlteracoesECommit()
+    public void BeginChangesAndCommit()
     {
         var t = new TransactionTracker();
         var changes = 0;
@@ -66,7 +66,7 @@ public sealed class TransactionTrackerTests
     }
 
     [Fact]
-    public void AutocommitDesligadoAbreTransacaoImplicita()
+    public void AutocommitOffOpensAnImplicitTransaction()
     {
         var t = new TransactionTracker();
         t.Observe(["SET autocommit = 0"]);
@@ -88,7 +88,7 @@ public sealed class TransactionTrackerTests
     }
 
     [Fact]
-    public void LigacaoPerdidaDizSeHaviaAlteracoes()
+    public void LostConnectionTellsWhetherThereWereChanges()
     {
         var t = new TransactionTracker();
         t.Observe(["START TRANSACTION", "INSERT INTO t VALUES (1)"]);

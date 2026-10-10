@@ -10,7 +10,7 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class GridExportDialogTests
 {
     [AvaloniaFact]
-    public void DefaultsEOpcoesDoClipboardSeparadas()
+    public void DefaultsAndSeparateClipboardOptions()
     {
         var settings = new ExportOptions();
         var dialog = new GridExportDialog(settings, selectedRows: 3, allRows: 1000, focusedColumn: "name", expandFileName: s => s);

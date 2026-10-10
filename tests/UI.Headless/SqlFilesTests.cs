@@ -21,7 +21,7 @@ public sealed class SqlFilesTests : IDisposable
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task LoadSaveRecentesEAlteracaoExterna()
+    public async Task LoadSaveRecentAndExternalChange()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();
@@ -67,7 +67,7 @@ public sealed class SqlFilesTests : IDisposable
         // Save as in a new tab: UTF-8 without a BOM and the caption with the name.
         var second = window.Tabs.AddQueryTab();
         var secondView = Assert.IsType<QueryTabView>(second.Content);
-        secondView.Editor.Text = "SELECT 'novo';";
+        secondView.Editor.Text = "SELECT 'new';";
         var other = Path.Combine(_dir, "b.sql");
         window.SaveSqlFileOverride = suggested =>
         {
@@ -76,7 +76,7 @@ public sealed class SqlFilesTests : IDisposable
         };
         Assert.True(await commands.ExecuteAsync("query.saveAs"));
         Assert.Equal("b.sql", second.Name);
-        Assert.Equal(Encoding.UTF8.GetBytes("SELECT 'novo';"), await File.ReadAllBytesAsync(other));
+        Assert.Equal(Encoding.UTF8.GetBytes("SELECT 'new';"), await File.ReadAllBytesAsync(other));
 
         // Closing a changed tab asks; Cancel keeps it, No closes it.
         secondView.Editor.Text = "SELECT 'mudou';";
@@ -98,7 +98,7 @@ public sealed class SqlFilesTests : IDisposable
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task FicheiroGrandePerguntaAntes()
+    public async Task LargeFileAsksFirst()
     {
         var window = new MainWindow(TestShell.CreateContext());
         window.Show();

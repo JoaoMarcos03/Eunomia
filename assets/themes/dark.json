@@ -1,6 +1,6 @@
 {
   "name": "Dark",
-  "comment": "Tema escuro (Fase 13): cinzentos neutros coerentes com o Fluent escuro, acento azul; cores de dados da secção 5.6 aclaradas para fundo escuro.",
+  "comment": "Dark theme (phase 13): neutral greys consistent with dark Fluent, blue accent; data colours from spec section 5.6 lightened for a dark background.",
   "tokens": {
     "surface.chrome": "#2B2D30",
     "surface.panel": "#2B2D30",

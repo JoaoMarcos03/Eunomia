@@ -19,7 +19,7 @@ public readonly record struct KeyChord(ChordModifiers Modifiers, string Key)
 {
     /// <summary>Reads "Ctrl+Shift+F9", "Alt+Enter", "Ins", "F5". Modifiers in any order, case-insensitive.</summary>
     public static KeyChord Parse(string text) =>
-        TryParse(text, out var chord) ? chord : throw new FormatException($"Atalho inválido: '{text}'.");
+        TryParse(text, out var chord) ? chord : throw new FormatException($"Invalid shortcut: '{text}'.");
 
     public static bool TryParse(string? text, [NotNullWhen(true)] out KeyChord chord)
     {

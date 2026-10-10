@@ -36,10 +36,10 @@ public sealed class BlobTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task GravaOBlobInteiroEMostraAImagem()
+    public async Task SavesTheWholeBlobAndShowsTheImage()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var png = NoisePng(40, 30);
         Assert.True(png.Length > 1000);
@@ -110,7 +110,7 @@ public sealed class BlobTests
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("light")]
     [InlineData("dark")]
-    public async Task SnapshotDoPainel(string theme)
+    public async Task PanelSnapshot(string theme)
     {
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var panel = new ImagePreviewPanel();

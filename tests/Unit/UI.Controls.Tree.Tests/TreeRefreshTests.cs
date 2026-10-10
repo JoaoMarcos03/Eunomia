@@ -23,7 +23,7 @@ public sealed class TreeRefreshTests
         {
             if (parent.Name == Failing)
             {
-                throw new InvalidOperationException("falhou " + parent.Name);
+                throw new InvalidOperationException("failed " + parent.Name);
             }
             IReadOnlyList<TreeNode> result = parent.Kind switch
             {
@@ -56,7 +56,7 @@ public sealed class TreeRefreshTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [Fact]
-    public async Task RefreshMantemBasesEGruposAbertosEReencontraOFocado()
+    public async Task RefreshKeepsDatabasesAndGroupsOpenAndFindsTheFocusedOneAgain()
     {
         var (model, provider, session) = Create(group: true);
         await model.ExpandAsync(session, Ct);
@@ -65,7 +65,7 @@ public sealed class TreeRefreshTests
         await model.ExpandAsync(Child(a, "Tables"), Ct);
         var path = TreeModel.PathOf(Child(Child(a, "Tables"), "t2"));
         provider.Databases.Remove("b");
-        provider.Databases["d"] = [("novo", 1)];
+        provider.Databases["d"] = [("added", 1)];
 
         await model.ReloadAsync(session, Ct);
 
@@ -81,7 +81,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task ObjetoQueDesapareceuDevolveOAntepassadoMaisProximo()
+    public async Task VanishedObjectReturnsTheClosestAncestor()
     {
         var (model, provider, session) = Create();
         await model.ExpandAsync(session, Ct);
@@ -95,7 +95,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task GruposSaoTransparentesNoCaminho()
+    public async Task GroupsAreTransparentInThePath()
     {
         // The focused object is found again after turning "Group objects by type" on or off.
         var (model, provider, session) = Create();
@@ -118,7 +118,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task UmaBaseQueFalhaNoRefreshFicaFechadaEAsOutrasReabrem()
+    public async Task DatabaseFailingOnRefreshStaysClosedAndTheOthersReopen()
     {
         var (model, provider, session) = Create();
         Exception? failure = null;
@@ -132,11 +132,11 @@ public sealed class TreeRefreshTests
 
         Assert.False(Child(session, "a").IsExpanded);
         Assert.True(Child(session, "b").IsExpanded);
-        Assert.Contains("falhou a", failure!.Message, StringComparison.Ordinal);
+        Assert.Contains("failed a", failure!.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task GrupoMostraAContagem()
+    public async Task GroupShowsTheCount()
     {
         var (model, _, session) = Create(group: true);
         await model.ExpandAsync(session, Ct);
@@ -150,7 +150,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task SomasDaColunaSize()
+    public async Task SizeColumnSums()
     {
         var (model, provider, session) = Create(group: true);
         provider.Databases["b"] = [("x", 50)];
@@ -174,7 +174,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task CollapseAllFechaOsDescendentesMasNaoASessao()
+    public async Task CollapseAllClosesTheDescendantsButNotTheSession()
     {
         var (model, _, session) = Create();
         await model.ExpandAsync(session, Ct);
@@ -188,7 +188,7 @@ public sealed class TreeRefreshTests
     }
 
     [Fact]
-    public async Task EstrelaAvisaQuemGrava()
+    public async Task StarNotifiesWhoeverSaves()
     {
         var (model, _, session) = Create();
         await model.ExpandAsync(session, Ct);

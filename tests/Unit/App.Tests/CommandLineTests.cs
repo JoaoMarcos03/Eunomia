@@ -6,7 +6,7 @@ namespace Eunomia.App.Tests;
 public sealed class CommandLineTests
 {
     [Fact]
-    public void FormasDeEscreverOsValores()
+    public void WaysOfWritingTheValues()
     {
         var r = CommandLine.Parse(["-h=db.example.com", "-P", "3307", "--user=app", "-p\"se cret\"", "-db=shop;crm", "C:\\x\\script.sql", "--theme", "dark"]);
 
@@ -20,7 +20,7 @@ public sealed class CommandLineTests
     }
 
     [Fact]
-    public void ValorNaoPodeComecarPorHifen()
+    public void ValueCannotStartWithAHyphen()
     {
         var r = CommandLine.Parse(["-u", "-p=x"]);
 
@@ -29,7 +29,7 @@ public sealed class CommandLineTests
     }
 
     [Fact]
-    public void SessaoGravadaComParametrosPorCimaEhAdHoc()
+    public void SavedSessionWithParametersOnTopIsAdHoc()
     {
         var catalog = new SessionCatalog();
         var saved = new SessionDefinition { Name = "prod", Folder = ["Clients"], Host = "prod", Port = 3306, User = "root", Color = 0xDC143C };
@@ -48,7 +48,7 @@ public sealed class CommandLineTests
     }
 
     [Fact]
-    public void SshPelaLinhaDeComandos()
+    public void SshThroughTheCommandLine()
     {
         var s = CommandLine.Resolve(CommandLine.Parse(["-h=10.0.0.5", "-sh=bastion", "-su=deploy", "-sP=2222"]), new SessionCatalog())!;
 
@@ -57,7 +57,7 @@ public sealed class CommandLineTests
     }
 
     [Fact]
-    public void SemNadaEhVazio()
+    public void WithNothingItIsEmpty()
     {
         Assert.True(CommandLine.Parse(["--theme", "dark", "--startup-probe", "x.json"]).IsEmpty);
     }

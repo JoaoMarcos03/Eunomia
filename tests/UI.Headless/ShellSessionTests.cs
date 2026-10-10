@@ -14,10 +14,10 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class ShellSessionTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task LigaMostraArvoreDadosERunNoServidorReal()
+    public async Task ConnectsAndShowsTreeDataAndRunOnTheRealServer()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var database = NewDatabaseName("eunomia_ui_");
         await ExecAsync(cs, $"CREATE DATABASE `{database}`; CREATE TABLE `{database}`.`people` (id INT PRIMARY KEY, name VARCHAR(20)); INSERT INTO `{database}`.`people` VALUES (1,'Ana'),(2,'Rui'),(3,'Eva');");
         try

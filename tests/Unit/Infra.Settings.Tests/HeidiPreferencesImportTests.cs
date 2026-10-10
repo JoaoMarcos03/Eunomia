@@ -41,7 +41,7 @@ public sealed class HeidiPreferencesImportTests : IDisposable
     }
 
     [Fact]
-    public void PreferenciasGlobaisDoHeidiSql()
+    public void HeidiSqlGlobalPreferences()
     {
         var (result, catalog, settings, db) = Import();
         using (db)
@@ -68,7 +68,7 @@ public sealed class HeidiPreferencesImportTests : IDisposable
     }
 
     [Fact]
-    public void EstadoPorTabelaEHistorico()
+    public void PerTableStateAndHistory()
     {
         var (result, catalog, _, db) = Import();
         using (db)

@@ -14,11 +14,11 @@ namespace Eunomia.Integration.Tests;
 /// </summary>
 public sealed class SecretsInLogsTests
 {
-    private const string Secret = "Sgr-7f3a-Teste!";
+    private const string Secret = "Sgr-7f3a-Test!";
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task PasswordsNuncaChegamAoSqlLogNemAosErros()
+    public async Task PasswordsNeverReachTheSqlLogOrTheErrors()
     {
         TestServer.RequireServer();
         var builder = new MySqlConnectionStringBuilder(TestServer.ConnectionString!);

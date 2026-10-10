@@ -19,7 +19,7 @@ public sealed class DataFiltersTests
     private static readonly ColumnDefinition Data = Col("data", "blob", LogicalTypeKind.Binary);
 
     [Fact]
-    public void MultiColumnLikeEmTodasAsColunas()
+    public void MultiColumnLikeOnEveryColumn()
     {
         Assert.Equal(
             "`id` LIKE '%a''b%' OR `name` LIKE '%a''b%' OR CAST(`created` AS CHAR) LIKE '%a''b%'",
@@ -30,7 +30,7 @@ public sealed class DataFiltersTests
     }
 
     [Fact]
-    public void EscapingPorTipo()
+    public void EscapingPerType()
     {
         Assert.Equal("42", DataFilters.Escape(Dialect, Id, "42"));
         Assert.Equal("'4x'", DataFilters.Escape(Dialect, Id, "4x"));
@@ -41,7 +41,7 @@ public sealed class DataFiltersTests
     }
 
     [Fact]
-    public void ValoresDasLinhasSelecionadas()
+    public void ValuesOfTheSelectedRows()
     {
         string?[] values = ["a", "b", "a", null];
 
@@ -55,7 +55,7 @@ public sealed class DataFiltersTests
     }
 
     [Fact]
-    public void ValoresParamAo1Kb()
+    public void ValuesStopAt1Kb()
     {
         var values = Enumerable.Range(0, 100).Select(i => i.ToString("D3", System.Globalization.CultureInfo.InvariantCulture) + new string('x', 47)).ToList();
 
@@ -65,7 +65,7 @@ public sealed class DataFiltersTests
     }
 
     [Fact]
-    public void ValorEscritoOuDoClipboard()
+    public void TypedOrClipboardValue()
     {
         Assert.Equal("`id` = 7", DataFilters.Single(Dialect, Id, QuickFilterOperator.Equal, "7"));
         Assert.Equal("`name` != 'x'", DataFilters.Single(Dialect, Name, QuickFilterOperator.NotEqual, "x"));
@@ -81,7 +81,7 @@ public sealed class DataFiltersTests
     }
 
     [Fact]
-    public void ShiftJuntaComAnd()
+    public void ShiftJoinsWithAnd()
     {
         Assert.Equal("`id` = 1", DataFilters.Combine(null, "`id` = 1"));
         Assert.Equal("`id` = 1\nAND `name` = 'a'", DataFilters.Combine("`id` = 1", "`name` = 'a'"));
@@ -90,7 +90,7 @@ public sealed class DataFiltersTests
     }
 
     [Fact]
-    public void CaptionCortadaA100()
+    public void CaptionCutAt100()
     {
         Assert.Equal("`a` = 1 OR `b` = 2", DataFilters.Caption("`a` = 1\nOR `b` = 2"));
         Assert.Equal(100, DataFilters.Caption(new string('x', 300)).Length);

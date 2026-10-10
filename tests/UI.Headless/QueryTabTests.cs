@@ -18,10 +18,10 @@ public sealed class QueryTabTests
     private static string Header(TabItem item) => (string)item.Header!;
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ResultTabsOrdenacaoErroEUnsafe()
+    public async Task ResultTabsSortingErrorAndUnsafe()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_qt_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); INSERT INTO `{db}`.people VALUES (1, 'rui'), (2, 'Ana'), (3, NULL);");
@@ -46,9 +46,9 @@ public sealed class QueryTabTests
             var view = Assert.IsType<QueryTabView>(window.Tabs.QueryTabs[0].Content);
 
             // Two result sets named by comments, "(Nr × Mc)" captions and the summary in the log.
-            window.SqlEditor.Text = $"-- names: um, dois\nSELECT 1 AS a;\nSELECT * FROM `{db}`.people;";
+            window.SqlEditor.Text = $"-- names: one, two\nSELECT 1 AS a;\nSELECT * FROM `{db}`.people;";
             Assert.True(await context.Commands.ExecuteAsync("query.run"));
-            Assert.Equal(["um (1r × 1c)", "dois (3r × 2c)"], view.Results.Items.OfType<TabItem>().Select(Header));
+            Assert.Equal(["one (1r × 1c)", "two (3r × 2c)"], view.Results.Items.OfType<TabItem>().Select(Header));
             Assert.Contains(log.Snapshot(), l => l.Text.Contains("Affected rows: 0  Found rows: 4  Warnings: 0  Duration for 2 queries:", StringComparison.Ordinal));
             Assert.Equal(0xFF006400u, view.ResultGrids[0].Control.SessionColor);
             Assert.True(view.ResultGrids[0].Control.IsReadOnly);
@@ -102,10 +102,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task AutocompleteComAliasNaSessaoAtiva()
+    public async Task AutocompleteWithAliasOnTheActiveSession()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_qa_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, `full name` VARCHAR(20));");
         try
@@ -138,10 +138,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ResultadosEditaveisSoComTabelaEChave()
+    public async Task EditableResultsOnlyWithTableAndKey()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_qe_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); INSERT INTO `{db}`.people VALUES (1, 'Ana'), (2, 'Rui');");
         try
@@ -183,10 +183,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SessaoAlvoEFixarTab()
+    public async Task TargetSessionAndPinningTheTab()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var (window, context, session, connector, log) = CreateShell(cs, string.Empty, color: 0xC00000);
         var questions = new List<string>();
         var answer = false;
@@ -240,10 +240,10 @@ public sealed class QueryTabTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task CancelSoAtuaNaPropriaTab()
+    public async Task CancelOnlyActsOnItsOwnTab()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var (window, context, session, _, log) = CreateShell(cs, string.Empty);
         Assert.True(await window.ConnectAsync(window, session, null));
         await WaitAsync(() => window.Tree.Tree.Model!.Roots.FirstOrDefault());

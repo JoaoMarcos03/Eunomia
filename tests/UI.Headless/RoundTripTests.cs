@@ -16,10 +16,10 @@ public sealed class RoundTripTests
     private static TreeNode Child(TreeNode parent, string name) => parent.Children!.Single(n => n.Name == name);
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task UmaIdaPorPassoAoAbrirTabelas()
+    public async Task OneRoundTripPerStepWhenOpeningTables()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_rtt_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
             $"CREATE TABLE `{db}`.parent (id INT PRIMARY KEY, name VARCHAR(20), UNIQUE KEY uq (name)); " +

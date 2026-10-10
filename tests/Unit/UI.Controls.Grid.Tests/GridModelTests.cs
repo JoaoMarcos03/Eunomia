@@ -12,7 +12,7 @@ public sealed class GridColumnsTests
     }
 
     [Fact]
-    public void SomasPrefixasEPesquisaBinaria()
+    public void PrefixSumsAndBinarySearch()
     {
         var c = Make(50, 100, 30);
 
@@ -27,7 +27,7 @@ public sealed class GridColumnsTests
     }
 
     [Fact]
-    public void ColunasVisiveis()
+    public void VisibleColumns()
     {
         var c = Make(Enumerable.Repeat(100.0, 60).ToArray());
 
@@ -37,7 +37,7 @@ public sealed class GridColumnsTests
     }
 
     [Fact]
-    public void LarguraMinima()
+    public void MinimumWidth()
     {
         var c = Make(1, 50);
 
@@ -50,7 +50,7 @@ public sealed class GridColumnsTests
 public sealed class GridSelectionTests
 {
     [Fact]
-    public void CliqueSelecionaSoALinhaFocada()
+    public void ClickSelectsOnlyTheFocusedRow()
     {
         var s = new GridSelection();
         s.Focus(5, 2);
@@ -63,7 +63,7 @@ public sealed class GridSelectionTests
     }
 
     [Fact]
-    public void ShiftEstendeDaAncora()
+    public void ShiftExtendsFromTheAnchor()
     {
         var s = new GridSelection();
         s.Focus(10, 0);
@@ -77,7 +77,7 @@ public sealed class GridSelectionTests
     }
 
     [Fact]
-    public void CtrlAlternaLinhas()
+    public void CtrlTogglesRows()
     {
         var s = new GridSelection();
         s.Focus(1, 0);
@@ -91,7 +91,7 @@ public sealed class GridSelectionTests
     }
 
     [Fact]
-    public void CtrlSetaMoveSoOFoco()
+    public void CtrlArrowMovesOnlyTheFocus()
     {
         var s = new GridSelection();
         s.Focus(1, 0);
@@ -103,7 +103,7 @@ public sealed class GridSelectionTests
     }
 
     [Fact]
-    public void CtrlAECtrlI()
+    public void CtrlAAndCtrlI()
     {
         var s = new GridSelection();
         s.Focus(2, 0);
@@ -121,7 +121,7 @@ public sealed class GridSelectionTests
     }
 
     [Fact]
-    public void SemFocoNaoHaStatus()
+    public void WithoutFocusThereIsNoStatus()
     {
         Assert.Equal(string.Empty, new GridSelection().StatusText);
     }
@@ -130,7 +130,7 @@ public sealed class GridSelectionTests
 public sealed class GridEditBufferTests
 {
     [Fact]
-    public void AlteracoesFicamPendentesAteGravar()
+    public void ChangesStayPendingUntilSaved()
     {
         var b = new GridEditBuffer();
         b.SetValue(3, 1, new CellValue("x"));
@@ -151,7 +151,7 @@ public sealed class GridEditBufferTests
     }
 
     [Fact]
-    public void NaoAceitaAlteracoesEmDuasLinhasSemGravar()
+    public void DoesNotAcceptChangesOnTwoRowsWithoutSaving()
     {
         var b = new GridEditBuffer();
         b.SetValue(1, 0, new CellValue("a"));
@@ -160,7 +160,7 @@ public sealed class GridEditBufferTests
     }
 
     [Fact]
-    public void DescartarRepoeOValorOriginal()
+    public void DiscardRestoresTheOriginalValue()
     {
         var b = new GridEditBuffer();
         b.SetValue(1, 0, new CellValue("a"));
@@ -171,7 +171,7 @@ public sealed class GridEditBufferTests
     }
 
     [Fact]
-    public void InserirAcrescentaNoFimEDescartarRemove()
+    public void InsertAppendsAtTheEndAndDiscardRemoves()
     {
         var b = new GridEditBuffer();
 
@@ -182,7 +182,7 @@ public sealed class GridEditBufferTests
         Assert.Equal(0, b.InsertedRows);
 
         Assert.Equal(1000, b.InsertRow(1000));
-        b.SetValue(1000, 1, new CellValue("novo"));
+        b.SetValue(1000, 1, new CellValue("new"));
         b.Commit();
         Assert.Equal(1001, b.InsertRow(1000));
     }
@@ -207,7 +207,7 @@ public sealed class GridKeymapTests
     [InlineData(Key.Enter, KeyModifiers.Control, GridCommand.CommitRow)]
     [InlineData(Key.Escape, KeyModifiers.None, GridCommand.DiscardRow)]
     [InlineData(Key.Tab, KeyModifiers.None, GridCommand.None)]
-    public void Navegacao(Key key, KeyModifiers modifiers, GridCommand expected)
+    public void Navigation(Key key, KeyModifiers modifiers, GridCommand expected)
     {
         Assert.Equal(expected, Map.Resolve(key, modifiers, GridKeyContext.Navigation));
     }
@@ -219,20 +219,20 @@ public sealed class GridKeymapTests
     [InlineData(Key.Enter, KeyModifiers.None, GridCommand.EndEdit)]
     [InlineData(Key.Home, KeyModifiers.None, GridCommand.None)]
     [InlineData(Key.C, KeyModifiers.Control, GridCommand.None)]
-    public void Edicao(Key key, KeyModifiers modifiers, GridCommand expected)
+    public void Editing(Key key, KeyModifiers modifiers, GridCommand expected)
     {
         Assert.Equal(expected, Map.Resolve(key, modifiers, GridKeyContext.Editing));
     }
 
     [Fact]
-    public void CtrlInsertNaoEhCopy()
+    public void CtrlInsertIsNotCopy()
     {
         // In HeidiSQL Ctrl+Ins duplicates the row (FAM-G09); it must not stay as Copy.
         Assert.Equal(GridCommand.None, Map.Resolve(Key.Insert, KeyModifiers.Control, GridKeyContext.Navigation));
     }
 
     [Fact]
-    public void KeymapEhReconfiguravel()
+    public void KeymapIsReconfigurable()
     {
         var map = new GridKeymap { Bindings = [new(Key.F5, KeyModifiers.None, GridKeyContext.Navigation, GridCommand.Copy)] };
 

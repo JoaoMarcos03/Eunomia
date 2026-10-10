@@ -10,7 +10,7 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class TableEditorIndexMenuTests
 {
     [AvaloniaFact]
-    public void CriaIndicesEJuntaColunas()
+    public void CreatesIndexesAndAddsColumns()
     {
         var design = new TableDesign { Database = "shop", Name = "people" };
         design.Columns.Add(new ColumnDesign { Name = "id", DataType = "INT" });

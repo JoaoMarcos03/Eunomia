@@ -14,9 +14,9 @@ public sealed class HeidiRegistryTests
     private static readonly DateTimeOffset Now = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public void LeAsSettingsDoRegistoComoOFicheiro()
+    public void ReadsTheRegistrySettingsLikeTheFile()
     {
-        Assert.SkipUnless(OperatingSystem.IsWindows(), "Registo só no Windows.");
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Registry only on Windows.");
         if (!OperatingSystem.IsWindows())
         {
             return;
@@ -49,7 +49,7 @@ public sealed class HeidiRegistryTests
 
             var local = catalog.FindByPath("localhost")!;
             Assert.Equal(0x006400u, local.Color);
-            Assert.Equal("Linha 1\r\nLinha 2", local.Comment);
+            Assert.Equal("Line 1\r\nLine 2", local.Comment);
             Assert.Equal("root-pw", secrets.Get(SecretKeys.Password(local.Id)));
             Assert.Equal(3307, catalog.FindByPath(@"Amberline\StagingAmberline")!.Port);
             Assert.False(HeidiRegistry.HasSessions(key + @"\Nothing"));

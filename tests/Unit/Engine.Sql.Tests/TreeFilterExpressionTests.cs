@@ -49,7 +49,7 @@ public sealed class TreeFilterExpressionTests
     [InlineData("prd", "PRD_PRODUCTS", true)]
     [InlineData("(?-i)Prd", "prd_x", false)]
     [InlineData("(?-i)Prd", "Prd_x", true)]
-    [InlineData("AÇÃO", "tabela_ação", true)]
+    [InlineData("AÇÃO", "orders_ação", true)]
     // ; and | are both OR.
     [InlineData("a;b|c", "xcx", true)]
     [InlineData("users;orders", "orders", true)]
@@ -68,20 +68,20 @@ public sealed class TreeFilterExpressionTests
     // A literal ; is impossible: \; becomes \| (a literal pipe).
     [InlineData(@"a\;b", "a|b", true)]
     [InlineData(@"a\;b", "a;b", false)]
-    public void Corresponde(string filter, string name, bool expected)
+    public void Matches(string filter, string name, bool expected)
     {
         Assert.Equal(expected, new TreeFilterExpression(filter).IsMatch(name));
     }
 
     [Fact]
-    public void PontoEVirgulaViraPipeDentroDeParenteses()
+    public void SemicolonBecomesPipeInsideParentheses()
     {
         Assert.Equal("(a|b|c)", new TreeFilterExpression("a;b|c").Pattern);
         Assert.Equal("(b2b| prd)", new TreeFilterExpression("b2b; prd").Pattern);
     }
 
     [Fact]
-    public void CaixaVaziaNaoFiltra()
+    public void EmptyBoxDoesNotFilter()
     {
         var f = new TreeFilterExpression("");
 
@@ -94,7 +94,7 @@ public sealed class TreeFilterExpressionTests
     [InlineData("(")]
     [InlineData("prd_[")]
     [InlineData("*abc")]
-    public void RegexInvalidaDeixaTudoVisivelEDaErro(string filter)
+    public void InvalidRegexLeavesEverythingVisibleAndGivesAnError(string filter)
     {
         var f = new TreeFilterExpression(filter);
 
@@ -105,7 +105,7 @@ public sealed class TreeFilterExpressionTests
     }
 
     [Fact]
-    public void TimeoutEhCinquentaMilissegundosEDeixaONoVisivel()
+    public void TimeoutIsFiftyMillisecondsAndLeavesTheNodeVisible()
     {
         Assert.Equal(TimeSpan.FromMilliseconds(50), TreeFilterExpression.MatchTimeout);
 
@@ -115,7 +115,7 @@ public sealed class TreeFilterExpressionTests
     }
 
     [Fact]
-    public void HistoricoGuardaVinteMaisRecentesPrimeiro()
+    public void HistoryKeepsTwentyMostRecentFirst()
     {
         var h = new FilterHistory();
         for (var i = 0; i < 25; i++)

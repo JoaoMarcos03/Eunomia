@@ -42,7 +42,7 @@ internal static class Snapshot
             return;
         }
 
-        Assert.True(File.Exists(baselinePath), $"Falta a baseline {baselinePath}. Gerar com EUNOMIA_UPDATE_SNAPSHOTS=1 e rever o PNG antes do commit.");
+        Assert.True(File.Exists(baselinePath), $"Missing baseline {baselinePath}. Generate it with EUNOMIA_UPDATE_SNAPSHOTS=1 and review the PNG before committing.");
 
         // Both images go through the same PNG decoder, so they have the same pixel format.
         var (actualPixels, actualSize) = Decode(png);
@@ -70,7 +70,7 @@ internal static class Snapshot
         }
         Assert.True(
             ratio <= MaxDifferentRatio,
-            $"Snapshot {name}: {ratio:P2} dos pixels diferentes (máx. {MaxDifferentRatio:P2}); tamanho {actualSize} vs {expectedSize}.");
+            $"Snapshot {name}: {ratio:P2} of the pixels differ (max {MaxDifferentRatio:P2}); size {actualSize} vs {expectedSize}.");
     }
 
     private static byte[] Encode(Bitmap bitmap)
@@ -106,6 +106,6 @@ internal static class Snapshot
         {
             dir = dir.Parent;
         }
-        return dir?.FullName ?? throw new InvalidOperationException("Raiz do repo (Eunomia.slnx) não encontrada.");
+        return dir?.FullName ?? throw new InvalidOperationException("Repository root (Eunomia.slnx) not found.");
     }
 }

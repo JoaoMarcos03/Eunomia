@@ -19,10 +19,10 @@ public sealed class TransactionUiTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task StatusBarEPerguntaAoDesligarComAlteracoesPorConfirmar()
+    public async Task StatusBarAndQuestionWhenDisconnectingWithUncommittedChanges()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_txui_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT PRIMARY KEY) ENGINE=InnoDB;");
         try

@@ -15,10 +15,10 @@ namespace Eunomia.UI.Headless.Tests;
 public sealed class HeidiGapsTests
 {
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task ExplainAutoRefreshFollowForeignKeyEOpenUrl()
+    public async Task ExplainAutoRefreshFollowForeignKeyAndOpenUrl()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_gp_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; " +
@@ -121,10 +121,10 @@ public sealed class HeidiGapsTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task SqlHelpComF1NaPalavraDoCursor()
+    public async Task SqlHelpWithF1OnTheWordAtTheCursor()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var (window, context, session, connector, _) = CreateShell(cs, string.Empty);
         Assert.True(await window.ConnectAsync(window, session, null));
         await WaitAsync(() => window.Tree.Tree.Model!.Roots.FirstOrDefault());

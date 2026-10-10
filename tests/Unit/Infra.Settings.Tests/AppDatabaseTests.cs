@@ -23,13 +23,13 @@ public sealed class AppDatabaseTests : IDisposable
     private static readonly TableKey Products = new("localhost", "shop", "products");
 
     [Fact]
-    public void CriaOEsquemaNaVersaoAtual()
+    public void CreatesTheSchemaAtTheCurrentVersion()
     {
         Assert.Equal(SqliteAppDatabase.SchemaVersion, _db.CurrentSchemaVersion);
     }
 
     [Fact]
-    public void EstadoPorTabelaGravaSubstituiEApaga()
+    public void PerTableStateSavesReplacesAndDeletes()
     {
         _db.SetTableState(Products, "sort", "`id` DESC");
         _db.SetTableState(Products, "sort", "`name` ASC");
@@ -41,7 +41,7 @@ public sealed class AppDatabaseTests : IDisposable
     }
 
     [Fact]
-    public void FiltrosRecentesSobemParaOTopoECortamEm20()
+    public void RecentFiltersMoveToTheTopAndAreCappedAt20()
     {
         for (var i = 0; i < 25; i++)
         {
@@ -61,7 +61,7 @@ public sealed class AppDatabaseTests : IDisposable
     }
 
     [Fact]
-    public void FavoritosPorSessao()
+    public void FavouritesPerSession()
     {
         _db.SetFavorite("a", "shop||products", true);
         _db.SetFavorite("a", "shop||products", true);
@@ -74,7 +74,7 @@ public sealed class AppDatabaseTests : IDisposable
     }
 
     [Fact]
-    public void HistoricoDoMaisRecenteParaOMaisAntigo()
+    public void HistoryFromTheMostRecentToTheOldest()
     {
         var t0 = new DateTimeOffset(2026, 10, 5, 10, 0, 0, TimeSpan.Zero);
         var first = _db.AddHistory("a", "shop", "SELECT 1", t0, TimeSpan.FromMilliseconds(12));
@@ -96,7 +96,7 @@ public sealed class AppDatabaseTests : IDisposable
     }
 
     [Fact]
-    public void ReabrirMantemOsDados()
+    public void ReopeningKeepsTheData()
     {
         _db.SetFavorite("a", "x", true);
         _db.Dispose();

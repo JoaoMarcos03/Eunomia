@@ -20,10 +20,10 @@ public sealed class DataEditingTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task EditarInserirDuplicarApagarEErros()
+    public async Task EditInsertDuplicateDeleteAndErrors()
     {
         var cs = ConnectionString();
-        Assert.SkipWhen(cs is null, "Sem servidor de teste.");
+        Assert.SkipWhen(cs is null, "No test server.");
         var db = NewDatabaseName("eunomia_ed_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(20), age INT, note TEXT, created DATETIME) ENGINE=InnoDB; " +
             $"INSERT INTO `{db}`.people (name, age, note) VALUES ('Ana', 30, REPEAT('n', 400)), ('Rui', 40, 'curta');");
@@ -81,10 +81,10 @@ public sealed class DataEditingTests
             // Insert row: only the changed columns; the id comes from LAST_INSERT_ID().
             Assert.True(await context.Commands.ExecuteAsync("grid.insertRow"));
             Assert.Equal(3, grid.RowCount);
-            Assert.True(await grid.SetCellValueAsync(2, name, new CellValue("Nova")));
+            Assert.True(await grid.SetCellValueAsync(2, name, new CellValue("Nora")));
             Assert.True(await grid.PostAsync());
             Assert.Equal("3", grid.GetDisplayText(2, 0));
-            Assert.Equal("Nova", await ScalarAsync(cs, $"SELECT name FROM `{db}`.people WHERE id = 3"));
+            Assert.Equal("Nora", await ScalarAsync(cs, $"SELECT name FROM `{db}`.people WHERE id = 3"));
 
             // Duplicate row without keys: copies everything but the id and saves on Post.
             grid.FocusCell(1, name);
