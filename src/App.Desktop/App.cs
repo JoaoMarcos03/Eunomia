@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -119,13 +118,15 @@ public sealed class App : Application
                         ShowManagerOnStartup = true,
                     },
                 };
-                import = path => ImportSettings(HeidiSettingsFile.Load(path), catalog, sessionStore, context, secrets);
+                import = path => EunomiaSettingsFile.LooksLikeEunomiaFile(path)
+                    ? ImportEunomiaSettings(path, catalog, sessionStore, context)
+                    : ImportSettings(HeidiSettingsFile.Load(path), catalog, sessionStore, context, secrets);
                 if (OperatingSystem.IsWindows() && HeidiRegistry.HasSessions())
                 {
                     importRegistry = () => ImportSettings(
                         (OperatingSystem.IsWindows() ? HeidiRegistry.Read() : null) ?? new HeidiSettingsFile(), catalog, sessionStore, context, secrets);
                 }
-                export = path => ExportSettings(path, catalog, settings);
+                export = path => EunomiaSettingsFile.Export(path, catalog, context.Settings, _appDatabase);
                 desktop.Exit += (_, _) => _appDatabase.Dispose();
             }
             RequestedThemeVariant = PreferencesWindow.ThemeOf(options.Theme ?? context.Settings.Theme);
@@ -206,31 +207,25 @@ public sealed class App : Application
     private static string KeyringName =>
         OperatingSystem.IsWindows() ? "Windows Credential Manager" : OperatingSystem.IsMacOS() ? "macOS Keychain" : "system keyring";
 
-    /// <summary>File › Export settings file: settings and sessions as JSON, without secrets (section 23.2).</summary>
-    private static string ExportSettings(string path, SessionCatalog catalog, AppSettings settings)
+    /// <summary>
+    /// File › Import settings file with a file exported by Eunomia (<see cref="EunomiaSettingsFile"/>): add-only
+    /// sessions and folders, the favourites, and the preferences of the file.
+    /// </summary>
+    private string ImportEunomiaSettings(string path, SessionCatalog catalog, ISessionStore store, ShellContext context)
     {
-        var temp = Path.Combine(Path.GetTempPath(), "eunomia-export-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(temp);
-        try
+        var result = EunomiaSettingsFile.Import(path, catalog, context.Settings, _appDatabase);
+        store.Save(catalog);
+        context.SaveSettings();
+        var lines = new List<string>
         {
-            new JsonSettingsStore(Path.Combine(temp, "settings.json")).Save(settings);
-            new JsonSessionStore(Path.Combine(temp, "sessions.json")).Save(catalog);
-            using var stream = File.Create(path);
-            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-            writer.WriteStartObject();
-            writer.WriteString("format", "eunomia-settings");
-            writer.WriteNumber("version", 1);
-            writer.WritePropertyName("settings");
-            JsonDocument.Parse(File.ReadAllBytes(Path.Combine(temp, "settings.json"))).WriteTo(writer);
-            writer.WritePropertyName("sessions");
-            JsonDocument.Parse(File.ReadAllBytes(Path.Combine(temp, "sessions.json"))).WriteTo(writer);
-            writer.WriteEndObject();
-        }
-        finally
+            $"{result.ImportedSessions.Count} session(s) and {result.ImportedFolders} folder(s) imported, {result.SkippedSessions.Count} already existing session(s) left unchanged.",
+            $"{result.ImportedFavorites} favorite(s){(result.ImportedPreferences ? ", preferences and shortcuts" : string.Empty)} imported.",
+        };
+        if (result.ImportedSessions.Count > 0)
         {
-            Directory.Delete(temp, recursive: true);
+            lines.Add("Passwords are not part of the file: each imported session asks for its password on the first connection.");
         }
-        return $"{catalog.Sessions.Count} session(s) exported without passwords.";
+        return string.Join('\n', lines);
     }
 
     /// <summary>In-memory sessions (measurement mode).</summary>

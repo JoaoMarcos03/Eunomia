@@ -76,7 +76,9 @@ public sealed class RowBlockBuilder
     public void SetString(int row, int column, ReadOnlySpan<char> value, bool truncated = false)
     {
         AdvanceStringRow(column, row);
-        var needed = Encoding.UTF8.GetMaxByteCount(value.Length);
+        // Large text (multi-MB JSON) reserves its exact size: the maximum (3 bytes per character) tripled the memory and
+        // made the arena grow to twice that.
+        var needed = value.Length > LargeText ? Encoding.UTF8.GetByteCount(value) : Encoding.UTF8.GetMaxByteCount(value.Length);
         EnsureCapacity(column, needed);
         var written = Encoding.UTF8.GetBytes(value, _buffers[column].AsSpan(_lengths[column]));
         _lengths[column] += written;
@@ -173,6 +175,9 @@ public sealed class RowBlockBuilder
         }
         _nextRow[column] = row;
     }
+
+    /// <summary>From this length on, text counts its bytes before reserving (one more pass, paid back in memory).</summary>
+    private const int LargeText = 16 * 1024;
 
     private void EnsureCapacity(int column, int extra)
     {

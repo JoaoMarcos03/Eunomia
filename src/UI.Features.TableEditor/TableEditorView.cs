@@ -1,10 +1,16 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.VisualTree;
 using Eunomia.App.Objects;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.UI.Controls.Common.Accessibility;
@@ -26,7 +32,7 @@ public sealed record TableEditorLists(IReadOnlyList<string> Collations, IReadOnl
 public sealed class TableEditorView : DockPanel
 {
     private static readonly string[] Headers = ["#", "Name", "Datatype", "Length/Set", "Unsigned", "Allow NULL", "Zerofill", "Default", "Comment", "Collation", "Expression", "Virtuality", "SRID", "Invisible", "Compressed"];
-    private static readonly double[] Widths = [30, 140, 120, 90, 66, 78, 64, 170, 160, 160, 130, 90, 50, 66, 84];
+    private static readonly double[] Widths = [52, 160, 120, 90, 66, 78, 64, 170, 160, 160, 130, 90, 50, 66, 84];
     private static readonly string[] Actions = ["RESTRICT", "CASCADE", "SET NULL", "NO ACTION", "SET DEFAULT"];
 
     private readonly TableEditorLists _lists;
@@ -43,7 +49,13 @@ public sealed class TableEditorView : DockPanel
     private readonly TextBox _alterCodeBox = Code().Named("ALTER code");
     private readonly Button _save = new() { Content = "Save", MinWidth = 75, HorizontalContentAlignment = HorizontalAlignment.Center };
     private readonly Button _discard = new() { Content = "Discard", MinWidth = 75, HorizontalContentAlignment = HorizontalAlignment.Center };
+    private const string RowClass = "column-row";
+    private const string SelectedClass = "selected";
+    private const double RowHeight = 26;
+
     private int _selected = -1;
+    private Regex? _columnFilter;
+    private Dictionary<string, string> _keys = new(StringComparer.OrdinalIgnoreCase);
 
     public TableEditorView(TableDesign design, TableEditorLists lists, Func<TableDesign, string> createCode, Func<TableDesign, string>? alterCode)
     {
@@ -89,17 +101,7 @@ public sealed class TableEditorView : DockPanel
         columnBar.Children.Add(ToolButton("Up", () => MoveColumn(-1)));
         columnBar.Children.Add(ToolButton("Down", () => MoveColumn(1)));
 
-        var header = new Grid { ColumnDefinitions = ColumnsLayout() };
-        for (var i = 0; i < Headers.Length; i++)
-        {
-            var text = new TextBlock { Text = Headers[i], FontWeight = FontWeight.SemiBold, Margin = new Thickness(2) };
-            Grid.SetColumn(text, i);
-            header.Children.Add(text);
-        }
-        var grid = new StackPanel();
-        grid.Children.Add(header);
-        grid.Children.Add(_columnRows);
-        var columns = new ScrollViewer { Content = grid, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        var columns = BuildColumnList();
 
         var bottom = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 6, 0, 0) };
         bottom.Children.Add(_discard);
@@ -141,11 +143,7 @@ public sealed class TableEditorView : DockPanel
     public int SelectedColumn
     {
         get => _selected;
-        set
-        {
-            _selected = Math.Clamp(value, -1, Design.Columns.Count - 1);
-            HighlightSelection();
-        }
+        set => SelectColumn(value);
     }
 
     public string CreateCodeText => _createCodeBox.Text ?? string.Empty;
@@ -160,6 +158,57 @@ public sealed class TableEditorView : DockPanel
     }
 
     public string AlterCodeText => _alterCodeBox.Text ?? string.Empty;
+
+    /// <summary>
+    /// Bottom filter panel over the column list (appendix C §1.9; appendix D B11): hides the columns where no visible
+    /// text (#, name, type, Length/Set, default, comment, collation, expression, virtuality) matches
+    /// <paramref name="regex"/>; <c>null</c> shows them all. It stays active after adding, removing or moving columns.
+    /// Returns the matching columns and the total.
+    /// </summary>
+    /// <exception cref="RegexMatchTimeoutException">The regex took too long (the filter is turned off).</exception>
+    public (int Matching, int Total) FilterColumns(Regex? regex)
+    {
+        _columnFilter = regex;
+        try
+        {
+            return ApplyColumnFilter();
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            _columnFilter = null;
+            ApplyColumnFilter();
+            throw;
+        }
+    }
+
+    /// <summary>Column rows visible with the current filter (tests).</summary>
+    public IReadOnlyList<string> VisibleColumnNames =>
+        _columnRows.Children.Select((row, i) => (row, i)).Where(x => x.row.IsVisible && x.i < Design.Columns.Count).Select(x => Design.Columns[x.i].Name).ToList();
+
+    private (int Matching, int Total) ApplyColumnFilter()
+    {
+        var matching = 0;
+        for (var i = 0; i < _columnRows.Children.Count && i < Design.Columns.Count; i++)
+        {
+            var visible = _columnFilter is not { } regex || ColumnTexts(i, Design.Columns[i]).Any(regex.IsMatch);
+            _columnRows.Children[i].IsVisible = visible;
+            matching += visible ? 1 : 0;
+        }
+        return (matching, Design.Columns.Count);
+    }
+
+    private static IEnumerable<string> ColumnTexts(int index, ColumnDesign c)
+    {
+        yield return (index + 1).ToString(CultureInfo.InvariantCulture);
+        yield return c.Name;
+        yield return c.DataType;
+        yield return c.LengthSet;
+        yield return c.DefaultCaption;
+        yield return c.Comment;
+        yield return c.Collation;
+        yield return c.Expression;
+        yield return c.Virtuality;
+    }
 
     /// <summary>After saving: no unsaved changes.</summary>
     public void MarkSaved()
@@ -396,47 +445,289 @@ public sealed class TableEditorView : DockPanel
         _checksTab.Header = $"Check constraints ({Design.Checks.Count})";
     }
 
-    private HashSet<string> PrimaryColumns() =>
-        Design.Indexes.Where(i => i.Kind == IndexKind.Primary).SelectMany(i => TableDesign.SplitList(i.Columns)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    /// Column list with a fixed header: the header scrolls sideways with the rows and stays on top when they scroll
+    /// down. Row lines, hover and selection come from the theme tokens.
+    /// </summary>
+    private Control BuildColumnList()
+    {
+        Styles.Add(new Style(x => x.OfType<Border>().Class(RowClass))
+        {
+            Setters =
+            {
+                new Setter(Border.BorderThicknessProperty, new Thickness(0, 0, 0, 1)),
+                new Setter(Border.BorderBrushProperty, new DynamicResourceExtension(ThemeTokens.Key("grid.line"))),
+                new Setter(Border.BackgroundProperty, Brushes.Transparent),
+            },
+        });
+        Styles.Add(new Style(x => x.OfType<Border>().Class(RowClass).Class(":pointerover"))
+        {
+            Setters = { new Setter(Border.BackgroundProperty, new DynamicResourceExtension(ThemeTokens.Key("hover"))) },
+        });
+        Styles.Add(new Style(x => x.OfType<Border>().Class(RowClass).Class(SelectedClass))
+        {
+            Setters = { new Setter(Border.BackgroundProperty, new DynamicResourceExtension(ThemeTokens.Key("selection.focus"))) },
+        });
 
-    /// <summary>The column rows, one grid per table column.</summary>
+        var header = new Grid { ColumnDefinitions = ColumnsLayout(), MinHeight = RowHeight };
+        for (var i = 0; i < Headers.Length; i++)
+        {
+            var text = new TextBlock { Text = Headers[i], FontWeight = FontWeight.SemiBold, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+            if (IsCheckColumn(i))
+            {
+                text.HorizontalAlignment = HorizontalAlignment.Center;
+            }
+            Grid.SetColumn(text, i);
+            header.Children.Add(text);
+        }
+        var headerBox = new Border { Child = header, BorderThickness = new Thickness(0, 0, 0, 1) };
+        Themed.Bind(headerBox, Border.BackgroundProperty, "surface.header");
+        Themed.Bind(headerBox, Border.BorderBrushProperty, "border");
+        var headerScroll = new ScrollViewer { Content = headerBox, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        var rowsScroll = new ScrollViewer { Content = _columnRows, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        rowsScroll.ScrollChanged += (_, _) => headerScroll.Offset = new Vector(rowsScroll.Offset.X, 0);
+        _columnRows.AddHandler(KeyDownEvent, OnColumnKeyDown, RoutingStrategies.Bubble);
+
+        var list = new DockPanel();
+        DockPanel.SetDock(headerScroll, Dock.Top);
+        list.Children.Add(headerScroll);
+        list.Children.Add(rowsScroll);
+        return Themed.Bind(new Border { Child = list, BorderThickness = new Thickness(1) }, Border.BorderBrushProperty, "border");
+    }
+
+    private static bool IsCheckColumn(int column) => column is 4 or 5 or 6 or 13 or 14;
+
+    /// <summary>
+    /// The column rows: plain text, and the editors only in the selected row (like the HeidiSQL grid, which opens an
+    /// editor on the focused cell). Building every editor for every column froze the UI on wide tables.
+    /// </summary>
     private void RebuildColumns()
     {
         _columnRows.Children.Clear();
-        var primary = PrimaryColumns();
+        _keys = KeyMarks();
         for (var i = 0; i < Design.Columns.Count; i++)
         {
-            _columnRows.Children.Add(ColumnRow(i, Design.Columns[i], primary.Contains(Design.Columns[i].Name)));
+            _columnRows.Children.Add(BuildRow(i));
         }
-        HighlightSelection();
+        if (_columnFilter is not null)
+        {
+            try
+            {
+                ApplyColumnFilter();
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                _columnFilter = null;
+                ApplyColumnFilter();
+            }
+        }
     }
 
-    private void HighlightSelection()
+    private Border BuildRow(int index)
     {
-        for (var i = 0; i < _columnRows.Children.Count; i++)
+        var c = Design.Columns[index];
+        var row = index == _selected ? EditorRow(index, c, _keys.TryGetValue(c.Name, out var k) && k == "PK") : DisplayRow(index, c);
+        row.Classes.Set(SelectedClass, index == _selected);
+        return row;
+    }
+
+    /// <summary>Selects a column row: the old row goes back to text, the new one gets the editors.</summary>
+    private void SelectColumn(int index, int focusColumn = -1)
+    {
+        index = Math.Clamp(index, -1, Design.Columns.Count - 1);
+        if (index != _selected)
         {
-            ((Grid)_columnRows.Children[i]).Background = i == _selected ? new SolidColorBrush(Color.FromArgb(0x40, 0x33, 0x99, 0xFF)) : null;
+            var previous = _selected;
+            _selected = index;
+            ReplaceRow(previous);
+            ReplaceRow(index);
+        }
+        if (focusColumn >= 0 && index >= 0)
+        {
+            Dispatch(() => FocusCell(index, focusColumn));
         }
     }
 
-    private Grid ColumnRow(int index, ColumnDesign c, bool isPrimary)
+    private void ReplaceRow(int index)
     {
-        var row = new Grid { ColumnDefinitions = ColumnsLayout() };
-        row.GotFocus += (_, _) =>
+        if (index < 0 || index >= _columnRows.Children.Count || index >= Design.Columns.Count)
         {
-            _selected = Design.Columns.IndexOf(c);
-            HighlightSelection();
-        };
-        row.PointerPressed += (_, _) =>
+            return;
+        }
+        var visible = _columnRows.Children[index].IsVisible;
+        var row = BuildRow(index);
+        row.IsVisible = visible;
+        _columnRows.Children[index] = row;
+    }
+
+    private void FocusCell(int index, int column)
+    {
+        if (index != _selected || index >= _columnRows.Children.Count || _columnRows.Children[index] is not Border { Child: Grid grid })
         {
-            _selected = Design.Columns.IndexOf(c);
-            HighlightSelection();
-        };
+            return;
+        }
+        var target = grid.Children.FirstOrDefault(c => Grid.GetColumn(c) == column && c.Focusable && c.IsEnabled)
+            ?? grid.Children.FirstOrDefault(c => Grid.GetColumn(c) == 1);
+        target?.Focus();
+        if (target is TextBox box)
+        {
+            box.SelectAll();
+        }
+    }
+
+    /// <summary>Up and Down move to the same cell of the previous or next column (text boxes and checkboxes).</summary>
+    private void OnColumnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Up or Key.Down) || e.KeyModifiers != KeyModifiers.None || e.Source is not Control source
+            || source.FindAncestorOfType<ComboBox>(includeSelf: true) is not null)
+        {
+            return;
+        }
+        var cell = source.GetSelfAndLogicalAncestors().OfType<Control>().FirstOrDefault(c => c.Parent is Grid { Parent: Border row } && row.Classes.Contains(RowClass));
+        if (cell is null || _selected < 0)
+        {
+            return;
+        }
+        var step = e.Key == Key.Up ? -1 : 1;
+        var next = _selected + step;
+        while (next >= 0 && next < _columnRows.Children.Count && !_columnRows.Children[next].IsVisible)
+        {
+            next += step;
+        }
+        if (next >= 0 && next < Design.Columns.Count)
+        {
+            SelectColumn(next, Grid.GetColumn(cell));
+            e.Handled = true;
+        }
+    }
+
+    private static int ColumnAt(double x)
+    {
+        for (var i = 0; i < Widths.Length; i++)
+        {
+            x -= Widths[i];
+            if (x < 0)
+            {
+                return i;
+            }
+        }
+        return Widths.Length - 1;
+    }
+
+    /// <summary>Strongest index of each column for the # cell: PK, then UQ, then IX (HeidiSQL draws key icons there).</summary>
+    private Dictionary<string, string> KeyMarks()
+    {
+        var marks = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (kind, mark) in new[] { (IndexKind.Primary, "PK"), (IndexKind.Unique, "UQ"), (IndexKind.Key, "IX"), (IndexKind.FullText, "IX"), (IndexKind.Spatial, "IX") })
+        {
+            foreach (var name in Design.Indexes.Where(i => i.Kind == kind).SelectMany(i => TableDesign.SplitList(i.Columns)))
+            {
+                marks.TryAdd(name.Trim().Trim('`'), mark);
+            }
+        }
+        return marks;
+    }
+
+    private Border RowBox(Grid grid, ColumnDesign c)
+    {
+        var row = new Border { Child = grid, MinHeight = RowHeight };
+        row.Classes.Add(RowClass);
         // Column menu as in HeidiSQL: Create new index ▸ and Add to index ▸ (instead of dragging to the indexes).
         var menu = new ContextMenu();
         menu.Opening += (_, _) => menu.ItemsSource = ColumnMenuItems(c);
         row.ContextMenu = menu;
-        row.Background = Avalonia.Media.Brushes.Transparent;
+        return row;
+    }
+
+    /// <summary>A row as text: the data type in its category colour, check marks, defaults and empty values muted.</summary>
+    private Border DisplayRow(int index, ColumnDesign c)
+    {
+        var grid = new Grid { ColumnDefinitions = ColumnsLayout() };
+        TextBlock Put(int column, string text, string? token = null)
+        {
+            var block = new TextBlock
+            {
+                Text = text,
+                Margin = new Thickness(4, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                HorizontalAlignment = IsCheckColumn(column) ? HorizontalAlignment.Center : HorizontalAlignment.Stretch,
+            };
+            if (token is not null)
+            {
+                Themed.Bind(block, TextBlock.ForegroundProperty, token);
+            }
+            Grid.SetColumn(block, column);
+            grid.Children.Add(block);
+            return block;
+        }
+        const string Check = "✓";
+        var number = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new Thickness(4, 0), VerticalAlignment = VerticalAlignment.Center };
+        number.Children.Add(Themed.Bind(new TextBlock { Text = (index + 1).ToString(CultureInfo.InvariantCulture) }, TextBlock.ForegroundProperty, "text.muted"));
+        var isPrimary = false;
+        if (_keys.TryGetValue(c.Name, out var mark))
+        {
+            isPrimary = mark == "PK";
+            number.Children.Add(Themed.Bind(new TextBlock { Text = mark, FontSize = 10, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center },
+                TextBlock.ForegroundProperty, isPrimary ? "grid.key" : "text.muted"));
+        }
+        grid.Children.Add(number);
+        var name = Put(1, c.Name);
+        if (isPrimary)
+        {
+            name.FontWeight = FontWeight.SemiBold;
+        }
+        Put(2, c.DataType.ToUpperInvariant(), TypeToken(c.DataType));
+        Put(3, c.LengthSet);
+        Put(4, c.Unsigned ? Check : string.Empty);
+        Put(5, c.AllowNull && !isPrimary ? Check : string.Empty);
+        Put(6, c.Zerofill ? Check : string.Empty);
+        Put(7, c.DefaultCaption, c.DefaultKind is DefaultKind.None or DefaultKind.Null ? "text.muted" : null);
+        Put(8, c.Comment);
+        Put(9, c.Collation, "text.muted");
+        Put(10, c.Expression);
+        Put(11, c.Virtuality);
+        Put(13, c.Invisible ? Check : string.Empty);
+        foreach (var text in new[] { name }.Concat(grid.Children.OfType<TextBlock>().Where(t => Grid.GetColumn(t) is 7 or 8 or 10)))
+        {
+            if (!string.IsNullOrEmpty(text.Text))
+            {
+                ToolTip.SetTip(text, text.Text);
+            }
+        }
+        var row = RowBox(grid, c);
+        row.PointerPressed += (_, e) =>
+        {
+            if (e.GetCurrentPoint(row).Properties.IsLeftButtonPressed)
+            {
+                SelectColumn(index, ColumnAt(e.GetPosition(grid).X));
+            }
+            else
+            {
+                SelectColumn(index);
+            }
+        };
+        return row;
+    }
+
+    /// <summary>Theme token of the data type category (the same colours as the grid and the tree).</summary>
+    private static string TypeToken(string dataType)
+    {
+        string[] tokens = ["type.integer", "type.real", "type.text", "type.binary", "type.temporal", "type.spatial", "type.other"];
+        for (var i = 0; i < TableDesign.DataTypes.Count; i++)
+        {
+            if (TableDesign.DataTypes[i].Types.Contains(dataType, StringComparer.OrdinalIgnoreCase))
+            {
+                return tokens[Math.Min(i, tokens.Length - 1)];
+            }
+        }
+        return "type.other";
+    }
+
+    /// <summary>The selected row: the HeidiSQL editors of every cell.</summary>
+    private Border EditorRow(int index, ColumnDesign c, bool isPrimary)
+    {
+        var row = new Grid { ColumnDefinitions = ColumnsLayout() };
         void Put(int column, Control control)
         {
             control.Named(Headers[column]);
@@ -478,6 +769,8 @@ public sealed class TableEditorView : DockPanel
                     c.Zerofill = false;
                 }
                 Changed();
+                // Unsigned and Zerofill follow the type; rebuilt after the drop-down has finished with the change.
+                Dispatch(() => ReplaceRow(Design.Columns.IndexOf(c)));
             }
         };
         Put(2, typeBox);
@@ -493,7 +786,7 @@ public sealed class TableEditorView : DockPanel
         Put(12, new TextBox { IsEnabled = false, MinHeight = 0 });
         Put(13, Check(c.Invisible, true, v => c.Invisible = v));
         Put(14, Check(false, false, _ => { }));
-        return row;
+        return RowBox(row, c);
     }
 
     /// <summary>Default cell: the current text and, on click, the defaults editor panel (appendix C §5.2).</summary>
@@ -549,6 +842,7 @@ public sealed class TableEditorView : DockPanel
             }
             flyout.Hide();
             Changed();
+            Dispatch(() => ReplaceRow(Design.Columns.IndexOf(c)));
         };
         cancel.Click += (_, _) => flyout.Hide();
         return button;

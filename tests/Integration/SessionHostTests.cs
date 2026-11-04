@@ -188,6 +188,34 @@ public sealed class SessionHostTests
         await host.DisposeAsync();
     }
 
+    /// <summary>
+    /// Two concurrent jobs always run on different connections. Before, the connection was picked by its state and could
+    /// look free between the choice and entering the queue: the second job went to the same connection, behind the first
+    /// (export workers ran one after the other, and a Cancel could never finish).
+    /// </summary>
+    [Fact]
+    public async Task ConcurrentJobsNeverShareAConnection()
+    {
+        TestServer.RequireServer();
+        var (host, _) = Create(s => s with { MaxJobConnections = 2 });
+        await host.ConnectAsync(Ct);
+        for (var i = 0; i < 20; i++)
+        {
+            TaskCompletionSource[] started = [new(TaskCreationOptions.RunContinuationsAsynchronously), new(TaskCreationOptions.RunContinuationsAsynchronously)];
+            var ids = await Task.WhenAll(Enumerable.Range(0, 2).Select(j => host.RunJobAsync(
+                async (h, ct) =>
+                {
+                    started[j].TrySetResult();
+                    // Each job waits for the other: on the same connection, the second would only start after the first ended.
+                    await started[1 - j].Task.WaitAsync(TimeSpan.FromSeconds(10), ct);
+                    return h.ServerConnectionId;
+                },
+                Ct)));
+            Assert.NotEqual(ids[0], ids[1]);
+        }
+        await host.DisposeAsync();
+    }
+
     [Fact]
     public async Task WrongPasswordFailsAndStaysFailed()
     {

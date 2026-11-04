@@ -94,6 +94,22 @@ public sealed class SnapshotTests
         window.Close();
     }
 
+    /// <summary>"Show only favorites" on: the star centred in the button, filled, on the favourites tint.</summary>
+    [AvaloniaTheory(Timeout = UiTimeouts.Default)]
+    [InlineData("tree-favorites-light", "light")]
+    [InlineData("tree-favorites-dark", "dark")]
+    public async Task TreeWithOnlyFavorites(string name, string theme)
+    {
+        var view = await TreeAsync(string.Empty, string.Empty);
+        var window = CreateWindow(view, 320, 220, theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light, 1.0);
+        view.FavoritesButton.IsChecked = true;
+        view.Tree.Focus();
+        window.CaptureRenderedFrame();
+
+        Snapshot.Match(window.CaptureRenderedFrame(), name);
+        window.Close();
+    }
+
     private const string Sql = """
         -- Spike test query
         SELECT p.`id`, p.`name`, COUNT(*) AS total, SUM(p.price * 1.23) AS gross

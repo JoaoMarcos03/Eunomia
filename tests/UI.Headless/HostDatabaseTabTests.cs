@@ -149,11 +149,11 @@ public sealed class HostDatabaseTabTests
             Assert.Equal(TreeNodeKind.Table, Child(dbNow, "b2").Kind);
             Assert.DoesNotContain(dbNow.Children!, n => n.Name == "b");
 
-            // Enter on a row opens the object: focus in the tree and the Table tab.
+            // Enter on a row opens the object: focus in the tree and the Data tab (tables open on their rows by default).
             list.FocusedNode = list.Roots.First(n => n[0] == "a");
             list.RaiseEvent(new Avalonia.Input.KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Avalonia.Input.Key.Enter });
             await WaitAsync(() => window.Tree.Tree.FocusedNode is { Name: "a", Kind: TreeNodeKind.Table } ? "ok" : null);
-            await WaitAsync(() => ReferenceEquals(window.Tabs.SelectedItem, window.Tabs.TableTab) ? "ok" : null);
+            await WaitAsync(() => ReferenceEquals(window.Tabs.SelectedItem, window.Tabs.DataTab) ? "ok" : null);
 
             await connector.DisconnectAllAsync();
             window.Close();

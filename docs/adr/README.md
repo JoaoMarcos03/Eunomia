@@ -24,3 +24,4 @@ One ADR per decision in section 29 of the specification. ADRs 01 and 03 to 20 tr
 | [ADR-18](ADR-18-filter-engine.md) | Regex filter engine | Accepted |
 | [ADR-19](ADR-19-divergences-d9-d10.md) | UX divergences D9 and D10 | Accepted |
 | [ADR-20](ADR-20-supported-windows.md) | Supported Windows versions | Accepted |
+| [ADR-21](ADR-21-plugin-engine.md) | Plugin engine (out-of-process, connection transports first) | Proposed (2 Nov 2026) |

@@ -75,10 +75,13 @@ public sealed partial class MainWindow
         public List<ResultView> Results { get; } = [];
     }
 
-    /// <summary>A result tab: the result, the local sort order and the view shown (before the local filter).</summary>
-    private sealed class ResultView(QueryResult result, DataGridView grid)
+    /// <summary>A result tab: the result, the session that produced it, the local sort order and the view shown (before the local filter).</summary>
+    private sealed class ResultView(QueryResult result, DataGridView grid, OpenSession? session)
     {
         public QueryResult Result { get; } = result;
+
+        /// <summary>Session of the run that produced the result (dialect for Copy as and Export grid rows).</summary>
+        public OpenSession? Session { get; } = session;
 
         public DataGridView Grid { get; } = grid;
 
@@ -480,7 +483,7 @@ public sealed partial class MainWindow
                 _context.Status.Progress = p.Total > 1 ? (double)(p.Number - 1) / p.Total : null;
             }
         });
-        runner.ResultStarted += (_, r) => Dispatcher.UIThread.Post(() => AddQueryResult(view, state, r, color));
+        runner.ResultStarted += (_, r) => Dispatcher.UIThread.Post(() => AddQueryResult(view, state, r, color, session));
         runner.ResultCompleted += (_, r) => Dispatcher.UIThread.Post(() =>
         {
             if (state.Results.FirstOrDefault(v => ReferenceEquals(v.Result, r)) is { } done)
@@ -565,7 +568,7 @@ public sealed partial class MainWindow
         return sessions.Connector.Find(definition.Id) is { Host.State: SessionState.Ready } session ? session : null;
     }
 
-    private void AddQueryResult(QueryTabView view, QueryTabState state, QueryResult result, uint color)
+    private void AddQueryResult(QueryTabView view, QueryTabState state, QueryResult result, uint color, OpenSession session)
     {
         if (!_queryStates.ContainsKey(view))
         {
@@ -586,10 +589,32 @@ public sealed partial class MainWindow
                 }
             };
         });
-        var entry = new ResultView(result, grid);
+        var entry = new ResultView(result, grid, session);
         grid.Control.HeaderClicked += (_, e) => _ = SortResultAsync(entry, e.Column);
+        grid.Control.ContextRequested += (_, e) => OpenResultGridMenu(grid.Control, e);
+        grid.Control.PopupEditRequested += (_, e) => _ = PopupEditAsync(grid.Control, e, session, entry.EditTable);
         state.Results.Add(entry);
     }
+
+    /// <summary>
+    /// Right click on a result tab cell: the grid menu with what applies to results (Copy, Copy as, Paste, Insert value,
+    /// Save BLOB, Grid view options, Open URL, Post/Cancel, Find, Export grid rows; appendix C §3.5). It is built on every
+    /// opening, because result grids are rebuilt on every run. It does not open on the header.
+    /// </summary>
+    private void OpenResultGridMenu(DataGridControl grid, Avalonia.Input.ContextRequestedEventArgs e)
+    {
+        if (e.Handled || e.TryGetPosition(grid, out var point) && point.Y < grid.HeaderHeight)
+        {
+            return;
+        }
+        e.Handled = true;
+        RefreshInsertValues();
+        LastResultGridMenu = _ui.BuildTransientContextMenu(MainMenuLayout.ResultGridMenu);
+        LastResultGridMenu.Open(grid);
+    }
+
+    /// <summary>Last menu opened on a result tab (tests).</summary>
+    internal Avalonia.Controls.ContextMenu? LastResultGridMenu { get; private set; }
 
     /// <summary>Dialog for the first error, line in pink and the cursor on it; with Stop on errors off, all of them go to the log.</summary>
     private void ShowQueryErrors(QueryTabView view, IReadOnlyList<QueryRunError> errors, int lineOffset)

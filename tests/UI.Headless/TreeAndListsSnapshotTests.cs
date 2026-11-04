@@ -219,6 +219,34 @@ public sealed class TreeAndListsSnapshotTests
         window.Close();
     }
 
+    /// <summary>Output "Database": the target database list replaces the file name.</summary>
+    [AvaloniaTheory(Timeout = UiTimeouts.Default)]
+    [InlineData("sql-export-database-light", "light")]
+    [InlineData("sql-export-database-dark", "dark")]
+    public async Task SqlExportToDatabase(string name, string theme)
+    {
+        using var culture = new CultureScope(CultureInfo.InvariantCulture);
+        static DbObjectInfo O(string name, DbObjectKind kind) => new(new DbObjectRef("shop", "shop", name, kind), RowsEstimate: 1000);
+        IReadOnlyList<DbObjectInfo> objects = [O("customers", DbObjectKind.Table), O("orders", DbObjectKind.Table)];
+        var settings = new App.Settings.SqlExportSettings { CreateTables = true, Data = 2, Output = 4, TargetDatabase = "shop_copy" };
+        var targets = new UI.Features.Transfer.SqlExportTargets(
+            [new UI.Features.Transfer.SqlExportServer(Guid.NewGuid(), "staging")],
+            (_, _) => Task.FromResult<IReadOnlyList<string>>(["shop", "shop_copy", "stats"]),
+            _ => null,
+            (_, _, _, _) => throw new InvalidOperationException());
+        var dialog = new UI.Features.Transfer.SqlExportDialog(settings, ["information_schema", "shop", "stats"], (_, _) => Task.FromResult(objects),
+            (_, _, _) => Task.FromResult(new App.Transfer.SqlExportResult(false, 0, [], null, TimeSpan.Zero)), "shop", null, targets);
+        await dialog.Loading;
+        await dialog.TargetLoading;
+        var content = (Control)dialog.Content!;
+        dialog.Content = null;
+
+        var window = CreateWindow(content, 900, 640, theme);
+        window.CaptureRenderedFrame();
+        Snapshot.Match(window.CaptureRenderedFrame(), name);
+        window.Close();
+    }
+
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("csv-import-light", "light")]
     [InlineData("csv-import-dark", "dark")]

@@ -5,6 +5,7 @@ using Eunomia.Drivers.Abstractions;
 using Eunomia.Engine.Execution.Editing;
 using Eunomia.Engine.Results;
 using Eunomia.Engine.Sql;
+using Eunomia.Engine.Sql.Formatting;
 using Eunomia.Presentation.Logging;
 using Eunomia.UI.Controls.Common.Dialogs;
 using Eunomia.UI.Controls.Grid;
@@ -41,7 +42,7 @@ public sealed partial class MainWindow
         DataGrid.CommitHandler = CommitDataRowAsync;
         DataGrid.EditRefused += (_, _) => ShowEditError(_browserSession is { Definition.ReadOnly: true } ro ? ReadOnlyMessage(ro) : NoKeyMessage);
         DataGrid.EditorProvider = DataEditorAsync;
-        DataGrid.PopupEditRequested += (_, e) => _ = PopupEditAsync(DataGrid, e);
+        DataGrid.PopupEditRequested += (_, e) => _ = PopupEditAsync(DataGrid, e, _browserSession, _browser?.Table);
         var c = _context.Commands;
         c.SetHandler("grid.insertRow", _ => new ValueTask(InsertDataRowAsync(duplicate: false, withKeys: false)), CanEditData);
         c.SetHandler("grid.duplicateRow", _ => new ValueTask(InsertDataRowAsync(duplicate: true, withKeys: false)), () => CanEditData() && DataGrid.Selection.FocusedRow >= 0);
@@ -137,14 +138,32 @@ public sealed partial class MainWindow
         };
     }
 
-    /// <summary>Window editor (long text or text with line breaks, "…", binary): the new value goes into the cell.</summary>
-    private async Task PopupEditAsync(DataGridControl grid, GridPopupEditEventArgs request)
+    /// <summary>
+    /// Window editor (long text or text with line breaks, "…", binary) of the Data grid and of editable result tabs: the
+    /// new value goes into the cell. The maximum length and the type come from the column of <paramref name="table"/>,
+    /// when known; the chosen highlighting is saved per table column (HeidiSQL's <c>MemoEditorHighlighter_&lt;col&gt;</c>,
+    /// appendix D B12).
+    /// </summary>
+    private async Task PopupEditAsync(DataGridControl grid, GridPopupEditEventArgs request, OpenSession? session, TableDefinition? table)
     {
-        var name = grid.Source is { } source && request.Column < source.Schema.Count ? source.Schema[request.Column].Name : string.Empty;
-        long? max = _browser?.Table.Columns.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase))?.Type.Length;
+        var info = grid.Source is { } source && request.Column < source.Schema.Count ? source.Schema[request.Column] : null;
+        var name = info?.Name ?? string.Empty;
+        var tableColumn = string.IsNullOrEmpty(info?.SourceColumn) ? name : info.SourceColumn;
+        var definition = table?.Columns.FirstOrDefault(c => string.Equals(c.Name, tableColumn, StringComparison.OrdinalIgnoreCase));
+        var nativeType = definition?.Type.Kind == LogicalTypeKind.Json ? "JSON" : definition?.NativeType ?? info?.NativeType;
+        App.Settings.TableKey? stateKey = session is not null && table is not null ? KeyOf(session, table.Ref) : null;
+        var stateName = "TextSyntax." + tableColumn;
+        TextSyntax? saved = stateKey is { } key && TextSyntaxes.TryParse(GetTableState(key, stateName), out var s) ? s : null;
         var value = PopupEditorOverride is { } fake
             ? fake(request)
-            : await Views.TextEditorWindow.ShowAsync(this, $"Edit {name}", request.Value, max, request.IsBinary);
+            : await Views.TextEditorWindow.ShowAsync(this, $"Edit {name}", request.Value, definition?.Type.Length, request.IsBinary, saved, nativeType,
+                chosen =>
+                {
+                    if (stateKey is { } k)
+                    {
+                        SetTableState(k, stateName, TextSyntaxes.Caption(chosen));
+                    }
+                });
         if (value is not null && value != request.Value)
         {
             await grid.SetCellValueAsync(request.Row, request.Column, new CellValue(value));

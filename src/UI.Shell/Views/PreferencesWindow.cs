@@ -53,6 +53,7 @@ public sealed class PreferencesWindow : Window
     private bool _bars;
     private bool _autoReconnect;
     private bool _restoreLastDatabase;
+    private bool _openTablesInDataTab;
     private string _theme;
     private readonly CommandRegistry _shortcuts;
 
@@ -96,6 +97,7 @@ public sealed class PreferencesWindow : Window
         _bars = context.Settings.Display.Bars;
         _autoReconnect = context.Settings.SessionManager.AutoReconnect;
         _restoreLastDatabase = context.Settings.SessionManager.RestoreLastUsedDatabase;
+        _openTablesInDataTab = context.Settings.Tree.OpenTablesInDataTab;
         _shortcuts = HeidiSqlCatalog.CreateRegistry();
         _shortcuts.ImportShortcutOverrides(context.Commands.ExportShortcutOverrides());
 
@@ -167,6 +169,7 @@ public sealed class PreferencesWindow : Window
         panel.Children.Add(Check("Automatically reconnect to previously opened sessions on startup", _autoReconnect, v => _autoReconnect = v));
         panel.Children.Add(Check("Restore last used database on startup", _restoreLastDatabase, v => _restoreLastDatabase = v));
         panel.Children.Add(Check("Display bars in various list columns", _bars, v => _bars = v));
+        panel.Children.Add(Check("Open tables and views on their data (Data tab) instead of their structure", _openTablesInDataTab, v => _openTablesInDataTab = v));
         var snippets = new TextBox
         {
             Text = _query.SnippetsDirectory ?? string.Empty,
@@ -451,6 +454,7 @@ public sealed class PreferencesWindow : Window
         settings.Display.Bars = _bars;
         settings.SessionManager.AutoReconnect = _autoReconnect;
         settings.SessionManager.RestoreLastUsedDatabase = _restoreLastDatabase;
+        settings.Tree.OpenTablesInDataTab = _openTablesInDataTab;
         settings.Theme = _theme;
         if (Application.Current is { } app)
         {
@@ -494,6 +498,7 @@ public sealed class PreferencesWindow : Window
         _context.Settings.Display.Bars = true;
         _context.Settings.SessionManager.AutoReconnect = false;
         _context.Settings.SessionManager.RestoreLastUsedDatabase = true;
+        _context.Settings.Tree.OpenTablesInDataTab = new TreeOptions().OpenTablesInDataTab;
         _context.Commands.ImportShortcutOverrides(new Dictionary<string, string>());
         _context.SaveSettings();
         Close(true);

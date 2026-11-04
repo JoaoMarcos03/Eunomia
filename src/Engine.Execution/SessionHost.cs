@@ -32,6 +32,9 @@ public sealed class SessionHost : IAsyncDisposable
     private readonly SessionServices _services;
     private readonly Lock _gate = new();
     private readonly List<ConnectionLane> _jobs = [];
+
+    /// <summary>Job connections that were handed a job (picked and reserved under <c>_gate</c>).</summary>
+    private readonly HashSet<ConnectionLane> _jobsInUse = [];
     private readonly SemaphoreSlim _jobSlots;
     private readonly SemaphoreSlim _tunnelGate = new(1, 1);
     private readonly Timer _keepAlive;
@@ -174,10 +177,16 @@ public sealed class SessionHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Heavy work (export, import) on a job connection; at most <see cref="SessionConnectionSettings.MaxJobConnections"/>
-    /// at the same time, the others wait in the queue (12.6). With <paramref name="logCommands"/> set to <c>false</c>, the
-    /// commands do not go to the SQL log.
+    /// Heavy work (export, import) on a job connection of its own; at most
+    /// <see cref="SessionConnectionSettings.MaxJobConnections"/> at the same time, the others wait in the queue (12.6).
+    /// With <paramref name="logCommands"/> set to <c>false</c>, the commands do not go to the SQL log.
     /// </summary>
+    /// <remarks>
+    /// The connection stays reserved from the moment it is picked until the work ends. Before, the choice only looked at
+    /// the connection's state, and between releasing the lock and the work entering the queue (or leaving it) the
+    /// connection looked free: two export workers could end up on the same connection, one behind the other, and the
+    /// export ran on a single one.
+    /// </remarks>
     public async Task<T> RunJobAsync<T>(Func<IDbConnectionHandle, CancellationToken, Task<T>> work, CancellationToken cancellationToken, bool logCommands = true)
     {
         await _jobSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -186,17 +195,25 @@ public sealed class SessionHost : IAsyncDisposable
         {
             lock (_gate)
             {
-                lane = _jobs.FirstOrDefault(j => !j.IsBusy && !j.HasPendingWork);
+                lane = _jobs.FirstOrDefault(j => !_jobsInUse.Contains(j) && !j.IsBusy && !j.HasPendingWork);
                 if (lane is null)
                 {
                     lane = CreateLane(ConnectionRole.Job, "job" + (_jobs.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture));
                     _jobs.Add(lane);
                 }
+                _jobsInUse.Add(lane);
             }
             return await lane.RunAsync(work, WorkPriority.Visible, logCommands ? SessionLogCategory.Script : SessionLogCategory.None, retryAfterReconnect: false, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
+            if (lane is not null)
+            {
+                lock (_gate)
+                {
+                    _jobsInUse.Remove(lane);
+                }
+            }
             _jobSlots.Release();
         }
     }

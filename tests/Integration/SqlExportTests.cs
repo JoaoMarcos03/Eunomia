@@ -116,6 +116,44 @@ public sealed class SqlExportTests : IAsyncLifetime
         };
     }
 
+    /// <summary>
+    /// A job connection refused by the server (here <c>max_user_connections</c>) does not throw the export away: the other
+    /// worker does every object and the file is complete. Before, the whole export failed at the end, with everything
+    /// already written; and with no worker running, the merge waited forever.
+    /// </summary>
+    [Fact]
+    public async Task WorkerWithoutConnectionDoesNotLoseTheExport()
+    {
+        TestServer.RequireServer();
+        var user = "eu_lim_" + Guid.NewGuid().ToString("N")[..6];
+        const string password = "Lim1t-Pw";
+        // The primary connection and one job connection; the second job connection is refused. The limit must exist
+        // before the connections open (the server only counts the ones opened under it).
+        await ExecAsync($"CREATE USER '{user}'@'%' IDENTIFIED BY '{password}' WITH MAX_USER_CONNECTIONS 2", $"GRANT ALL ON `{_database}`.* TO '{user}'@'%'", $"GRANT SELECT ON *.* TO '{user}'@'%'");
+        try
+        {
+            var options = TestServer.Options() with { User = user, Password = new SecretReference("pw") };
+            await using var limited = new SessionHost(new SessionConnectionSettings("lim", options) { KeepAlive = null, MaxJobConnections = 2 }, new SessionServices
+            {
+                Provider = new MySqlProvider(),
+                ResolveSecret = (_, _) => ValueTask.FromResult(password),
+            });
+            await limited.ConnectAsync(Ct);
+            await limited.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT 1", ct), Ct);
+            Assert.Equal(2L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE USER = '{user}'"), System.Globalization.CultureInfo.InvariantCulture));
+
+            var path = Path.Combine(_directory, "limited.sql");
+            var result = await new SqlExportJob(limited, await RequestAsync(SqlExportTarget.File, path, snapshot: false)).RunAsync(null, Ct).WaitAsync(TimeSpan.FromSeconds(60), Ct);
+            Assert.False(result.Cancelled);
+            Assert.DoesNotContain(result.Items, i => i.State is SqlExportItemState.Failed or SqlExportItemState.Waiting);
+            await ReimportAndCompareAsync(await File.ReadAllTextAsync(path, Ct));
+        }
+        finally
+        {
+            await ExecAsync($"DROP USER '{user}'@'%'");
+        }
+    }
+
     /// <summary>Runs the dump on a new database with Run SQL file and compares the data table by table.</summary>
     private async Task ReimportAndCompareAsync(string dump)
     {
@@ -127,6 +165,12 @@ public sealed class SqlExportTests : IAsyncLifetime
         var run = await new SqlFileJob(_host, new SqlFileRequest { Path = file, Database = copy }).RunAsync(null, Ct);
         Assert.True(run.Completed, string.Join("\n", run.ErrorList.Select(e => $"#{e.Statement} line {e.Line}: {e.Message}\n{e.Sql}")));
         Assert.Equal(0, run.Errors);
+        await CompareCopyAsync(copy);
+    }
+
+    /// <summary>The copy has the same data as the source, table by table, and its views, functions and triggers work.</summary>
+    private async Task CompareCopyAsync(string copy)
+    {
         foreach (var table in new[] { "typed", "big", "nokey" })
         {
             var source = await ChecksumAsync(_database, table);
@@ -150,6 +194,83 @@ public sealed class SqlExportTests : IAsyncLifetime
                     : block.GetString(0, 1);
             },
             Ct);
+
+    private async Task<string> NewEmptyDatabaseAsync()
+    {
+        var name = _database + "_t" + _cleanup.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _cleanup.Add(name);
+        await ExecAsync($"CREATE DATABASE `{name}` CHARACTER SET utf8mb4");
+        return name;
+    }
+
+    /// <summary>
+    /// Output "Database" (user feedback, 2 Nov 2026: "exporting I cannot import straight into another database, as in
+    /// HeidiSQL"): the dump runs on the target database and gives the same data; the source is not touched.
+    /// </summary>
+    [Fact]
+    public async Task ExportToAnotherDatabaseCopiesEverythingAndLeavesTheSourceAlone()
+    {
+        TestServer.RequireServer();
+        var target = await NewEmptyDatabaseAsync();
+        var before = await ChecksumAsync(_database, "typed");
+        var request = await RequestAsync(SqlExportTarget.Database, string.Empty, snapshot: false) with { TargetDatabase = target };
+        Assert.Null(SqlExportToServerJob.Validate(request, sameServer: true));
+
+        var imports = new List<SqlFileProgress>();
+        var result = await new SqlExportToServerJob(_host, _host, request, _directory).RunAsync(null, new SyncProgress<SqlFileProgress>(imports.Add), Ct);
+
+        Assert.True(result.Completed, result.NotImported ?? string.Join("\n", result.Import!.ErrorList.Select(e => $"#{e.Statement}: {e.Message}\n{e.Sql}")));
+        Assert.NotEmpty(imports);
+        await CompareCopyAsync(target);
+        Assert.Equal(before, await ChecksumAsync(_database, "typed"));
+        Assert.Empty(Directory.EnumerateFiles(_directory, "export-*"));
+    }
+
+    /// <summary>"Delete + insert" without Create replaces the rows of the target table and only those.</summary>
+    [Fact]
+    public async Task DeleteInsertIntoAnotherDatabaseReplacesItsRows()
+    {
+        TestServer.RequireServer();
+        var target = await NewEmptyDatabaseAsync();
+        await ExecAsync(
+            $"CREATE TABLE `{target}`.nokey (a INT, b VARCHAR(10))",
+            $"INSERT INTO `{target}`.nokey VALUES (9, 'old'), (8, 'old')",
+            $"CREATE TABLE `{target}`.other (id INT)",
+            $"INSERT INTO `{target}`.other VALUES (1)");
+        var objects = await _host.RunMetadataAsync((h, ct) => h.Metadata.GetObjectsAsync(_database, _database, ObjectDetail.Statistics, ct), Ct);
+        var request = new SqlExportRequest
+        {
+            Dump = new SqlDumpOptions { Data = DumpDataMode.DeleteInsert },
+            Databases = [new SqlExportDatabase(_database, [.. objects.Where(o => o.Ref.Name == "nokey")])],
+            Target = SqlExportTarget.Database,
+            TargetDatabase = target,
+        };
+
+        var result = await new SqlExportToServerJob(_host, _host, request, _directory).RunAsync(null, null, Ct);
+
+        Assert.True(result.Completed, result.NotImported);
+        Assert.Equal(await ChecksumAsync(_database, "nokey"), await ChecksumAsync(target, "nokey"));
+        Assert.Equal(1L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM `{target}`.other"), System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(3L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.nokey"), System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>A cancelled export writes nothing to the target and leaves no temporary file.</summary>
+    [Fact]
+    public async Task CancelledExportToDatabaseWritesNothing()
+    {
+        TestServer.RequireServer();
+        var target = await NewEmptyDatabaseAsync();
+        var request = await RequestAsync(SqlExportTarget.Database, string.Empty, snapshot: false) with { TargetDatabase = target };
+        using var cancel = new CancellationTokenSource();
+        await cancel.CancelAsync();
+
+        var result = await new SqlExportToServerJob(_host, _host, request, _directory).RunAsync(null, null, cancel.Token);
+
+        Assert.True(result.Export.Cancelled);
+        Assert.Null(result.Import);
+        Assert.Equal(0L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{target}'"), System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Empty(Directory.EnumerateFiles(_directory, "export-*"));
+    }
 
     [Fact]
     public async Task FileWithSnapshotReimportsIdentically()

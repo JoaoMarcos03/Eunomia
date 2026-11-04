@@ -10,6 +10,8 @@ namespace Eunomia.UI.Shell;
 /// <summary>
 /// Tools › Export database as SQL (phase 8; FAM-E06): the dialog with the database or the object focused in the tree already
 /// checked, and the job on the session's job connections. The clipboard gets the text at the end; the SQL log records the result.
+/// The "Database" and "Server: &lt;session&gt;" outputs run the dump on another database or saved session
+/// (<see cref="SqlExportToServerJob"/>); a server that is not open connects when it is chosen.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -42,8 +44,91 @@ public sealed partial class MainWindow
             async (name, ct) => (await open.Metadata.GetObjectsAsync(name, ct, forceStatistics: true)).Objects,
             (request, progress, ct) => RunSqlExportAsync(open, request, progress, ct),
             database,
-            objects);
+            objects,
+            ExportTargets(open));
         _context.SaveSettings();
+    }
+
+    /// <summary>The other saved sessions, their databases, the checks and the runner of the database outputs.</summary>
+    private SqlExportTargets? ExportTargets(OpenSession open)
+    {
+        if (Sessions is not { } sessions)
+        {
+            return null;
+        }
+        var servers = sessions.Catalog.Sessions
+            .Where(s => s.Id != open.Definition.Id)
+            .OrderBy(s => s.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(s => new SqlExportServer(s.Id, s.Path))
+            .ToList();
+        var sameServer = new Dictionary<Guid, bool>();
+        return new SqlExportTargets(
+            servers,
+            async (id, ct) =>
+            {
+                var target = id is { } session ? await TargetSessionAsync(session) : open;
+                if (target is null)
+                {
+                    throw new InvalidOperationException("Not connected.");
+                }
+                if (id is { } targetId)
+                {
+                    sameServer[targetId] = await SqlExportToServerJob.SameServerAsync(open.Host, target.Host, ct);
+                }
+                return await target.Metadata.GetDatabasesAsync(ct);
+            },
+            request =>
+            {
+                var target = request.TargetSession is { } id ? sessions.Connector.Find(id) : open;
+                if (target is null)
+                {
+                    return "The target session is not connected.";
+                }
+                if (target.Definition.ReadOnly)
+                {
+                    return $"Session \"{target.Name}\" is read-only.";
+                }
+                var same = request.TargetSession is not { } targetId || !sameServer.TryGetValue(targetId, out var known) || known;
+                return SqlExportToServerJob.Validate(request, same);
+            },
+            (request, exportProgress, importProgress, ct) => RunSqlExportToServerAsync(open, request, exportProgress, importProgress, ct));
+
+        async Task<OpenSession?> TargetSessionAsync(Guid id)
+        {
+            if (sessions.Connector.Find(id) is { } already)
+            {
+                return already;
+            }
+            if (sessions.Catalog.Find(id) is not { } definition)
+            {
+                return null;
+            }
+            var owner = OwnedWindows.OfType<SqlExportDialog>().FirstOrDefault() as Avalonia.Controls.Window ?? this;
+            return await ConnectAsync(owner, definition, null, showHostTab: false) ? sessions.Connector.Find(id) : null;
+        }
+    }
+
+    private async Task<SqlExportToServerResult> RunSqlExportToServerAsync(
+        OpenSession open, SqlExportRequest request, IProgress<SqlExportProgress> exportProgress, IProgress<SqlFileProgress> importProgress, CancellationToken cancellationToken)
+    {
+        var target = request.TargetSession is { } id ? Sessions?.Connector.Find(id) ?? throw new InvalidOperationException("The target session is not connected.") : open;
+        var directory = _context.SpillDirectory ?? Path.Combine(Path.GetTempPath(), "Eunomia");
+        var job = new SqlExportToServerJob(open.Host, target.Host, request with { Host = open.Definition.Host, AppVersion = ShellContext.Version }, directory);
+        var result = await Task.Run(() => job.RunAsync(exportProgress, importProgress, cancellationToken), CancellationToken.None);
+        var where = (request.TargetDatabase is { } db ? $"database {db} of " : "databases with the same names on ") + target.Name;
+        var summary = result.Import is { } import
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"SQL export to {where} {(import.Completed ? "finished" : import.Cancelled ? "cancelled" : "stopped at an error")}: {result.Export.Items.Count} object(s), {import.Statements} queries, {(result.Export.Elapsed + import.Elapsed).TotalSeconds:0.0} s.")
+            : $"SQL export to {where}: {result.NotImported}";
+        _context.Log.Append(result.Completed ? LogCategory.Info : LogCategory.Error, summary);
+        if (result.Import is { Statements: > 0 })
+        {
+            foreach (var name in request.TargetDatabase is { } single ? [single] : request.Databases.Select(d => d.Name))
+            {
+                await ReloadDatabaseObjectsAsync(target, name);
+            }
+        }
+        return result;
     }
 
     private async Task<SqlExportResult> RunSqlExportAsync(OpenSession open, SqlExportRequest request, IProgress<SqlExportProgress> progress, CancellationToken cancellationToken)

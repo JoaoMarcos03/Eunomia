@@ -85,7 +85,7 @@ public sealed class JsonSessionStore(string path, TimeProvider? clock = null) : 
         }
     }
 
-    private static SessionCatalog? TryParse(byte[] bytes)
+    internal static SessionCatalog? TryParse(byte[] bytes)
     {
         try
         {

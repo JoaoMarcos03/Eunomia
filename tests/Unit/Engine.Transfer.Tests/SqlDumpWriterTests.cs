@@ -117,6 +117,20 @@ public sealed class SqlDumpWriterTests
         Assert.Equal("\r\nBEGIN;\r\nREPLACE INTO `t` (`id`, `name`) VALUES\r\n\t(7, 'x');\r\nCOMMIT;\r\n", text);
     }
 
+    /// <summary>Export to a server with "[Same as on source server]": each database by name, without CREATE DATABASE.</summary>
+    [Fact]
+    public void UseDatabasesWritesOnlyTheUseWithoutCreate()
+    {
+        var options = new SqlDumpOptions { AddComments = false, UseDatabases = true };
+        var text = Dump(options, w =>
+        {
+            w.WriteDatabase("shop", string.Empty);
+            w.WriteDatabase("we`ird", string.Empty);
+        });
+
+        Assert.Equal("\r\nUSE `shop`;\r\n\r\nUSE `we``ird`;\r\n", text);
+    }
+
     [Fact]
     public void NoDataWritesOnlyTheComment()
     {

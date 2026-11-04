@@ -131,6 +131,7 @@ public static class IconSet
             ["comment"] = [P("M2,14 L7,2 M8,14 L13,2", null, Green, 1.6)],
             ["filter"] = [funnel],
             ["filter-remove"] = [funnel, redX],
+            ["filter-clear"] = [P("M5.5,3 H14.5 V13 H5.5 L1.5,8 Z", Red, 0x8E1B1B, 0.8), P("M8,5.8 L12,10.2 M12,5.8 L8,10.2", null, Paper, 1.5)],
             ["sort-reset"] = [P("M4,2 V14 M1.5,11.5 L4,14 L6.5,11.5 M10,14 V2 M7.5,4.5 L10,2 L12.5,4.5", null, DarkBlue, 1.4), redX],
             ["pin"] = [P("M8,9 V15", null, Gray, 1.4), P("M5.5,1.5 H10.5 L9.6,5.5 L12,9 H4 L6.4,5.5 Z", Red, 0x8E1C1C)],
             ["favorites"] = [P("M8,1 L10.1,5.6 L15,6.1 L11.2,9.5 L12.3,14.5 L8,11.9 L3.7,14.5 L4.8,9.5 L1,6.1 L5.9,5.6 Z", Yellow, DarkOrange, 0.8)],

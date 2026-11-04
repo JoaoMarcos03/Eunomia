@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 
 namespace Eunomia.Engine.Results;
 
@@ -192,14 +193,45 @@ public sealed class DisplayFormatter
         return truncated || bytes.Length > MaxDisplayBytes ? text + TruncatedSuffix : text;
     }
 
-    /// <summary>Formats a whole column of a block.</summary>
+    /// <summary>
+    /// Text characters the grid keeps and draws per cell (section 9, P9: preview limited per cell, full value only on
+    /// demand). Longer text (JSON from API responses, logs) shows its start and <see cref="TruncatedSuffix"/>; the whole
+    /// value stays in the block for copying, editing and exporting (<see cref="FormatRaw"/>). Without the limit, every
+    /// formatted column of a block kept whole copies of multi-MB values and the grid ran out of memory.
+    /// </summary>
+    public const int MaxDisplayChars = 1024;
+
+    /// <summary>
+    /// Formats a whole column of a block for the grid: like <see cref="Format"/>, but text longer than
+    /// <see cref="MaxDisplayChars"/> bytes keeps only its start (the rest is not decoded).
+    /// </summary>
     public string[] FormatColumn(RowBlock block, int column)
     {
+        ArgumentNullException.ThrowIfNull(block);
         var cells = new string[block.RowCount];
+        var text = block.Schema[column].Storage == StorageKind.String;
         for (var r = 0; r < cells.Length; r++)
         {
-            cells[r] = Format(block, r, column);
+            cells[r] = text && !block.IsNull(r, column) && block.GetUtf8(r, column) is { Length: > MaxDisplayChars } utf8
+                ? Utf8Prefix(utf8, MaxDisplayChars) + TruncatedSuffix
+                : Format(block, r, column);
         }
         return cells;
+    }
+
+    /// <summary>The first <paramref name="maxBytes"/> bytes as text, without splitting a multi-byte character.</summary>
+    internal static string Utf8Prefix(ReadOnlySpan<byte> utf8, int maxBytes)
+    {
+        if (utf8.Length <= maxBytes)
+        {
+            return Encoding.UTF8.GetString(utf8);
+        }
+        var end = maxBytes;
+        // Continuation bytes (10xxxxxx): step back to the start of the character that would be cut in half.
+        while (end > 0 && (utf8[end] & 0xC0) == 0x80)
+        {
+            end--;
+        }
+        return Encoding.UTF8.GetString(utf8[..end]);
     }
 }

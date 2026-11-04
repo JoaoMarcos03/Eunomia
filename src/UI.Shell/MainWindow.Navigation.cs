@@ -10,11 +10,13 @@ using Eunomia.UI.Shell.Views;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Tree selection → tabs (FAM-L04, L08; appendix D A11): session → Host; database or group → <c>USE</c> and Database; object
-/// → <c>USE</c>, cached definition and Table tab only if the current tab is Host or Database (otherwise it stays on Data or
-/// Query). Captions "Host" = session, "Database: x", "Table: y" with the kind's icon; Data only for tables, views and
-/// columns. A failed <c>USE</c> shows the error and goes back to the previous node. Whatever was loading for the previous
-/// choice (data, definition, editor) is cancelled: with a slow server, it does not keep the connections busy.
+/// Tree selection → tabs (FAM-L04, L08; appendix D A11): session → Host; database or group → <c>USE</c> and Database;
+/// object → <c>USE</c>, cached definition and, only when the current tab is Host or Database, the Data tab for tables
+/// and views (the Table tab with <see cref="Eunomia.App.Settings.TreeOptions.OpenTablesInDataTab"/> off) and the Table
+/// tab for the rest (otherwise it stays on the current tab). Captions "Host" = session, "Database: x", "Table: y" with
+/// the type icon; Data only for tables, views and columns. A failed <c>USE</c> shows the error and goes back to the
+/// previous node. Whatever was loading for the previous choice (data, definition, editor) is cancelled: with a slow
+/// server, it does not keep the connections busy.
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -72,7 +74,9 @@ public sealed partial class MainWindow
                 if (ReferenceEquals(_tabs.SelectedItem, _tabs.HostTab) || ReferenceEquals(_tabs.SelectedItem, _tabs.DatabaseTab)
                     || _tabs.SelectedItem is TabItem { IsVisible: false })
                 {
-                    _tabs.SelectedItem = _tabs.TableTab;
+                    // Tables and views open on their rows by default; the structure is one tab away (Preferences › General).
+                    var showData = _context.Settings.Tree.OpenTablesInDataTab && tag.Object.Kind is DbObjectKind.Table or DbObjectKind.View;
+                    _tabs.SelectedItem = showData ? _tabs.DataTab : _tabs.TableTab;
                 }
                 LoadObjectDefinition(open, tag.Object, navigation.Token);
                 // A tab that was just selected already loaded (SelectionChanged); the one that stayed has to reload.
