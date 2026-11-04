@@ -57,6 +57,9 @@ public sealed record ConnectionOptions(
     public bool AllowLocalInfile { get; init; }
 }
 
+/// <summary>Rows affected and server warnings of an <see cref="IDbConnectionHandle.BulkLoadAsync"/>.</summary>
+public sealed record BulkLoadResult(long Rows, long Warnings);
+
 public enum BulkLoadConflict
 {
     /// <summary>Duplicates raise an error (INSERT).</summary>
@@ -148,10 +151,10 @@ public interface IDbConnectionHandle : IAsyncDisposable
     Task<object?> ExecuteScalarAsync(string sql, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Loads <see cref="BulkLoadRequest.Source"/> into the table; returns the affected rows. Only on a connection opened with
-    /// <see cref="ConnectionOptions.AllowLocalInfile"/>.
+    /// Loads <see cref="BulkLoadRequest.Source"/> into the table, all or nothing: cancelled or failed, no row is kept
+    /// (in transactional tables). Only on a dedicated connection opened with <see cref="ConnectionOptions.AllowLocalInfile"/>.
     /// </summary>
-    Task<long> BulkLoadAsync(BulkLoadRequest request, CancellationToken cancellationToken);
+    Task<BulkLoadResult> BulkLoadAsync(BulkLoadRequest request, CancellationToken cancellationToken);
 
     /// <summary>The connection's current database (after <c>USE</c>), or <c>null</c>.</summary>
     string? Database { get; }

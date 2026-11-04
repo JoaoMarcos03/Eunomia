@@ -3,86 +3,105 @@ using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Eunomia.Engine.Sql.Formatting;
 using Eunomia.UI.Controls.Common.Accessibility;
 using Eunomia.UI.Controls.Common.Brand;
 using Eunomia.UI.Controls.Common.Dialogs;
 using Eunomia.UI.Controls.Common.Theming;
+using Eunomia.UI.Controls.SqlEditor;
 
 namespace Eunomia.UI.Shell.Views;
 
 /// <summary>
-/// Window cell editor (appendix D B15, <c>texteditor.pas</c>): text with optional word wrap and the status line
-/// "N characters (max: M), L lines, cursor at y:x"; Ctrl+Enter applies, Esc cancels, closing with changes
-/// asks "Apply modifications?". For binary, the text is hex (<c>0x…</c>) and only accepts hexadecimal digits.
+/// Window cell editor (appendix D B15, appendix C §3.18, <c>texteditor.pas</c>): AvaloniaEdit with word wrap (on by
+/// default), highlighting picked in the "Syntax" combo (Text, JSON, XML, HTML, SQL; the initial one comes from the column
+/// or the value) and "Format" to indent JSON, XML or SQL when the user asks; the status line "N characters (max: M),
+/// L lines, cursor at y:x". Ctrl+Enter applies, Esc cancels, closing with changes asks "Apply modifications?". For
+/// binary, the text is hex (<c>0x…</c>) and only accepts hexadecimal digits. The text returned is the editor's as it is:
+/// opening, changing the highlighting or the word wrap does not change the value.
 /// </summary>
 public sealed partial class TextEditorWindow : Window
 {
     [GeneratedRegex("^(0x)?[0-9a-fA-F]*$", RegexOptions.CultureInvariant)]
     private static partial Regex HexText();
 
-    private readonly TextBox _text;
-    private readonly TextBlock _status = new() { Margin = new Thickness(4, 2), Foreground = Brushes.Gray };
+    private readonly TextValueEditor _editor = new();
+    private readonly ComboBox _syntax;
+    private readonly Button _format = new() { Content = "Format", MinWidth = 70, HorizontalContentAlignment = HorizontalAlignment.Center };
+    private readonly TextBlock _status = new() { Margin = new Thickness(4, 2), Foreground = Brushes.Gray, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly string _original;
     private readonly long? _maxLength;
     private readonly bool _binary;
     private bool _answered;
 
-    public TextEditorWindow(string title, string? value, long? maxLength, bool binary)
+    public TextEditorWindow(string title, string? value, long? maxLength, bool binary, TextSyntax? syntax = null, string? nativeType = null)
     {
         Icon = BrandAssets.WindowIcon;
         _original = value ?? string.Empty;
         _maxLength = maxLength;
         _binary = binary;
         Title = title;
-        Width = 640;
-        Height = 420;
+        Width = 720;
+        Height = 460;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
         FontFamily = UiFonts.Ui;
         FontSize = 12;
 
-        _text = new TextBox
+        _editor.Text = _original;
+        // The caret starts at the beginning, as in HeidiSQL (the new document left it at the end).
+        _editor.Editor.CaretOffset = 0;
+        _editor.Editor.Named(title);
+        _editor.AttachedToVisualTree += (_, _) => _editor.Editor.TextArea.Focus();
+        var wrap = new CheckBox { Content = "Wrap long lines", IsChecked = true, Margin = new Thickness(4, 0) };
+        wrap.IsCheckedChanged += (_, _) => _editor.WordWrap = wrap.IsChecked == true;
+        _syntax = new ComboBox { ItemsSource = TextSyntaxes.All.Select(s => s.Caption).ToList(), MinWidth = 80, IsEnabled = !binary }.Named("Syntax");
+        _syntax.SelectedIndex = (int)(binary ? TextSyntax.Text : syntax ?? TextSyntaxes.Detect(_original, nativeType));
+        _editor.Syntax = Syntax;
+        _syntax.SelectionChanged += (_, _) =>
         {
-            Text = _original,
-            AcceptsReturn = !binary,
-            AcceptsTab = !binary,
-            TextWrapping = binary ? TextWrapping.Wrap : TextWrapping.NoWrap,
-            FontFamily = UiFonts.Monospace,
-            VerticalContentAlignment = VerticalAlignment.Top,
+            _editor.Syntax = Syntax;
+            SyntaxChosen = true;
+            UpdateFormat();
+            UpdateStatus();
         };
-        _text.Named(title);
-        _text.AttachedToVisualTree += (_, _) => _text.Focus();
-        var wrap = new CheckBox { Content = "Wrap long lines", IsChecked = binary, Margin = new Thickness(4, 0) };
-        wrap.IsCheckedChanged += (_, _) => _text.TextWrapping = wrap.IsChecked == true ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        ToolTip.SetTip(_format, "Indent the text once (JSON, XML or SQL)");
+        _format.Click += (_, _) => Format();
+        UpdateFormat();
+
         var ok = new Button { Content = "OK", MinWidth = 75, HorizontalContentAlignment = HorizontalAlignment.Center };
         var cancel = new Button { Content = "Cancel", MinWidth = 75, HorizontalContentAlignment = HorizontalAlignment.Center };
         ok.Click += (_, _) => Apply();
         cancel.Click += (_, _) => Cancel();
-        var bottom = new DockPanel { Margin = new Thickness(4) };
+        var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        tools.Children.Add(wrap);
+        tools.Children.Add(new TextBlock { Text = "Syntax:", VerticalAlignment = VerticalAlignment.Center });
+        tools.Children.Add(_syntax);
+        tools.Children.Add(_format);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
+        var bottom = new DockPanel { Margin = new Thickness(4) };
         DockPanel.SetDock(buttons, Dock.Right);
-        DockPanel.SetDock(wrap, Dock.Left);
+        DockPanel.SetDock(tools, Dock.Left);
         bottom.Children.Add(buttons);
-        bottom.Children.Add(wrap);
-        bottom.Children.Add(_status);
+        bottom.Children.Add(tools);
+        bottom.Children.Add(new Control());
         var root = new DockPanel();
+        DockPanel.SetDock(_status, Dock.Bottom);
         DockPanel.SetDock(bottom, Dock.Bottom);
+        root.Children.Add(_status);
         root.Children.Add(bottom);
-        root.Children.Add(_text);
+        root.Children.Add(_editor);
         Content = root;
 
-        _text.PropertyChanged += (_, e) =>
-        {
-            if (e.Property == TextBox.TextProperty || e.Property == TextBox.CaretIndexProperty)
-            {
-                UpdateStatus();
-            }
-        };
-        KeyDown += (_, e) =>
+        _editor.Editor.Document.TextChanged += (_, _) => UpdateStatus();
+        _editor.Editor.TextArea.Caret.PositionChanged += (_, _) => UpdateStatus();
+        // Tunnelling: AvaloniaEdit handles Enter and Esc before the window sees them.
+        AddHandler(KeyDownEvent, (_, e) =>
         {
             if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.Control)
             {
@@ -94,7 +113,7 @@ public sealed partial class TextEditorWindow : Window
                 e.Handled = true;
                 Cancel();
             }
-        };
+        }, RoutingStrategies.Tunnel);
         Closing += async (_, e) =>
         {
             if (_answered || Text == _original)
@@ -118,23 +137,59 @@ public sealed partial class TextEditorWindow : Window
     /// <summary>Current text (tests).</summary>
     public string Text
     {
-        get => _text.Text ?? string.Empty;
-        set => _text.Text = value;
+        get => _editor.Text;
+        set => _editor.Text = value;
     }
+
+    /// <summary>Highlighting picked in the combo.</summary>
+    public TextSyntax Syntax => _syntax.SelectedIndex >= 0 ? TextSyntaxes.All[_syntax.SelectedIndex].Syntax : TextSyntax.Text;
+
+    /// <summary>The user changed the highlighting (it is saved for the column).</summary>
+    public bool SyntaxChosen { get; private set; }
 
     /// <summary>Status line text (tests).</summary>
     public string Status => _status.Text ?? string.Empty;
 
+    /// <summary>Editor (tests).</summary>
+    internal TextValueEditor ValueEditor => _editor;
+
+    /// <summary>Changes the highlighting as the combo does (tests).</summary>
+    internal void SelectSyntax(TextSyntax syntax) => _syntax.SelectedIndex = (int)syntax;
+
+    /// <summary>Format: indents once; invalid text stays the same and the status line says why.</summary>
+    internal void Format()
+    {
+        if (!TextSyntaxes.TryFormat(Text, Syntax, out var formatted, out var error))
+        {
+            _status.Text = error;
+            return;
+        }
+        if (!string.Equals(formatted, Text, StringComparison.Ordinal))
+        {
+            // A single undo step (Ctrl+Z goes back to the previous text).
+            var document = _editor.Editor.Document;
+            document.Replace(0, document.TextLength, formatted);
+            _editor.Editor.CaretOffset = 0;
+        }
+    }
+
+    private void UpdateFormat() => _format.IsEnabled = !_binary && TextSyntaxes.CanFormat(Syntax);
+
     private void UpdateStatus()
     {
-        var text = Text;
-        var caret = Math.Clamp(_text.CaretIndex, 0, text.Length);
-        var before = text.AsSpan(0, caret);
-        var line = before.Count('\n') + 1;
-        var column = caret - (before.LastIndexOf('\n') + 1) + 1;
-        var lines = text.AsSpan().Count('\n') + 1;
+        var document = _editor.Editor.Document;
+        var caret = _editor.Editor.TextArea.Caret;
         var max = _maxLength is { } m ? m.ToString("N0", CultureInfo.CurrentCulture) : "unknown";
-        _status.Text = string.Create(CultureInfo.CurrentCulture, $"{text.Length:N0} characters (max: {max}), {lines:N0} lines, cursor at {line}:{column}");
+        var text = string.Create(CultureInfo.CurrentCulture, $"{document.TextLength:N0} characters (max: {max}), {document.LineCount:N0} lines, cursor at {caret.Line}:{caret.Column}");
+        if (Syntax != TextSyntax.Text && _editor.HasUnhighlightedLines)
+        {
+            text += ". Long lines are not highlighted";
+            if (TextSyntaxes.CanFormat(Syntax))
+            {
+                text += " (Format splits them)";
+            }
+        }
+        _status.Text = text;
     }
 
     private void Apply()
@@ -160,6 +215,20 @@ public sealed partial class TextEditorWindow : Window
         Close(null);
     }
 
-    public static Task<string?> ShowAsync(Window owner, string title, string? value, long? maxLength, bool binary) =>
-        new TextEditorWindow(title, value, maxLength, binary).ShowDialog<string?>(owner);
+    /// <summary>
+    /// Opens the editor and returns the text (or <c>null</c> on Cancel). <paramref name="syntax"/> is the highlighting
+    /// saved for the column (otherwise it is detected from <paramref name="nativeType"/> and the value);
+    /// <paramref name="syntaxChosen"/> receives the highlighting when the user changes it.
+    /// </summary>
+    public static async Task<string?> ShowAsync(Window owner, string title, string? value, long? maxLength, bool binary,
+        TextSyntax? syntax = null, string? nativeType = null, Action<TextSyntax>? syntaxChosen = null)
+    {
+        var window = new TextEditorWindow(title, value, maxLength, binary, syntax, nativeType);
+        var result = await window.ShowDialog<string?>(owner);
+        if (window.SyntaxChosen)
+        {
+            syntaxChosen?.Invoke(window.Syntax);
+        }
+        return result;
+    }
 }

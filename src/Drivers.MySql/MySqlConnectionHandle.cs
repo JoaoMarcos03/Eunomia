@@ -243,14 +243,17 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
     /// <summary>
     /// <c>LOAD DATA LOCAL INFILE</c> fed by the stream (<see cref="MySqlBulkLoader.SourceStream"/>): the server receives
     /// the data without reading files from the client. The SQL log shows the statement with the stream in place of the file.
+    /// It runs in a transaction: cancelled, no row is kept, even when the stream was cut at the end of a line and the
+    /// server accepted the lines sent until then (MySqlConnector only throws the stream's error after the server answers).
     /// </summary>
-    public async Task<long> BulkLoadAsync(BulkLoadRequest request, CancellationToken cancellationToken)
+    public async Task<BulkLoadResult> BulkLoadAsync(BulkLoadRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var source = new BulkLoadSource(request.Source);
         var loader = new MySqlBulkLoader(_connection)
         {
             TableName = Dialect.QuoteIdentifier(request.Database) + "." + Dialect.QuoteIdentifier(request.Table),
-            SourceStream = request.Source,
+            SourceStream = source,
             Local = true,
             FieldTerminator = request.FieldTerminator,
             LineTerminator = request.LineTerminator,
@@ -281,15 +284,39 @@ public sealed class MySqlConnectionHandle : IDbConnectionHandle
             throw new DbOperationException(refused);
         }
         CommandIssued?.Invoke(described);
-        try
+        // Without a commit (error or cancel), disposing the transaction undoes what the LOAD DATA wrote.
+        var transaction = await _connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using (transaction.ConfigureAwait(false))
         {
-            return await loader.LoadAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (MySqlException e) when (IsCancellation(e, cancellationToken))
-        {
-            // The cancel read from the SourceStream arrives wrapped in a LOAD DATA error when it wins the race against
-            // MySqlConnector's own cancel; for the engine, cancelling is not an error (the import showed an error instead of "cancelled").
-            throw new OperationCanceledException(e.Message, e, cancellationToken);
+            long rows;
+            try
+            {
+                rows = await loader.LoadAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (MySqlException e) when (cancellationToken.IsCancellationRequested && (source.Cancelled || IsCancellation(e, cancellationToken)))
+            {
+                // The cancel read from the SourceStream arrives wrapped in a LOAD DATA error when it wins the race with
+                // MySqlConnector's own cancel, or as the server's error about the cut file (MySQL 8); for the engine,
+                // cancelling is not an error (the import showed an error instead of "cancelled").
+                throw new OperationCanceledException(e.Message, e, cancellationToken);
+            }
+            // COMMIT clears @@warning_count: it is read first.
+            long warnings;
+            var cmd = CreateCommand("SELECT @@warning_count");
+            await using (cmd.ConfigureAwait(false))
+            {
+                cmd.Transaction = transaction;
+                try
+                {
+                    warnings = Convert.ToInt64(await cmd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture);
+                }
+                finally
+                {
+                    Finished(cmd);
+                }
+            }
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return new BulkLoadResult(rows, warnings);
         }
     }
 

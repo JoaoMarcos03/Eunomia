@@ -3,15 +3,18 @@ using System.Text.RegularExpressions;
 using Avalonia.Threading;
 using Eunomia.Engine.Results;
 using Eunomia.Presentation.Logging;
+using Eunomia.UI.Controls.Common.Input;
 using Eunomia.UI.Controls.Common.TreeList;
+using Eunomia.UI.Features.HostTab;
 
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Bottom filter panel (Ctrl+Alt+F; appendix D B11; FAM-G14): local case-insensitive regex over the loaded rows of the
-/// active list (Data grid, query tab result tab, Host and Database tab lists), 500 ms after the last key. The text is kept per
-/// list; "x out of y matching. z hidden."; an invalid regex goes to the log and shows everything; the Data grid clears it on
-/// every reload.
+/// Bottom filter panel (Ctrl+Alt+F; appendix C §1.9; appendix D B11; FAM-G14): local case-insensitive regex over the
+/// loaded rows of the active list (Data grid, query tab result tab, the five Host lists, the Database tab list and the
+/// table editor columns), 500 ms after the last key; the clear button applies at once. The text is kept per list;
+/// "x out of y matching. z hidden."; an invalid regex goes to the log and shows everything; the Data grid clears it on
+/// every reload (Next and Show all included).
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -56,7 +59,56 @@ public sealed partial class MainWindow
             _localFilterTimer.Stop();
             _localFilterTimer.Start();
         };
+        _filterBox.WithClearButton(cleared: ClearLocalFilter);
         _tabs.SelectionChanged += (_, _) => SyncLocalFilterBox();
+        // Another table in the Table tab (or the Host and Database tab views being created) changes the list without a tab change.
+        foreach (var tab in new[] { _tabs.TableTab, _tabs.HostTab, _tabs.DatabaseTab })
+        {
+            tab.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == Avalonia.Controls.ContentControl.ContentProperty)
+                {
+                    SyncLocalFilterBox();
+                    ReapplyTableEditorFilter();
+                }
+            };
+        }
+    }
+
+    /// <summary>
+    /// The Table tab's text belongs to the tab (appendix D B11: per tab), not to the editor: the editor is rebuilt when
+    /// coming back to the table or opening another one, and the filter keeps applying to the new editor's columns.
+    /// </summary>
+    private void ReapplyTableEditorFilter()
+    {
+        if (TableEditor is not { } editor || _localFilterTexts.GetValueOrDefault(_tabs.TableTab) is not { Length: > 0 } text || LocalFilterRegex(text) is not { } regex)
+        {
+            return;
+        }
+        try
+        {
+            var (matching, total) = editor.FilterColumns(regex);
+            if (ReferenceEquals(LocalFilterTarget(), _tabs.TableTab))
+            {
+                _filterInfo.Text = MatchText(matching, total);
+            }
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            _context.Log.Append(LogCategory.Info, "Filter text is not a valid regular expression");
+        }
+    }
+
+    /// <summary>Clear button: shows everything at once, without waiting the 500 ms.</summary>
+    private void ClearLocalFilter()
+    {
+        _localFilterTimer?.Stop();
+        if (LocalFilterTarget() is { } target)
+        {
+            // Stored before TextChanged (which arrives later), so the empty filter is not applied again 500 ms later.
+            _localFilterTexts[target] = string.Empty;
+            _ = ApplyLocalFilterAsync();
+        }
     }
 
     /// <summary>List the filter panel filters now (key of the stored text), or <c>null</c>.</summary>
@@ -68,13 +120,36 @@ public sealed partial class MainWindow
         }
         if (ReferenceEquals(_tabs.SelectedItem, _tabs.HostTab) && _hostView is { } host)
         {
-            return ReferenceEquals(host.SelectedItem, host.ProcessesTab) ? host.ProcessList : host.DatabaseList;
+            return HostListOf(host);
         }
         if (ReferenceEquals(_tabs.SelectedItem, _tabs.DatabaseTab) && _databaseView is { } database)
         {
             return database.List;
         }
+        if (ReferenceEquals(_tabs.SelectedItem, _tabs.TableTab))
+        {
+            // Only with the table editor showing (appendix C §1.9); the code editor of views and routines has no list.
+            return TableEditor is not null ? _tabs.TableTab : null;
+        }
         return ActiveResultView;
+    }
+
+    /// <summary>List of the visible Host sub-tab (before, every tab other than Processes filtered the Databases list).</summary>
+    private static TreeListControl HostListOf(HostTabView host)
+    {
+        if (ReferenceEquals(host.SelectedItem, host.ProcessesTab))
+        {
+            return host.ProcessList;
+        }
+        if (ReferenceEquals(host.SelectedItem, host.VariablesTab))
+        {
+            return host.VariableList;
+        }
+        if (ReferenceEquals(host.SelectedItem, host.StatusTab))
+        {
+            return host.StatusList;
+        }
+        return ReferenceEquals(host.SelectedItem, host.CommandStatisticsTab) ? host.CommandList : host.DatabaseList;
     }
 
     /// <summary>The active list changed: the box shows that list's stored text.</summary>
@@ -140,6 +215,18 @@ public sealed partial class MainWindow
                 {
                     var nodes = list.AllNodes().ToList();
                     _filterInfo.Text = MatchText(nodes.Count(n => n.Cells.Any(c => regex.IsMatch(c))), nodes.Count);
+                }
+                break;
+            case Avalonia.Controls.TabItem when TableEditor is { } editor:
+                try
+                {
+                    var (matchingColumns, totalColumns) = editor.FilterColumns(regex);
+                    _filterInfo.Text = regex is null ? string.Empty : MatchText(matchingColumns, totalColumns);
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    _context.Log.Append(LogCategory.Info, "Filter text is not a valid regular expression");
+                    _filterInfo.Text = string.Empty;
                 }
                 break;
             case ResultView entry:

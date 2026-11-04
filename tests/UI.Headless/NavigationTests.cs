@@ -23,7 +23,7 @@ public sealed class NavigationTests
             $"CREATE TABLE `{db}`.pets (id INT); CREATE PROCEDURE `{db}`.p() SELECT 1;");
         try
         {
-            var (window, _, session, connector, _) = CreateShell(cs, db);
+            var (window, context, session, connector, _) = CreateShell(cs, db);
             Assert.True(await window.ConnectAsync(window, session, null));
             var tabs = window.Tabs;
             var model = window.Tree.Tree.Model!;
@@ -48,13 +48,23 @@ public sealed class NavigationTests
             Assert.Equal("Database: " + db, Caption(tabs.DatabaseTab));
             Assert.False(tabs.DataTab.IsVisible);
 
-            // Table coming from the Database tab → Table tab with the CREATE code; Data visible.
+            // A table chosen from the Database tab opens on its rows (Data tab, the default); the Table tab is next to it.
             window.Tree.Tree.FocusedNode = Child(dbNode, "people");
-            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.TableTab) ? "ok" : null);
+            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.DataTab) && window.DataGrid.RowCount == 2 ? "ok" : null);
             Assert.Equal("Table: people", Caption(tabs.TableTab));
-            Assert.True(tabs.DataTab.IsVisible);
+            Assert.True(tabs.TableTab.IsVisible);
+            tabs.SelectedItem = tabs.TableTab;
             await WaitAsync(() => (tabs.TableTab.Content as UI.Features.TableEditor.TableEditorView)?.CreateCodeText.Contains("CREATE TABLE", StringComparison.Ordinal) == true ? "ok" : null);
             await WaitAsync(() => open.Metadata.CachedTable(((Shell.Sessions.TreeObjectTag)Child(dbNode, "people").Tag!).Object!));
+
+            // With "Open tables ... in the Data tab" off, it opens the Table tab, as in HeidiSQL.
+            context.Settings.Tree.OpenTablesInDataTab = false;
+            window.Tree.Tree.FocusedNode = dbNode;
+            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.DatabaseTab) ? "ok" : null);
+            window.Tree.Tree.FocusedNode = Child(dbNode, "pets");
+            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.TableTab) ? "ok" : null);
+            await WaitAsync(() => (tabs.TableTab.Content as UI.Features.TableEditor.TableEditorView)?.Design.Name == "pets" ? "ok" : null);
+            context.Settings.Tree.OpenTablesInDataTab = true;
 
             // In the Data tab, another table keeps the Data tab and loads the data.
             tabs.SelectedItem = tabs.DataTab;

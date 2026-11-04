@@ -86,6 +86,9 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
 
     public string? SessionModeQuery => "SELECT @@SESSION.sql_mode";
 
+    /// <summary>Host name, port and data directory of the server: the same values from every session that reaches it.</summary>
+    public string? ServerInstanceQuery => "SELECT CONCAT_WS(':', @@hostname, @@port, @@datadir)";
+
     /// <summary><c>SET SESSION TRANSACTION READ ONLY</c> (MySQL 5.6.5+, MariaDB 10.0+): the server refuses DML and DDL.</summary>
     public string? ReadOnlySession =>
         (Server.Engine == DbEngine.MariaDb ? Server.Version >= new Version(10, 0) : Server.Version >= new Version(5, 6, 5))

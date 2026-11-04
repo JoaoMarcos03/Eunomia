@@ -32,6 +32,8 @@ public sealed class TableEditorTests
         try
         {
             var (window, context, session, _, _) = CreateShell(cs, db);
+            // These tests edit the structure: tables open in the Table tab (the Data tab is the default).
+            context.Settings.Tree.OpenTablesInDataTab = false;
             var errors = new List<string>();
             window.EditErrorOverride = errors.Add;
             Assert.True(await window.ConnectAsync(window, session, null));
@@ -94,7 +96,8 @@ public sealed class TableEditorTests
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.people (id INT PRIMARY KEY, name VARCHAR(20)); CREATE TABLE `{db}`.pets (id INT);");
         try
         {
-            var (window, _, session, _, _) = CreateShell(cs, db);
+            var (window, context, session, _, _) = CreateShell(cs, db);
+            context.Settings.Tree.OpenTablesInDataTab = false;
             var questions = new List<string>();
             var answer = Eunomia.UI.Controls.Common.Dialogs.MessageDialogResult.Cancel;
             window.SaveTableQuestionOverride = q =>

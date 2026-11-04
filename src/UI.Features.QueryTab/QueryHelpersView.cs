@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Eunomia.UI.Controls.Common.Accessibility;
+using Eunomia.UI.Controls.Common.Input;
 using Eunomia.UI.Controls.Common.TreeList;
 
 namespace Eunomia.UI.Features.QueryTab;
@@ -15,7 +16,7 @@ public sealed class QueryHelpersView : DockPanel
 {
     public QueryHelpersView()
     {
-        Filter = new TextBox { PlaceholderText = "Filter ...", Margin = new Thickness(0, 0, 0, 2), VerticalContentAlignment = VerticalAlignment.Center }.Named("Filter helpers");
+        Filter = new TextBox { PlaceholderText = "Filter ...", Margin = new Thickness(0, 0, 0, 2), VerticalContentAlignment = VerticalAlignment.Center }.Named("Filter helpers").WithClearButton("find");
         Tree = new TreeListControl { ShowHeader = false, MultiSelect = true, GroupsFirst = false };
         Tree.Columns.Add(new TreeListColumn("Main column", 140));
         Tree.Columns.Add(new TreeListColumn("Attributes", 100));

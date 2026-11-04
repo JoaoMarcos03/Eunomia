@@ -10,13 +10,22 @@ using Eunomia.Engine.Transfer;
 
 namespace Eunomia.App.Transfer;
 
-/// <summary>SQL export target in the MVP (another database and another server come later, 27.2).</summary>
+/// <summary>
+/// Destination of the SQL export. <see cref="Database"/> and <see cref="Server"/> run the dump on a database of the same
+/// session or on another session (<see cref="SqlExportToServerJob"/>).
+/// </summary>
 public enum SqlExportTarget
 {
     File,
     Zip,
     Directory,
     Clipboard,
+
+    /// <summary>Another database of the source session.</summary>
+    Database,
+
+    /// <summary>A database of another session ("Server: &lt;session&gt;").</summary>
+    Server,
 }
 
 /// <summary>A database and the objects checked in the dialog's tree, in tree order (natural, by name).</summary>
@@ -48,6 +57,17 @@ public sealed record SqlExportRequest
 
     /// <summary>Maximum text size for the clipboard (section 13.2: bounded clipboard).</summary>
     public long ClipboardLimit { get; init; } = DefaultClipboardLimit;
+
+    /// <summary>
+    /// <see cref="SqlExportTarget.Server"/>: the saved session to run the dump on. <c>null</c> for the other targets.
+    /// </summary>
+    public Guid? TargetSession { get; init; }
+
+    /// <summary>
+    /// <see cref="SqlExportTarget.Database"/> and <see cref="SqlExportTarget.Server"/>: the database that receives every
+    /// object, or <c>null</c> on a server for databases with the same names as the source ones.
+    /// </summary>
+    public string? TargetDatabase { get; init; }
 }
 
 public enum SqlExportItemState
@@ -108,6 +128,10 @@ public sealed class SqlExportJob
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(request);
+        if (request.Target is SqlExportTarget.Database or SqlExportTarget.Server)
+        {
+            throw new ArgumentException("Exports to a database run through SqlExportToServerJob.", nameof(request));
+        }
         _host = host;
         _request = request;
         _items = Plan(request);
@@ -349,6 +373,13 @@ public sealed class SqlExportJob
     /// Without a consistent snapshot: <paramref name="connections"/> job connections take objects from the queue in plan
     /// order and write each into a segment; the output joins the segments in the same order, as they finish.
     /// </summary>
+    /// <remarks>
+    /// A worker that fails before taking any object (its connection does not open: "Too many connections", a user
+    /// limit) does not spoil the export while another one is working. When all of them stop, the objects nobody took fail
+    /// with their error: before, the merge waited for those objects forever ("Exporting..." stuck, Cancel as the only way
+    /// out). An error after every object has been merged (while restoring the session) no longer throws away the
+    /// complete export either.
+    /// </remarks>
     private async Task RunParallelAsync(Utf8Output output, int connections, CancellationToken cancellationToken)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -381,6 +412,7 @@ public sealed class SqlExportJob
                 return true;
             },
             linked.Token)).ToList();
+        _ = FailUntakenItemsWhenWorkersStopAsync(workers);
 
         try
         {
@@ -405,7 +437,14 @@ public sealed class SqlExportJob
                     TryDelete(path);
                 }
             }
-            await Task.WhenAll(workers).ConfigureAwait(false);
+            try
+            {
+                await Task.WhenAll(workers).ConfigureAwait(false);
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Every object is in the output: an error of a worker without objects, or while restoring the session, does not count.
+            }
         }
         catch
         {
@@ -426,6 +465,28 @@ public sealed class SqlExportJob
                 }
             }
             throw;
+        }
+    }
+
+    /// <summary>When every worker has stopped, the objects none of them took fail (the merge does not wait for them).</summary>
+    private async Task FailUntakenItemsWhenWorkersStopAsync(IReadOnlyList<Task<bool>> workers)
+    {
+        Exception? error = null;
+        foreach (var worker in workers)
+        {
+            try
+            {
+                await worker.ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                error ??= e;
+            }
+        }
+        error ??= new InvalidOperationException("The export connections stopped before exporting all objects.");
+        foreach (var item in _items)
+        {
+            item.Done.TrySetException(error);
         }
     }
 
@@ -545,6 +606,10 @@ public sealed class SqlExportJob
             {
                 writer.WriteDatabase(item.Database, await metadata.GetCreateDatabaseAsync(item.Database, cancellationToken).ConfigureAwait(false));
             }
+            else if (Options.UseDatabases)
+            {
+                writer.WriteDatabase(item.Database, string.Empty);
+            }
             return;
         }
         var info = item.Info!;
@@ -621,13 +686,16 @@ public sealed class SqlExportJob
             writer.BeginData(item.Database, info.Ref.Name, estimated, approximate, []);
             return;
         }
-        if (info.Engine is { } engine && (engine.Equals("MRG_MYISAM", StringComparison.OrdinalIgnoreCase) || engine.Equals("FEDERATED", StringComparison.OrdinalIgnoreCase)))
+        var table = await handle.Metadata.GetTableAsync(info.Ref, cancellationToken).ConfigureAwait(false);
+        // The engine comes from the object list or, when the list only has names (no statistics), from the definition: a
+        // FEDERATED table is never read (the SELECT would go to the remote server, which may not answer).
+        if ((info.Engine ?? table.Options.GetValueOrDefault("Engine")) is { } engine
+            && (engine.Equals("MRG_MYISAM", StringComparison.OrdinalIgnoreCase) || engine.Equals("FEDERATED", StringComparison.OrdinalIgnoreCase)))
         {
             writer.WriteDataSkipped(item.Database, info.Ref.Name, engine);
             item.End(_clock, SqlExportItemState.Skipped);
             return;
         }
-        var table = await handle.Metadata.GetTableAsync(info.Ref, cancellationToken).ConfigureAwait(false);
         var columns = table.Columns.Where(c => !c.IsGenerated).ToList();
         var select = SelectFor(table, columns);
         writer.BeginData(item.Database, info.Ref.Name, estimated, approximate, [.. columns.Select(c => c.Name)]);

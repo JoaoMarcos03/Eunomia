@@ -201,6 +201,24 @@ public static class MainMenuLayout
         I("export.gridRows"), I("help.sql"), I("view.refresh"),
     ];
 
+    /// <summary>
+    /// Context menu of the query tab result tabs: <c>popupDataGrid</c> (appendix C §3.5) with only what applies to a
+    /// result (no Quick Filter, new rows, Follow foreign key or Refresh, which belong to the Data tab's table).
+    /// </summary>
+    public static IReadOnlyList<MenuEntry> ResultGridMenu { get; } =
+    [
+        I("edit.copy"),
+        new SubmenuEntry("Copy as", HeidiSqlCatalog.CopyAsFormats.Select(f => (MenuEntry)I(f.Id)).ToList(), "copy"),
+        I("edit.paste"),
+        new SubmenuEntry("Insert value", InsertValueMenu()),
+        I("grid.saveBlob"),
+        new SubmenuEntry("Grid view options", [I("grid.unixTimestamp"), I("grid.imagePreview"), I("grid.blobAsText"), I("tools.preferencesData")]),
+        I("grid.openUrl"), S,
+        I("grid.post"), I("grid.cancelEditing"), S,
+        I("search.find"), S,
+        I("export.gridRows"),
+    ];
+
     /// <summary>Context menu of the Host tab lists (<c>popupHost</c>, appendix C §3.4).</summary>
     public static IReadOnlyList<MenuEntry> HostMenu { get; } =
     [
@@ -249,6 +267,7 @@ public static class MainMenuLayout
             .Concat(Walk(DatabaseMenu))
             .Concat(Walk(HostMenu))
             .Concat(Walk(DataGridMenu))
+            .Concat(Walk(ResultGridMenu))
             .Concat(Walk(HelpersMenu));
     }
 }

@@ -70,7 +70,9 @@ public sealed class RealShellReviewTests
             // Table tab (table editor) and Data tab.
             var customers = TreeModel.ObjectsOf(dbNode).Single(n => n.Name == "customers");
             window.Tree.Tree.FocusedNode = customers;
-            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.TableTab) ? "ok" : null);
+            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.DataTab) ? "ok" : null);
+            tabs.SelectedItem = tabs.TableTab;
+            await WaitAsync(() => window.TableEditor);
             await Settle();
             Save(window, $"real-table-{theme}");
             tabs.SelectedItem = tabs.DataTab;

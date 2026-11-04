@@ -301,6 +301,12 @@ public sealed class TreeOptions
     public bool AutoExpand { get; set; }
 
     public bool DoubleClickInsertsNodeText { get; set; } = true;
+
+    /// <summary>
+    /// A table or view chosen in the tree while the Host or Database tab is showing opens in the Data tab (on by
+    /// default; HeidiSQL opens the Table tab, which is what this option does when it is off).
+    /// </summary>
+    public bool OpenTablesInDataTab { get; set; } = true;
 }
 
 /// <summary>Values remembered by the dialogs (<c>asCreateDbCollation</c>…).</summary>
@@ -346,7 +352,7 @@ public sealed class SqlExportSettings
 
     public int MaxInsertSizeKb { get; set; } = 1024;
 
-    /// <summary>0 file, 1 ZIP, 2 directory, 3 clipboard.</summary>
+    /// <summary>0 file, 1 ZIP, 2 directory, 3 clipboard, 4 database (the server outputs are not saved).</summary>
     public int Output { get; set; }
 
     /// <summary>Recent entries (up to 20) per output kind.</summary>
@@ -355,6 +361,9 @@ public sealed class SqlExportSettings
     public List<string> ZipFilenames { get; set; } = [];
 
     public List<string> Directories { get; set; } = [];
+
+    /// <summary>Last target database of the "Database" and "Server" outputs (<c>ExportSQL_Database</c>).</summary>
+    public string TargetDatabase { get; set; } = string.Empty;
 
     public bool AddComments { get; set; } = true;
 

@@ -42,6 +42,12 @@ public sealed record SqlDumpOptions
 
     public bool RemoveDefiner { get; init; } = true;
 
+    /// <summary>
+    /// A <c>USE</c> for each database even without Create or Drop, so that a dump run on another server goes into
+    /// databases with the same names ("[Same as on source server]" in the export to a server).
+    /// </summary>
+    public bool UseDatabases { get; init; }
+
     /// <summary>Drop implies Create (the dialog checks both).</summary>
     internal bool WritesDatabases => CreateDatabases || DropDatabases;
 
@@ -143,6 +149,10 @@ public sealed partial class SqlDumpWriter
         EnsureNoData();
         if (!_options.WritesDatabases)
         {
+            if (_options.UseDatabases)
+            {
+                _output.Write(Crlf + "USE " + Quote(database) + ";" + Crlf);
+            }
             return;
         }
         var sb = new StringBuilder(Crlf + Crlf);

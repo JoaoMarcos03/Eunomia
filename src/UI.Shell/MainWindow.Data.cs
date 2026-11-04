@@ -445,6 +445,13 @@ public sealed partial class MainWindow
         {
             return;
         }
+        // Next and Show all reload the grid: the local filter is cleared, as on any reload (appendix D B11). Without this,
+        // the grid kept the filtered view without the new rows and the focus went to an index of the full view.
+        if (_dataGridFiltered && _browserRows is { } rows)
+        {
+            DataGrid.SetSource(new ProjectedRowSource(rows, _dataVisibleColumns));
+        }
+        ResetDataGridFilter();
         var firstNew = browser.Loaded;
         var cts = BeginDataLoad();
         _context.Status.Busy = "Fetching rows ...";

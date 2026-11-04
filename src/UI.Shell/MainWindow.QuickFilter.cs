@@ -8,6 +8,7 @@ using Eunomia.Engine.Results;
 using Eunomia.Presentation.Logging;
 using Eunomia.UI.Controls.Common.Dialogs;
 using Eunomia.UI.Controls.Common.Text;
+using Eunomia.UI.Controls.Grid;
 using ColumnDefinition = Eunomia.Drivers.Abstractions.ColumnDefinition;
 
 namespace Eunomia.UI.Shell;
@@ -123,7 +124,12 @@ public sealed partial class MainWindow
         var length = 0;
         foreach (var row in SelectedRows())
         {
-            var text = browser.RawText(row, inner, out var truncated);
+            // With the local filter, the grid row is not the browser row.
+            if (SourceRowOf(row) is not { } sourceRow)
+            {
+                continue;
+            }
+            var text = browser.RawText(sourceRow, inner, out var truncated);
             if (truncated)
             {
                 continue;
@@ -147,10 +153,13 @@ public sealed partial class MainWindow
         _ui.Refresh();
     }
 
-    /// <summary>Selected rows (including the focused one), in order.</summary>
-    private IEnumerable<long> SelectedRows()
+    /// <summary>Selected rows of the Data grid (including the focused one), in order.</summary>
+    private IEnumerable<long> SelectedRows() => SelectedRows(DataGrid);
+
+    /// <summary>Selected rows of <paramref name="grid"/> (including the focused one), in order.</summary>
+    private static IEnumerable<long> SelectedRows(DataGridControl grid)
     {
-        var selection = DataGrid.Selection;
+        var selection = grid.Selection;
         var any = false;
         foreach (var (start, end) in selection.Ranges)
         {
@@ -226,7 +235,7 @@ public sealed partial class MainWindow
         {
             return;
         }
-        var focused = browser.RawText(DataGrid.Selection.FocusedRow, inner, out _) ?? string.Empty;
+        var focused = SourceRowOf(DataGrid.Selection.FocusedRow) is { } row ? browser.RawText(row, inner, out _) ?? string.Empty : string.Empty;
         var value = await InputDialog.ShowAsync(this, "Quick filter", $"Filter value for column {column.Name}:", focused);
         if (value is not null && DialectOf() is { } dialect)
         {

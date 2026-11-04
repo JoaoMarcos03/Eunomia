@@ -42,7 +42,11 @@ public sealed partial class MainWindow
         {
             return;
         }
-        var row = DataGrid.Selection.FocusedRow;
+        // With the local filter, the grid row is not the browser row.
+        if (SourceRowOf(DataGrid.Selection.FocusedRow) is not { } row)
+        {
+            return;
+        }
         var parts = new List<string>();
         for (var i = 0; i < fk.Columns.Count && i < fk.ReferencedColumns.Count; i++)
         {

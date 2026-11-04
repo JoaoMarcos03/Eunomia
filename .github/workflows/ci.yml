@@ -277,3 +277,52 @@ jobs:
 
       - name: Coverage per project and thresholds
         run: python3 build/coverage.py coverage --summary "$GITHUB_STEP_SUMMARY"
+
+  # Every push to main that passes quality, tests, publish and integration becomes a GitHub release with the packages
+  # of the 5 targets, so the latest build can be shared. Tagged v<Version>-build.<run number>; a pre-release while the
+  # version has a pre-release label (1.0.0-beta.1).
+  release:
+    name: Release
+    needs: [quality, test, publish, integration]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Creating the tag and the release.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: eunomia-*
+          path: packages
+          merge-multiple: true
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(dotnet msbuild src/App.Desktop/App.Desktop.csproj -getProperty:Version)
+          tag="v$version-build.$GITHUB_RUN_NUMBER"
+          prerelease=()
+          case "$version" in *-*) prerelease=(--prerelease) ;; esac
+          cat > notes.md <<NOTES
+          Build $GITHUB_RUN_NUMBER of Eunomia $version from commit $GITHUB_SHA.
+
+          | System | Package |
+          | --- | --- |
+          | Windows x64 | \`Eunomia-$version-win-x64.zip\`: extract and run \`Eunomia.exe\` |
+          | macOS Apple silicon / Intel | \`Eunomia-$version-osx-arm64.zip\` / \`osx-x64.zip\`: extract and open \`Eunomia.app\` |
+          | Linux x64 / arm64 | \`Eunomia-$version-linux-x64.tar.gz\` / \`linux-arm64.tar.gz\`: extract and run \`install.sh\` |
+
+          The executables are not signed: Windows SmartScreen and macOS Gatekeeper ask for confirmation the first time
+          (see docs/user-guide.md).
+          NOTES
+          ls -la packages
+          gh release create "$tag" packages/* --target "$GITHUB_SHA" --title "Eunomia $version (build $GITHUB_RUN_NUMBER)" \
+            --notes-file notes.md --generate-notes "${prerelease[@]}"

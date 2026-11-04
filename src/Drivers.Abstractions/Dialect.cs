@@ -130,6 +130,13 @@ public interface IDialect
     string? SessionModeQuery { get; }
 
     /// <summary>
+    /// Query with one value that identifies the server instance, whatever host name or tunnel a session uses to reach it
+    /// (the export to another server refuses the source databases as targets on the same instance); <c>null</c> if the
+    /// system has none.
+    /// </summary>
+    string? ServerInstanceQuery { get; }
+
+    /// <summary>
     /// Statements around the application's DDL and those that restore the session: waits for metadata locks at most
     /// <paramref name="lockWaitSeconds"/> (an ALTER waiting for a lock blocks every later query on the table) and,
     /// with <paramref name="strictFrom"/> (the current mode), a mode in which an ALTER that copies data fails instead of
