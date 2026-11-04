@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Eunomia.App.Transfer;
+using Eunomia.Drivers.Abstractions;
 using Eunomia.Drivers.MySql;
 using Eunomia.Engine.Execution;
 using Eunomia.Engine.Transfer;
@@ -210,6 +211,90 @@ public sealed class CsvImportTests : IAsyncLifetime
             Assert.Equal("0", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
         }
         Assert.Equal("1", await ScalarAsync("SELECT 1"));
+    }
+
+    [Fact]
+    public async Task ServerModeCountsTheLoadDataWarnings()
+    {
+        TestServer.RequireServer();
+        // INSERT IGNORE with a repeated key: one row and a "Duplicate entry" warning.
+        var path = Write("w.csv", "id;name;price;note\r\n1;a;1;x\r\n1;b;2;y\r\n", new UTF8Encoding(false));
+        var result = await new CsvImportJob(_host, Request(path, CsvImportMethod.Server) with { Duplicates = CsvDuplicates.InsertIgnore }).RunAsync(null, Ct);
+
+        Assert.Equal(1, result.Rows);
+        Assert.Equal(1, result.Warnings);
+        Assert.Equal("1|a|1.00|x", await RowsAsync());
+    }
+
+    [Fact]
+    public async Task CancelAtTheEndOfALineKeepsNoRows()
+    {
+        TestServer.RequireServer();
+        // The cancel cuts the stream between two lines: the server takes the lines already sent as a complete LOAD DATA
+        // and only then does the driver see the cancel. Without a transaction around it, those rows were kept.
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        await using var source = new CancelAfterLinesStream(500, cts);
+        var handle = await _host.OpenDedicatedAsync(o => o with { AllowLocalInfile = true }, Ct);
+        await using (handle)
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => handle.BulkLoadAsync(new BulkLoadRequest
+            {
+                Database = _database,
+                Table = "t",
+                Source = source,
+                Columns = ["`id`", "`name`", "`price`", "`note`"],
+                FieldTerminator = ";",
+                LineTerminator = "\r\n",
+                CharacterSet = "utf8mb4",
+            }, cts.Token));
+        }
+
+        Assert.True(source.LinesSent > 0);
+        Assert.Equal("0", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
+        Assert.Equal("1", await ScalarAsync("SELECT 1"));
+    }
+
+    /// <summary>Whole lines up to <c>lines</c>; the next read cancels and throws, like the CSV import stream.</summary>
+    private sealed class CancelAfterLinesStream(int lines, CancellationTokenSource cancel) : Stream
+    {
+        public int LinesSent { get; private set; }
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (LinesSent >= lines)
+            {
+                cancel.Cancel();
+                cancel.Token.ThrowIfCancellationRequested();
+            }
+            LinesSent++;
+            var line = Encoding.UTF8.GetBytes(string.Create(CultureInfo.InvariantCulture, $"{LinesSent};nome {LinesSent};{LinesSent};x\r\n"));
+            line.CopyTo(buffer, offset);
+            return line.Length;
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private sealed class SyncProgress<T>(Action<T> report) : IProgress<T>

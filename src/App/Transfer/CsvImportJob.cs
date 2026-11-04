@@ -150,17 +150,17 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
                     }
                 }
                 var csv = request.Csv;
-                long rows;
+                BulkLoadResult loaded;
                 try
                 {
-                    rows = await LoadAsync(handle, source, columns, expressions, csv, cancellationToken).ConfigureAwait(false);
+                    loaded = await LoadAsync(handle, source, columns, expressions, csv, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception e) when (!cancellationToken.IsCancellationRequested && host.StatementError(e) is { Code: LocalInfileDisabled or NotAllowedCommand or InfileCapabilityDisabled } error)
                 {
                     throw new CsvLocalInfileDisabledException(error.Message, e);
                 }
-                Interlocked.Exchange(ref _rows, rows);
-                return Convert.ToInt64(await handle.ExecuteScalarAsync("SELECT @@warning_count", cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture);
+                Interlocked.Exchange(ref _rows, loaded.Rows);
+                return loaded.Warnings;
             }
         }
     }
@@ -174,7 +174,7 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
     /// <summary>ER_LOAD_INFILE_CAPABILITY_DISABLED: the same on MariaDB 10.5+.</summary>
     private const int InfileCapabilityDisabled = 4166;
 
-    private Task<long> LoadAsync(IDbConnectionHandle handle, Stream source, List<string> columns, List<string> expressions, CsvOptions csv, CancellationToken cancellationToken) =>
+    private Task<BulkLoadResult> LoadAsync(IDbConnectionHandle handle, Stream source, List<string> columns, List<string> expressions, CsvOptions csv, CancellationToken cancellationToken) =>
         handle.BulkLoadAsync(new BulkLoadRequest
         {
             Database = request.Database,
