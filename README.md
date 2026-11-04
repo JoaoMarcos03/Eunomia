@@ -79,7 +79,7 @@ Version **1.0.0-beta.1**. MySQL and MariaDB are supported. CI tests against MySQ
 | Linux x64 | `tar.gz` (NativeAOT) with an `install.sh` | X11, or Wayland with XWayland |
 | Linux arm64 | `tar.gz` (self-contained) | |
 
-CI builds these packages on every push; they are attached to each workflow run as artifacts.
+**Download:** every push to `main` that passes CI publishes these packages as a pre-release on the [Releases page](https://github.com/JoaoMarcos03/Eunomia/releases). The executables are not signed yet, so Windows SmartScreen and macOS Gatekeeper ask for confirmation the first time (see the [user guide](docs/user-guide.md)).
 
 ## Building from source
 
