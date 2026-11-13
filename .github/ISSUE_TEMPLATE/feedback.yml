@@ -13,7 +13,7 @@ body:
     attributes:
       label: Eunomia version
       description: In Help › About, or in the window title.
-      placeholder: "1.0.0-beta.1"
+      placeholder: "1.0.0-beta.2"
     validations:
       required: true
 

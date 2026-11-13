@@ -13,8 +13,8 @@ body:
     id: version
     attributes:
       label: Eunomia version
-      description: In Help › About, or in the window title (for example `1.0.0-beta.1`).
-      placeholder: "1.0.0-beta.1"
+      description: In Help › About, or in the window title (for example `1.0.0-beta.2`).
+      placeholder: "1.0.0-beta.2"
     validations:
       required: true
 
