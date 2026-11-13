@@ -24,6 +24,7 @@ public sealed class CommandUi
     private readonly CommandRegistry _registry;
     private readonly List<(MenuItem Item, string Id)> _menuItems = [];
     private readonly List<(Control Button, Image Icon, string Id)> _buttons = [];
+    private readonly Dictionary<Control, string> _dropdowns = [];
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<MenuItem, List<object>> _submenus = [];
     private Panel? _toolbar;
     private readonly DispatcherTimer _timer;
@@ -190,32 +191,77 @@ public sealed class CommandUi
         Control button = main;
         if (dropdown is not null)
         {
-            var flyout = new MenuFlyout();
-            flyout.Opening += (_, _) =>
-            {
-                var entries = DropdownEntries?.Invoke(dropdown) ?? [];
-                var dynamicItems = entries.Count == 0 ? DynamicItems?.Invoke(dropdown) : null;
-                var built = dynamicItems is { Count: > 0 } ? dynamicItems : BuildItems(entries);
-                flyout.ItemsSource = built;
-                RefreshMenus();
-                Arrange(built);
-            };
             var arrow = new Button
             {
                 Content = new Avalonia.Controls.Shapes.Path { Data = DropArrow, Fill = Avalonia.Media.Brushes.DimGray, Width = 5, Height = 3, Stretch = Avalonia.Media.Stretch.Fill },
-                Flyout = flyout,
                 Focusable = false,
                 Classes = { "toolbar-arrow" },
             };
             var pair = new StackPanel { Orientation = Orientation.Horizontal };
             pair.Children.Add(main);
             pair.Children.Add(arrow);
+            arrow.Click += (_, _) => ShowDropdown(dropdown, pair);
             button = pair;
+            _dropdowns[pair] = dropdown;
         }
         ToolTip.SetShowOnDisabled(button, true);
         button.Name = "tb_" + id;
         _buttons.Add((button, icon, id));
         return button;
+    }
+
+    /// <summary>
+    /// End of the tooltip of a button with an arrow: the shortcuts of the other commands in the dropdown (on Run, how to
+    /// run only the selection or only the current query) and a note that the arrow has more options, as HeidiSQL hints do.
+    /// </summary>
+    private string DropdownHint(string id, string dropdown)
+    {
+        var entries = DropdownEntries?.Invoke(dropdown) ?? [];
+        var sb = new System.Text.StringBuilder();
+        foreach (var entry in entries)
+        {
+            if (entry is CommandEntry { CommandId: var other } && other != id && _registry.ShortcutOf(other) is { } keys
+                && _registry.StateOf(other) is { IsImplemented: true } state)
+            {
+                sb.Append(Environment.NewLine).Append(keys).Append(": ").Append(state.Caption);
+            }
+        }
+        return (sb.Length > 0 ? Environment.NewLine + sb.ToString() : string.Empty)
+            + Environment.NewLine + Environment.NewLine + "Click the arrow for more options.";
+    }
+
+    /// <summary>The arrow menu open now (tests).</summary>
+    internal MenuFlyout? OpenDropdown { get; private set; }
+
+    /// <summary>
+    /// Arrow menu of a toolbar button, with its items built before it opens: <see cref="MenuFlyout"/> creates the presenter
+    /// before the Opening event, so items given in Opening stayed out of the menu and the arrow showed nothing.
+    /// The command items leave the refresh list when the menu closes (each opening creates new items).
+    /// </summary>
+    private void ShowDropdown(string dropdown, Control anchor)
+    {
+        var entries = DropdownEntries?.Invoke(dropdown) ?? [];
+        var dynamicItems = entries.Count == 0 ? DynamicItems?.Invoke(dropdown) : null;
+        var first = _menuItems.Count;
+        IReadOnlyList<object> built = dynamicItems is { Count: > 0 } ? dynamicItems : BuildItems(entries);
+        var added = _menuItems.GetRange(first, _menuItems.Count - first).Select(m => m.Item).ToHashSet();
+        if (built.Count == 0)
+        {
+            built = [new MenuItem { Header = "(none)", IsEnabled = false }];
+        }
+        RefreshMenus();
+        Arrange(built);
+        var flyout = new MenuFlyout { ItemsSource = built, Placement = PlacementMode.BottomEdgeAlignedLeft };
+        flyout.Closed += (_, _) =>
+        {
+            _menuItems.RemoveAll(m => added.Contains(m.Item));
+            if (OpenDropdown == flyout)
+            {
+                OpenDropdown = null;
+            }
+        };
+        OpenDropdown = flyout;
+        flyout.ShowAt(anchor);
     }
 
     /// <summary>Toolbar icons again (the theme changed); the menu ones are recreated when the menu opens.</summary>
@@ -259,8 +305,12 @@ public sealed class CommandUi
             }
             var shortcut = _registry.ShortcutOf(id);
             var tip = state.Command.Caption + (shortcut is { } s ? $" ({s})" : string.Empty)
-                + (state.Tooltip is { } t ? Environment.NewLine + t : state.Command.Hint is { } h ? Environment.NewLine + h : string.Empty);
-            ToolTip.SetTip(button, tip);
+                + (state.Tooltip is { } t ? Environment.NewLine + t : state.Command.Hint is { } h ? Environment.NewLine + h : string.Empty)
+                + (_dropdowns.TryGetValue(button, out var dropdown) ? DropdownHint(id, dropdown) : string.Empty);
+            if (!Equals(ToolTip.GetTip(button), tip))
+            {
+                ToolTip.SetTip(button, tip);
+            }
         }
         if (visibilityChanged && _toolbar is not null)
         {

@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -10,6 +9,7 @@ using Avalonia.Platform.Storage;
 using Eunomia.App.Settings;
 using Eunomia.App.Transfer;
 using Eunomia.Drivers.Abstractions;
+using Eunomia.Engine.Sql.Filters;
 using Eunomia.Engine.Transfer;
 using Eunomia.UI.Controls.Common.Accessibility;
 using Eunomia.UI.Controls.Common.Brand;
@@ -42,8 +42,15 @@ public sealed record SqlExportTargets(
     SqlExportToServerRunner Run);
 
 /// <summary>
+/// Text of the main tree's Database filter and Table filter when the dialog opens: the dialog shows and
+/// exports what the user was looking at, as in HeidiSQL.
+/// </summary>
+public sealed record SqlExportTreeFilters(string Databases, string Tables);
+
+/// <summary>
 /// Tools › Export database as SQL (FAM-E06; appendix B §2.3.1): a tree of databases and objects with check boxes and filters
-/// (regular expressions), Drop/Create of databases and tables (Drop implies Create and shows in bold as "Drop!!"),
+/// (the syntax of the main tree's filters, <see cref="TreeFilterExpression"/>; they open with the tree's filters and only
+/// what is visible is exported), Drop/Create of databases and tables (Drop implies Create and shows in bold as "Drop!!"),
 /// data (No data, Delete + insert, Insert, Insert ignore, Replace), Max INSERT size, output (file, ZIP, directory,
 /// clipboard) with recent entries, HeidiSQL's options and the consistent snapshot. The bottom grid shows each object
 /// (Database, Table, Rows "N / P%", Duration) while the job runs; Export becomes Cancel.
@@ -99,6 +106,8 @@ public sealed class SqlExportDialog : Window
     private readonly Dictionary<(string Database, string Name, DbObjectKind Kind), TextBlock[]> _resultRows = [];
     private CancellationTokenSource? _running;
     private bool _updatingChecks;
+    private TreeFilterExpression _databaseMatch = TreeFilterExpression.Empty;
+    private TreeFilterExpression _tableMatch = TreeFilterExpression.Empty;
 
     public SqlExportDialog(
         SqlExportSettings settings,
@@ -107,7 +116,8 @@ public sealed class SqlExportDialog : Window
         SqlExportRunner run,
         string? initialDatabase = null,
         IReadOnlyCollection<string>? initialObjects = null,
-        SqlExportTargets? targets = null)
+        SqlExportTargets? targets = null,
+        SqlExportTreeFilters? treeFilters = null)
     {
         Icon = BrandAssets.WindowIcon;
         ArgumentNullException.ThrowIfNull(settings);
@@ -154,8 +164,9 @@ public sealed class SqlExportDialog : Window
         _removeAutoIncrement.IsChecked = settings.RemoveAutoIncrement;
         _removeDefiner.IsChecked = settings.RemoveDefiner;
         _snapshot.IsChecked = settings.ConsistentSnapshot;
-        _databaseFilter.Text = settings.DatabaseFilter;
-        _tableFilter.Text = settings.TableFilter;
+        // The main tree's filters win over the saved ones: an old filter would hide objects from the export without warning.
+        _databaseFilter.Text = treeFilters?.Databases ?? settings.DatabaseFilter;
+        _tableFilter.Text = treeFilters?.Tables ?? settings.TableFilter;
         _path.Text = Recent().FirstOrDefault() ?? string.Empty;
 
         // Drop implies Create; turning Create off turns Drop off (tabletools.pas L1664-L1686).
@@ -170,8 +181,8 @@ public sealed class SqlExportDialog : Window
         };
         _databaseFilter.TextChanged += (_, _) => ApplyFilters();
         _tableFilter.TextChanged += (_, _) => ApplyFilters();
-        _recent.Flyout = new MenuFlyout();
-        _recent.Click += (_, _) => _recent.Flyout = new MenuFlyout { ItemsSource = RecentMenu() };
+        // A new menu on each click, with its items before it opens (Button.Flyout opened before Click, and empty).
+        _recent.Click += (_, _) => new MenuFlyout { ItemsSource = RecentMenu(), Placement = PlacementMode.BottomEdgeAlignedLeft }.ShowAt(_recent);
         var browse = new Button { Content = "...", Padding = new Thickness(6, 1) };
         browse.Click += async (_, _) => await BrowseAsync();
         _path.DoubleTapped += async (_, _) => await BrowseAsync();
@@ -216,6 +227,10 @@ public sealed class SqlExportDialog : Window
     // ---------- For tests ----------
 
     internal TreeView Tree => _tree;
+
+    internal TextBox DatabaseFilterBox => _databaseFilter;
+
+    internal TextBox TableFilterBox => _tableFilter;
 
     internal ComboBox OutputCombo => _output;
 
@@ -335,7 +350,7 @@ public sealed class SqlExportDialog : Window
             or DbObjectKind.Function or DbObjectKind.Trigger or DbObjectKind.Event))
         {
             var child = new ObjectNode(info);
-            child.Check = new CheckBox { Content = Text(info.Ref.Name), Padding = new Thickness(4, 0), MinHeight = 24, IsChecked = node.Check.IsChecked == true };
+            child.Check = new CheckBox { Content = Text(info.Ref.Name), Padding = new Thickness(4, 0), MinHeight = 24, IsChecked = node.Check.IsChecked == true && _tableMatch.IsMatch(info.Ref.Name) };
             var kind = new TextBlock { Text = KindText(info.Ref.Kind), Foreground = Brushes.Gray, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             var header = new StackPanel { Orientation = Orientation.Horizontal };
             header.Children.Add(child.Check);
@@ -353,6 +368,10 @@ public sealed class SqlExportDialog : Window
         node.Objects = children;
         node.Item.ItemsSource = children.Select(c => c.Item).ToList();
         ApplyFilters();
+        if (node.Check.IsChecked == true && children.Count > 0)
+        {
+            UpdateParent(node);
+        }
     }
 
     private async Task SelectInitialAsync(DatabaseNode node, IReadOnlyCollection<string>? objects)
@@ -377,19 +396,21 @@ public sealed class SqlExportDialog : Window
         UpdateParent(node);
     }
 
+    /// <summary>Checking a database checks only the objects that pass the Table filter; unchecking unchecks them all.</summary>
     private void SetChildren(List<ObjectNode> objects, bool check)
     {
         _updatingChecks = true;
         foreach (var o in objects)
         {
-            o.Check.IsChecked = check;
+            o.Check.IsChecked = check && _tableMatch.IsMatch(o.Info.Ref.Name);
         }
         _updatingChecks = false;
     }
 
+    /// <summary>The database's state counts only the visible objects, which are the ones that go into the export.</summary>
     private void UpdateParent(DatabaseNode node)
     {
-        var objects = node.Objects ?? [];
+        var objects = (node.Objects ?? []).Where(o => _tableMatch.IsMatch(o.Info.Ref.Name)).ToList();
         var count = objects.Count(o => o.Check.IsChecked == true);
         _updatingChecks = true;
         node.Check.IsChecked = count == 0 ? false : count == objects.Count ? true : null;
@@ -398,32 +419,20 @@ public sealed class SqlExportDialog : Window
 
     private void ApplyFilters()
     {
-        var databases = Pattern(_databaseFilter.Text);
-        var tables = Pattern(_tableFilter.Text);
+        var tablesChanged = _tableMatch.Text != (_tableFilter.Text ?? string.Empty);
+        _databaseMatch = new TreeFilterExpression(_databaseFilter.Text ?? string.Empty);
+        _tableMatch = new TreeFilterExpression(_tableFilter.Text ?? string.Empty);
         foreach (var d in _databases)
         {
-            d.Item.IsVisible = databases?.IsMatch(d.Name) ?? true;
+            d.Item.IsVisible = _databaseMatch.IsMatch(d.Name);
             foreach (var o in d.Objects ?? [])
             {
-                o.Item.IsVisible = tables?.IsMatch(o.Info.Ref.Name) ?? true;
+                o.Item.IsVisible = _tableMatch.IsMatch(o.Info.Ref.Name);
             }
-        }
-    }
-
-    /// <summary>Case-insensitive regular expression; an invalid or empty one does not filter.</summary>
-    private static Regex? Pattern(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return null;
-        }
-        try
-        {
-            return new Regex(text, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
-        }
-        catch (ArgumentException)
-        {
-            return null;
+            if (tablesChanged && d.Objects is { Count: > 0 })
+            {
+                UpdateParent(d);
+            }
         }
     }
 
@@ -811,19 +820,23 @@ public sealed class SqlExportDialog : Window
             $"Done: {FormatBytes(result.Export.BytesWritten)} exported and {import.Statements:N0} queries run on {where} in {(result.Export.Elapsed + import.Elapsed).TotalSeconds:0.0} s.");
     }
 
-    /// <summary>Checked databases and objects, in tree order; a checked database not yet opened loads now.</summary>
+    /// <summary>
+    /// Checked and visible databases and objects, in tree order; a checked database not yet opened loads now. What the
+    /// filters hide is never exported, even if it was left checked.
+    /// </summary>
     private async Task<List<SqlExportDatabase>> CheckedAsync()
     {
         var result = new List<SqlExportDatabase>();
         foreach (var d in _databases)
         {
-            if (d.Check.IsChecked == false)
+            if (d.Check.IsChecked == false || !_databaseMatch.IsMatch(d.Name))
             {
                 continue;
             }
             await EnsureLoadedAsync(d);
-            var objects = (d.Objects ?? []).Where(o => o.Check.IsChecked == true).Select(o => o.Info).ToList();
-            if (objects.Count > 0 || d.Check.IsChecked == true)
+            var objects = (d.Objects ?? []).Where(o => o.Check.IsChecked == true && _tableMatch.IsMatch(o.Info.Ref.Name)).Select(o => o.Info).ToList();
+            // A checked empty database exports only its CREATE DATABASE; a database whose objects are all hidden is left out.
+            if (objects.Count > 0 || (d.Check.IsChecked == true && d.Objects is not { Count: > 0 }))
             {
                 result.Add(new SqlExportDatabase(d.Name, objects));
             }
@@ -1085,6 +1098,7 @@ public sealed class SqlExportDialog : Window
         SqlExportRunner run,
         string? initialDatabase,
         IReadOnlyCollection<string>? initialObjects,
-        SqlExportTargets? targets = null) =>
-        new SqlExportDialog(settings, databases, loadObjects, run, initialDatabase, initialObjects, targets).ShowDialog(owner);
+        SqlExportTargets? targets = null,
+        SqlExportTreeFilters? treeFilters = null) =>
+        new SqlExportDialog(settings, databases, loadObjects, run, initialDatabase, initialObjects, targets, treeFilters).ShowDialog(owner);
 }

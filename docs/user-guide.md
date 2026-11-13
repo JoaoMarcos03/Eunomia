@@ -2,7 +2,7 @@
 
 Eunomia is a MySQL and MariaDB client for Windows, macOS and Linux, built for people who use HeidiSQL: the menus, shortcuts, dialogs and file formats (SQL export, CSV) follow HeidiSQL. The differences are listed at the end of this guide.
 
-This is the beta (1.0.0-beta.1). Not there yet, among other things: PostgreSQL, SQL Server and SQLite, User manager, Bulk table editor, Generate data, Insert files, and export to another database or server. The menus only show what already works.
+This is the beta (1.0.0-beta.2). Not there yet, among other things: PostgreSQL, SQL Server and SQLite, User manager, Bulk table editor, Generate data and Insert files. The menus only show what already works.
 
 ## Coming from HeidiSQL
 
@@ -137,6 +137,8 @@ Nothing leaves the machine: there is no telemetry and no update check.
 ### Export database as SQL (Tools)
 
 - Choose databases and objects in the dialog's tree (with filters), Drop/Create for databases and tables, the data (No data, Delete + insert, Insert, Insert ignore, Replace) and the Max INSERT size.
+- With the Database tab list focused, only the objects selected in it come checked (select some tables there, then click Export database as SQL).
+- The dialog opens with the tree's **Database filter** and **Table filter** (same syntax: regular expressions, `;` as "or"). Only what the filters show is exported: hidden databases and objects stay out even if they were checked, and checking a database checks only its visible objects. Clear the filters in the dialog to export everything.
 - Output: a `.sql` file, a `.zip`, a directory with one file per object, or the clipboard (up to 64 MiB).
 - Output **Database** copies straight into another database of the same session; **Server: <session>** copies into another saved session (it connects when chosen), into one database or, with **[Same as on source server]**, into databases with the same names (with Create on, they are created). Before running, a confirmation names the target and says what happens to existing tables and rows (Drop, Delete + insert, Replace). The run stops at the first error; statements already run are not undone. An exported database can never be the target on the same server, and a read-only session cannot be a target.
 - How it works: the dump is first written to a temporary file in the app's spill folder (constant memory, like a file export) and then run on the target like **Run SQL file**; the file is deleted at the end. With MySQL, views keep the database names that `SHOW CREATE VIEW` writes in them.
