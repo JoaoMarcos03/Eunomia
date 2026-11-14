@@ -8,7 +8,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
     <!-- Versions: 0.<phase>.<n> up to the MVP; then 1.0.0-beta.<n> (phase 14) until the stable 1.0. -->
-    <Version>1.0.0-beta.1</Version>
+    <Version>1.0.0-beta.2</Version>
 
     <!-- AOT and trimming analyzers in every project (spec section 22). -->
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>

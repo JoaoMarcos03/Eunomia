@@ -15,7 +15,7 @@
   <a href="https://github.com/JoaoMarcos03/Eunomia/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/JoaoMarcos03/Eunomia/actions/workflows/ci.yml/badge.svg"></a>
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-informational">
-  <img alt="Status" src="https://img.shields.io/badge/status-1.0.0--beta.1-orange">
+  <img alt="Status" src="https://img.shields.io/badge/status-1.0.0--beta.2-orange">
 </p>
 
 <p align="center">
@@ -70,7 +70,7 @@ The [user guide](docs/user-guide.md) covers every feature and the differences fr
 
 ## Status
 
-Version **1.0.0-beta.1**. MySQL and MariaDB are supported. CI tests against MySQL 8.0 and 8.4 and MariaDB 10.6 and 11.4, and development uses MariaDB 10.4. The architecture keeps the core independent of MySQL, so that PostgreSQL can be added as another driver. Planned work is in the [roadmap](docs/roadmap.md).
+Version **1.0.0-beta.2**. MySQL and MariaDB are supported. CI tests against MySQL 8.0 and 8.4 and MariaDB 10.6 and 11.4, and development uses MariaDB 10.4. The architecture keeps the core independent of MySQL, so that PostgreSQL can be added as another driver. Planned work is in the [roadmap](docs/roadmap.md).
 
 | Platform | Package | Notes |
 | --- | --- | --- |

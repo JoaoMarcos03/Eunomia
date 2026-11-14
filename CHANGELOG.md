@@ -4,6 +4,8 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
+## [1.0.0-beta.2] - 2026-11-13
+
 ### Added
 
 - Every push to `main` that passes CI publishes a pre-release on GitHub with the Windows, macOS and Linux packages (`release` job in `.github/workflows/ci.yml`, tagged `v<version>-build.<run>`).
@@ -31,6 +33,8 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 
 ### Changed
 
+- Toolbar tooltips of buttons with an arrow list the shortcuts of the other commands in the arrow (Run: Ctrl+F9 runs the selection, Ctrl+Shift+F9 the current query) and say that the arrow has more options.
+- Export database as SQL opened from the Database tab list (with the list focused) checks only the objects selected in it, as in HeidiSQL.
 - Choosing a table or view in the tree from the Host or Database tab opens the Data tab (HeidiSQL opens the Table tab; the old behaviour is one option away).
 - Table structure (Table tab): rows are plain text with the data type in its category colour, PK/UQ/IX marks and a fixed header; the editors appear only in the selected row, and Up/Down move between rows.
 - The "Show only favorites" button draws a centred star: an outline when off, filled in the favourites colour on an amber tint when on (it used to be an off-centre text glyph on the accent blue).
@@ -50,6 +54,8 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 
 ### Fixed
 
+- Toolbar arrows (Session manager, Refresh, Run, Load SQL file) opened an empty menu, so nothing appeared: the items are now built before the menu opens. The Session manager arrow lists the saved sessions again and the Run arrow offers Run, Run Selection and Run current query. The recent files arrow of Export database as SQL had the same problem.
+- Export database as SQL opens with the tree's Database filter and Table filter (same syntax, `;` as "or") and exports only what they show: a database or object hidden by the filters is never exported, and checking a database checks only its visible objects, as in HeidiSQL.
 - CSV import in server mode: a cancel no longer keeps rows. The `LOAD DATA` runs in a transaction and is rolled back when cancelled, including when the file was cut at the end of a line and the server had accepted the rows sent so far; on MySQL 8 a cancel that arrived as "Row N doesn't contain data for all columns" is now shown as cancelled.
 - Import settings file imported nothing from a file written by Export settings file (it only read the HeidiSQL format): sessions, folders, favourites and preferences now move from one Eunomia to another; the export also includes the favourites.
 - The bottom filter panel (Filter: regular expression) did nothing in the Table tab: it now filters the table editor columns, and the text stays with the tab. In the Host's Variables, Status and Command-Statistics sub-tabs it filtered the hidden Databases list.

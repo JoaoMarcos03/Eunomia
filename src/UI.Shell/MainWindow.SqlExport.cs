@@ -9,8 +9,9 @@ namespace Eunomia.UI.Shell;
 
 /// <summary>
 /// Tools › Export database as SQL (phase 8; FAM-E06): the dialog with the database or the object focused in the tree already
-/// checked, and the job on the session's job connections. The clipboard gets the text at the end; the SQL log records the result.
-/// The "Database" and "Server: &lt;session&gt;" outputs run the dump on another database or saved session
+/// checked and the tree filters applied, and the job on the session's job connections. The clipboard gets the text
+/// at the end; the SQL log records the result. The "Database" and "Server: &lt;session&gt;" outputs run the dump on another
+/// database or saved session
 /// (<see cref="SqlExportToServerJob"/>); a server that is not open connects when it is chosen.
 /// </summary>
 public sealed partial class MainWindow
@@ -37,6 +38,12 @@ public sealed partial class MainWindow
         var focused = _tree.Tree.FocusedNode;
         var database = focused?.Database?.Name;
         IReadOnlyCollection<string>? objects = focused is { IsObject: true } ? [focused.Name] : null;
+        // As in HeidiSQL: with the Database tab list focused, the objects selected in it come checked.
+        if (ListTarget() is { } list && list.Session == open)
+        {
+            database = list.Database;
+            objects = [.. list.Objects.Select(o => o.Name)];
+        }
         await SqlExportDialog.ShowAsync(
             this,
             _context.Settings.SqlExport,
@@ -45,7 +52,8 @@ public sealed partial class MainWindow
             (request, progress, ct) => RunSqlExportAsync(open, request, progress, ct),
             database,
             objects,
-            ExportTargets(open));
+            ExportTargets(open),
+            new SqlExportTreeFilters(_tree.DatabaseFilterBox.Text ?? string.Empty, _tree.TableFilterBox.Text ?? string.Empty));
         _context.SaveSettings();
     }
 
