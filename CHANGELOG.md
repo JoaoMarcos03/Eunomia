@@ -17,7 +17,8 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 - Data tab pages, and the full load used by Export grid rows and Copy as, no longer stop at the 30 s query timeout; the timeout of other queries counts from when the statement starts, not from when it was queued behind another one.
 - Data tab: tables with large rows (BLOBs) are read in smaller pages (at least 10 rows), so the first rows of a very large table show without the server reading gigabytes first; the SQL log says so once per table.
 - Export to a file or ZIP: writing (and compressing) runs on its own thread, in parallel with reading the rows; the status shows the SQL size and, for a ZIP, the compressed size.
-- Database dumps lift the session's statement time limit (`MAX_EXECUTION_TIME`/`MAX_STATEMENT_TIME`) and raise `NET_WRITE_TIMEOUT` to at least an hour while they read, restoring both at the end.
+- Database dumps lift the session's statement time limit (`MAX_EXECUTION_TIME`/`MAX_STATEMENT_TIME`) and set `NET_WRITE_TIMEOUT` to an hour while they read, restoring both at the end.
+- GitHub Actions only builds the packages and publishes the release when a pull request is merged into `main`; the build, tests, coverage, formatting check and benchmarks run locally (the `quality`, `test`, `integration` and `coverage` jobs, the executable smoke test and `bench.yml` were removed).
 - Run SQL file: on MySQL 8.4 and later, the import connection turns off `restrict_fk_on_non_standard_key`, so dumps from MySQL 8.0 with foreign keys to non-unique keys load.
 - Run SQL file: the tree, the table structure and the Data tab of other databases no longer wait while an import runs.
 

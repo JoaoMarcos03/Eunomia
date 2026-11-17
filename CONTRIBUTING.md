@@ -36,7 +36,7 @@ dotnet test Eunomia.slnx                                        # all tests
 dotnet test tests/Unit/Engine.Sql.Tests --filter "FullyQualifiedName~Splitter"   # a subset
 dotnet test Eunomia.slnx --collect "Code Coverage;Format=cobertura" --results-directory TestResults   # with coverage
 python build/coverage.py TestResults                            # coverage per project against build/coverage-baseline.json
-dotnet format Eunomia.slnx --verify-no-changes                  # formatting and style (CI runs this)
+dotnet format Eunomia.slnx --verify-no-changes                  # formatting and style (before every PR)
 dotnet format Eunomia.slnx                                      # fix formatting and style
 dotnet build Eunomia.slnx -c Release                            # performance measurements only in Release
 ```
@@ -66,7 +66,7 @@ Eunomia is used on production databases. Order of precedence of the principles (
 
 ## 5. C# coding standards
 
-They follow Microsoft's [C# coding conventions](https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions) and the [Framework Design Guidelines](https://learn.microsoft.com/dotnet/standard/design-guidelines/), plus what is below. `.editorconfig` encodes what can be checked; CI runs `dotnet format --verify-no-changes`. New code follows these rules; old code is aligned when it is touched.
+They follow Microsoft's [C# coding conventions](https://learn.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions) and the [Framework Design Guidelines](https://learn.microsoft.com/dotnet/standard/design-guidelines/), plus what is below. `.editorconfig` encodes what can be checked; `dotnet format --verify-no-changes` runs before every pull request. New code follows these rules; old code is aligned when it is touched.
 
 ### Structure
 
@@ -134,7 +134,7 @@ They follow Microsoft's [C# coding conventions](https://learn.microsoft.com/dotn
 
 ## 7. Git, commits and pull requests
 
-- One branch per topic (`feat/user-manager`, `fix/grid-conflicts`, `docs/…`); work reaches `main` through a pull request with green CI (Windows, Linux, macOS, integration, quality and coverage).
+- One branch per topic (`feat/user-manager`, `fix/grid-conflicts`, `docs/…`); work reaches `main` through a pull request, after the build, the tests (with the test server) and `dotnet format --verify-no-changes` pass locally. GitHub runs no tests: merging into `main` only builds the packages and publishes the release (`.github/workflows/ci.yml`).
 - One commit per coherent step, with a green build and tests. Messages in English, in the [Conventional Commits](https://www.conventionalcommits.org/) format: `type(scope): imperative summary` (≤ 72 characters), with a body explaining the why when it is not obvious. Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`. Example: `fix(grid): refuse to save truncated values`.
 - Before the PR: `dotnet format Eunomia.slnx --verify-no-changes`, with `CHANGELOG.md` and `docs/progress.md` up to date.
 - Small, focused PRs with the template filled in (what, why, how it was tested, risks to data).

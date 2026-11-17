@@ -12,7 +12,7 @@
 
 ## Checklist
 
-- [ ] `dotnet build Eunomia.slnx` and `dotnet test Eunomia.slnx` green; `dotnet format Eunomia.slnx --verify-no-changes` clean
+- [ ] Locally: `dotnet build Eunomia.slnx` and `dotnet test Eunomia.slnx` (with the test server) green; `dotnet format Eunomia.slnx --verify-no-changes` clean
 - [ ] Write paths covered by integration tests; SQL only through the dialect and the composers
 - [ ] Changed screens with light and dark snapshots reviewed
 - [ ] `CHANGELOG.md`, `docs/progress.md` and, if user-visible, `docs/user-guide.md` updated

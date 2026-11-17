@@ -1,121 +1,23 @@
-# CI for every push and pull request (spec section 22: ci.yml; section 25.1: snapshots on every PR).
-# Build and tests on Windows, Linux and macOS (phase 14); publish of the 5 targets with a smoke test of the executable
-# and packages; integration tests against real servers on Linux.
-name: ci
+# Releases only: every push to main (a merged pull request) builds the packages of the 5 targets and publishes them as
+# a GitHub release. No tests run on GitHub: they run locally before the pull request (CONTRIBUTING.md, section 6).
+# The file keeps its name: the build number ($GITHUB_RUN_NUMBER, EunomiaBuild in Directory.Build.props, compared by the
+# update check) is counted per workflow file, and a new file would start again at 1.
+name: release
 
 on:
   push:
     branches: [main]
-  pull_request:
-  workflow_dispatch:
 
 env:
   DOTNET_NOLOGO: "1"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   AVALONIA_TELEMETRY_OPTOUT: "1"
 
-# Least privilege: the GITHUB_TOKEN only reads the repository.
+# Least privilege: the GITHUB_TOKEN only reads the repository (the release job asks for more).
 permissions:
   contents: read
 
-# A new push to a PR cancels that PR's previous run; on main every push runs.
-concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
-  # Formatting and style (.editorconfig) and packages with known vulnerabilities (CONTRIBUTING.md, section 5).
-  quality:
-    name: Quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-
-      - name: Restore
-        run: dotnet restore Eunomia.slnx
-
-      - name: Formatting and style
-        run: dotnet format Eunomia.slnx --verify-no-changes --no-restore --severity warn
-
-      - name: Packages with known vulnerabilities
-        run: |
-          dotnet list Eunomia.slnx package --vulnerable --include-transitive --format json > vulnerable.json
-          if grep -q '"vulnerabilities"' vulnerable.json; then
-            dotnet list Eunomia.slnx package --vulnerable --include-transitive
-            exit 1
-          fi
-
-  test:
-    name: Build and tests (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-
-      # Secret Service for the vault tests (libsecret) and fonts for headless rendering.
-      - name: Dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y gnome-keyring dbus-x11 libsecret-1-0 fonts-dejavu-core
-
-      - name: Restore
-        run: dotnet restore Eunomia.slnx
-
-      # TreatWarningsAsErrors is set in Directory.Build.props: a warning fails the build.
-      - name: Build
-        run: dotnet build Eunomia.slnx -c Release --no-restore
-
-      - name: Tests (unit, architecture, headless and snapshots)
-        if: runner.os != 'Linux'
-        run: dotnet test Eunomia.slnx -c Release --no-build --logger trx --results-directory TestResults
-
-      # In a D-Bus session of its own with GNOME Keyring unlocked (the Secret Service test runs for real). Collects line
-      # coverage (Microsoft.NET.Test.Sdk collector), merged with the integration coverage in the "coverage" job.
-      - name: Tests (Linux, with Secret Service and coverage)
-        if: runner.os == 'Linux'
-        run: |
-          dbus-run-session -- bash -c '
-            echo -n eunomia | gnome-keyring-daemon --unlock --components=secrets > /dev/null
-            dotnet test Eunomia.slnx -c Release --no-build --logger trx --results-directory TestResults --collect "Code Coverage;Format=cobertura"'
-
-      - name: Coverage (unit)
-        if: always() && runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-unit
-          # Only the run's merged report (the per-project ones repeat the same lines).
-          path: TestResults/*/*.cobertura.xml
-          if-no-files-found: ignore
-
-      - name: Test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ runner.os }}
-          path: TestResults/
-
-      # On Windows the snapshots are compared with the baselines (the actual PNG is only kept on failure); on Linux and
-      # macOS they are always kept, to review the look with each system's fonts (see tests/UI.Headless/Snapshot.cs).
-      - name: Actual snapshots
-        if: always() && (runner.os != 'Windows' || failure())
-        uses: actions/upload-artifact@v4
-        with:
-          name: snapshots-actual-${{ runner.os }}
-          path: tests/UI.Headless/bin/Release/net10.0/snapshots-actual/
-          if-no-files-found: ignore
-
   publish:
     name: Publish (${{ matrix.rid }})
     runs-on: ${{ matrix.os }}
@@ -124,13 +26,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, rid: win-x64, aot: true, smoke: false }
-          - { os: ubuntu-latest, rid: linux-x64, aot: true, smoke: true }
+          - { os: windows-latest, rid: win-x64, aot: true }
+          - { os: ubuntu-latest, rid: linux-x64, aot: true }
           # No ARM runner or cross-compile sysroot: self-contained with JIT (runs the same, starts slower).
-          - { os: ubuntu-latest, rid: linux-arm64, aot: false, smoke: false }
-          - { os: macos-latest, rid: osx-arm64, aot: true, smoke: true }
+          - { os: ubuntu-latest, rid: linux-arm64, aot: false }
+          - { os: macos-latest, rid: osx-arm64, aot: true }
           # The macOS ILCompiler targets x64 from the arm64 runner.
-          - { os: macos-latest, rid: osx-x64, aot: true, smoke: false }
+          - { os: macos-latest, rid: osx-x64, aot: true }
     steps:
       - uses: actions/checkout@v4
 
@@ -140,14 +42,14 @@ jobs:
 
       - name: NativeAOT toolchain (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev xvfb
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
 
       - name: Version
         id: version
         shell: bash
         run: echo "value=$(dotnet msbuild src/App.Desktop/App.Desktop.csproj -getProperty:Version)" >> "$GITHUB_OUTPUT"
 
-      # Windows: the same function as the benchmarks, plus the portable ZIP (build/Publish-Portable.ps1).
+      # Windows: the portable ZIP (build/Publish-Portable.ps1).
       - name: Publish and package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -164,22 +66,6 @@ jobs:
           fi
           ls -la artifacts/publish/${{ matrix.rid }}
 
-      # The executable starts, draws the window and exits (--startup-probe, in-memory settings, synthetic data).
-      - name: Executable smoke test
-        if: matrix.smoke
-        shell: bash
-        run: |
-          exe=artifacts/publish/${{ matrix.rid }}/Eunomia
-          if [ "$RUNNER_OS" = "Linux" ]; then run="xvfb-run -a"; else run=""; fi
-          # No GNU timeout on macOS: wait at most 120 s, then kill.
-          $run "$exe" --startup-probe "$PWD/probe.json" --exit &
-          pid=$!
-          for _ in $(seq 120); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
-          if kill -0 "$pid" 2>/dev/null; then kill "$pid"; echo "The executable did not exit within 120 s"; exit 1; fi
-          wait "$pid"
-          cat probe.json
-          grep -Eq '"nativeAot": *true' probe.json
-
       - name: Package (Linux and macOS)
         if: runner.os != 'Windows'
         shell: bash
@@ -193,98 +79,11 @@ jobs:
             artifacts/*.tar.gz
           if-no-files-found: error
 
-  # Integration tests against real servers (spec section 24; phase 3). Service containers only exist on Linux; the
-  # driver and the engine have no Windows dependencies, so the same tests run here.
-  integration:
-    name: Integration (${{ matrix.image }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        image: ["mysql:8.0", "mysql:8.4", "mariadb:10.6", "mariadb:11.4"]
-    services:
-      # OpenSSH server with TCP forwarding (linuxserver.io mod) for the SSH tunnel tests.
-      ssh:
-        image: linuxserver/openssh-server:latest
-        env:
-          PUID: "1000"
-          PGID: "1000"
-          USER_NAME: eunomia
-          USER_PASSWORD: eunomia
-          PASSWORD_ACCESS: "true"
-          DOCKER_MODS: linuxserver/mods:openssh-server-ssh-tunnel
-        ports:
-          - 2222:2222
-      db:
-        image: ${{ matrix.image }}
-        env:
-          MYSQL_ROOT_PASSWORD: eunomia
-          MARIADB_ROOT_PASSWORD: eunomia
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -peunomia || mariadb-admin ping -h 127.0.0.1 -peunomia"
-          --health-interval 5s --health-timeout 5s --health-retries 40
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-
-      - name: Integration tests
-        env:
-          EUNOMIA_IT_MYSQL: "Server=127.0.0.1;Port=3306;User ID=root;Password=eunomia;"
-          EUNOMIA_IT_SSH: "127.0.0.1;2222;eunomia;eunomia"
-          EUNOMIA_IT_SSH_TARGET: "db;3306"
-        # Coverage on one of the images (the driver's write paths run here; merged with the unit coverage).
-        run: |
-          coverage=()
-          if [ "${{ matrix.image }}" = "mysql:8.4" ]; then coverage=(--collect "Code Coverage;Format=cobertura"); fi
-          dotnet test tests/Integration -c Release --logger trx --results-directory TestResults "${coverage[@]}"
-
-      - name: Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integration-${{ strategy.job-index }}
-          path: TestResults/
-
-      - name: Coverage (integration)
-        if: always() && matrix.image == 'mysql:8.4'
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-integration
-          # Only the run's merged report (the per-project ones repeat the same lines).
-          path: TestResults/*/*.cobertura.xml
-          if-no-files-found: ignore
-
-  # Line coverage per project (unit tests on Linux + integration on MySQL 8.4) and thresholds that only go up
-  # (build/coverage-baseline.json, roadmap 2.2): a core project that drops below its threshold fails the job.
-  coverage:
-    name: Coverage
-    needs: [test, integration]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-*
-          path: coverage
-
-      - name: Coverage per project and thresholds
-        run: python3 build/coverage.py coverage --summary "$GITHUB_STEP_SUMMARY"
-
-  # Every push to main that passes quality, tests, publish and integration becomes a GitHub release with the packages
-  # of the 5 targets, so the latest build can be shared. Tagged v<Version>-build.<run number>; a pre-release while the
+  # The packages of the 5 targets become a GitHub release, tagged v<Version>-build.<run number>; a pre-release while the
   # version has a pre-release label (1.0.0-beta.1).
   release:
     name: Release
-    needs: [quality, test, publish, integration]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [publish]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
