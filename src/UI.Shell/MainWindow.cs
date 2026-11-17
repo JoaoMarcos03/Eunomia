@@ -171,13 +171,15 @@ public sealed partial class MainWindow : Window
         _logSplitter = new GridSplitter { ResizeDirection = GridResizeDirection.Rows };
         Themed.Bind(_logSplitter, BackgroundProperty, "splitter");
         _logSplitter.DragCompleted += (_, _) => RememberPanels();
-        Grid.SetRow(_toolbar, 1);
+        // The update notice (MainWindow.Updates.cs) shows under the toolbar, in the same row.
+        var top = new StackPanel { Children = { _toolbar, BuildUpdateBar() } };
+        Grid.SetRow(top, 1);
         Grid.SetRow(_body, 2);
         Grid.SetRow(_logSplitter, 3);
         Grid.SetRow(_log, 4);
         Grid.SetRow(status, 5);
         _root.Children.Add(menu);
-        _root.Children.Add(_toolbar);
+        _root.Children.Add(top);
         _root.Children.Add(_body);
         _root.Children.Add(_logSplitter);
         _root.Children.Add(_log);
@@ -214,10 +216,13 @@ public sealed partial class MainWindow : Window
         InitObjectCode();
         InitCloseGuards();
         InitJournal();
+        InitUpdates();
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(GotFocusEvent, OnGotFocus, RoutingStrategies.Bubble, handledEventsToo: true);
         Opened += async (_, _) =>
         {
             Controls.Common.Icons.IconFactory.SetDark(ActualThemeVariant == ThemeVariant.Dark);
+            StartUpdateCheck();
             if (_sessionTree is null && _model.Roots.Count > 0)
             {
                 await _model.ExpandAsync(_model.Roots[0]);
@@ -235,7 +240,7 @@ public sealed partial class MainWindow : Window
         {
             context.Log.Append(LogCategory.Info, $"Warning: ignored shortcut setting for \"{line}\"");
         }
-        context.Log.Append(LogCategory.Info, $"Eunomia {ShellContext.Version} started");
+        context.Log.Append(LogCategory.Info, $"Eunomia {ShellContext.DisplayVersion} started");
         foreach (var warning in context.StartupWarnings)
         {
             context.Log.Append(LogCategory.Error, warning);
@@ -245,7 +250,7 @@ public sealed partial class MainWindow : Window
             // Crash recovery (section 21.5): query tabs come back through the journal; the report stays on disk, without SQL or values.
             context.Log.Append(LogCategory.Error, $"Eunomia closed unexpectedly the last time. Query tabs were restored. Crash report: {crash}");
         }
-        context.Diagnostics.Write(Eunomia.App.Diagnostics.DiagnosticLevel.Info, "app", $"Eunomia {ShellContext.Version} started");
+        context.Diagnostics.Write(Eunomia.App.Diagnostics.DiagnosticLevel.Info, "app", $"Eunomia {ShellContext.DisplayVersion} started on {context.Machine.Description}");
         if (context.Diagnostics is not Eunomia.App.Diagnostics.NullDiagnosticLog)
         {
             _stalls = new UiStallMonitor(context.Diagnostics);
@@ -412,14 +417,16 @@ public sealed partial class MainWindow : Window
 
     private void OnLogChanged(object? sender, LogChange change)
     {
-        // The engine may write from any thread; the view only changes on the UI thread.
-        if (Dispatcher.UIThread.CheckAccess())
+        // The engine may write from any thread; the view only changes on the UI thread. Here and in the other events
+        // raised off the UI thread, the window's own Dispatcher (taken when it was built), never Dispatcher.UIThread:
+        // read from another thread between two headless tests, that one would become the next test's UI thread.
+        if (CheckAccess())
         {
             ApplyLogChange(change);
         }
         else
         {
-            Dispatcher.UIThread.Post(() => ApplyLogChange(change));
+            Dispatcher.Post(() => ApplyLogChange(change));
         }
     }
 

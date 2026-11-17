@@ -42,9 +42,9 @@ public sealed class NavigationTests
 
             // Database → USE and the Database tab.
             window.Tree.Tree.FocusedNode = dbNode;
-            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.DatabaseTab) ? "ok" : null);
+            // The USE ends on a worker thread; the tree marks the database when its continuation runs on the UI thread.
+            await WaitAsync(() => ReferenceEquals(tabs.SelectedItem, tabs.DatabaseTab) && dbNode.IsCurrent ? "ok" : null);
             Assert.Equal(db, open.Host.CurrentDatabase);
-            Assert.True(dbNode.IsCurrent);
             Assert.Equal("Database: " + db, Caption(tabs.DatabaseTab));
             Assert.False(tabs.DataTab.IsVisible);
 

@@ -252,9 +252,9 @@ public sealed partial class MainWindow
         {
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
         };
-        watcher.Changed += (_, _) => Dispatcher.UIThread.Post(() => ScheduleFileCheck(state));
-        watcher.Deleted += (_, _) => Dispatcher.UIThread.Post(() => _ = OnFileDeletedAsync(state));
-        watcher.Renamed += (_, e) => Dispatcher.UIThread.Post(() => OnFileRenamed(state, e.FullPath));
+        watcher.Changed += (_, _) => Dispatcher.Post(() => ScheduleFileCheck(state));
+        watcher.Deleted += (_, _) => Dispatcher.Post(() => _ = OnFileDeletedAsync(state));
+        watcher.Renamed += (_, e) => Dispatcher.Post(() => OnFileRenamed(state, e.FullPath));
         watcher.EnableRaisingEvents = true;
         _fileWatchers[state] = watcher;
     }

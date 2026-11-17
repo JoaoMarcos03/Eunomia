@@ -126,4 +126,49 @@ public sealed class DialectAndTypesTests
         Assert.True(new MySqlCapabilities(MySql8).Supports(Capability.IndexVisibility));
         Assert.Equal(["TRADITIONAL", "JSON"], new MySqlCapabilities(MySql8).ExplainFormats);
     }
+
+    [Fact]
+    public void ImportSessionTurnsOffTheForeignKeyRestrictionOfMySql84()
+    {
+        Assert.Equal(["SET SESSION restrict_fk_on_non_standard_key = OFF"], new MySqlDialect(MySqlConnectionFactory.ParseIdentity("8.4.3", "MySQL Community Server - GPL")).ImportSession);
+        Assert.Equal(["SET SESSION restrict_fk_on_non_standard_key = OFF"], new MySqlDialect(MySqlConnectionFactory.ParseIdentity("9.1.0", null)).ImportSession);
+        Assert.Empty(new MySqlDialect(MySql8).ImportSession);
+        Assert.Empty(new MySqlDialect(MySqlConnectionFactory.ParseIdentity("11.4.2-MariaDB-ubu2404", null)).ImportSession);
+    }
+
+    /// <summary>
+    /// Request of 16 Nov 2026: the export's job connections lift the server's limit on statement time (with the variable
+    /// of each engine and version: an unknown one would fail the whole export) and raise net_write_timeout; Restore
+    /// puts every value back.
+    /// </summary>
+    [Theory]
+    [InlineData("8.0.46-0ubuntu0.24.04.5", "(Ubuntu)", "MAX_EXECUTION_TIME")]
+    [InlineData("5.7.44-log", null, "MAX_EXECUTION_TIME")]
+    [InlineData("5.7.6", null, "MAX_STATEMENT_TIME")]
+    [InlineData("5.6.51", null, null)]
+    [InlineData("11.4.13-MariaDB", null, "MAX_STATEMENT_TIME")]
+    [InlineData("10.1.48-MariaDB", null, "MAX_STATEMENT_TIME")]
+    [InlineData("10.0.38-MariaDB", null, null)]
+    [InlineData("5.5.5-10.6.18-MariaDB-log", null, "MAX_STATEMENT_TIME")]
+    public void DumpSessionLiftsTheStatementTimeLimit(string version, string? comment, string? variable)
+    {
+        var session = new MySqlDialect(MySqlConnectionFactory.ParseIdentity(version, comment)).DumpSession;
+
+        // A literal: MySQL 8 refuses GREATEST(@@NET_WRITE_TIMEOUT, 3600) (error 1232, a DECIMAL), which MariaDB accepts.
+        Assert.Contains("SET @OLD_NET_WRITE_TIMEOUT=@@NET_WRITE_TIMEOUT, NET_WRITE_TIMEOUT=3600", session.Setup);
+        Assert.DoesNotContain(session.Setup, s => s.Contains("GREATEST", StringComparison.Ordinal));
+        Assert.Contains("SET NET_WRITE_TIMEOUT=@OLD_NET_WRITE_TIMEOUT", session.Restore);
+        var limits = session.Setup.Where(s => s.Contains("_TIME=0", StringComparison.Ordinal)).ToList();
+        if (variable is null)
+        {
+            Assert.Empty(limits);
+            Assert.DoesNotContain(session.Restore, s => s.Contains("@OLD_STATEMENT_TIME", StringComparison.Ordinal));
+        }
+        else
+        {
+            Assert.Equal([$"SET @OLD_STATEMENT_TIME=@@{variable}, {variable}=0"], limits);
+            Assert.Contains($"SET {variable}=@OLD_STATEMENT_TIME", session.Restore);
+        }
+        Assert.Equal(session.Setup.Count, session.Restore.Count + 1);
+    }
 }

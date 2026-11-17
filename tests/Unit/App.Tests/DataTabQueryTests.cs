@@ -124,4 +124,35 @@ public sealed class DataTabQueryTests
             DataTabQuery.CountLabel("shop", "products", new DataCount(3, false, true, 3, false, false), c));
         Assert.Equal("shop.v: 10 rows", DataTabQuery.CountLabel("shop", "v", new DataCount(10, false, false, null, false, false, IsView: true), c));
     }
+
+    [Theory]
+    // Small rows (or unknown size): the setting.
+    [InlineData(1000, 50_000_000L, 1_000_000L, 1000)]
+    [InlineData(1000, null, 1_000_000L, 1000)]
+    [InlineData(1000, 50_000_000L, null, 1000)]
+    [InlineData(1000, 0L, 0L, 1000)]
+    [InlineData(1000, 16_384L, 0L, 1000)]
+    // 11 GB in 40,000 rows (275 KB each): 32 MiB / 275 KB = 122 rows.
+    [InlineData(1000, 11_000_000_000L, 40_000L, 122)]
+    // 1 MB rows: 33; 50 MB rows: never fewer than 10.
+    [InlineData(1000, 1_000_000_000L, 1_000L, 33)]
+    [InlineData(1000, 50_000_000_000L, 1_000L, 10)]
+    // Never more than the setting, and a setting below the minimum stays.
+    [InlineData(50, 100_000L, 1_000L, 50)]
+    [InlineData(5, 50_000_000_000L, 1_000L, 5)]
+    [InlineData(0, null, null, 1)]
+    public void LargeRowsGetFewerPerPage(int setting, long? dataBytes, long? rows, int expected) =>
+        Assert.Equal(expected, DataTabQuery.RowsPerStepFor(setting, dataBytes, rows));
+
+    [Fact]
+    public void LoadingAndCancelledLabels()
+    {
+        Assert.Equal("shop.products: loading ...", DataTabQuery.LoadingLabel("shop", "products", TimeSpan.FromMilliseconds(900)));
+        Assert.Equal("shop.products: loading ... 1 s (Esc to cancel)", DataTabQuery.LoadingLabel("shop", "products", TimeSpan.FromSeconds(1.2)));
+        Assert.Equal("shop.products: loading ... 59 s (Esc to cancel)", DataTabQuery.LoadingLabel("shop", "products", TimeSpan.FromSeconds(59.9)));
+        Assert.Equal("shop.products: loading ... 2 min 05 s (Esc to cancel)", DataTabQuery.LoadingLabel("shop", "products", TimeSpan.FromSeconds(125)));
+        Assert.Equal("shop.products: 1,500 rows loaded (cancelled)", DataTabQuery.CancelledLabel("shop", "products", 1500, CultureInfo.InvariantCulture));
+        Assert.Equal("shop.products: loading cancelled", DataTabQuery.CancelledLabel("shop", "products", null));
+        Assert.Equal("shop.products: loading cancelled", DataTabQuery.CancelledLabel("shop", "products", 0));
+    }
 }

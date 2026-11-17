@@ -8,10 +8,10 @@ public sealed partial class MainWindow
     /// <summary>UI thread stall monitor (only with a diagnostic log).</summary>
     internal UiStallMonitor? Stalls => _stalls;
 
-    /// <summary>The global results budget with the current Preferences value.</summary>
+    /// <summary>The global results budget with the current Preferences value, lowered to this computer.</summary>
     private Eunomia.Engine.Results.ResultMemoryPool GlobalResultPool()
     {
-        _context.ResultPool.BudgetBytes = (long)Math.Max(64, _context.Settings.Data.GlobalResultMemoryMb) * 1024 * 1024;
+        _context.ResultPool.BudgetBytes = _context.GlobalResultMemoryBytes;
         return _context.ResultPool;
     }
 }

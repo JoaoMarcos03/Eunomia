@@ -121,6 +121,12 @@ public interface IDialect
     DumpSessionSql DumpSession { get; }
 
     /// <summary>
+    /// Statements on the Run SQL file connection before the file, so dumps from older versions of the server load (on
+    /// MySQL 8.4+, foreign keys to non-unique keys). Each one is optional: the job ignores the ones the server refuses.
+    /// </summary>
+    IReadOnlyList<string> ImportSession => [];
+
+    /// <summary>
     /// Puts the session in read-only transactions (read-only sessions: the server refuses writes); <c>null</c> if the
     /// server does not have them.
     /// </summary>

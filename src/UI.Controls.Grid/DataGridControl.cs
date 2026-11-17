@@ -1147,7 +1147,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
                 // Stays active. Avalonia releases the capture after this event; it is captured again right after,
                 // to receive the moves even outside the grid.
                 var pointer = e.Pointer;
-                Dispatcher.UIThread.Post(() =>
+                Dispatcher.Post(() =>
                 {
                     if (_autoScroll.IsActive)
                     {
@@ -1418,7 +1418,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
             return;
         }
         _invalidatePosted = true;
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.Post(() =>
         {
             _invalidatePosted = false;
             if (_source is { } source && source.RowCount.Count != _lastRowCount)

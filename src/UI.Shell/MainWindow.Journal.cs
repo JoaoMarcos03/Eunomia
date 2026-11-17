@@ -73,7 +73,7 @@ public sealed partial class MainWindow
                 Watch(state);
                 if (FileStamp(file) != state.FileStamp)
                 {
-                    Dispatcher.UIThread.Post(() => ScheduleFileCheck(state), DispatcherPriority.Background);
+                    Dispatcher.Post(() => ScheduleFileCheck(state), DispatcherPriority.Background);
                 }
             }
             if (saved.Focused)

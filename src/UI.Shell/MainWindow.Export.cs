@@ -69,17 +69,20 @@ public sealed partial class MainWindow
 
     private static IDialect? DialectOf(ResultView result) => result.Session?.Host.ServerServices?.Dialect;
 
-    /// <summary>Data grid rows and columns in the browser's source, and the column definitions.</summary>
-    private (IReadOnlyList<long> Rows, IReadOnlyList<(int Column, GridExportColumn Info)> Columns)? DataGridExportShape(bool selectedOnly, bool focusedColumnOnly = false)
+    /// <summary>
+    /// Data grid rows and columns in the browser's source, and the column definitions; <c>GridRows</c> and <c>GridColumns</c>
+    /// are the same rows and columns in the grid.
+    /// </summary>
+    private (IReadOnlyList<long> Rows, IReadOnlyList<(int Column, GridExportColumn Info)> Columns, IReadOnlyList<long> GridRows, IReadOnlyList<int> GridColumns)? DataGridExportShape(bool selectedOnly, bool focusedColumnOnly = false)
     {
         if (_browser is not { Source: { } source } browser || DataGrid.Source is not ProjectedRowSource projected)
         {
             return null;
         }
-        var gridRows = selectedOnly ? SelectedRows().ToList() : AllRows(DataGrid);
+        var gridRows = (selectedOnly ? SelectedRows() : AllRows(DataGrid)).Where(r => r < projected.RowCount.Count).ToList();
         var filtered = projected.Inner as FilteredRowSource;
-        var rows = gridRows.Where(r => r < projected.RowCount.Count).Select(r => filtered?.InnerRow(r) ?? r).ToList();
-        var visible = Enumerable.Range(0, projected.Schema.Count);
+        var rows = gridRows.Select(r => filtered?.InnerRow(r) ?? r).ToList();
+        var visible = Enumerable.Range(0, projected.Schema.Count).ToList();
         if (focusedColumnOnly && DataGrid.Selection.FocusedColumn >= 0)
         {
             visible = [DataGrid.Selection.FocusedColumn];
@@ -91,13 +94,13 @@ public sealed partial class MainWindow
             var definition = browser.Table.Columns.FirstOrDefault(d => string.Equals(d.Name, info.Name, StringComparison.OrdinalIgnoreCase));
             return (inner, new GridExportColumn(info.Name, info, definition));
         }).ToList();
-        return (rows, columns);
+        return (rows, columns, gridRows, visible);
     }
 
     /// <summary>Reads the rows to export; if any cell came cut, reads the rows again without <c>LEFT()</c> (appendix D B4).</summary>
     internal async Task<GridExportData?> ReadDataGridExportAsync(bool selectedOnly, bool focusedColumnOnly = false)
     {
-        if (DataGridExportShape(selectedOnly, focusedColumnOnly) is not ({ } rows, { } columns) || _browser is not { Source: { } source } browser)
+        if (DataGridExportShape(selectedOnly, focusedColumnOnly) is not ({ } rows, { } columns, { } gridRows, { } gridColumns) || _browser is not { Source: { } source } browser)
         {
             return null;
         }
@@ -111,7 +114,8 @@ public sealed partial class MainWindow
                 full = await browser.LoadFullRowsAsync(CancellationToken.None);
                 from = full;
             }
-            return await GridExportSource.ReadAsync(from, rows, columns, browser.Table.Ref.Name, browser.Select.KeyColumns, _context.Settings.Data.BlobAsText, CancellationToken.None);
+            var data = await GridExportSource.ReadAsync(from, rows, columns, browser.Table.Ref.Name, browser.Select.KeyColumns, _context.Settings.Data.BlobAsText, CancellationToken.None);
+            return WithCommittedValues(DataGrid, data, gridRows, gridColumns);
         }
         finally
         {
@@ -172,18 +176,21 @@ public sealed partial class MainWindow
             }
         }
         var data = await GridExportSource.ReadAsync(source, rows, columns, tableName, keys, _context.Settings.Data.BlobAsText, CancellationToken.None);
-        return WithCommittedValues(grid, data, rows, columns);
+        return WithCommittedValues(grid, data, rows, columns.Select(c => c.Column).ToList());
     }
 
-    /// <summary>Values saved and read back in an editable result tab: they go over the source, as in the grid.</summary>
-    private static GridExportData WithCommittedValues(DataGridControl grid, GridExportData data, IReadOnlyList<long> rows, IReadOnlyList<(int Column, GridExportColumn Info)> columns)
+    /// <summary>
+    /// Values saved and read back in the grid (Data tab or editable result tab) go over the source, as in the grid, until it
+    /// reloads. <paramref name="gridRows"/> and <paramref name="gridColumns"/> are the exported rows and columns in the grid.
+    /// </summary>
+    private static GridExportData WithCommittedValues(DataGridControl grid, GridExportData data, IReadOnlyList<long> gridRows, IReadOnlyList<int> gridColumns)
     {
         List<IReadOnlyList<string?>>? patched = null;
-        for (var i = 0; i < rows.Count; i++)
+        for (var i = 0; i < gridRows.Count; i++)
         {
-            for (var j = 0; j < columns.Count; j++)
+            for (var j = 0; j < gridColumns.Count; j++)
             {
-                if (grid.Edits.TryGetCommitted(rows[i], columns[j].Column, out var value) && !value.IsFunction)
+                if (grid.Edits.TryGetCommitted(gridRows[i], gridColumns[j], out var value) && !value.IsFunction)
                 {
                     patched ??= [.. data.Rows];
                     var row = patched[i].ToArray();

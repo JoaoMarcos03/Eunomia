@@ -204,7 +204,7 @@ public sealed partial class MainWindow
             PostListsRefresh(open, e);
             if (e.Scope == MetadataScope.Objects && e.Database is { } database)
             {
-                Dispatcher.UIThread.Post(() => OnObjectsChanged(open, sessionNode, database));
+                Dispatcher.Post(() => OnObjectsChanged(open, sessionNode, database));
             }
         };
     }

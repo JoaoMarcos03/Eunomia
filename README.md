@@ -12,7 +12,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/JoaoMarcos03/Eunomia/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/JoaoMarcos03/Eunomia/actions/workflows/ci.yml/badge.svg"></a>
   <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4">
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-informational">
   <img alt="Status" src="https://img.shields.io/badge/status-1.0.0--beta.2-orange">
@@ -65,12 +64,13 @@ Eunomia is an independent, clean-room implementation: it contains no HeidiSQL co
 - Passwords live only in the OS vault: Windows Credential Manager, macOS Keychain or the Linux Secret Service.
 - TLS verifies the CA and host name by default; a built-in SSH tunnel with its own `known_hosts` and agent support (OpenSSH agent, Pageant).
 - No telemetry. Crash reports stay on the machine and contain no SQL, values, hosts or user names.
+- One optional network request of its own: at startup, at most once a day, an anonymous HTTPS request to the project's GitHub releases to say when a newer version is out ([update check](docs/user-guide.md#update-check)). It sends only the version in the `User-Agent`, and Preferences › General turns it off.
 
 The [user guide](docs/user-guide.md) covers every feature and the differences from HeidiSQL.
 
 ## Status
 
-Version **1.0.0-beta.2**. MySQL and MariaDB are supported. CI tests against MySQL 8.0 and 8.4 and MariaDB 10.6 and 11.4, and development uses MariaDB 10.4. The architecture keeps the core independent of MySQL, so that PostgreSQL can be added as another driver. Planned work is in the [roadmap](docs/roadmap.md).
+Version **1.0.0-beta.2**. MySQL and MariaDB are supported. Tests run locally against a disposable MySQL or MariaDB server (MariaDB 11.4 by default); up to 1.0.0-beta.2 they also ran against MySQL 8.0 and 8.4 and MariaDB 10.6 and 11.4. The architecture keeps the core independent of MySQL, so that PostgreSQL can be added as another driver. Planned work is in the [roadmap](docs/roadmap.md).
 
 | Platform | Package | Notes |
 | --- | --- | --- |
@@ -79,7 +79,7 @@ Version **1.0.0-beta.2**. MySQL and MariaDB are supported. CI tests against MySQ
 | Linux x64 | `tar.gz` (NativeAOT) with an `install.sh` | X11, or Wayland with XWayland |
 | Linux arm64 | `tar.gz` (self-contained) | |
 
-**Download:** every push to `main` that passes CI publishes these packages as a pre-release on the [Releases page](https://github.com/JoaoMarcos03/Eunomia/releases). The executables are not signed yet, so Windows SmartScreen and macOS Gatekeeper ask for confirmation the first time (see the [user guide](docs/user-guide.md)).
+**Download:** every pull request merged into `main` publishes these packages as a pre-release on the [Releases page](https://github.com/JoaoMarcos03/Eunomia/releases). The executables are not signed yet, so Windows SmartScreen and macOS Gatekeeper ask for confirmation the first time (see the [user guide](docs/user-guide.md)).
 
 ## Building from source
 
@@ -120,7 +120,7 @@ Valid runtime identifiers are `win-x64`, `osx-arm64`, `osx-x64`, `linux-x64` and
 
 ## Tests
 
-About 1,400 automated tests run on every push, on Windows, Linux and macOS:
+About 1,400 automated tests run locally before each pull request (GitHub only builds the releases):
 
 | Suite | What it covers |
 | --- | --- |
@@ -129,9 +129,9 @@ About 1,400 automated tests run on every push, on Windows, Linux and macOS:
 | `tests/UI.Headless` | Windows and dialogs rendered headless with Avalonia: behaviour, keyboard flows, accessibility names and light/dark screenshot baselines |
 | `tests/Architecture` | Layer dependency rules, and that MySQL-specific types stay in the driver and the SQL language layer |
 
-Integration tests need a server. Set `EUNOMIA_IT_MYSQL` to a connection string for a disposable test server, or on Windows with XAMPP run `powershell -File tests/Integration/Start-TestServer.ps1`. Without a server they are reported as skipped, never as passed.
+Integration tests need a server. Set `EUNOMIA_IT_MYSQL` to a connection string for a disposable test server, or on Windows run `powershell -File tests/Integration/Start-TestServer.ps1` (an installed MariaDB, or `-Mysqld` with the `mysqld.exe` of an unzipped MySQL 8; see `CONTRIBUTING.md`). Without a server they are reported as skipped, never as passed.
 
-Code coverage per project is checked in CI against [`build/coverage-baseline.json`](build/coverage-baseline.json), and the baseline only goes up:
+Code coverage per project is checked locally against [`build/coverage-baseline.json`](build/coverage-baseline.json), and the baseline only goes up:
 
 ```bash
 dotnet test Eunomia.slnx --collect "Code Coverage;Format=cobertura" --results-directory TestResults

@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
+using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Engine.Execution;
@@ -94,7 +96,12 @@ public sealed record SqlExportItemProgress(
 public sealed record SqlExportProgress(IReadOnlyList<SqlExportItemProgress> Items, long BytesWritten, TimeSpan Elapsed);
 
 /// <summary>End of the export: the text for the clipboard, or the path written.</summary>
-public sealed record SqlExportResult(bool Cancelled, long BytesWritten, IReadOnlyList<SqlExportItemProgress> Items, string? ClipboardText, TimeSpan Elapsed);
+/// <param name="BytesWritten">Bytes of SQL (for a ZIP, before compression).</param>
+public sealed record SqlExportResult(bool Cancelled, long BytesWritten, IReadOnlyList<SqlExportItemProgress> Items, string? ClipboardText, TimeSpan Elapsed)
+{
+    /// <summary>Size of the file written, checked after closing it (for a ZIP, compressed); null for the clipboard and a directory.</summary>
+    public long? FileBytes { get; init; }
+}
 
 /// <summary>The text for the clipboard went over the configured limit.</summary>
 public sealed class ClipboardLimitException(long limit)
@@ -120,6 +127,7 @@ public sealed class SqlExportJob
     private readonly Stopwatch _clock = new();
     private Utf8Output? _main;
     private long _directoryBytes;
+    private long? _fileBytes;
 
     // Current database of each job connection: SHOW CREATE only writes names without the database when the connection is in it.
     private readonly ConcurrentDictionary<IDbConnectionHandle, string> _databases = new();
@@ -176,7 +184,7 @@ public sealed class SqlExportJob
             await stopReports.CancelAsync().ConfigureAwait(false);
             await reporter.ConfigureAwait(false);
         }
-        var result = new SqlExportResult(cancelled, BytesWritten, Snapshot(), text, _clock.Elapsed);
+        var result = new SqlExportResult(cancelled, BytesWritten, Snapshot(), text, _clock.Elapsed) { FileBytes = _fileBytes };
         progress?.Report(new SqlExportProgress(result.Items, result.BytesWritten, result.Elapsed));
         return result;
     }
@@ -277,7 +285,7 @@ public sealed class SqlExportJob
     private async Task<string?> RunSingleAsync(CancellationToken cancellationToken)
     {
         string? partial = null;
-        FileStream? file = null;
+        LocalFileStream? file = null;
         ZipArchive? zip = null;
         Stream sink;
         switch (_request.Target)
@@ -288,14 +296,26 @@ public sealed class SqlExportJob
             default:
                 partial = _request.Path + ".partial";
                 file = OpenPartial(partial);
-                if (_request.Target == SqlExportTarget.Zip)
+                try
                 {
-                    zip = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true);
-                    sink = zip.CreateEntry(System.IO.Path.GetFileNameWithoutExtension(_request.Path) + ".sql", CompressionLevel.Optimal).Open();
+                    // The compression (and the writes to the disk) run on a thread of their own, at the same time as the
+                    // rows are read and turned into SQL: before, a ZIP took about as long as both one after the other.
+                    if (_request.Target == SqlExportTarget.Zip)
+                    {
+                        zip = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true);
+                        sink = new BackgroundWriteStream(zip.CreateEntry(System.IO.Path.GetFileNameWithoutExtension(_request.Path) + ".sql", CompressionLevel.Optimal).Open());
+                    }
+                    else
+                    {
+                        sink = new BackgroundWriteStream(file, leaveOpen: true);
+                    }
                 }
-                else
+                catch
                 {
-                    sink = file;
+                    zip?.Dispose();
+                    await file.DisposeAsync().ConfigureAwait(false);
+                    TryDelete(partial);
+                    throw;
                 }
                 break;
         }
@@ -303,6 +323,7 @@ public sealed class SqlExportJob
         var completed = false;
         try
         {
+            long written;
             using (var output = new Utf8Output(sink, leaveOpen: true))
             {
                 _main = output;
@@ -335,25 +356,32 @@ public sealed class SqlExportJob
                     await RunParallelAsync(output, parallel, cancellationToken).ConfigureAwait(false);
                 }
                 writer.WriteFooter();
+                written = output.BytesWritten;
             }
             if (sink is MemoryStream memory)
             {
                 return System.Text.Encoding.UTF8.GetString(memory.GetBuffer(), 0, (int)memory.Length);
             }
+            // Closed here and not only in finally: the last writes of the entry, the ZIP's directory and the file's buffer
+            // can fail (a full disk, a lost network share), and then the export failed; it does not leave a file that
+            // looks complete. Then the file is checked against the bytes the writer counted.
+            await CloseAsync(sink, zip, file).ConfigureAwait(false);
+            _fileBytes = VerifyOutput(partial!, zip is not null, written);
             completed = true;
             return null;
         }
         finally
         {
-            // The ZIP entry closes before the archive, and the archive before the file.
-            if (!ReferenceEquals(sink, file))
+            if (!completed)
             {
-                await sink.DisposeAsync().ConfigureAwait(false);
-            }
-            zip?.Dispose();
-            if (file is not null)
-            {
-                await file.DisposeAsync().ConfigureAwait(false);
+                try
+                {
+                    await CloseAsync(sink, zip, file).ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    // The export already failed (or was cancelled) and the .partial is deleted below: its first error is the one that counts.
+                }
             }
             if (partial is not null)
             {
@@ -425,7 +453,7 @@ public sealed class SqlExportJob
                 }
                 else if (segment?.FilePath is { } path)
                 {
-                    await using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan))
+                    await using (var stream = LocalFileStream.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1, FileOptions.SequentialScan))
                     {
                         var buffer = new byte[Utf8Output.DefaultBufferSize];
                         int read;
@@ -537,11 +565,12 @@ public sealed class SqlExportJob
                     {
                         var item = _items[index];
                         var directory = System.IO.Path.Combine(_request.Path, SafeFileName(item.Database));
-                        Directory.CreateDirectory(directory);
+                        LocalFileException.Guard(() => Directory.CreateDirectory(directory));
                         var path = System.IO.Path.Combine(directory, SafeFileName(TypeName(item.Info!.Ref.Kind) + "-" + item.Info.Ref.Name) + ".sql");
                         var partial = path + ".partial";
                         try
                         {
+                            long bytes;
                             using (var output = new Utf8Output(OpenPartial(partial)))
                             {
                                 var writer = new SqlDumpWriter(output, Options);
@@ -552,9 +581,11 @@ public sealed class SqlExportJob
                                     await ExportItemAsync(handle, new Item(item.Database, item.Info, Pass.FinalView), writer, output, ct).ConfigureAwait(false);
                                 }
                                 writer.WriteFooter();
-                                Interlocked.Add(ref _directoryBytes, output.BytesWritten);
+                                bytes = output.BytesWritten;
                             }
-                            File.Move(partial, path, overwrite: true);
+                            LocalFileException.Guard(() => VerifyOutput(partial, isZip: false, bytes));
+                            Interlocked.Add(ref _directoryBytes, bytes);
+                            LocalFileException.Guard(() => File.Move(partial, path, overwrite: true));
                         }
                         catch
                         {
@@ -867,9 +898,86 @@ public sealed class SqlExportJob
 
     // ---------- Files ----------
 
-    private static FileStream OpenPartial(string path) =>
+    /// <remarks>
+    /// The files of the export are <see cref="LocalFileStream"/>s, and the file operations in a job connection go through
+    /// <see cref="LocalFileException.Guard(Action)"/>: a full disk fails the export, it is not a lost connection.
+    /// </remarks>
+    private static LocalFileStream OpenPartial(string path) =>
         // No FileStream buffer: Utf8Output already writes in 1 MB blocks.
-        new(path, FileMode.Create, FileAccess.Write, FileShare.Read, 1, FileOptions.SequentialScan);
+        LocalFileStream.Open(path, FileMode.Create, FileAccess.Write, FileShare.Read, 1, FileOptions.SequentialScan);
+
+    /// <summary>
+    /// The writer closes first (it writes the blocks it still holds and closes the ZIP entry), then the archive and the
+    /// file; a second call does nothing. Each one closes even when the one before failed, and the first error comes out:
+    /// before, a failed write of a ZIP left the file open, and its <c>.partial</c> could not be deleted.
+    /// </summary>
+    private static async ValueTask CloseAsync(Stream sink, ZipArchive? zip, LocalFileStream? file)
+    {
+        Exception? first = null;
+        try
+        {
+            await sink.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            first = e;
+        }
+        try
+        {
+            zip?.Dispose();
+        }
+        catch (Exception e)
+        {
+            first ??= e;
+        }
+        if (file is not null)
+        {
+            try
+            {
+                await file.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                first ??= e;
+            }
+        }
+        if (first is not null)
+        {
+            ExceptionDispatchInfo.Throw(first);
+        }
+    }
+
+    /// <summary>
+    /// Checks the closed file against the bytes of SQL the writer counted and returns its size: a SQL file has all of
+    /// them; a ZIP has a directory that opens, with one entry of that length (a ZIP cut short has no directory, or a
+    /// shorter entry). The data itself was compressed by this process and is not read again: on a dump of several GB it
+    /// would take as long as the compression.
+    /// </summary>
+    internal static long VerifyOutput(string path, bool isZip, long sqlBytes)
+    {
+        var length = new FileInfo(path).Length;
+        if (!isZip)
+        {
+            return length == sqlBytes
+                ? length
+                : throw new IOException(string.Create(CultureInfo.InvariantCulture, $"The file has {length:N0} bytes instead of {sqlBytes:N0}: the export is incomplete."));
+        }
+        try
+        {
+            using var archive = ZipFile.OpenRead(path);
+            if (archive.Entries is [var entry] && entry.Length == sqlBytes && entry.CompressedLength < length)
+            {
+                return length;
+            }
+            var found = archive.Entries.Count == 1 ? archive.Entries[0].Length : -1;
+            throw new IOException(string.Create(CultureInfo.InvariantCulture,
+                $"The ZIP file has {archive.Entries.Count} entries ({found:N0} bytes) instead of one with {sqlBytes:N0}: the export is incomplete."));
+        }
+        catch (InvalidDataException e)
+        {
+            throw new IOException("The ZIP file is damaged: " + e.Message, e);
+        }
+    }
 
     private static void TryDelete(string path)
     {

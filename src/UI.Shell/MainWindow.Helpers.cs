@@ -63,7 +63,7 @@ public sealed partial class MainWindow
         var helpers = new QueryHelpersView();
         CommandScope.SetContext(helpers, CommandContexts.Helpers);
         // After the tab has content: building the menu evaluates the commands, which look at the active query tab.
-        Dispatcher.UIThread.Post(() => helpers.Tree.ContextMenu = _ui.BuildContextMenu(MainMenuLayout.HelpersMenu));
+        Dispatcher.Post(() => helpers.Tree.ContextMenu = _ui.BuildContextMenu(MainMenuLayout.HelpersMenu));
         helpers.Tree.NodeActivated += (_, node) =>
         {
             if (node.Tag is HelperItem { Kind: not (HelperKind.Root or HelperKind.HistoryDay) })
@@ -143,7 +143,7 @@ public sealed partial class MainWindow
         try
         {
             await session.Metadata.GetTableAsync(table, CancellationToken.None);
-            Dispatcher.UIThread.Post(() => RefreshHelpers(view));
+            Dispatcher.Post(() => RefreshHelpers(view));
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

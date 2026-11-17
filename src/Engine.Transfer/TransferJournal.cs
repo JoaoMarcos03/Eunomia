@@ -58,6 +58,15 @@ public sealed record TransferJournalEntry
     /// <summary>Statement in progress when the job stopped without a transaction (the UI shows it before resuming).</summary>
     public string? LastStatement { get; init; }
 
+    /// <summary>
+    /// SQL import: the file's <c>USE</c> and session <c>SET</c>s already run, replayed on the new connection before resuming.
+    /// <c>null</c> in journals from older versions (the job then reads them from the start of the file).
+    /// </summary>
+    public IReadOnlyList<string>? SessionState { get; init; }
+
+    /// <summary>Time the job has run in earlier attempts (the clock continues from it when resuming).</summary>
+    public TimeSpan Elapsed { get; init; }
+
     /// <summary>Export: objects already fully written and the <c>.partial</c> bytes up to the end of the last one.</summary>
     public IReadOnlyList<string> CompletedObjects { get; init; } = [];
 }

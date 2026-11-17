@@ -4,6 +4,33 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 
 ## [Unreleased]
 
+### Added
+
+- Update check: at startup, at most once a day and a few seconds after the window opens, one anonymous request to the project's GitHub releases; a bar under the toolbar says when a newer version is out, with **Open release page**, **Skip this version** and **Turn off update checks**. Pre-releases are offered only to pre-release builds. Help › Check for updates asks at once; Preferences › General turns the startup check off. Nothing is downloaded or installed (user guide, "Update check"; threat model).
+- Run SQL file: a target dialog before the run, with the server's databases (searchable). For files that select their own database with `USE`, **As in the file** or **Everything in the database above** (the file's `USE` and `CREATE`/`DROP`/`ALTER DATABASE` are skipped). The progress window shows the server and the database, and follows the file's `USE`.
+- Export database as SQL: rows of the **Server: <session>** outputs in the session colour, as in the tree; the target database box is searchable ("Type to search"; the arrow lists them all); an export with errors ends with a message listing the objects that failed.
+- Preferences › Grid formatting › "Lower the memory limits to fit this computer" (on by default): below 8 GB of memory, the limits for results in memory follow the computer (all results: an eighth of the memory, at least 256 MB; one result: a quarter of that, at least 64 MB); values set lower are kept. The page shows the computer's processors and memory.
+- Data tab: while a table loads, the label shows the time taken and "(Esc to cancel)"; after cancelling, it says how many rows were loaded.
+
+### Changed
+
+- Data tab pages, and the full load used by Export grid rows and Copy as, no longer stop at the 30 s query timeout; the timeout of other queries counts from when the statement starts, not from when it was queued behind another one.
+- Data tab: tables with large rows (BLOBs) are read in smaller pages (at least 10 rows), so the first rows of a very large table show without the server reading gigabytes first; the SQL log says so once per table.
+- Export to a file or ZIP: writing (and compressing) runs on its own thread, in parallel with reading the rows; the status shows the SQL size and, for a ZIP, the compressed size.
+- Database dumps lift the session's statement time limit (`MAX_EXECUTION_TIME`/`MAX_STATEMENT_TIME`) and set `NET_WRITE_TIMEOUT` to an hour while they read, restoring both at the end.
+- GitHub Actions only builds the packages and publishes the release when a pull request is merged into `main`; the build, tests, coverage, formatting check and benchmarks run locally (the `quality`, `test`, `integration` and `coverage` jobs, the executable smoke test and `bench.yml` were removed).
+- `tests/Integration/Start-TestServer.ps1` also starts the MySQL 8.0/8.4 of the Windows ZIP archives (`-Mysqld`, `-Name`, `-Port`; `--initialize-insecure` with `root@127.0.0.1`, `--no-defaults`, no X Protocol, no service), and `-Stop` also stops MySQL's server process, which runs as a child of a monitor process.
+- Run SQL file: on MySQL 8.4 and later, the import connection turns off `restrict_fk_on_non_standard_key`, so dumps from MySQL 8.0 with foreign keys to non-unique keys load.
+- Run SQL file: the tree, the table structure and the Data tab of other databases no longer wait while an import runs.
+
+### Fixed
+
+- Data tab: a large table (11 GB) stopped after 30 s with nothing shown.
+- Copy, Copy as and Edit › Copy on query results acted on the wrong grid, or did nothing, when a menu had taken the focus; keyboard shortcuts no longer run while a menu is open.
+- Cancelling a query or a Data tab load that waits behind another one cancels it at once.
+- Export: a full disk or a lost network share is reported as a file error (not a lost connection); an incomplete file (failed close, damaged ZIP, wrong size) fails the export, and the `.partial` file is deleted on error or cancel (before, a failed ZIP write kept it open).
+- Run SQL file: resuming an interrupted import ran in the wrong database and without the dump's `SET`s (it now replays the file's `USE` and `SET` statements first) and counted the statement that stopped it twice; a file that can no longer be read fails with a file error.
+
 ## [1.0.0-beta.2] - 2026-11-13
 
 ### Added

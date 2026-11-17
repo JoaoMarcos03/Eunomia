@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Platform.Storage;
 using Eunomia.App.Commands;
 using Eunomia.Presentation.Logging;
@@ -32,10 +34,58 @@ public sealed partial class MainWindow
         new CommandEntry("query.renameTab"), new CommandEntry("query.pinToSession"), new CommandEntry("tabs.closeOnDoubleClick"), new CommandEntry("tabs.closeOnMiddleClick"), new CommandEntry("tabs.multipleLines"),
     ];
 
+    /// <summary>Last element of this window that had the focus outside the menus.</summary>
     private IInputElement? _lastFocused;
 
-    /// <summary>Element with the keyboard focus, ignoring menus and the toolbar (which do not keep the focus).</summary>
-    public IInputElement? FocusedElement => FocusManager?.GetFocusedElement() ?? _lastFocused;
+    /// <summary>
+    /// Element the commands act on: the one with the keyboard focus, except that menus take the focus when they open (and
+    /// hovering or the arrow keys move it to their items). Inside a context menu it is the control the menu was opened on;
+    /// inside the main menu or a drop-down, the element that had the focus before.
+    /// </summary>
+    public IInputElement? FocusedElement => CommandTarget(FocusManager?.GetFocusedElement(), _lastFocused);
+
+    /// <summary>The menu that contains <paramref name="element"/> (in the logical tree), or null.</summary>
+    internal static MenuBase? MenuOf(IInputElement? element)
+    {
+        for (var node = element as ILogical; node is not null; node = node.LogicalParent)
+        {
+            if (node is MenuBase menu)
+            {
+                return menu;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>See <see cref="FocusedElement"/>.</summary>
+    internal static IInputElement? CommandTarget(IInputElement? focused, IInputElement? lastOutsideMenus)
+    {
+        switch (MenuOf(focused))
+        {
+            case null:
+                return focused ?? lastOutsideMenus;
+            case ContextMenu contextMenu:
+                // ContextMenu > Popup > the control it was opened on (also for menus opened with Open(control)).
+                for (var owner = ((ILogical)contextMenu).LogicalParent; owner is not null; owner = owner.LogicalParent)
+                {
+                    if (owner is IInputElement element and not Popup)
+                    {
+                        return element;
+                    }
+                }
+                return lastOutsideMenus;
+            default:
+                return lastOutsideMenus;
+        }
+    }
+
+    private void OnGotFocus(object? sender, FocusChangedEventArgs e)
+    {
+        if (e.Source is IInputElement element && MenuOf(element) is null)
+        {
+            _lastFocused = element;
+        }
+    }
 
     /// <summary>Current focus contexts, from the innermost to the outermost.</summary>
     public IReadOnlyList<string> FocusContexts => CommandScope.ContextsOf(FocusedElement);
@@ -151,7 +201,7 @@ public sealed partial class MainWindow
         c.SetHandler("tools.preferences", _ => new ValueTask(ShowPreferencesAsync(null)));
         c.SetHandler("tools.preferencesLogging", _ => new ValueTask(ShowPreferencesAsync(PreferencesWindow.LoggingPage)));
         c.SetHandler("tools.preferencesData", _ => new ValueTask(ShowPreferencesAsync(PreferencesWindow.DataPage)));
-        c.SetHandler("help.about", _ => new ValueTask(AboutDialog.ShowAsync(this, ShellContext.Version)));
+        c.SetHandler("help.about", _ => new ValueTask(AboutDialog.ShowAsync(this, ShellContext.DisplayVersion)));
         c.SetHandler("file.exit", Close);
         c.SetHandler("file.newWindow", StartNewWindow, () => Environment.ProcessPath is not null);
     }
@@ -250,7 +300,11 @@ public sealed partial class MainWindow
     /// </summary>
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        _lastFocused = FocusManager?.GetFocusedElement() ?? _lastFocused;
+        // An open menu owns the keyboard (arrows, Enter, Escape, access keys): no shortcuts while it has the focus.
+        if (MenuOf(FocusManager?.GetFocusedElement()) is { } menu && (menu is not Menu || menu.IsOpen))
+        {
+            return;
+        }
         if (KeyChordMapper.FromKey(e.Key, e.KeyModifiers) is not { } chord)
         {
             return;

@@ -16,6 +16,7 @@ State on 9 Oct 2026 (1.0.0-beta.1; roadmap 4.3). It complements `docs/security-a
 
 - **A malicious or compromised database server:** controls object names, values, error messages, the text of other sessions (`SHOW PROCESSLIST`) and protocol requests (for example `LOAD DATA LOCAL`).
 - **The network between the client and the server:** reads or changes traffic without TLS or SSH; impersonates the server or the SSH host.
+- **The update feed (GitHub, or whoever impersonates or changes its answer):** controls the list of releases, their tags and their links.
 - **Files of unknown origin:** SQL scripts, CSV files, HeidiSQL settings exports, session files.
 - **Another local process or user:** reads the profile's files; sees the processes' command lines.
 - **The user, by mistake:** runs a write on the wrong session or on production.
@@ -31,6 +32,7 @@ Imported files ──► [ Eunomia ] ◄──► network (TLS / SSH) ◄──�
      user's disk ◄────┤
      browser / file ◄─┘ (Open URL, Explore folder, exports opened in other programs)
      manager
+  [ Eunomia ] ──► api.github.com (HTTPS, update check: list of releases only)
 ```
 
 Everything that arrives from the server, from files, from the clipboard or from the command line is data, never SQL or code: it only enters statements as a literal or an identifier produced by the dialect (`CONTRIBUTING.md`, section 3).
@@ -52,6 +54,7 @@ Everything that arrives from the server, from files, from the clipboard or from 
 | Secrets | A password in JSON, logs, errors, history or a URL | Only in the vault (`ResilientSecretStore`: without a vault, only in memory); `SecretMasking` in the SQL log, the query log and the diagnostic log; history without statements that hold passwords | `SecretsInLogsTests`, `SecretMaskingTests` |
 | Crash reports and diagnostics | SQL, values, hosts or users leaving the machine | Crash reports only with the type, stack, version, system and memory (no messages); a diagnostic log with redaction; nothing is sent | `Infra.Observability.Tests` |
 | Local files | Another user reads sessions, history or spill; a damaged file deletes sessions | 0700 folders and 0600 files on Unix; atomic writes with `.bak`; spill with `DeleteOnClose` and clean-up of orphans; `app.db` only with parameterised queries | `Infra.Settings.Tests` |
+| Update check | A request that reveals more than the version; an answer that makes Eunomia open another site, run or download something, or freeze; a link to a lookalike page | One anonymous `GET` with only `Accept`, `User-Agent: Eunomia/<version>` and the API version, at most once a day, off in Preferences; HTTPS, 15 s and 4 MB; the answer is data (tags parsed as versions, nothing downloaded or run); a release page is kept and opened only if it is `https://github.com/JoaoMarcos03/Eunomia/releases/…` with no user info or port, checked again before opening; any error is a line in the diagnostic log | `GitHubReleaseFeedTests`, `UpdateCheckerTests`, `UpdateNoticeTests` |
 | Opening URLs and folders | A grid value that opens a program or a dangerous scheme | Open URL only `http`/`https` with the normalised URI; Explore folder with the path in quotes | `HeidiGapsTests` |
 
 ## 5. Residual risks
@@ -65,8 +68,8 @@ The accepted risks are in `docs/security-audit.md` (R1–R6: "Preferred" TLS wit
 | M3 | Portable mode and Linux without a keyring do not keep passwords (they stay in memory until closing) | The file vault with a passphrase does not exist yet (roadmap 4.2) | Sessions ask for the password at login |
 | M5 | Image preview decodes images coming from the server (Skia, through Avalonia) | It is what HeidiSQL does; only with the preview on, only JPEG/GIF/BMP/PNG recognised by their first bytes, up to 16 MiB, off the UI thread | Keep Avalonia and Skia up to date (roadmap 2.6) |
 | M6 | Export to a server with Insert stops at the first duplicate key and leaves the statements already run (no transaction around a dump: DDL commits implicitly) | MySQL and MariaDB cannot roll back DDL | The confirmation says so; the source is never touched, so the export can be repeated with Delete + insert or Replace |
-| M4 | No code signing and no update verification | Needs certificates (roadmap 1.3 and 1.5) | Download only from the repository's releases and compare the SHA-256 |
+| M4 | No code signing and no update verification | Needs certificates (roadmap 1.3 and 1.5) | Download only from the repository's releases and compare the SHA-256; the update notice only links to those releases and never downloads anything |
 
 ## 6. When to review
 
-Review this document in the same PR when any of these change: the driver's connection options (`MySqlConnectionHandle`, `MySqlProvider`), `Infra.Ssh`, `Infra.Secrets.*`, `CsvImportJob`/`BulkLoadAsync`, `SqlFileJob`, `SqlExportToServerJob`, `EunomiaSettingsFile`, the HeidiSQL import, the exporters, `CrashReports`/`JsonLinesDiagnosticLog`, `SecretMasking`, `ReadOnlyPolicy`, `SafeDdl`, `RowWriter` or the DML/DDL composers; or when a feature arrives that talks to a new system (updates, sending crash reports, another database engine).
+Review this document in the same PR when any of these change: the driver's connection options (`MySqlConnectionHandle`, `MySqlProvider`), `Infra.Ssh`, `Infra.Secrets.*`, `CsvImportJob`/`BulkLoadAsync`, `SqlFileJob`, `SqlExportToServerJob`, `EunomiaSettingsFile`, the HeidiSQL import, the exporters, `CrashReports`/`JsonLinesDiagnosticLog`, `Infra.Updates`/`UpdateChecker`, `SecretMasking`, `ReadOnlyPolicy`, `SafeDdl`, `RowWriter` or the DML/DDL composers; or when a feature arrives that talks to a new system (sending crash reports, another database engine).

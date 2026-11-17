@@ -48,6 +48,8 @@ public sealed class AppSettings
 
     public CsvImportSettings CsvImport { get; set; } = new();
 
+    public UpdateOptions Updates { get; set; } = new();
+
     /// <summary>Visible columns of the lists (Database tab…), by list key.</summary>
     public Dictionary<string, List<string>> Lists { get; set; } = [];
 }
@@ -240,6 +242,9 @@ public sealed class DataOptions
 
     /// <summary>Global budget for all results in MB (PR-17); above it, the largest ones spill.</summary>
     public int GlobalResultMemoryMb { get; set; } = 1024;
+
+    /// <summary>The two memory budgets above are lowered to what this computer has (<see cref="MachineProfile"/>).</summary>
+    public bool AdjustMemoryToComputer { get; set; } = true;
 
     /// <summary>Maximum column width for automatic sizing, in pixels (<c>MaxColWidth</c>).</summary>
     public int MaxColumnWidth { get; set; } = 300;
@@ -464,4 +469,26 @@ public sealed class ExportOptions
     public string ClipboardTerminator { get; set; } = @"\r\n";
 
     public string ClipboardNullValue { get; set; } = @"\N";
+}
+
+/// <summary>
+/// The check for new releases on GitHub (request of 16 Nov 2026): at most once a day, at startup, without delaying it.
+/// The latest release found stays here, so the notice shows again at the next start without asking GitHub.
+/// </summary>
+public sealed class UpdateOptions
+{
+    /// <summary>Preferences › General: "Check for updates on startup (once a day, on GitHub)".</summary>
+    public bool CheckOnStartup { get; set; } = true;
+
+    /// <summary>When GitHub last answered; failed checks do not count.</summary>
+    public DateTimeOffset? LastCheck { get; set; }
+
+    /// <summary>Tag of the newest release offered to this kind of build at the last check, if any.</summary>
+    public string? LatestTag { get; set; }
+
+    /// <summary>Its page on GitHub.</summary>
+    public string? LatestUrl { get; set; }
+
+    /// <summary>"Skip this version": that release (and older ones) no longer show the notice; a newer one does.</summary>
+    public string? SkippedTag { get; set; }
 }

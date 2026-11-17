@@ -338,5 +338,5 @@ public sealed partial class MainWindow
     }
 
     private void PostListsRefresh(OpenSession open, MetadataChangedEventArgs e) =>
-        Dispatcher.UIThread.Post(() => OnMetadataChangedForLists(open, e));
+        Dispatcher.Post(() => OnMetadataChangedForLists(open, e));
 }

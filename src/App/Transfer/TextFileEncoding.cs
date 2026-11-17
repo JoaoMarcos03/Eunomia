@@ -1,6 +1,7 @@
 using System.Text;
 using Eunomia.App.Export;
 using Eunomia.App.Query;
+using Eunomia.Engine.Transfer;
 
 namespace Eunomia.App.Transfer;
 
@@ -48,10 +49,10 @@ internal static class TextFileEncoding
         _ => ExportFile.EncodingOf(name),
     };
 
-    /// <summary>Opens the file after the BOM and reports the encoding used.</summary>
-    public static async Task<(FileStream Stream, string Encoding)> OpenAsync(string path, string encoding, CancellationToken cancellationToken)
+    /// <summary>Opens the file after the BOM and reports the encoding used; its read errors are <see cref="LocalFileException"/>s (they happen inside the import's connection).</summary>
+    public static async Task<(LocalFileStream Stream, string Encoding)> OpenAsync(string path, string encoding, CancellationToken cancellationToken)
     {
-        var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1, FileOptions.SequentialScan);
+        var stream = LocalFileStream.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1, FileOptions.SequentialScan);
         try
         {
             var head = new byte[(int)Math.Min(1024 * 1024, stream.Length)];

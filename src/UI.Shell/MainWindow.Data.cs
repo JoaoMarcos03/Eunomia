@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -27,6 +28,12 @@ public sealed partial class MainWindow
     private long? _restoreTopRow;
     private IReadOnlyList<int> _dataVisibleColumns = [];
     private (Guid Session, DbObjectRef Table)? _dataTarget;
+
+    /// <summary>Tables whose smaller page was already explained in the log (once per run).</summary>
+    private readonly HashSet<(Guid Session, DbObjectRef Table)> _reducedStepLogged = [];
+
+    /// <summary>Owner of the Data tab label while it shows a load's time (<see cref="LoadingTime"/>).</summary>
+    private object? _loadingLabelOwner;
 
     /// <summary>
     /// Data tab load in progress (first page, Next, Show all and the label's count), or <c>null</c>. Choosing something else
@@ -109,7 +116,8 @@ public sealed partial class MainWindow
     /// <summary>Apply filter: the text goes to the table's recent filters (20, no duplicates) and reloads (appendix D B9).</summary>
     private void ApplyFilter(string text)
     {
-        if (_dataTarget is not { } target || Sessions?.Connector.Find(target.Session) is not { } session)
+        // After Esc the table is left unloaded (no target): the filter is for the focused one (a slow filter, corrected).
+        if ((_dataTarget ?? FocusedTable()) is not { } target || Sessions?.Connector.Find(target.Session) is not { } session)
         {
             return;
         }
@@ -162,8 +170,7 @@ public sealed partial class MainWindow
     /// </summary>
     private void LoadDataForFocusedNode(bool force = false)
     {
-        if (_tree.Tree.FocusedNode?.Tag is not TreeObjectTag { Object: { Kind: DbObjectKind.Table or DbObjectKind.View } obj } tag
-            || Sessions?.Connector.Find(tag.Session) is not { } session)
+        if (FocusedTable() is not (var sessionId, var obj) || Sessions?.Connector.Find(sessionId) is not { } session)
         {
             return;
         }
@@ -172,11 +179,15 @@ public sealed partial class MainWindow
         {
             return;
         }
-        var step = Math.Max(1, _context.Settings.Data.RowsPerStep);
-        var wanted = same && _browser is not null ? Math.Max(_browser.Wanted, step) : step;
+        // The same table keeps the rows already requested; another one, a page (fewer rows when they are large: ReadBrowseOptions).
+        var wanted = same && _browser is not null ? _browser.Wanted : 0;
         _dataTarget = (session.Id, obj);
         _ = LoadTableAsync(session, obj, wanted, BeginDataLoad());
     }
+
+    /// <summary>The table or view focused in the tree, with its session.</summary>
+    private (Guid Session, DbObjectRef Table)? FocusedTable() =>
+        _tree.Tree.FocusedNode?.Tag is TreeObjectTag { Object: { Kind: DbObjectKind.Table or DbObjectKind.View } obj } tag ? (tag.Session, obj) : null;
 
     /// <summary>Starts a Data tab load; the one in progress is cancelled.</summary>
     private CancellationTokenSource BeginDataLoad()
@@ -222,15 +233,23 @@ public sealed partial class MainWindow
     {
         var data = _context.Settings.Data;
         var key = KeyOf(session, table);
+        // Large rows (BLOBs): fewer per page, otherwise the server reads gigabytes before the first one shows.
+        var info = session.Metadata.CachedObjects(table.Schema)?.Objects.FirstOrDefault(o => o.Ref == table);
+        var step = DataTabQuery.RowsPerStepFor(data.RowsPerStep, info?.DataBytes, info?.RowsEstimate);
+        if (step < data.RowsPerStep && _reducedStepLogged.Add((session.Id, table)))
+        {
+            _context.Log.Append(LogCategory.Info,
+                $"Rows of {table.Schema}.{table.Name} are large: the Data tab shows {step.ToString("N0", CultureInfo.CurrentCulture)} at a time instead of {data.RowsPerStep.ToString("N0", CultureInfo.CurrentCulture)}.");
+        }
         return new DataBrowseOptions
         {
             Hidden = DataTabQuery.ParseHidden(GetTableState(key, "HiddenColumns")),
             Filter = GetTableState(key, "Filter"),
             Sort = DataTabQuery.ParseSort(GetTableState(key, "Sort")),
-            RowsPerStep = Math.Max(1, data.RowsPerStep),
+            RowsPerStep = step,
             MaximumRows = Math.Max(data.RowsPerStep, data.MaximumRows),
             Storage = new ResultStorage(
-                (long)Math.Max(16, data.ResultMemoryMb) * 1024 * 1024,
+                _context.ResultMemoryBytes,
                 _context.SpillDirectory,
                 (long)Math.Max(0, data.SpillQuotaMb) * 1024 * 1024)
             {
@@ -247,15 +266,15 @@ public sealed partial class MainWindow
         {
             await DataGrid.PostAsync();
         }
-        _dataLabel.Text = $"{obj.Schema}.{obj.Name}: loading ...";
         _context.Status.Busy = "Fetching rows ...";
         TableBrowser? browser = null;
+        using var loadingTime = new LoadingTime(this, obj, immediately: true, cancellationToken, () => CancelledLabel(obj, browser));
         try
         {
             var table = await session.Metadata.GetTableAsync(obj, cancellationToken);
             browser = new TableBrowser(session.Host, table, ReadBrowseOptions(session, obj));
             var loading = browser;
-            browser.SourceReady += (_, _) => Dispatcher.UIThread.Post(() =>
+            browser.SourceReady += (_, _) => Dispatcher.Post(() =>
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
@@ -313,6 +332,76 @@ public sealed partial class MainWindow
                 _context.Status.SetIdle();
             }
             _ui.Refresh();
+        }
+    }
+
+    private string CancelledLabel(DbObjectRef table, TableBrowser? browser) =>
+        DataTabQuery.CancelledLabel(table.Schema, table.Name, browser is not null && ReferenceEquals(_browser, browser) ? browser.Loaded : null);
+
+    /// <summary>
+    /// The Data tab label while a load runs: the time it has taken, from the first second on, and how to cancel it (a page of a
+    /// large table has no query timeout). Another load or the final count replace it; disposing stops it and, when the load was
+    /// cancelled and nothing replaced it, says so.
+    /// </summary>
+    private sealed class LoadingTime : IDisposable
+    {
+        private readonly MainWindow _window;
+        private readonly DbObjectRef _table;
+        private readonly CancellationToken _cancellationToken;
+        private readonly Func<string> _cancelled;
+        private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
+        private readonly long _started = Stopwatch.GetTimestamp();
+        private string? _shown;
+
+        public LoadingTime(MainWindow window, DbObjectRef table, bool immediately, CancellationToken cancellationToken, Func<string> cancelled)
+        {
+            _window = window;
+            _table = table;
+            _cancellationToken = cancellationToken;
+            _cancelled = cancelled;
+            window._loadingLabelOwner = this;
+            if (immediately)
+            {
+                Show(DataTabQuery.LoadingLabel(table.Schema, table.Name, TimeSpan.Zero));
+            }
+            else
+            {
+                _shown = window._dataLabel.Text;
+            }
+            _timer.Tick += (_, _) =>
+            {
+                if (Showing)
+                {
+                    Show(DataTabQuery.LoadingLabel(_table.Schema, _table.Name, Stopwatch.GetElapsedTime(_started)));
+                }
+                else
+                {
+                    _timer.Stop();
+                }
+            };
+            _timer.Start();
+        }
+
+        /// <summary>The label is still this load's: no other load took it and nothing wrote over it.</summary>
+        private bool Showing => ReferenceEquals(_window._loadingLabelOwner, this) && _window._dataLabel.Text == _shown;
+
+        private void Show(string text)
+        {
+            _shown = text;
+            _window._dataLabel.Text = text;
+        }
+
+        public void Dispose()
+        {
+            _timer.Stop();
+            if (Showing && _cancellationToken.IsCancellationRequested)
+            {
+                _window._dataLabel.Text = _cancelled();
+            }
+            if (ReferenceEquals(_window._loadingLabelOwner, this))
+            {
+                _window._loadingLabelOwner = null;
+            }
         }
     }
 
@@ -455,6 +544,8 @@ public sealed partial class MainWindow
         var firstNew = browser.Loaded;
         var cts = BeginDataLoad();
         _context.Status.Busy = "Fetching rows ...";
+        // Next keeps the count in the label; after a second, the time it is taking.
+        using var loadingTime = new LoadingTime(this, browser.Table.Ref, immediately: false, cts.Token, () => CancelledLabel(browser.Table.Ref, browser));
         try
         {
             await (all ? browser.ShowAllAsync(cts.Token) : browser.NextAsync(cts.Token));

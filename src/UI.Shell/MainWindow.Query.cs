@@ -112,8 +112,8 @@ public sealed partial class MainWindow
         c.SetChecked("query.pinToSession", () => PinTarget()?.State.PinnedSession is not null);
         if (Sessions is { } sessions)
         {
-            sessions.Connector.SessionOpened += (_, _) => Dispatcher.UIThread.Post(UpdateQueryTargets);
-            sessions.Connector.SessionClosed += (_, _) => Dispatcher.UIThread.Post(UpdateQueryTargets);
+            sessions.Connector.SessionOpened += (_, _) => Dispatcher.Post(UpdateQueryTargets);
+            sessions.Connector.SessionClosed += (_, _) => Dispatcher.Post(UpdateQueryTargets);
         }
         _tabs.CanCloseQueryTab = tab =>
         {
@@ -355,7 +355,7 @@ public sealed partial class MainWindow
     private bool CanCancelOperation() =>
         ActiveQueryView is { } view
             ? StateOf(view).Run is not null || ActiveResultView?.Sort is not null
-            : ActiveSession is { Host.IsPrimaryBusy: true } session && !QueryRunningOn(session);
+            : ActiveSession is { } session && (IsLoadingData(session) || (session.Host.IsPrimaryBusy && !QueryRunningOn(session)));
 
     /// <summary>
     /// Esc / Cancel (D2): in a query tab, its run or the result tab's sort; in the other tabs, the work on the active session's
@@ -375,7 +375,17 @@ public sealed partial class MainWindow
             }
             return;
         }
-        if (ActiveSession is { } session && !QueryRunningOn(session))
+        if (ActiveSession is not { } session)
+        {
+            return;
+        }
+        // The Data tab's load by its own token: also while it waits for the connection (behind a query tab's run, which goes
+        // on) or counts the rows.
+        if (IsLoadingData(session))
+        {
+            _dataLoad?.Cancel();
+        }
+        if (!QueryRunningOn(session))
         {
             session.Host.CancelPrimary();
         }
@@ -406,7 +416,7 @@ public sealed partial class MainWindow
             StopOnErrors = query.StopOnErrors,
             MaxResultSets = Math.Max(1, query.MaxResults),
             Storage = new ResultStorage(
-                (long)Math.Max(16, data.ResultMemoryMb) * 1024 * 1024,
+                _context.ResultMemoryBytes,
                 _context.SpillDirectory,
                 (long)Math.Max(0, data.SpillQuotaMb) * 1024 * 1024)
             {
@@ -475,7 +485,7 @@ public sealed partial class MainWindow
         state.Session = session;
         var color = session.Color is { } rgb ? 0xFF000000 | rgb : 0;
         var runner = new QueryRunner(session.Host);
-        runner.Progress += (_, p) => Dispatcher.UIThread.Post(() =>
+        runner.Progress += (_, p) => Dispatcher.Post(() =>
         {
             if (ReferenceEquals(state.Run, cts))
             {
@@ -483,8 +493,8 @@ public sealed partial class MainWindow
                 _context.Status.Progress = p.Total > 1 ? (double)(p.Number - 1) / p.Total : null;
             }
         });
-        runner.ResultStarted += (_, r) => Dispatcher.UIThread.Post(() => AddQueryResult(view, state, r, color, session));
-        runner.ResultCompleted += (_, r) => Dispatcher.UIThread.Post(() =>
+        runner.ResultStarted += (_, r) => Dispatcher.Post(() => AddQueryResult(view, state, r, color, session));
+        runner.ResultCompleted += (_, r) => Dispatcher.Post(() =>
         {
             if (state.Results.FirstOrDefault(v => ReferenceEquals(v.Result, r)) is { } done)
             {
@@ -512,7 +522,7 @@ public sealed partial class MainWindow
                 ShowError(ex);
             }
             // The grids and captions arrive through Post: flushes them before the summary.
-            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
             // Results cut by an error or a cancel keep the rows that arrived.
             foreach (var result in state.Results.Where(r => !r.Result.Source.IsComplete))
             {

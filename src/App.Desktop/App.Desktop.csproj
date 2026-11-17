@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Infra.Secrets.MacOS\Infra.Secrets.MacOS.csproj" />
     <ProjectReference Include="..\Infra.Secrets.Linux\Infra.Secrets.Linux.csproj" />
     <ProjectReference Include="..\Infra.Ssh\Infra.Ssh.csproj" />
+    <ProjectReference Include="..\Infra.Updates\Infra.Updates.csproj" />
     <ProjectReference Include="..\Drivers.MySql\Drivers.MySql.csproj" />
   </ItemGroup>
 </Project>
