@@ -148,7 +148,7 @@ public static class HeidiSqlCatalog
         yield return C("tools.flushTables", "Tables", "Tools", null, "actFlushTables", availableIn: AfterMvp);
         yield return C("tools.flushTablesWithReadLock", "Tables with read lock", "Tools", null, "actFlushTableswithreadlock", availableIn: AfterMvp);
         yield return C("tools.flushStatus", "Status", "Tools", null, "actFlushStatus", availableIn: AfterMvp);
-        yield return C("help.checkUpdates", "Check for updates ...", "Tools", null, "actUpdateCheck", "update", availableIn: AfterMvp);
+        yield return C("help.checkUpdates", "Check for updates ...", "Tools", null, "actUpdateCheck", "update", "Look for a newer release of Eunomia on GitHub");
         yield return C("help.downloadPage", "Download page", "Various", null, "actWebDownloadpage", "web");
         yield return C("help.forum", "Support forum", "Various", null, "actWebForum", "web");
         yield return C("help.changelog", "Changelog", "Various", null, "actWebChangelog", "web");

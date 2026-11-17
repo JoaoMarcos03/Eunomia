@@ -16,7 +16,7 @@ public sealed class DialogSnapshotTests
     public static TheoryData<string, string> Cases()
     {
         var data = new TheoryData<string, string>();
-        foreach (var name in new[] { "preferences", "preferences-grid", "search-replace", "create-database", "run-sql-file", "grid-export", "login", "text-editor", "message", "input", "large-files", "about" })
+        foreach (var name in new[] { "preferences", "preferences-grid", "search-replace", "create-database", "run-sql-file", "run-sql-file-target", "grid-export", "login", "text-editor", "message", "input", "large-files", "about" })
         {
             data.Add(name, "light");
             data.Add(name, "dark");
@@ -31,7 +31,8 @@ public sealed class DialogSnapshotTests
         "search-replace" => new SearchReplaceDialog("customer", replace: true, [new SearchTarget("Query #1", true, false), new SearchTarget("Data grid", false, false)], 0, new SearchSettings()),
         "create-database" => new CreateDatabaseDialog(["utf8mb4_general_ci", "utf8mb4_unicode_ci", "latin1_swedish_ci"], "utf8mb4_unicode_ci", "utf8mb4_general_ci",
             (db, collation) => $"CREATE DATABASE `{db}`" + (collation is null ? string.Empty : $" /*!40100 COLLATE '{collation}' */")),
-        "run-sql-file" => new SqlFileRunWindow(10L * 1024 * 1024),
+        "run-sql-file" => new SqlFileRunWindow(10L * 1024 * 1024, "local (127.0.0.1:3306)"),
+        "run-sql-file-target" => new RunSqlFileDialog("local (127.0.0.1:3306)", [@"C:\dumps\shop-full.sql"], ["crm", "shop", "shop_archive"], "crm", ["shop"]),
         "grid-export" => new GridExportDialog(new ExportOptions(), 12, 12345, "name", f => f),
         "login" => new LoginDialog("localhost", "root"),
         "text-editor" => new TextEditorWindow("Edit text: notes", "Line one\nLine two with a longer text value", 65535, binary: false),

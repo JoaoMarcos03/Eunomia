@@ -102,12 +102,15 @@ public sealed class App : Application
                 context = new ShellContext(settings, store, _appDatabase, log)
                 {
                     SpillDirectory = paths.Spill,
+                    Machine = MachineProfile.Detect(),
                     StartupWarnings = warnings,
                     RecoveryDirectory = paths.Recovery,
                     Diagnostics = diagnostics,
                     PreviousCrashReport = previousCrash,
                     TabJournal = settings.Query.RestoreTabs ? new Eunomia.Infra.Settings.Journal.TabJournal(paths.TabsJournal) : null,
                     TransferJournal = new Eunomia.Engine.Transfer.TransferJournal(paths.JobsJournal),
+                    // Once a day at most, anonymous, and off in Preferences › General (README, "Update check").
+                    Updates = new Eunomia.App.Updates.UpdateChecker(new Eunomia.Infra.Updates.GitHubReleaseFeed(ShellContext.Version)),
                     Sessions = new ShellSessions
                     {
                         Catalog = catalog,
@@ -150,7 +153,7 @@ public sealed class App : Application
             {
                 // macOS application menu: About opens our dialog (the rest of the menu is the window's).
                 var about = new NativeMenuItem("About Eunomia");
-                about.Click += (_, _) => _ = Eunomia.UI.Shell.Views.AboutDialog.ShowAsync(window, ShellContext.Version);
+                about.Click += (_, _) => _ = Eunomia.UI.Shell.Views.AboutDialog.ShowAsync(window, ShellContext.DisplayVersion);
                 NativeMenu.SetMenu(this, new NativeMenu { Items = { about } });
             }
         }

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Eunomia.Infra.Updates</RootNamespace>
+    <AssemblyName>Eunomia.Infra.Updates</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Infra.Updates.Tests" />
+  </ItemGroup>
+
+  <!-- Implements IReleaseFeed (App): the releases of the project on GitHub, for the update check. -->
+  <ItemGroup>
+    <ProjectReference Include="..\App\App.csproj" />
+  </ItemGroup>
+</Project>

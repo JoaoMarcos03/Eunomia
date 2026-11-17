@@ -28,6 +28,7 @@
     <ProjectReference Include="..\..\src\Infra.Secrets.Windows\Infra.Secrets.Windows.csproj" />
     <ProjectReference Include="..\..\src\Infra.Settings\Infra.Settings.csproj" />
     <ProjectReference Include="..\..\src\Infra.Ssh\Infra.Ssh.csproj" />
+    <ProjectReference Include="..\..\src\Infra.Updates\Infra.Updates.csproj" />
     <ProjectReference Include="..\..\src\Presentation\Presentation.csproj" />
     <ProjectReference Include="..\..\src\UI.Controls.Common\UI.Controls.Common.csproj" />
     <ProjectReference Include="..\..\src\UI.Controls.Graph\UI.Controls.Graph.csproj" />

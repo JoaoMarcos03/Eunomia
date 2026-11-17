@@ -5,6 +5,7 @@ using Eunomia.App.Export;
 using Eunomia.App.Query;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Engine.Execution;
+using Eunomia.Engine.Sql;
 using Eunomia.Engine.Sql.Splitting;
 using Eunomia.Engine.Transfer;
 
@@ -27,6 +28,12 @@ public sealed record SqlFileRequest
 
     public string Delimiter { get; init; } = ";";
 
+    /// <summary>
+    /// "Run everything in <see cref="Database"/>": the file's <c>USE</c> and <c>CREATE</c>/<c>DROP</c>/<c>ALTER DATABASE</c>
+    /// are skipped (counted as run), so a dump of another database is restored into this one. Requires <see cref="Database"/>.
+    /// </summary>
+    public bool StayInDatabase { get; init; }
+
     /// <summary>Name of the saved session (in the journal, to resume).</summary>
     public string Session { get; init; } = string.Empty;
 }
@@ -34,7 +41,8 @@ public sealed record SqlFileRequest
 /// <summary>Error of a statement in the file (section 13.1: located by statement number and line).</summary>
 public sealed record SqlFileError(long Statement, long Line, string Message, string Sql);
 
-public sealed record SqlFileProgress(long BytesRead, long TotalBytes, long Statements, long Errors, long AffectedRows, TimeSpan Elapsed);
+/// <param name="Database">Database the statements run in now (the file's last <c>USE</c>), or <c>null</c> if none.</param>
+public sealed record SqlFileProgress(long BytesRead, long TotalBytes, long Statements, long Errors, long AffectedRows, TimeSpan Elapsed, string? Database = null);
 
 public sealed record SqlFileResult(
     Guid JobId,
@@ -80,6 +88,12 @@ public sealed class SqlFileJob
     private TimeSpan _lastReport;
     private TimeSpan _lastJournal;
     private TransferJournalEntry? _entry;
+    private SessionStateLog _session = new();
+    private TimeSpan _previousElapsed;
+    private string? _database;
+
+    // The statement that stopped the job runs again when it resumes: its error is not kept in the journal.
+    private bool _retryPending;
 
     // Job state (only the job thread writes it).
     private long _statements;
@@ -92,6 +106,10 @@ public sealed class SqlFileJob
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(request);
+        if (request.StayInDatabase && string.IsNullOrEmpty(request.Database))
+        {
+            throw new ArgumentException("Running everything in one database needs that database.", nameof(request));
+        }
         _host = host;
         _request = request;
         _journal = journal;
@@ -121,14 +139,46 @@ public sealed class SqlFileJob
             Database = entry.Database,
             StopOnErrors = entry.Options.GetValueOrDefault("stopOnErrors") != "false",
             BatchInOneGo = entry.Options.GetValueOrDefault("batch") == "true",
-            Delimiter = entry.Delimiter,
+            Delimiter = entry.Options.GetValueOrDefault("startDelimiter") ?? entry.Delimiter,
+            StayInDatabase = entry.Options.GetValueOrDefault("stayInDatabase") == "true" && !string.IsNullOrEmpty(entry.Database),
             Session = entry.Session,
         };
+    }
+
+    /// <summary>
+    /// Databases the file selects with <c>USE</c> in its first <paramref name="maxBytes"/> bytes: a dump with
+    /// <c>CREATE DATABASE</c> and <c>USE</c> runs there, not in the session's database (the confirmation says so).
+    /// </summary>
+    public static IReadOnlyList<string> DatabasesSelectedBy(string path, string encoding = SqlFile.AutoDetect, string delimiter = ";", int maxBytes = 4 * 1024 * 1024)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var bytes = new byte[(int)Math.Min(maxBytes, stream.Length)];
+        var read = stream.ReadAtLeast(bytes, bytes.Length, throwOnEndOfStream: false);
+        var (name, bom) = TextFileEncoding.Detect(bytes.AsSpan(0, read), encoding);
+        var text = TextFileEncoding.For(name).GetString(bytes, bom, read - bom);
+        var splitter = new StreamingSqlSplitter(delimiter);
+        var emitted = new List<StreamedStatement>();
+        splitter.Append(text, emitted);
+        if (read == stream.Length)
+        {
+            splitter.Complete(emitted);
+        }
+        var result = new List<string>();
+        foreach (var statement in emitted)
+        {
+            if (SessionStatements.UseTarget(statement.Text) is { } database && !result.Contains(database, StringComparer.Ordinal))
+            {
+                result.Add(database);
+            }
+        }
+        return result;
     }
 
     public async Task<SqlFileResult> RunAsync(IProgress<SqlFileProgress>? progress, CancellationToken cancellationToken)
     {
         _clock.Restart();
+        _previousElapsed = _resume?.Elapsed ?? TimeSpan.Zero;
         var cancelled = false;
         var stopped = false;
         try
@@ -153,20 +203,26 @@ public sealed class SqlFileJob
             _journal.Delete(Id);
         }
         progress?.Report(Progress());
-        return new SqlFileResult(Id, cancelled, stopped, _statements, _errorCount, _affected, _bytesRead, _totalBytes, _clock.Elapsed, [.. _errors]);
+        return new SqlFileResult(Id, cancelled, stopped, _statements, _errorCount, _affected, _bytesRead, _totalBytes, Elapsed, [.. _errors]);
     }
 
     /// <summary>Runs the file; returns <c>true</c> if it stopped on an error (Stop on errors).</summary>
     private async Task<bool> RunOnConnectionAsync(IDbConnectionHandle handle, IProgress<SqlFileProgress>? progress, CancellationToken cancellationToken)
     {
         var dialect = (_host.ServerServices ?? throw new InvalidOperationException("The session is not connected.")).Dialect;
+        foreach (var setup in dialect.ImportSession)
+        {
+            await TryExecuteAsync(handle, setup, cancellationToken).ConfigureAwait(false);
+        }
         if (_request.Database is { Length: > 0 } database)
         {
             await handle.ExecuteNonQueryAsync(dialect.ChangeDatabase(database), cancellationToken).ConfigureAwait(false);
+            _database = database;
         }
         var maxPacket = Convert.ToInt64(await handle.ExecuteScalarAsync("SELECT @@max_allowed_packet", cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture);
 
-        await using var stream = new FileStream(_request.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1, FileOptions.SequentialScan);
+        // A file that does not read (deleted, on a lost network share) fails the run, not the connection: see LocalFileException.
+        await using var stream = LocalFileStream.Open(_request.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1, FileOptions.SequentialScan);
         _totalBytes = stream.Length;
         var bytes = new byte[Math.Max(ChunkSize, 4096)];
         Encoding encoding;
@@ -176,12 +232,28 @@ public sealed class SqlFileJob
         long charOffset;
         if (_resume is { } resume)
         {
-            if (resume.InputSize != stream.Length || (resume.InputFingerprint is { } print && print != TransferJournal.Fingerprint(_request.Path)))
+            if (resume.InputSize != stream.Length || (resume.InputFingerprint is { } print && print != LocalFileException.Guard(() => TransferJournal.Fingerprint(_request.Path))))
             {
                 throw new SqlFileChangedException(_request.Path);
             }
             encodingName = _request.Encoding;
             encoding = TextFileEncoding.For(encodingName);
+            // The file's USE and SETs run before the resume point: without them the rest would run in the database chosen
+            // in the dialog and without the dump's settings (FOREIGN_KEY_CHECKS=0, time zone, sql_mode…).
+            var state = resume.SessionState ?? await ReadSessionStateAsync(stream, encoding, resume, progress, cancellationToken).ConfigureAwait(false);
+            foreach (var statement in state)
+            {
+                if (SessionStatements.UseTarget(statement) is { } used)
+                {
+                    await handle.ExecuteNonQueryAsync(statement, cancellationToken).ConfigureAwait(false);
+                    _database = used;
+                }
+                else
+                {
+                    await TryExecuteAsync(handle, statement, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            _session = new SessionStateLog(state);
             stream.Seek(resume.Offset, SeekOrigin.Begin);
             splitter = new StreamingSqlSplitter(new SplitterPosition(resume.CharOffset, resume.Line, resume.Delimiter));
             byteOffset = resume.Offset;
@@ -208,7 +280,7 @@ public sealed class SqlFileJob
             Database = _request.Database,
             Path = _request.Path,
             InputSize = stream.Length,
-            InputFingerprint = _journal is null ? null : _resume?.InputFingerprint ?? TransferJournal.Fingerprint(_request.Path),
+            InputFingerprint = _journal is null ? null : _resume?.InputFingerprint ?? LocalFileException.Guard(() => TransferJournal.Fingerprint(_request.Path)),
             Started = _resume?.Started ?? DateTimeOffset.Now,
             Updated = DateTimeOffset.Now,
             Options = new Dictionary<string, string>
@@ -216,6 +288,8 @@ public sealed class SqlFileJob
                 ["encoding"] = encodingName,
                 ["stopOnErrors"] = _request.StopOnErrors ? "true" : "false",
                 ["batch"] = _request.BatchInOneGo ? "true" : "false",
+                ["startDelimiter"] = _request.Delimiter,
+                ["stayInDatabase"] = _request.StayInDatabase ? "true" : "false",
             },
             Offset = byteOffset,
             CharOffset = charOffset,
@@ -223,6 +297,7 @@ public sealed class SqlFileJob
             Delimiter = _resume?.Delimiter ?? _request.Delimiter,
             Count = _statements,
             Errors = _errorCount,
+            SessionState = [.. _session.Statements],
         };
         SaveJournal(force: true);
 
@@ -307,7 +382,12 @@ public sealed class SqlFileJob
     /// <summary>One statement, or a multi-statement packet; returns <c>true</c> if the job must stop (Stop on errors).</summary>
     private async Task<bool> ExecuteAsync(IDbConnectionHandle handle, IReadOnlyList<(StreamedStatement Statement, long NextByte)> statements, CancellationToken cancellationToken)
     {
-        var sql = statements.Count == 1 ? statements[0].Statement.Text : string.Join(";\n", statements.Select(s => s.Statement.Text));
+        IReadOnlyList<(StreamedStatement Statement, long NextByte)> run = _request.StayInDatabase ? [.. statements.Where(s => !Skipped(s.Statement.Text))] : statements;
+        if (run.Count == 0)
+        {
+            return Advance(statements, recordSession: false);
+        }
+        var sql = run.Count == 1 ? run[0].Statement.Text : string.Join(";\n", run.Select(s => s.Statement.Text));
         try
         {
             var affected = await handle.ExecuteNonQueryAsync(sql, cancellationToken).ConfigureAwait(false);
@@ -316,7 +396,7 @@ public sealed class SqlFileJob
         catch (Exception e) when (!cancellationToken.IsCancellationRequested && _host.StatementError(e) is { } error)
         {
             _errorCount++;
-            var first = statements[0].Statement;
+            var first = run[0].Statement;
             if (_errors.Count < MaxErrorsKept)
             {
                 _errors.Add(new SqlFileError(_statements + 1, first.Line + Math.Max(0, (error.Line ?? 1) - 1), error.Message, sql.Length > 2000 ? sql[..2000] : sql));
@@ -324,7 +404,31 @@ public sealed class SqlFileJob
             if (_request.StopOnErrors)
             {
                 // Resuming starts at the statement that failed.
+                _retryPending = true;
                 return true;
+            }
+            return Advance(statements, recordSession: false);
+        }
+        return Advance(statements, recordSession: true);
+    }
+
+    /// <summary>Moves the resume point past <paramref name="statements"/>; returns <c>false</c> (the job continues).</summary>
+    private bool Advance(IReadOnlyList<(StreamedStatement Statement, long NextByte)> statements, bool recordSession)
+    {
+        var sessionChanged = false;
+        if (recordSession)
+        {
+            foreach (var (statement, _) in statements)
+            {
+                if (Skipped(statement.Text))
+                {
+                    continue;
+                }
+                sessionChanged |= _session.Record(statement.Text);
+                if (SessionStatements.UseTarget(statement.Text) is { } used)
+                {
+                    _database = used;
+                }
             }
         }
         _statements += statements.Count;
@@ -338,9 +442,70 @@ public sealed class SqlFileJob
             Count = _statements,
             Errors = _errorCount,
             LastStatement = last.Statement.Text.Length > 500 ? last.Statement.Text[..500] : last.Statement.Text,
+            SessionState = sessionChanged ? [.. _session.Statements] : _entry.SessionState,
         };
         SaveJournal(force: false);
         return false;
+    }
+
+    /// <summary>With "Run everything in the database", the file's statements on databases do not run.</summary>
+    private bool Skipped(string statement) => _request.StayInDatabase && SessionStatements.IsDatabaseStatement(statement);
+
+    /// <summary>Optional statement (setup, a SET replayed when resuming): an error from the server is ignored.</summary>
+    private async Task TryExecuteAsync(IDbConnectionHandle handle, string sql, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await handle.ExecuteNonQueryAsync(sql, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e) when (!cancellationToken.IsCancellationRequested && _host.StatementError(e) is not null)
+        {
+            // Not allowed or not known by this server: the file runs as it would without it.
+        }
+    }
+
+    /// <summary>
+    /// Journal from an older version, without the session state: the file's USE and SETs before the resume point are read
+    /// from the start of the file (once; the progress shows the reading). Leaves the stream at an undefined position.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> ReadSessionStateAsync(LocalFileStream stream, Encoding encoding, TransferJournalEntry resume, IProgress<SqlFileProgress>? progress, CancellationToken cancellationToken)
+    {
+        var log = new SessionStateLog();
+        var bytes = new byte[Math.Max(ChunkSize, 4096)];
+        stream.Seek(0, SeekOrigin.Begin);
+        var head = await stream.ReadAsync(bytes.AsMemory(0, (int)Math.Min(bytes.Length, stream.Length)), cancellationToken).ConfigureAwait(false);
+        var (_, bom) = TextFileEncoding.Detect(bytes.AsSpan(0, head), _request.Encoding);
+        stream.Seek(bom, SeekOrigin.Begin);
+        var decoder = encoding.GetDecoder();
+        var chars = new char[encoding.GetMaxCharCount(bytes.Length) + 2];
+        var splitter = new StreamingSqlSplitter(_request.Delimiter);
+        var emitted = new List<StreamedStatement>();
+        long charOffset = 0;
+        var eof = false;
+        while (!eof && charOffset < resume.CharOffset)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var read = await stream.ReadAsync(bytes, cancellationToken).ConfigureAwait(false);
+            eof = read == 0;
+            var count = decoder.GetChars(bytes, 0, read, chars, 0, flush: eof);
+            splitter.Append(chars.AsSpan(0, count), emitted);
+            if (eof)
+            {
+                splitter.Complete(emitted);
+            }
+            foreach (var statement in emitted)
+            {
+                if (statement.Next.Offset <= resume.CharOffset && !Skipped(statement.Text))
+                {
+                    log.Record(statement.Text);
+                }
+            }
+            emitted.Clear();
+            charOffset += count;
+            _bytesRead = Math.Min(stream.Position, resume.Offset);
+            Report(progress);
+        }
+        return log.Statements;
     }
 
     private void Report(IProgress<SqlFileProgress>? progress)
@@ -352,7 +517,9 @@ public sealed class SqlFileJob
         }
     }
 
-    private SqlFileProgress Progress() => new(_bytesRead, _totalBytes, _statements, _errorCount, _affected, _clock.Elapsed);
+    private TimeSpan Elapsed => _previousElapsed + _clock.Elapsed;
+
+    private SqlFileProgress Progress() => new(_bytesRead, _totalBytes, _statements, _errorCount, _affected, Elapsed, _database);
 
     private void SaveJournal(bool force)
     {
@@ -361,7 +528,7 @@ public sealed class SqlFileJob
             return;
         }
         _lastJournal = _clock.Elapsed;
-        _entry = _entry with { Updated = DateTimeOffset.Now, Count = _statements, Errors = _errorCount };
+        _entry = _entry with { Updated = DateTimeOffset.Now, Count = _statements, Errors = _errorCount - (_retryPending ? 1 : 0), Elapsed = Elapsed };
         try
         {
             _journal.Save(_entry);

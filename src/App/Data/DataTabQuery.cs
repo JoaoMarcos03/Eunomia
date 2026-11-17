@@ -25,6 +25,52 @@ public static class DataTabQuery
 
     public const int DefaultMaximumRows = 100_000;
 
+    /// <summary>What a page of the Data tab reads on the server, at most, estimated from the average row size.</summary>
+    public const long PageBudgetBytes = 32L * 1024 * 1024;
+
+    /// <summary>Fewest rows a page brings, however large the rows are.</summary>
+    public const int MinimumRowsPerStep = 10;
+
+    /// <summary>
+    /// Rows per page of a table: the setting, or fewer when its rows are large. The server reads a whole BLOB even to
+    /// send its first 256 characters, so 1,000 rows of 1 MB read 1 GB before the first row shows. The average comes from
+    /// the table status (<c>Data_length / Rows</c>); without it, the setting.
+    /// </summary>
+    public static int RowsPerStepFor(int setting, long? dataBytes, long? rows)
+    {
+        setting = Math.Max(1, setting);
+        if (dataBytes is not > 0 || rows is not > 0)
+        {
+            return setting;
+        }
+        var average = Math.Max(1, dataBytes.Value / rows.Value);
+        var fit = PageBudgetBytes / average;
+        return (int)Math.Clamp(fit, Math.Min(setting, MinimumRowsPerStep), setting);
+    }
+
+    /// <summary>
+    /// Label while the Data tab loads: from the first second on, the time it has taken and how to cancel it (a page of a
+    /// large table has no query timeout and can take minutes).
+    /// </summary>
+    public static string LoadingLabel(string schema, string name, TimeSpan elapsed)
+    {
+        var seconds = (long)elapsed.TotalSeconds;
+        if (seconds < 1)
+        {
+            return $"{schema}.{name}: loading ...";
+        }
+        var time = seconds < 60
+            ? string.Create(CultureInfo.InvariantCulture, $"{seconds} s")
+            : string.Create(CultureInfo.InvariantCulture, $"{seconds / 60} min {seconds % 60:00} s");
+        return $"{schema}.{name}: loading ... {time} (Esc to cancel)";
+    }
+
+    /// <summary>Label after a load was cancelled: the rows that arrived stay (Next continues from them), or none.</summary>
+    public static string CancelledLabel(string schema, string name, long? loaded, CultureInfo? culture = null) =>
+        loaded is > 0
+            ? $"{schema}.{name}: {loaded.Value.ToString("N0", culture ?? CultureInfo.CurrentCulture)} rows loaded (cancelled)"
+            : $"{schema}.{name}: loading cancelled";
+
     /// <summary>Key columns: the PK; otherwise the first UNIQUE whose columns are all NOT NULL; otherwise none.</summary>
     public static IReadOnlyList<string> KeyColumns(TableDefinition table)
     {

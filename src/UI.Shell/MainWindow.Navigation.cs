@@ -151,6 +151,9 @@ public sealed partial class MainWindow
     {
         if (string.Equals(open.Host.CurrentDatabase, database, StringComparison.Ordinal))
         {
+            // The connection may have reached this database after the tree was marked (it opens in the background
+            // with the session's database): mark it now too.
+            UpdateCurrentDatabase(open);
             return true;
         }
         try

@@ -13,6 +13,11 @@
     <InternalsVisibleTo Include="UI.Headless.Tests" />
   </ItemGroup>
 
+  <!-- The build number (Directory.Build.props) for ShellContext.Build and the update check. -->
+  <ItemGroup Condition="'$(EunomiaBuild)' != ''">
+    <AssemblyMetadata Include="EunomiaBuild" Value="$(EunomiaBuild)" />
+  </ItemGroup>
+
   <!-- Main window, menus, toolbar, status bar, SQL log and keymap (section 21.1). -->
   <ItemGroup>
     <ProjectReference Include="..\Presentation\Presentation.csproj" />

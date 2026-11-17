@@ -1,10 +1,19 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Styling;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Eunomia.App.Settings;
 using Eunomia.App.Transfer;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Engine.Transfer;
+using Eunomia.UI.Controls.Common.Input;
+using Eunomia.UI.Controls.Common.Theming;
 using Eunomia.UI.Features.Transfer;
 
 namespace Eunomia.UI.Headless.Tests;
@@ -53,19 +62,19 @@ public sealed class SqlExportDialogTests
             dialog.OutputCombo.Items.Cast<string>());
         dialog.OutputCombo.SelectedIndex = 4;
         await dialog.TargetLoading;
-        Assert.True(dialog.TargetDatabaseCombo.IsVisible);
+        Assert.True(dialog.TargetDatabaseSelect.IsVisible);
         Assert.False(dialog.PathBox.IsEffectivelyVisible);
-        Assert.Equal(["shop", "shop_copy"], dialog.TargetDatabaseCombo.Items.Cast<string>());
+        Assert.Equal(["shop", "shop_copy"], dialog.TargetDatabaseSelect.Items);
 
         // The exported database itself is refused before anything runs.
-        dialog.TargetDatabaseCombo.SelectedItem = "shop";
+        dialog.TargetDatabaseSelect.SelectedItem = "shop";
         dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await RealServer.WaitAsync(() => UnexpectedDialogGuardAttribute.TakeOpened() is [var refused] ? refused : null);
         Assert.Empty(questions);
         Assert.Null(requested);
 
         // Another one: the confirmation names the target and "Delete + insert"; No runs nothing.
-        dialog.TargetDatabaseCombo.SelectedItem = "shop_copy";
+        dialog.TargetDatabaseSelect.SelectedItem = "shop_copy";
         dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await RealServer.WaitAsync(() => questions.Count == 1 ? "ok" : null);
         Assert.Contains("database \"shop_copy\" of this session", questions[0], StringComparison.Ordinal);
@@ -84,8 +93,8 @@ public sealed class SqlExportDialogTests
         // A server lists "[Same as on source server]" first and is not remembered as the output.
         dialog.OutputCombo.SelectedIndex = 5;
         await dialog.TargetLoading;
-        Assert.Equal([SqlExportDialog.SameAsSource, "archive"], dialog.TargetDatabaseCombo.Items.Cast<string>());
-        Assert.Equal(SqlExportDialog.SameAsSource, dialog.TargetDatabaseCombo.SelectedItem);
+        Assert.Equal([SqlExportDialog.SameAsSource, "archive"], dialog.TargetDatabaseSelect.Items);
+        Assert.Equal(SqlExportDialog.SameAsSource, dialog.TargetDatabaseSelect.SelectedItem);
         dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await RealServer.WaitAsync(() => requested.Target == SqlExportTarget.Server ? "ok" : null);
         Assert.Equal((staging.Id, (string?)null), (requested.TargetSession, requested.TargetDatabase));
@@ -129,7 +138,7 @@ public sealed class SqlExportDialogTests
         dialog.SetObjectChecked("shop", "logs", false);
         dialog.OutputCombo.SelectedIndex = 4;
         await dialog.TargetLoading;
-        dialog.TargetDatabaseCombo.SelectedItem = "shop_copy";
+        dialog.TargetDatabaseSelect.SelectedItem = "shop_copy";
 
         dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         await RealServer.WaitAsync(() => requested);
@@ -218,6 +227,59 @@ public sealed class SqlExportDialogTests
     }
 
     /// <summary>
+    /// Request of 16 Nov 2026 ("the SQL file did not have the 15 GB, it had 8.7"): a ZIP export says how much SQL went
+    /// into how big a file, and objects with errors open a message that names them, not only a line in the status.
+    /// </summary>
+    [AvaloniaFact(Timeout = UiTimeouts.Default)]
+    public async Task ZipSizeAndObjectsWithErrorsAreShown()
+    {
+        using var culture = new CultureScope(System.Globalization.CultureInfo.InvariantCulture);
+        var path = Path.Combine(Path.GetTempPath(), "eunomia-" + Guid.NewGuid().ToString("N") + ".zip");
+        var settings = new SqlExportSettings { CreateTables = true, Data = 1, Output = 1, ZipFilenames = [path] };
+        SqlExportItemProgress[] items =
+        [
+            new("shop", "customers", DbObjectKind.Table, 5, 10, TimeSpan.FromSeconds(1), SqlExportItemState.Done, null),
+            .. Enumerable.Range(0, 12).Select(n => new SqlExportItemProgress("shop", "t" + n, DbObjectKind.Table, 0, 10, TimeSpan.Zero, SqlExportItemState.Failed,
+                "Query execution was interrupted")),
+            new("shop", "v", DbObjectKind.View, 0, 0, TimeSpan.Zero, SqlExportItemState.Failed, "View 'shop.v' references invalid table(s)"),
+        ];
+        var dialog = new SqlExportDialog(
+            settings,
+            ["shop"],
+            (db, _) => Task.FromResult<IReadOnlyList<DbObjectInfo>>([O(db, "customers", DbObjectKind.Table)]),
+            (_, _, _) => Task.FromResult(new SqlExportResult(false, 9L * 1024 * 1024 * 1024, items, null, TimeSpan.FromSeconds(312.4)) { FileBytes = 860L * 1024 * 1024 }),
+            initialDatabase: "shop",
+            initialObjects: null);
+        dialog.Show();
+        await dialog.Loading;
+        Assert.Equal(path, dialog.PathBox.Text);
+
+        dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var message = await RealServer.WaitAsync(() => UnexpectedDialogGuardAttribute.TakeOpened() is [var opened] ? opened : null);
+
+        Assert.Equal("Done: 9.00 GiB of SQL in a 860.0 MiB ZIP file, in 312.4 s, 13 object(s) with errors.", dialog.StatusText.Text);
+        Assert.StartsWith("MessageDialog \"Export finished with errors\": 13 object(s) could not be exported.", message, StringComparison.Ordinal);
+        Assert.Contains("\nshop.t0: Query execution was interrupted", message, StringComparison.Ordinal);
+        Assert.Contains("\nshop.t9: Query execution was interrupted", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("shop.t10", message, StringComparison.Ordinal);
+        Assert.EndsWith("... and 3 more (marked in the list).", message, StringComparison.Ordinal);
+        Assert.False(File.Exists(path));
+        dialog.Close();
+    }
+
+    [Fact]
+    public void DoneTextOfAFileHasNoZipSize()
+    {
+        using var culture = new CultureScope(System.Globalization.CultureInfo.InvariantCulture);
+        var result = new SqlExportResult(false, 2048, [], null, TimeSpan.FromSeconds(2)) { FileBytes = 2048 };
+
+        Assert.Equal("Done: 2.0 KiB in 2.0 s.", SqlExportDialog.DoneText(result, SqlExportTarget.File, failed: 0));
+        Assert.Equal("Done: 2.0 KiB in 2.0 s, 1 object(s) with errors.", SqlExportDialog.DoneText(result with { FileBytes = null }, SqlExportTarget.Clipboard, failed: 1));
+        var failures = new[] { new SqlExportItemProgress("db", "p", DbObjectKind.Procedure, 0, 0, TimeSpan.Zero, SqlExportItemState.Failed, "denied") };
+        Assert.EndsWith("\n\ndb.p (procedure): denied", SqlExportDialog.FailuresText(failures), StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The dialog opens with the main tree's filters (not the saved ones) and exports only what they show: a
     /// hidden database stays out even when checked, and checking a database checks only its visible objects.
     /// </summary>
@@ -276,6 +338,121 @@ public sealed class SqlExportDialogTests
         Assert.True(items[0].IsVisible);
         Assert.Equal("shop;archive", settings.DatabaseFilter);
         dialog.Close();
+    }
+
+    /// <summary>
+    /// Request of 16 Nov 2026: each "Server:" row of the output list has its session's colour from the settings, as in the
+    /// tree (a soft tint and a bar with the full colour), in light and dark; the other rows keep the theme's.
+    /// </summary>
+    [AvaloniaFact(Timeout = UiTimeouts.Default)]
+    public async Task ServerRowsHaveTheSessionColour()
+    {
+        const uint Crimson = 0xDC143C;
+        var targets = new SqlExportTargets(
+            [new SqlExportServer(Guid.NewGuid(), "live", Crimson), new SqlExportServer(Guid.NewGuid(), "plain")],
+            (_, _) => Task.FromResult<IReadOnlyList<string>>(["shop"]),
+            _ => null,
+            (_, _, _, _) => throw new InvalidOperationException("Not run."));
+        var dialog = new SqlExportDialog(new SqlExportSettings(), ["shop"], (_, _) => Task.FromResult<IReadOnlyList<DbObjectInfo>>([]),
+            (_, _, _) => throw new InvalidOperationException("Not run."), null, null, targets)
+        { RequestedThemeVariant = ThemeVariant.Light };
+        dialog.Show();
+        await dialog.Loading;
+
+        var combo = dialog.OutputCombo;
+        combo.IsDropDownOpen = true;
+        var live = await RealServer.WaitAsync(() => combo.ContainerFromIndex(5) as ComboBoxItem);
+        var plain = (ComboBoxItem)combo.ContainerFromIndex(6)!;
+        var database = (ComboBoxItem)combo.ContainerFromIndex(4)!;
+        var bar = new Thickness(3, 0, 0, 0);
+        Assert.Equal(ColorMath.SessionTint(Crimson, ThemeTokens.Light.Argb("surface.content")), BrushArgb(live.Background));
+        Assert.Equal(0xFFDC143C, BrushArgb(live.BorderBrush));
+        Assert.Equal(bar, live.BorderThickness);
+        foreach (var other in new[] { plain, database })
+        {
+            Assert.NotEqual(bar, other.BorderThickness);
+            Assert.NotEqual(BrushArgb(live.Background), BrushArgb(other.Background));
+        }
+
+        // The theme changes with the list open: the rows are painted again.
+        dialog.RequestedThemeVariant = ThemeVariant.Dark;
+        Assert.Equal(ColorMath.SessionTint(Crimson, ThemeTokens.Dark.Argb("surface.panel")), BrushArgb(live.Background));
+        Assert.NotEqual(bar, plain.BorderThickness);
+        combo.IsDropDownOpen = false;
+        dialog.Close();
+
+        static uint? BrushArgb(IBrush? brush) => (brush as ISolidColorBrush)?.Color.ToUInt32();
+    }
+
+    /// <summary>
+    /// Request of 16 Nov 2026: the target database of a server is searched by name (contains, ignoring case) and, with
+    /// nothing typed, the list shows every database; the only match is chosen when the box loses the focus.
+    /// </summary>
+    [AvaloniaFact(Timeout = UiTimeouts.Default)]
+    public async Task TheTargetDatabaseIsSearchedByName()
+    {
+        SqlExportRequest? requested = null;
+        var targets = new SqlExportTargets(
+            [new SqlExportServer(Guid.NewGuid(), "staging")],
+            (id, _) => Task.FromResult<IReadOnlyList<string>>(id is null ? ["shop"] : ["archive_2024", "crm", "Shop_Copy", "shop_old", "stats"]),
+            _ => null,
+            (request, _, _, _) =>
+            {
+                requested = request;
+                var exported = new SqlExportResult(false, 1, [], null, TimeSpan.Zero);
+                return Task.FromResult(new SqlExportToServerResult(exported, new SqlFileResult(Guid.NewGuid(), false, false, 1, 0, 1, 1, 1, TimeSpan.Zero, []), null));
+            });
+        var dialog = new SqlExportDialog(new SqlExportSettings { CreateTables = true }, ["shop"],
+            (db, _) => Task.FromResult<IReadOnlyList<DbObjectInfo>>([O(db, "orders", DbObjectKind.Table)]),
+            (_, _, _) => throw new InvalidOperationException("Not a file export."), "shop", null, targets)
+        {
+            ConfirmOverride = _ => Task.FromResult(true),
+        };
+        dialog.Show();
+        await dialog.Loading;
+        dialog.OutputCombo.SelectedIndex = 5;
+        await dialog.TargetLoading;
+        var select = dialog.TargetDatabaseSelect;
+        string[] all = [SqlExportDialog.SameAsSource, "archive_2024", "crm", "Shop_Copy", "shop_old", "stats"];
+        Assert.Equal(all, select.Items);
+        Assert.Equal(SqlExportDialog.SameAsSource, select.SelectedItem);
+
+        // The arrow, with the chosen item in the box: every database.
+        await PopupAsync(select);
+        select.Open();
+        Assert.Equal(all, await ListedAsync(select, all.Length));
+
+        // Typing replaces the chosen item and keeps the names that contain the text, ignoring case.
+        Dispatcher.UIThread.RunJobs();
+        dialog.KeyTextInput("SHOP");
+        Assert.Equal("SHOP", select.Box.Text);
+        Assert.Equal(["Shop_Copy", "shop_old"], await ListedAsync(select, 2));
+        Assert.True(select.Box.IsDropDownOpen);
+
+        // Text cleared: the whole list again.
+        select.Box.Text = string.Empty;
+        Assert.Equal(all, await ListedAsync(select, all.Length));
+
+        // The only database that contains "old" is the one exported to.
+        dialog.KeyTextInput("old");
+        dialog.ExportButton.Focus();
+        Assert.Equal("shop_old", select.SelectedItem);
+        dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await RealServer.WaitAsync(() => requested);
+        Assert.Equal("shop_old", requested!.TargetDatabase);
+        dialog.Close();
+
+        // The names in the select's open list (the list box of its popup).
+        static async Task<string[]> ListedAsync(SearchableSelect select, int count)
+        {
+            var popup = await PopupAsync(select);
+            var list = Assert.Single(popup.Child!.GetSelfAndVisualDescendants().OfType<ListBox>());
+            await RealServer.WaitAsync(() => list.Items.Count == count ? "ok" : null);
+            return [.. list.Items.Cast<string>()];
+        }
+
+        // The select was hidden until a database output was chosen: its template comes with the next layout.
+        static Task<Popup> PopupAsync(SearchableSelect select) => RealServer.WaitAsync(() => select.Box.GetVisualDescendants().OfType<Popup>().FirstOrDefault());
     }
 
     /// <summary>Without tree filters (tests, other callers) the dialog uses the saved filters, now with ';'.</summary>

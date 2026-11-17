@@ -247,6 +247,34 @@ public sealed class TreeAndListsSnapshotTests
         window.Close();
     }
 
+    /// <summary>Request of 16 Nov 2026: the "Server:" rows of the output list in each session's colour (one without).</summary>
+    [AvaloniaTheory(Timeout = UiTimeouts.Default)]
+    [InlineData("sql-export-server-colours-light", "light")]
+    [InlineData("sql-export-server-colours-dark", "dark")]
+    public async Task SqlExportServerColours(string name, string theme)
+    {
+        using var culture = new CultureScope(CultureInfo.InvariantCulture);
+        var targets = new UI.Features.Transfer.SqlExportTargets(
+            [
+                new(Guid.NewGuid(), "Customers\\live", 0xDC143C), new(Guid.NewGuid(), "Customers\\staging", 0x9D850B),
+                new(Guid.NewGuid(), "local"), new(Guid.NewGuid(), "reports", 0x006400),
+            ],
+            (_, _) => Task.FromResult<IReadOnlyList<string>>(["shop"]),
+            _ => null,
+            (_, _, _, _) => throw new InvalidOperationException());
+        var dialog = new UI.Features.Transfer.SqlExportDialog(new App.Settings.SqlExportSettings(), ["shop"], (_, _) => Task.FromResult<IReadOnlyList<DbObjectInfo>>([]),
+            (_, _, _) => throw new InvalidOperationException(), null, null, targets)
+        { RequestedThemeVariant = theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light };
+        dialog.Show();
+        await dialog.Loading;
+        dialog.OutputCombo.IsDropDownOpen = true;
+        var root = await RealServer.WaitAsync(() => dialog.OutputCombo.ContainerFromIndex(8) is { } row ? TopLevel.GetTopLevel(row) : null);
+        root.CaptureRenderedFrame();
+        Snapshot.Match(root.CaptureRenderedFrame(), name);
+        dialog.OutputCombo.IsDropDownOpen = false;
+        dialog.Close();
+    }
+
     [AvaloniaTheory(Timeout = UiTimeouts.Default)]
     [InlineData("csv-import-light", "light")]
     [InlineData("csv-import-dark", "dark")]

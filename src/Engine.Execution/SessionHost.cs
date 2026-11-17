@@ -305,13 +305,20 @@ public sealed class SessionHost : IAsyncDisposable
         _tunnelGate.Dispose();
     }
 
+    /// <summary>
+    /// The timeout counts from the moment the work starts on the connection: the wait in the queue (behind a long
+    /// query of another tab or a Data tab page) does not count, otherwise the work timed out before it ran.
+    /// </summary>
     private async Task<T> WithTimeoutAsync<T>(ConnectionLane lane, Func<IDbConnectionHandle, CancellationToken, Task<T>> work, TimeSpan timeout, CancellationToken cancellationToken, TimeSpan abandonGrace)
     {
         using var timer = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timer.CancelAfter(timeout);
         try
         {
-            return await lane.RunAsync(work, WorkPriority.Visible, SessionLogCategory.UserSql, retryAfterReconnect: false, timer.Token, abandonGrace).ConfigureAwait(false);
+            return await lane.RunAsync((h, ct) =>
+            {
+                timer.CancelAfter(timeout);
+                return work(h, ct);
+            }, WorkPriority.Visible, SessionLogCategory.UserSql, retryAfterReconnect: false, timer.Token, abandonGrace).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {

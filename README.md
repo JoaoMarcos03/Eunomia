@@ -65,6 +65,7 @@ Eunomia is an independent, clean-room implementation: it contains no HeidiSQL co
 - Passwords live only in the OS vault: Windows Credential Manager, macOS Keychain or the Linux Secret Service.
 - TLS verifies the CA and host name by default; a built-in SSH tunnel with its own `known_hosts` and agent support (OpenSSH agent, Pageant).
 - No telemetry. Crash reports stay on the machine and contain no SQL, values, hosts or user names.
+- One optional network request of its own: at startup, at most once a day, an anonymous HTTPS request to the project's GitHub releases to say when a newer version is out ([update check](docs/user-guide.md#update-check)). It sends only the version in the `User-Agent`, and Preferences › General turns it off.
 
 The [user guide](docs/user-guide.md) covers every feature and the differences from HeidiSQL.
 

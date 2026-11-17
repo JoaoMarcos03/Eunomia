@@ -154,6 +154,57 @@ public sealed class SqlExportTests : IAsyncLifetime
         }
     }
 
+    /// <summary>
+    /// Request of 16 Nov 2026 ("re-validate the whole export"): a server-side limit on statement time (MariaDB's
+    /// <c>max_statement_time</c>, here per user as hosting providers set it; MySQL's <c>max_execution_time</c>) no longer cuts
+    /// a table in the middle. Before, the SELECT stopped with error 1969, the file kept the rows read until then and a
+    /// comment, and the export still finished.
+    /// </summary>
+    [Fact]
+    public async Task StatementTimeLimitDoesNotCutATable()
+    {
+        TestServer.RequireServer();
+        Assert.SkipUnless(_host.Server!.Engine == DbEngine.MariaDb, "A per-user MAX_STATEMENT_TIME is MariaDB's; MySQL's max_execution_time is in the dialect tests.");
+        // About 100 MB: reading it takes far longer than the limit.
+        await ExecAsync(
+            $"CREATE TABLE `{_database}`.wide (id INT PRIMARY KEY, txt MEDIUMTEXT)",
+            $"INSERT INTO `{_database}`.wide WITH RECURSIVE s(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM s WHERE n < 99) " +
+                "SELECT a.n * 100 + b.n, REPEAT(CHAR(65 + (a.n + b.n) % 26), 25000) FROM s a, s b WHERE a.n < 40");
+        var user = "eu_mst_" + Guid.NewGuid().ToString("N")[..6];
+        const string password = "Mst-L1mit";
+        await ExecAsync($"CREATE USER '{user}'@'%' IDENTIFIED BY '{password}' WITH MAX_STATEMENT_TIME 0.1", $"GRANT ALL ON `{_database}`.* TO '{user}'@'%'", $"GRANT SELECT ON *.* TO '{user}'@'%'");
+        try
+        {
+            var options = TestServer.Options() with { User = user, Password = new SecretReference("pw") };
+            await using var limited = new SessionHost(new SessionConnectionSettings("mst", options) { KeepAlive = null }, new SessionServices
+            {
+                Provider = new MySqlProvider(),
+                ResolveSecret = (_, _) => ValueTask.FromResult(password),
+            });
+            await limited.ConnectAsync(Ct);
+            // The limit is real on the session's connections.
+            var limit = await Assert.ThrowsAsync<SessionOperationException>(() => limited.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT SLEEP(1)", ct), Ct));
+            Assert.Equal(DbErrorCategory.Timeout, limit.Classified.Category);
+
+            var path = Path.Combine(_directory, "limited.sql");
+            var result = await new SqlExportJob(limited, await RequestAsync(SqlExportTarget.File, path, snapshot: false)).RunAsync(null, Ct);
+
+            Assert.False(result.Cancelled);
+            Assert.All(result.Items, i => Assert.True(i.State == SqlExportItemState.Done, $"{i.Name}: {i.State} {i.Error}"));
+            Assert.Equal(4000, result.Items.Single(i => i.Name == "wide").Rows);
+            var dump = await File.ReadAllTextAsync(path, Ct);
+            Assert.DoesNotContain("max_statement_time", dump, StringComparison.OrdinalIgnoreCase);
+            await ReimportAndCompareAsync(dump);
+            Assert.Equal(await ChecksumAsync(_database, "wide"), await ChecksumAsync(_database + "_c" + (_cleanup.Count - 1).ToString(System.Globalization.CultureInfo.InvariantCulture), "wide"));
+            // The job connection went back to the user's limit.
+            await Assert.ThrowsAsync<SessionOperationException>(() => limited.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT SLEEP(1)", ct), Ct));
+        }
+        finally
+        {
+            await ExecAsync($"DROP USER '{user}'@'%'");
+        }
+    }
+
     /// <summary>Runs the dump on a new database with Run SQL file and compares the data table by table.</summary>
     private async Task ReimportAndCompareAsync(string dump)
     {
@@ -284,6 +335,7 @@ public sealed class SqlExportTests : IAsyncLifetime
         Assert.False(File.Exists(path + ".partial"));
         var dump = await File.ReadAllTextAsync(path, Ct);
         Assert.Equal(new FileInfo(path).Length, result.BytesWritten);
+        Assert.Equal(result.BytesWritten, result.FileBytes);
         Assert.StartsWith("-- --------------------------------------------------------\r\n-- Host:                         127.0.0.1\r\n", dump, StringComparison.Ordinal);
         Assert.Contains("-- Dumping data for table " + _database + ".big: ~", dump, StringComparison.Ordinal);
         Assert.Contains("_binary 0xCAFE", dump, StringComparison.Ordinal);
@@ -301,8 +353,13 @@ public sealed class SqlExportTests : IAsyncLifetime
         await ReimportAndCompareAsync(dump);
     }
 
+    /// <summary>
+    /// The ZIP written in parallel has the text of the sequential file, its entry has every byte the job counted, the
+    /// result gives the size of the ZIP (request of 16 Nov 2026: "Done: 8.7 GB" read as the size of the ZIP), and the
+    /// text re-imports with the same data.
+    /// </summary>
     [Fact]
-    public async Task ParallelZipHasTheSameTextAsTheSequentialFile()
+    public async Task ParallelZipHasTheSameTextAsTheSequentialFileAndReimports()
     {
         TestServer.RequireServer();
         var sequential = Path.Combine(_directory, "seq.sql");
@@ -313,12 +370,22 @@ public sealed class SqlExportTests : IAsyncLifetime
         var result = await new SqlExportJob(_host, request with { Target = SqlExportTarget.Zip, Path = zip, ConsistentSnapshot = false }).RunAsync(null, Ct);
 
         Assert.False(result.Cancelled);
-        using var archive = ZipFile.OpenRead(zip);
-        var entry = Assert.Single(archive.Entries);
-        Assert.Equal("par.sql", entry.FullName);
-        using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
-        var text = await reader.ReadToEndAsync(Ct);
+        Assert.False(File.Exists(zip + ".partial"));
+        Assert.All(result.Items, i => Assert.Equal(SqlExportItemState.Done, i.State));
+        Assert.Equal(new FileInfo(zip).Length, result.FileBytes);
+        Assert.True(result.FileBytes < result.BytesWritten);
+        string text;
+        using (var archive = ZipFile.OpenRead(zip))
+        {
+            var entry = Assert.Single(archive.Entries);
+            Assert.Equal("par.sql", entry.FullName);
+            Assert.Equal(result.BytesWritten, entry.Length);
+            using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
+            text = await reader.ReadToEndAsync(Ct);
+        }
         Assert.Equal(await File.ReadAllTextAsync(sequential, Ct), text);
+
+        await ReimportAndCompareAsync(text);
     }
 
     [Fact]
@@ -337,6 +404,9 @@ public sealed class SqlExportTests : IAsyncLifetime
 
         var clipboard = await new SqlExportJob(_host, await RequestAsync(SqlExportTarget.Clipboard, string.Empty, snapshot: false, DumpDataMode.Replace)).RunAsync(null, Ct);
         Assert.Contains("REPLACE INTO `nokey` (`a`, `b`) VALUES", clipboard.ClipboardText, StringComparison.Ordinal);
+        Assert.Null(clipboard.FileBytes);
+        Assert.Null(result.FileBytes);
+        Assert.Equal(Directory.GetFiles(Path.Combine(directory, _database)).Sum(f => new FileInfo(f).Length), result.BytesWritten);
         var limited = await RequestAsync(SqlExportTarget.Clipboard, string.Empty, snapshot: false);
         await Assert.ThrowsAsync<ClipboardLimitException>(() => new SqlExportJob(_host, limited with { ClipboardLimit = 10_000 }).RunAsync(null, Ct));
 
@@ -352,6 +422,108 @@ public sealed class SqlExportTests : IAsyncLifetime
         }
         // The job connection was reset and still works.
         Assert.Equal(1L, Convert.ToInt64(await _host.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT 1", ct), Ct), System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// An error of a local file inside a job connection (here a <c>.partial</c> another program holds open; a full disk
+    /// fails the same way) is the export's error, not a lost connection: the session does not reconnect.
+    /// </summary>
+    [Theory]
+    [InlineData(SqlExportTarget.Directory)]
+    [InlineData(SqlExportTarget.File)]
+    public async Task LocalFileErrorIsNotALostConnection(SqlExportTarget target)
+    {
+        TestServer.RequireServer();
+        var states = new List<SessionState>();
+        _host.StateChanged += (_, e) => { lock (states) { states.Add(e.State); } };
+        var locks = new List<FileStream>();
+        try
+        {
+            string path;
+            if (target == SqlExportTarget.Directory)
+            {
+                path = Path.Combine(_directory, "locked-dir");
+                Directory.CreateDirectory(Path.Combine(path, _database));
+                locks.Add(new FileStream(Path.Combine(path, _database, "table-big.sql.partial"), FileMode.Create, FileAccess.Write, FileShare.None));
+            }
+            else
+            {
+                // The parallel export writes each table with data to "<file>.partial.<index>" in a job connection.
+                path = Path.Combine(_directory, "locked.sql");
+                locks.AddRange(Enumerable.Range(0, 32).Select(i => new FileStream(path + ".partial." + i.ToString(System.Globalization.CultureInfo.InvariantCulture), FileMode.Create, FileAccess.Write, FileShare.None)));
+            }
+
+            var error = await Assert.ThrowsAsync<LocalFileException>(async () => await new SqlExportJob(_host, await RequestAsync(target, path, snapshot: false)).RunAsync(null, Ct));
+
+            Assert.IsType<IOException>(error.InnerException);
+            Assert.DoesNotContain("connection", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("used by another process", error.Message, StringComparison.Ordinal);
+            Assert.False(File.Exists(path));
+            Assert.Equal(SessionState.Ready, _host.State);
+            lock (states)
+            {
+                Assert.DoesNotContain(SessionState.Reconnecting, states);
+            }
+            Assert.Equal(1L, Convert.ToInt64(await _host.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT 1", ct), Ct), System.Globalization.CultureInfo.InvariantCulture));
+        }
+        finally
+        {
+            foreach (var stream in locks)
+            {
+                await stream.DisposeAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The file or ZIP of an export is written on a thread of its own: when a write of it fails half-way (here another
+    /// program locks the file; a full disk fails the same way), the export fails with that error, the session does not
+    /// reconnect, and no <c>.partial</c> is left behind.
+    /// </summary>
+    [Theory]
+    [InlineData(SqlExportTarget.File)]
+    [InlineData(SqlExportTarget.Zip)]
+    public async Task OutputThatFailsHalfWayFailsTheExport(SqlExportTarget target)
+    {
+        TestServer.RequireServer();
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Region locks only block writes on Windows (elsewhere they are advisory).");
+            return;
+        }
+        var states = new List<SessionState>();
+        _host.StateChanged += (_, e) => { lock (states) { states.Add(e.State); } };
+        var path = Path.Combine(_directory, target == SqlExportTarget.Zip ? "half.zip" : "half.sql");
+        var partial = path + ".partial";
+        await File.WriteAllBytesAsync(partial, [], Ct);
+        // A reader that locks the whole file: the export still opens it (and empties it), and its first write fails.
+        var locker = new FileStream(partial, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        try
+        {
+            locker.Lock(0, 1L << 40);
+
+            var error = await Assert.ThrowsAsync<LocalFileException>(async () => await new SqlExportJob(_host, await RequestAsync(target, path, snapshot: true)).RunAsync(null, Ct));
+
+            Assert.IsType<IOException>(error.InnerException);
+            Assert.Contains("locked a portion of the file", error.Message, StringComparison.Ordinal);
+            Assert.False(File.Exists(path));
+            Assert.Equal(SessionState.Ready, _host.State);
+            lock (states)
+            {
+                Assert.DoesNotContain(SessionState.Reconnecting, states);
+            }
+        }
+        finally
+        {
+            await locker.DisposeAsync();
+        }
+        // The .partial was deleted while the locker still had it open (FileShare.Delete): it is gone once it closes.
+        Assert.False(File.Exists(partial));
+        Assert.Equal(1L, Convert.ToInt64(await _host.RunJobAsync((h, ct) => h.ExecuteScalarAsync("SELECT 1", ct), Ct), System.Globalization.CultureInfo.InvariantCulture));
+
+        var result = await new SqlExportJob(_host, await RequestAsync(target, path, snapshot: true)).RunAsync(null, Ct);
+        Assert.True(File.Exists(path));
+        Assert.Equal(new FileInfo(path).Length, result.FileBytes);
     }
 
     /// <summary>IProgress that calls right away, on the reporting thread (Progress&lt;T&gt; needs a synchronisation context).</summary>

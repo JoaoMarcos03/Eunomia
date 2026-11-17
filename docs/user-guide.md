@@ -50,7 +50,22 @@ On macOS everything lives in `~/Library/Application Support/Eunomia`. On Linux, 
 
 `settings.json` and `sessions.json` keep the previous version in `.bak`: a damaged file (power cut, full disk) is set aside with a `.corrupt-<date>` suffix and Eunomia goes back to the previous copy, with a warning in the SQL log. Two Eunomia windows open at the same time do not delete each other's sessions: when saving, the changes from both are merged.
 
-Nothing leaves the machine: there is no telemetry and no update check.
+Nothing leaves the machine except the connections you open and the update check below; there is no telemetry.
+
+### Update check
+
+When Eunomia starts it asks GitHub whether there is a newer release, at most once a day and without delaying the window: a few seconds after it opens, one anonymous HTTPS `GET` to `api.github.com/repos/JoaoMarcos03/Eunomia/releases`. The request carries only `User-Agent: Eunomia/<version>` (no account, token, cookie, machine name, sessions or anything else), and GitHub sees the computer's IP address as with any web page. The answer is limited to 4 MB and 15 s; if there is no network, it fails quietly (a line in the diagnostic log) and is tried again on the next start.
+
+When a newer version exists, a bar under the toolbar says so, with:
+
+- **Open release page**: the release on `github.com/JoaoMarcos03/Eunomia/releases` in the browser (no other page is ever opened). Eunomia never downloads or installs anything itself.
+- **Skip this version**: no bar for that version; a newer one shows it again.
+- **Turn off update checks**: no more requests at startup.
+- **×**: hides the bar until the next start.
+
+Pre-release builds (`-beta`, `-rc`…) are told about pre-releases and releases; release builds only about releases. A build made from source without a CI build number is told only about higher versions.
+
+**Help › Check for updates** asks GitHub at once (even with the startup check off): it shows the bar, also for a version you skipped, or says in the SQL log that this is the latest version. **Preferences › General › Check for updates on startup** turns the startup check on or off. The time of the last answer and the newest release found are kept in `settings.json` (`updates`).
 
 ## Sessions
 
@@ -107,7 +122,8 @@ Nothing leaves the machine: there is no telemetry and no update check.
 - **Save BLOB to file** (cell menu and the preview panel): writes the full cell value to a file, even when the grid shows only the beginning. Binary values are written as they are (the suggested name is the column name, with `.png`, `.jpg`, `.gif` or `.bmp` for an image, otherwise `.bin`); text is written as UTF-8 with `.txt`.
 - **Image preview** (Grid view options): a panel below the tree with the image (JPEG, GIF, BMP or PNG) of the focused cell in the Data tab or a result, with its size and format; it shrinks the image to fit, never enlarges it. Images over 16 MiB are not shown.
 - New rows (**Ins**) appear at the end of the grid (in HeidiSQL they appear after the focused row); after saving and reloading they follow the server's order.
-- **Preferences › Grid formatting**: grid font and size, maximum column width, rows per page and maximum rows, and how much memory results may use before going to disk.
+- Very large tables: the Data tab's pages have no query timeout (the load runs until it ends or **Esc** cancels it, and the label shows the time taken), and tables with large rows (BLOBs) are read in smaller pages so the first rows show sooner.
+- **Preferences › Grid formatting**: grid font and size, maximum column width, rows per page and maximum rows, and how much memory results may use before going to disk. **Lower the memory limits to fit this computer** (on by default) lowers those limits on computers with less than 8 GB of memory; the page shows what this computer has.
 
 ## Query tabs
 
@@ -140,19 +156,22 @@ Nothing leaves the machine: there is no telemetry and no update check.
 - With the Database tab list focused, only the objects selected in it come checked (select some tables there, then click Export database as SQL).
 - The dialog opens with the tree's **Database filter** and **Table filter** (same syntax: regular expressions, `;` as "or"). Only what the filters show is exported: hidden databases and objects stay out even if they were checked, and checking a database checks only its visible objects. Clear the filters in the dialog to export everything.
 - Output: a `.sql` file, a `.zip`, a directory with one file per object, or the clipboard (up to 64 MiB).
-- Output **Database** copies straight into another database of the same session; **Server: <session>** copies into another saved session (it connects when chosen), into one database or, with **[Same as on source server]**, into databases with the same names (with Create on, they are created). Before running, a confirmation names the target and says what happens to existing tables and rows (Drop, Delete + insert, Replace). The run stops at the first error; statements already run are not undone. An exported database can never be the target on the same server, and a read-only session cannot be a target.
+- Output **Database** copies straight into another database of the same session; **Server: <session>** (in the session's colour) copies into another saved session (it connects when chosen), into one database or, with **[Same as on source server]**, into databases with the same names (with Create on, they are created). Before running, a confirmation names the target and says what happens to existing tables and rows (Drop, Delete + insert, Replace). The run stops at the first error; statements already run are not undone. An exported database can never be the target on the same server, and a read-only session cannot be a target.
 - How it works: the dump is first written to a temporary file in the app's spill folder (constant memory, like a file export) and then run on the target like **Run SQL file**; the file is deleted at the end. With MySQL, views keep the database names that `SHOW CREATE VIEW` writes in them.
 - **Consistent snapshot**: everything in one transaction, like `mysqldump --single-transaction`. Without it, tables are exported in parallel.
 - Without a consistent snapshot, tables are exported in parallel on the session's job connections (Session Manager › Advanced). While it runs, the status line says how many objects are done and, when an object takes more than 5 s, which one it is waiting for (for instance, a table locked by someone else's `ALTER`). The bytes only count what is already in the file, in the plan's order.
 - If the server refuses one of the job connections (connection limit), the export goes on with the others; FEDERATED tables are never read (the remote server may not answer).
-- The file is written as `.partial` and only gets its final name at the end; a cancel or an error deletes it.
+- The target database box filters as you type. An export that ends with errors lists the objects that failed.
+- The file is written as `.partial` and only gets its final name at the end, after checking its size (for a ZIP, that it opens and holds the whole SQL); a cancel or an error deletes it. A full disk or a lost network share is reported as a file error.
 
 ### Run SQL file
 
 - **Run SQL file…** (SQL menu) runs files without opening them in the editor. With **Load** (Ctrl+O), files over 5 MiB ask whether to run them directly.
-- The file is read in chunks (constant memory) and `DELIMITER` carries over between chunks.
+- Before running, a dialog shows the server and asks for the database (the list filters as you type). If the file selects its own database with `USE`, choose **As in the file** or **Everything in the database above**, which skips the file's `USE` and `CREATE`/`DROP`/`ALTER DATABASE`. The session's current database does not change.
+- The file is read in chunks (constant memory) and `DELIMITER` carries over between chunks. While it runs, the tree, the other databases and the Data tab stay usable (the import runs on a job connection of its own).
+- On MySQL 8.4 and later, the import connection turns off `restrict_fk_on_non_standard_key`, so dumps from MySQL 8.0 with foreign keys to non-unique keys load.
 - The file's statements do not go to the SQL log; the log shows the summary and each error with the statement number and line.
-- If it stops on an error (Stop on errors) or is cancelled, **Resume** continues at the statement that failed. An import interrupted by a crash shows up on the next start with the option to resume or discard it. If the file changed in the meantime, it does not resume.
+- If it stops on an error (Stop on errors) or is cancelled, **Resume** continues at the statement that failed, after replaying the file's `USE` and `SET` statements so the rest runs in the same database and with the same settings. An import interrupted by a crash shows up on the next start with the option to resume or discard it. If the file changed in the meantime, it does not resume.
 
 ### Import CSV file (Tools)
 

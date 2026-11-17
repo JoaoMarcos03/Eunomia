@@ -70,8 +70,8 @@ public sealed partial class MainWindow
     /// <summary>Lost-transaction warnings when a session's primary connection drops.</summary>
     private void WatchTransactions(OpenSession open)
     {
-        open.Host.Transactions.Changed += (_, _) => Dispatcher.UIThread.Post(UpdateStatusBar);
-        open.Host.TransactionLost += (_, _) => Dispatcher.UIThread.Post(() =>
+        open.Host.Transactions.Changed += (_, _) => Dispatcher.Post(UpdateStatusBar);
+        open.Host.TransactionLost += (_, _) => Dispatcher.Post(() =>
         {
             var message = $"The connection of session \"{open.Name}\" was lost while a transaction with changes was open. " +
                           "The server rolled the transaction back: the changes made since it started were NOT saved.";

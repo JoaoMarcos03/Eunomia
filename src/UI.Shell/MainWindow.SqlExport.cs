@@ -67,7 +67,7 @@ public sealed partial class MainWindow
         var servers = sessions.Catalog.Sessions
             .Where(s => s.Id != open.Definition.Id)
             .OrderBy(s => s.Path, StringComparer.OrdinalIgnoreCase)
-            .Select(s => new SqlExportServer(s.Id, s.Path))
+            .Select(s => new SqlExportServer(s.Id, s.Path, s.Color))
             .ToList();
         var sameServer = new Dictionary<Guid, bool>();
         return new SqlExportTargets(
@@ -149,9 +149,13 @@ public sealed partial class MainWindow
             await clipboard.SetTextAsync(text);
         }
         var where = request.Target == SqlExportTarget.Clipboard ? "clipboard" : request.Path;
-        _context.Diagnostics.Write(Eunomia.App.Diagnostics.DiagnosticLevel.Info, "export",
-            $"SQL export ({request.Target}) to {where}: {result.Items.Count} object(s), {result.BytesWritten} bytes, cancelled: {result.Cancelled}");
-        var errors = result.Items.Count(i => i.State == SqlExportItemState.Failed);
+        var failed = result.Items.Where(i => i.State == SqlExportItemState.Failed).ToList();
+        _context.Diagnostics.Write(failed.Count > 0 ? Eunomia.App.Diagnostics.DiagnosticLevel.Warning : Eunomia.App.Diagnostics.DiagnosticLevel.Info, "export",
+            string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"SQL export ({request.Target}) to {where}: {result.Items.Count} object(s), {result.BytesWritten} bytes of SQL{(result.FileBytes is { } file ? $", file {file} bytes" : string.Empty)}, cancelled: {result.Cancelled}")
+                + string.Concat(failed.Select(i => $"\n  failed {i.Database}.{i.Name} ({i.Kind}): {i.Error}")));
+        var errors = failed.Count;
         _context.Log.Append(
             result.Cancelled || errors > 0 ? LogCategory.Error : LogCategory.Info,
             string.Create(

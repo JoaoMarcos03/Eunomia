@@ -91,6 +91,12 @@ public sealed partial class MainWindow
         {
             return;
         }
+        OpenUrl(url);
+    }
+
+    /// <summary>The browser on an http/https address (the grid's Open URL, the update notice); tests use <see cref="OpenUrlOverride"/>.</summary>
+    private void OpenUrl(string url)
+    {
         if (OpenUrlOverride is { } open)
         {
             open(url);

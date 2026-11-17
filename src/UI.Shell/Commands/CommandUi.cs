@@ -30,11 +30,18 @@ public sealed class CommandUi
     private readonly DispatcherTimer _timer;
     private bool _refreshPosted;
 
+    /// <summary>
+    /// The UI thread's dispatcher, taken when the shell is built: the registry may raise its events on other threads, and
+    /// those must not read <see cref="Dispatcher.UIThread"/> (in the headless tests, a read between two tests would make
+    /// that thread the UI thread of the next one).
+    /// </summary>
+    private readonly Dispatcher _dispatcher = Dispatcher.UIThread;
+
     public CommandUi(CommandRegistry registry)
     {
         _registry = registry;
         _registry.StatesInvalidated += (_, _) => PostRefresh();
-        IconFactory.ThemeChanged += (_, _) => Dispatcher.UIThread.Post(RefreshIcons);
+        IconFactory.ThemeChanged += (_, _) => _dispatcher.Post(RefreshIcons);
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => RefreshToolbar());
         _timer.Start();
     }
@@ -423,7 +430,7 @@ public sealed class CommandUi
             return;
         }
         _refreshPosted = true;
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             _refreshPosted = false;
             Refresh();

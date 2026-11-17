@@ -70,6 +70,9 @@ public sealed class QueryTabTests
             await WaitAsync(() => grid.SortIndicators.Count == 1 && grid.GetDisplayText(1, 1) == "Ana" ? "ok" : null);
             Assert.Equal("(NULL)", grid.GetDisplayText(0, 1));
             Assert.Equal(new GridSortIndicator(false, 1), grid.SortIndicators[1]);
+            // The sorted rows size the columns again (the arrow widens the header): click where the header is now.
+            await grid.PendingAutoSize;
+            header = grid.TranslatePoint(new Point(grid.CellBounds(0, 1).Center.X, grid.HeaderHeight / 2), window)!.Value;
             window.MouseDown(header, MouseButton.Left, RawInputModifiers.None);
             window.MouseUp(header, MouseButton.Left, RawInputModifiers.None);
             await WaitAsync(() => grid.GetDisplayText(0, 1) == "rui" ? "ok" : null);

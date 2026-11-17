@@ -53,8 +53,8 @@ public sealed partial class MainWindow
             return;
         }
         _managerModel = new SessionManagerModel(sessions.Catalog, sessions.Store, sessions.Secrets);
-        sessions.Connector.SessionOpened += (_, open) => Dispatcher.UIThread.Post(() => OnSessionOpened(open));
-        sessions.Connector.SessionClosed += (_, closed) => Dispatcher.UIThread.Post(() => OnSessionClosed(closed));
+        sessions.Connector.SessionOpened += (_, open) => Dispatcher.Post(() => OnSessionOpened(open));
+        sessions.Connector.SessionClosed += (_, closed) => Dispatcher.Post(() => OnSessionClosed(closed));
 
         var c = _context.Commands;
         c.SetHandler("session.manager", _ => new ValueTask(ShowSessionManagerAsync(startup: false)));
@@ -180,7 +180,7 @@ public sealed partial class MainWindow
             ImportHeidiSqlAsync = ImportHeidiSqlRegistry is null ? null : owner => ImportHeidiSqlAsync(owner, ask: false),
             ExportSettingsAsync = ExportSettingsFile is null ? null : owner => ExportSettingsAsync(owner),
             ShowPreferencesAsync = owner => new PreferencesWindowLauncher(_context).ShowAsync(owner),
-            ShowAboutAsync = owner => AboutDialog.ShowAsync(owner, ShellContext.Version),
+            ShowAboutAsync = owner => AboutDialog.ShowAsync(owner, ShellContext.DisplayVersion),
             ListDatabasesAsync = (values, credentials) => sessions.Connector.ListDatabasesAsync(values, credentials, CancellationToken.None),
             Version = ShellContext.Version,
         });
@@ -265,7 +265,7 @@ public sealed partial class MainWindow
         AttachTree(open, node);
         _model.AddRoot(node);
         WatchTransactions(open);
-        open.Host.StateChanged += (_, e) => Dispatcher.UIThread.Post(() =>
+        open.Host.StateChanged += (_, e) => Dispatcher.Post(() =>
         {
             node.IsGhosted = e.State is SessionState.Reconnecting or SessionState.Failed or SessionState.Closed;
             _tree.Tree.InvalidateVisual();
@@ -308,7 +308,7 @@ public sealed partial class MainWindow
 
     private void FocusSessionNode(Guid id, bool showHostTab = true)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.Post(() =>
         {
             if (_sessionNodes.TryGetValue(id, out var node))
             {

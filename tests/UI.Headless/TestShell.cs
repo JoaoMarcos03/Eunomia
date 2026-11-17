@@ -13,7 +13,8 @@ internal static class TestShell
         settings.MainWindow.Width = 1280;
         settings.MainWindow.Height = 800;
         store = new MemorySettingsStore(settings);
-        return new ShellContext(settings, store);
+        // A fixed computer, so the preferences read the same everywhere; with 16 GB no default limit is lowered.
+        return new ShellContext(settings, store) { Machine = new MachineProfile(8, 16L * 1024 * 1024 * 1024) };
     }
 
     internal sealed class MemorySettingsStore(AppSettings settings) : ISettingsStore

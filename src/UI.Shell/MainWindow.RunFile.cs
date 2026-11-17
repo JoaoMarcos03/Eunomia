@@ -30,6 +30,9 @@ public sealed partial class MainWindow
 
     internal SqlFileRunWindow? RunWindow => _runWindow;
 
+    /// <summary>Replaces the target dialog of Run SQL file (tests); <c>null</c> cancels.</summary>
+    internal Func<RunSqlFileDialog, RunSqlFileTarget?>? RunTargetOverride { get; set; }
+
     private void InitRunFile()
     {
         _context.Commands.SetHandler("query.runFile", _ => new ValueTask(RunSqlFileCommandAsync()), () => ActiveSession is { Host.State: SessionState.Ready } && _runWindow is null);
@@ -114,21 +117,44 @@ public sealed partial class MainWindow
             await MessageDialog.ShowAsync(this, "Run SQL file", "Connect to a session first.", MessageDialogButtons.Ok);
             return;
         }
-        if (!await ConfirmWritesAsync(open, string.Create(CultureInfo.InvariantCulture,
-                $"Run {paths.Count} SQL file(s) in database \"{open.Host.CurrentDatabase ?? "(none)"}\"?\n\n{string.Join("\n", paths.Select(Path.GetFileName))}")))
+        if (open.Definition.ReadOnly)
+        {
+            ShowEditError(ReadOnlyMessage(open));
+            return;
+        }
+        var selected = await Task.Run(() => SelectedDatabases(paths, encoding));
+        IReadOnlyList<string> databases;
+        try
+        {
+            databases = await open.Metadata.GetDatabasesAsync(CancellationToken.None);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            _context.Log.Append(LogCategory.Error, e.Message);
+            databases = open.Host.CurrentDatabase is { } current ? [current] : [];
+        }
+        // The database selected in the tree (the session's own: ActiveSession is the focused node's), else the current one.
+        var database = _tree.Tree.FocusedNode?.Database?.Name ?? open.Host.CurrentDatabase;
+        var dialog = new RunSqlFileDialog(ServerText(open), paths, databases, database, selected);
+        var target = RunTargetOverride is { } choose ? choose(dialog) : await RunSqlFileDialog.ShowAsync(this, dialog);
+        if (target is null)
         {
             return;
         }
-        RunningFiles = RunSqlFilesAsync(open, paths, encoding, resume: null);
+        RunningFiles = RunSqlFilesAsync(open, paths, encoding, resume: null, target);
         await RunningFiles;
     }
 
+    /// <summary>"name (host:port)", in the target dialog and the progress window.</summary>
+    private static string ServerText(OpenSession open) =>
+        string.Create(CultureInfo.InvariantCulture, $"{open.Name} ({open.Definition.Host}:{open.Definition.Port})");
+
     /// <summary>Runs the files one by one in the progress window; a stopped job waits for Resume or Close.</summary>
-    private async Task RunSqlFilesAsync(OpenSession open, IReadOnlyList<string> paths, string encoding, TransferJournalEntry? resume)
+    private async Task RunSqlFilesAsync(OpenSession open, IReadOnlyList<string> paths, string encoding, TransferJournalEntry? resume, RunSqlFileTarget? target = null)
     {
         var journal = _context.TransferJournal;
         var total = paths.Sum(SizeOf) + (resume is null ? 0 : SizeOf(resume.Path));
-        var window = new SqlFileRunWindow(total);
+        var window = new SqlFileRunWindow(total, ServerText(open));
         _runWindow = window;
         window.Closed += (_, _) =>
         {
@@ -146,27 +172,31 @@ public sealed partial class MainWindow
         {
             SqlFileJob job;
             string path;
+            string? database;
             if (resume is not null)
             {
                 path = resume.Path;
+                database = resume.Database;
                 job = journal is null ? new SqlFileJob(open.Host, SqlFileJob.RequestOf(resume)) : new SqlFileJob(open.Host, resume, journal);
                 resume = null;
             }
             else
             {
                 path = Path.GetFullPath(queue.Dequeue());
+                database = target is null ? open.Host.CurrentDatabase : target.Database;
                 job = new SqlFileJob(open.Host, new SqlFileRequest
                 {
                     Path = path,
                     Encoding = encoding,
-                    Database = open.Host.CurrentDatabase,
+                    Database = database,
+                    StayInDatabase = target is { StayInDatabase: true } && database is not null,
                     StopOnErrors = _context.Settings.Query.StopOnErrors,
                     BatchInOneGo = _context.Settings.Query.BatchInOneGo,
                     Delimiter = _context.Settings.Query.Delimiter,
                     Session = open.Name,
                 }, journal);
             }
-            window.Start(path, done);
+            window.Start(path, done, database);
             var result = await RunFileJobAsync(window, job, path);
             if (result is { Completed: true })
             {
@@ -186,6 +216,23 @@ public sealed partial class MainWindow
         var summary = string.Create(CultureInfo.InvariantCulture, $"{processed} file(s) processed, in {elapsed.TotalSeconds:0.0} s");
         _context.Log.Append(LogCategory.Info, summary);
         window.Finish(summary + ".", canResume: false);
+    }
+
+    /// <summary>Databases the files select with USE at their start (a file that cannot be read adds nothing: running it reports the error).</summary>
+    private static List<string> SelectedDatabases(IReadOnlyList<string> paths, string encoding)
+    {
+        var result = new List<string>();
+        foreach (var path in paths)
+        {
+            try
+            {
+                result.AddRange(SqlFileJob.DatabasesSelectedBy(path, encoding).Where(d => !result.Contains(d, StringComparer.Ordinal)));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+            }
+        }
+        return result;
     }
 
     private static long SizeOf(string path)

@@ -108,6 +108,8 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         var select = _select;
         try
         {
+            // Without the session's query timeout: a page of a large table (rows with big BLOBs, a cold server) can take
+            // longer than 30 s, and it was cancelled with nothing shown. Esc and another choice in the tree cancel it.
             await _host.RunPrimaryAsync(async (handle, ct) =>
             {
                 await foreach (var e in handle.Executor.ExecuteAsync(SqlBatch.Single(select.Sql), options, ct).ConfigureAwait(false))
@@ -127,7 +129,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
                     }
                 }
                 return true;
-            }, cancellationToken, abandonGrace: AbandonGrace).ConfigureAwait(false);
+            }, cancellationToken, applyQueryTimeout: false, abandonGrace: AbandonGrace).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -144,7 +146,8 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
 
     /// <summary>
     /// The same rows already loaded, with nothing cut (appendix D B4: Export and Copy as run the SELECT again without
-    /// <c>LEFT()</c>), in the same order. The caller disposes the result.
+    /// <c>LEFT()</c>), in the same order. The caller disposes the result. Without the query timeout, like the pages: with the
+    /// whole values it reads even more than they did.
     /// </summary>
     public async Task<MaterializedRowSource> LoadFullRowsAsync(CancellationToken cancellationToken)
     {
@@ -168,7 +171,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
                 }
             }
             return true;
-        }, cancellationToken).ConfigureAwait(false);
+        }, cancellationToken, applyQueryTimeout: false).ConfigureAwait(false);
         result?.Complete();
         return result ?? throw new InvalidOperationException("No result.");
     }

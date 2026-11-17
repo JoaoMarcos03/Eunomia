@@ -77,12 +77,54 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
 
     public string? RestoreForeignKeyChecks => "SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1)";
 
-    public DumpSessionSql DumpSession { get; } = new(
-        ["SET @OLD_LOCAL_SQL_MODE=@@SQL_MODE, SQL_MODE=''", "SET @OLD_TIME_ZONE=@@TIME_ZONE", "SET TIME_ZONE='+00:00'"],
-        ["SET SQL_MODE=@OLD_LOCAL_SQL_MODE", "SET TIME_ZONE=@OLD_TIME_ZONE"],
-        ["SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ", "START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */"],
-        "ROLLBACK",
-        "SELECT @@version_compile_os");
+    public DumpSessionSql DumpSession { get; } = BuildDumpSession(server);
+
+    /// <summary>
+    /// Besides SQL_MODE and TIME_ZONE, as mysqldump does: no server limit on statement time (a host may set one globally or,
+    /// on MariaDB, per user, and the SELECT of a large table stopped in the middle with error 3024 or 1969, leaving the
+    /// table cut in the file), and a long <c>net_write_timeout</c> (after 60 s, by default, of a client that does not read,
+    /// such as a slow disk or network share under the file, the server drops the connection). Each value is restored.
+    /// </summary>
+    private static DumpSessionSql BuildDumpSession(ServerIdentity server)
+    {
+        List<string> setup =
+        [
+            "SET @OLD_LOCAL_SQL_MODE=@@SQL_MODE, SQL_MODE=''", "SET @OLD_TIME_ZONE=@@TIME_ZONE", "SET TIME_ZONE='+00:00'",
+            "SET @OLD_NET_WRITE_TIMEOUT=@@NET_WRITE_TIMEOUT, NET_WRITE_TIMEOUT=GREATEST(@@NET_WRITE_TIMEOUT, 3600)",
+        ];
+        List<string> restore = ["SET SQL_MODE=@OLD_LOCAL_SQL_MODE", "SET TIME_ZONE=@OLD_TIME_ZONE", "SET NET_WRITE_TIMEOUT=@OLD_NET_WRITE_TIMEOUT"];
+        if (StatementTimeVariable(server) is { } limit)
+        {
+            setup.Add($"SET @OLD_STATEMENT_TIME=@@{limit}, {limit}=0");
+            restore.Add($"SET {limit}=@OLD_STATEMENT_TIME");
+        }
+        return new DumpSessionSql(
+            setup,
+            restore,
+            ["SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ", "START TRANSACTION /*!40100 WITH CONSISTENT SNAPSHOT */"],
+            "ROLLBACK",
+            "SELECT @@version_compile_os");
+    }
+
+    /// <summary>
+    /// The session variable with the server's limit on statement time: <c>max_statement_time</c> (MariaDB 10.1.1+, MySQL
+    /// 5.7.4 to 5.7.7) or <c>max_execution_time</c> (MySQL 5.7.8+); <c>null</c> before those, or with an unknown version.
+    /// </summary>
+    private static string? StatementTimeVariable(ServerIdentity server) => server.Version switch
+    {
+        { Major: 0 } => null,
+        var v when server.Engine == DbEngine.MariaDb => v >= new Version(10, 1, 1) ? "MAX_STATEMENT_TIME" : null,
+        var v when v >= new Version(5, 7, 8) => "MAX_EXECUTION_TIME",
+        var v when v >= new Version(5, 7, 4) => "MAX_STATEMENT_TIME",
+        _ => null,
+    };
+
+    /// <summary>
+    /// MySQL 8.4+ refuses foreign keys to a non-unique or partial key (<c>restrict_fk_on_non_standard_key=ON</c>), even with
+    /// <c>FOREIGN_KEY_CHECKS=0</c>; 8.0 accepted them, so its dumps fail to load without turning the restriction off.
+    /// </summary>
+    public IReadOnlyList<string> ImportSession =>
+        Server.Engine == DbEngine.MySql && Server.Version >= new Version(8, 4) ? ["SET SESSION restrict_fk_on_non_standard_key = OFF"] : [];
 
     public string? SessionModeQuery => "SELECT @@SESSION.sql_mode";
 

@@ -27,8 +27,8 @@ public delegate Task<SqlExportResult> SqlExportRunner(SqlExportRequest request, 
 public delegate Task<SqlExportToServerResult> SqlExportToServerRunner(
     SqlExportRequest request, IProgress<SqlExportProgress> exportProgress, IProgress<SqlFileProgress> importProgress, CancellationToken cancellationToken);
 
-/// <summary>A saved session offered as "Server: &lt;name&gt;".</summary>
-public sealed record SqlExportServer(Guid Id, string Name);
+/// <summary>A saved session offered as "Server: &lt;name&gt;", with its colour (RGB; <c>null</c> or 0 = none).</summary>
+public sealed record SqlExportServer(Guid Id, string Name, uint? Color = null);
 
 /// <summary>
 /// The outputs "Database" and "Server: &lt;session&gt;" (appendix B §2.3.1): the other saved sessions, the databases of a
@@ -88,7 +88,8 @@ public sealed class SqlExportDialog : Window
     private readonly ComboBox _output = new() { MinWidth = 260 };
     private readonly SqlExportTargets? _targets;
     private readonly List<string> _outputs;
-    private readonly ComboBox _targetDatabase = new() { MinWidth = 260, HorizontalAlignment = HorizontalAlignment.Stretch };
+    /// <summary>Typing filters the target's databases (a server can have hundreds); empty text lists them all.</summary>
+    private readonly SearchableSelect _targetDatabase = new() { MinWidth = 260, HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = "Type to search" };
     private readonly TextBlock _pathLabel = new() { Text = "Filename:", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 3) };
     private DockPanel? _pathRow;
     private CancellationTokenSource? _targetLoad;
@@ -211,7 +212,16 @@ public sealed class SqlExportDialog : Window
         Avalonia.Automation.AutomationProperties.SetName(_results, "Export progress");
         Avalonia.Automation.AutomationProperties.SetName(_maxInsert, "Max INSERT size in KB");
         Avalonia.Automation.AutomationProperties.SetName(_path, "Output file name or directory");
-        Avalonia.Automation.AutomationProperties.SetName(_targetDatabase, "Target database");
+        Avalonia.Automation.AutomationProperties.SetName(_targetDatabase.Box, "Target database");
+        // Server rows in the session colour, as in the tree (the list reuses its rows: each one is painted again).
+        _output.ContainerPrepared += (_, e) => PaintOutput(e.Container, e.Index);
+        ActualThemeVariantChanged += (_, _) =>
+        {
+            foreach (var container in _output.GetRealizedContainers())
+            {
+                PaintOutput(container, _output.IndexFromContainer(container));
+            }
+        };
         Content = Layout(browse);
         ApplyFilters();
         UpdateEnabled();
@@ -234,7 +244,7 @@ public sealed class SqlExportDialog : Window
 
     internal ComboBox OutputCombo => _output;
 
-    internal ComboBox TargetDatabaseCombo => _targetDatabase;
+    internal SearchableSelect TargetDatabaseSelect => _targetDatabase;
 
     /// <summary>Answers the confirmation of an export to a database (tests).</summary>
     internal Func<string, Task<bool>>? ConfirmOverride { get; set; }
@@ -469,8 +479,38 @@ public sealed class SqlExportDialog : Window
 
     private bool ToDatabase => Target is SqlExportTarget.Database or SqlExportTarget.Server;
 
-    private SqlExportServer? SelectedServer =>
-        Target == SqlExportTarget.Server && _targets is { } targets ? targets.Servers[_output.SelectedIndex - FileOutputs.Length - 1] : null;
+    private SqlExportServer? SelectedServer => Target == SqlExportTarget.Server ? ServerAt(_output.SelectedIndex) : null;
+
+    /// <summary>The server of a row of the output list, or <c>null</c> (files, clipboard, database).</summary>
+    private SqlExportServer? ServerAt(int index) =>
+        _targets is { } targets && index - FileOutputs.Length - 1 is var i && i >= 0 && i < targets.Servers.Count ? targets.Servers[i] : null;
+
+    /// <summary>
+    /// A row of the output list: a server with a colour gets a soft tint of it over the list's background and a bar with
+    /// the full colour (as in the tree); the other rows keep the theme's.
+    /// </summary>
+    private void PaintOutput(Control container, int index)
+    {
+        if (container is not ComboBoxItem item)
+        {
+            return;
+        }
+        if (ServerAt(index)?.Color is { } rgb && rgb != 0)
+        {
+            // The list's background: Fluent's drop-down background (ChromeMediumLow), the panel in dark and the content in light.
+            var tokens = ThemeTokens.Of(ActualThemeVariant);
+            var background = tokens.Argb(ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark ? "surface.panel" : "surface.content");
+            item.Background = new SolidColorBrush(Color.FromUInt32(ColorMath.SessionTint(rgb, background)));
+            item.BorderBrush = new SolidColorBrush(Color.FromUInt32(rgb | 0xFF000000));
+            item.BorderThickness = new Thickness(3, 0, 0, 0);
+        }
+        else
+        {
+            item.ClearValue(BackgroundProperty);
+            item.ClearValue(BorderBrushProperty);
+            item.ClearValue(BorderThicknessProperty);
+        }
+    }
 
     /// <summary>
     /// Drop/Create of the databases for file, ZIP, clipboard and server (tabletools.pas L1648-L1653); Max INSERT size
@@ -507,7 +547,7 @@ public sealed class SqlExportDialog : Window
         var cts = new CancellationTokenSource();
         _targetLoad = cts;
         var server = SelectedServer;
-        _targetDatabase.ItemsSource = null;
+        _targetDatabase.Items = [];
         _status.Text = server is null ? string.Empty : $"Connecting to {server.Name}...";
         return TargetLoading = LoadAsync();
 
@@ -521,9 +561,10 @@ public sealed class SqlExportDialog : Window
                     return;
                 }
                 List<string> items = server is null ? [.. names] : [SameAsSource, .. names];
-                _targetDatabase.ItemsSource = items;
-                _targetDatabase.SelectedItem = items.FirstOrDefault(n => string.Equals(n, _settings.TargetDatabase, StringComparison.Ordinal))
-                    ?? (server is null ? null : SameAsSource);
+                _targetDatabase.Items = items;
+                _targetDatabase.SelectedItem = items.Contains(_settings.TargetDatabase ?? string.Empty, StringComparer.Ordinal)
+                    ? _settings.TargetDatabase
+                    : server is null ? null : SameAsSource;
                 _status.Text = string.Empty;
             }
             catch (OperationCanceledException)
@@ -637,16 +678,16 @@ public sealed class SqlExportDialog : Window
         _resultRows.Clear();
         ResetResults();
         string? error = null;
+        List<SqlExportItemProgress> failures = [];
         try
         {
             var result = await _run(request, new Progress<SqlExportProgress>(ShowProgress), _running.Token);
             ShowProgress(new SqlExportProgress(result.Items, result.BytesWritten, result.Elapsed));
-            var failed = result.Items.Count(i => i.State == SqlExportItemState.Failed);
-            var size = FormatBytes(result.BytesWritten);
-            _status.Text = result.Cancelled
-                ? "Cancelled."
-                : string.Create(CultureInfo.CurrentCulture, $"Done: {size} in {result.Elapsed.TotalSeconds:0.0} s")
-                    + (failed > 0 ? string.Create(CultureInfo.CurrentCulture, $", {failed} object(s) with errors (see the file).") : ".");
+            if (!result.Cancelled)
+            {
+                failures = [.. result.Items.Where(i => i.State == SqlExportItemState.Failed)];
+            }
+            _status.Text = result.Cancelled ? "Cancelled." : DoneText(result, target, failures.Count);
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
@@ -664,7 +705,43 @@ public sealed class SqlExportDialog : Window
         {
             await MessageDialog.ShowAsync(this, "Error", error, MessageDialogButtons.Ok);
         }
+        else if (failures.Count > 0)
+        {
+            // A line in the status and red rows in a long list are easy to miss: an export with holes must not pass for a complete one.
+            await MessageDialog.ShowAsync(this, "Export finished with errors", FailuresText(failures), MessageDialogButtons.Ok);
+        }
     }
+
+    /// <summary>The SQL written and, for a ZIP, the size of the file: a ZIP of a dump is about a tenth of its SQL, and both differ from the size of the database (indexes, free pages).</summary>
+    internal static string DoneText(SqlExportResult result, SqlExportTarget target, int failed)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        var size = target == SqlExportTarget.Zip && result.FileBytes is { } zipBytes
+            ? $"{FormatBytes(result.BytesWritten)} of SQL in a {FormatBytes(zipBytes)} ZIP file,"
+            : FormatBytes(result.BytesWritten);
+        return string.Create(culture, $"Done: {size} in {result.Elapsed.TotalSeconds:0.0} s")
+            + (failed > 0 ? string.Create(culture, $", {failed:N0} object(s) with errors.") : ".");
+    }
+
+    /// <summary>The objects with errors and their messages (the first <see cref="FailuresShown"/>).</summary>
+    internal static string FailuresText(IReadOnlyList<SqlExportItemProgress> failures)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        var text = new StringBuilder(string.Create(culture, $"{failures.Count:N0} object(s) could not be exported."));
+        text.Append(" In the output, each one has a comment with its error; a table may have only part of its rows.\n");
+        foreach (var item in failures.Take(FailuresShown))
+        {
+            var name = item.Kind == DbObjectKind.Table ? item.Name : item.Name + " (" + KindText(item.Kind) + ")";
+            text.Append(culture, $"\n{item.Database}.{name}: {item.Error}");
+        }
+        if (failures.Count > FailuresShown)
+        {
+            text.Append(culture, $"\n... and {failures.Count - FailuresShown:N0} more (marked in the list).");
+        }
+        return text.ToString();
+    }
+
+    private const int FailuresShown = 10;
 
     private SqlExportRequest BuildRequest(List<SqlExportDatabase> databases, SqlExportTarget target, string path) => new()
     {
@@ -698,7 +775,7 @@ public sealed class SqlExportDialog : Window
             return;
         }
         var server = SelectedServer;
-        var selected = _targetDatabase.SelectedItem as string;
+        var selected = _targetDatabase.SelectedItem;
         var targetDatabase = selected == SameAsSource ? null : selected;
         if (selected is null)
         {

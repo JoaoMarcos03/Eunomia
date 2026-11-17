@@ -42,6 +42,12 @@ public sealed class RunSqlFileTests
             window.Tree.Tree.FocusedNode = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db));
             var open = connector.Find(session.Id)!;
             await WaitAsync(() => open.Host.CurrentDatabase == db ? "ok" : null);
+            var dialogs = new List<RunSqlFileDialog>();
+            window.RunTargetOverride = d =>
+            {
+                dialogs.Add(d);
+                return d.Result;
+            };
 
             // Over 5 MiB: Load asks and "Run file(s) directly" runs it without opening it.
             var big = new StringBuilder("CREATE TABLE t (id INT PRIMARY KEY, txt VARCHAR(200));\r\n");
@@ -78,6 +84,11 @@ public sealed class RunSqlFileTests
             Assert.Contains(log.Snapshot(), l => l.Text.Contains($"File {bigPath} executed, with {statements + 1} queries and {row} affected rows", StringComparison.Ordinal));
             var run = Assert.IsType<SqlFileRunWindow>(window.RunWindow);
             Assert.Equal("1 file(s) processed", run.Line1.Split(',')[0]);
+            // The target dialog named the server and the database, and so does the progress window.
+            var asked1 = Assert.Single(dialogs);
+            Assert.Equal($"it ({session.Host}:{session.Port})", asked1.Server);
+            Assert.Equal(db, asked1.DatabaseSelect.SelectedItem);
+            Assert.Equal($"Server: it ({session.Host}:{session.Port}) · Database: {db}", run.Target);
             Assert.False(run.ResumeButton.IsVisible);
             run.Close();
 
@@ -106,6 +117,98 @@ public sealed class RunSqlFileTests
         finally
         {
             await ExecAsync(cs, $"DROP DATABASE IF EXISTS `{db}`");
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// A dump that creates and selects its own database: the dialog says so and lets it run in another database
+    /// (its USE and CREATE DATABASE skipped) or as in the file; the progress window follows the USE; the session's
+    /// current database never changes; Cancel runs nothing.
+    /// </summary>
+    [AvaloniaFact(Timeout = UiTimeouts.Default)]
+    public async Task ADumpOfAnotherDatabaseRunsInTheChosenOneOrAsInTheFile()
+    {
+        var cs = ConnectionString();
+        Assert.SkipWhen(cs is null, "No test server.");
+        var db = NewDatabaseName("eunomia_rt_");
+        var db2 = db + "_b";
+        var src = db + "_src";
+        var dir = Path.Combine(Path.GetTempPath(), "eunomia-it", "runtarget-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(dir);
+        await ExecAsync(cs, $"CREATE DATABASE `{db}`");
+        await ExecAsync(cs, $"CREATE DATABASE `{db2}`");
+        try
+        {
+            var (window, context, session, connector, _) = CreateShell(cs, $"{db};{db2}");
+            Assert.True(await window.ConnectAsync(window, session, null));
+            var model = window.Tree.Tree.Model!;
+            var root = await WaitAsync(() => model.Roots.FirstOrDefault());
+            window.Tree.Tree.FocusedNode = await WaitAsync(() => root.Children?.FirstOrDefault(n => n.Name == db));
+            var open = connector.Find(session.Id)!;
+            await WaitAsync(() => open.Host.CurrentDatabase == db ? "ok" : null);
+
+            var dump = Path.Combine(dir, "dump.sql");
+            await File.WriteAllTextAsync(dump,
+                $"/*!40014 SET FOREIGN_KEY_CHECKS=0 */;\nCREATE DATABASE IF NOT EXISTS `{src}`;\nUSE `{src}`;\nCREATE TABLE t (id INT, db VARCHAR(64));\nINSERT INTO t VALUES (1, DATABASE());\n");
+            window.OpenSqlFilesOverride = () => [dump];
+            window.LoadEncodingOverride = () => SqlFile.AutoDetect;
+            var server = $"it ({session.Host}:{session.Port})";
+
+            // Cancel in the dialog: nothing runs, no progress window.
+            RunSqlFileDialog? asked = null;
+            window.RunTargetOverride = d =>
+            {
+                asked = d;
+                return null;
+            };
+            Assert.True(await context.Commands.ExecuteAsync("query.runFile"));
+            Assert.NotNull(asked);
+            Assert.Null(window.RunWindow);
+            Assert.Equal("0", await ScalarAsync(cs, $"SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '{src}'"));
+
+            // What the dialog shows: the server, the focused database (any of the session's can be chosen), the file's USE.
+            Assert.Equal(server, asked.Server);
+            Assert.Equal(db, asked.DatabaseSelect.SelectedItem);
+            Assert.Contains(db2, asked.DatabaseSelect.Items);
+            Assert.True(asked.AsFileOption.IsChecked);
+            Assert.True(asked.StayOption.IsEnabled);
+            Assert.Equal("dump.sql", asked.Files);
+
+            // Everything in db2: the rows land there, the file's database is never created.
+            window.RunTargetOverride = d =>
+            {
+                d.DatabaseSelect.SelectedItem = db2;
+                d.StayOption.IsChecked = true;
+                return d.Result;
+            };
+            Assert.True(await context.Commands.ExecuteAsync("query.runFile"));
+            await window.RunningFiles;
+            var run = Assert.IsType<SqlFileRunWindow>(window.RunWindow);
+            Assert.StartsWith("1 file(s) processed", run.Line1, StringComparison.Ordinal);
+            Assert.Equal($"Server: {server} · Database: {db2}", run.Target);
+            Assert.Equal(db2, await ScalarAsync(cs, $"SELECT db FROM `{db2}`.t"));
+            Assert.Equal("0", await ScalarAsync(cs, $"SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '{src}'"));
+            Assert.Equal(db, open.Host.CurrentDatabase);
+            run.Close();
+
+            // As in the file: it creates its database and runs there; the progress window follows the USE.
+            window.RunTargetOverride = d => d.Result;
+            Assert.True(await context.Commands.ExecuteAsync("query.runFile"));
+            await window.RunningFiles;
+            run = Assert.IsType<SqlFileRunWindow>(window.RunWindow);
+            await WaitAsync(() => run.Target.EndsWith("Database: " + src, StringComparison.Ordinal) ? "ok" : null);
+            Assert.Equal(src, await ScalarAsync(cs, $"SELECT db FROM `{src}`.t"));
+            Assert.Equal("0", await ScalarAsync(cs, $"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{db}'"));
+            Assert.Equal(db, open.Host.CurrentDatabase);
+            run.Close();
+            window.Close();
+        }
+        finally
+        {
+            await ExecAsync(cs, $"DROP DATABASE IF EXISTS `{db}`");
+            await ExecAsync(cs, $"DROP DATABASE IF EXISTS `{db2}`");
+            await ExecAsync(cs, $"DROP DATABASE IF EXISTS `{src}`");
             Directory.Delete(dir, recursive: true);
         }
     }

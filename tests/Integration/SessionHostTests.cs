@@ -151,6 +151,64 @@ public sealed class SessionHostTests
         await host.DisposeAsync();
     }
 
+    /// <summary>
+    /// The timeout counts from when the query starts: a query queued behind a long one without the timeout (a Data tab page)
+    /// runs in full, where it used to time out while it waited.
+    /// </summary>
+    [Fact]
+    public async Task TheTimeoutDoesNotCountTheWaitInTheQueue()
+    {
+        TestServer.RequireServer();
+        var (host, _) = Create(s => s with { QueryTimeout = TimeSpan.FromSeconds(1.5) });
+        await host.ConnectAsync(Ct);
+
+        var page = host.RunPrimaryAsync(async (h, ct) => Convert.ToInt64(await h.ExecuteScalarAsync("SELECT SLEEP(2)", ct), System.Globalization.CultureInfo.InvariantCulture), Ct, applyQueryTimeout: false);
+        await Task.Delay(200, Ct);
+        var clock = Stopwatch.StartNew();
+        // Waits ~1.8 s for the page, then runs 1 s: 2.8 s in all, over the 1.5 s timeout, 1 s of it on the server.
+        Assert.Equal(0L, await ScalarAsync(host, "SELECT SLEEP(1)"));
+
+        Assert.True(clock.Elapsed > TimeSpan.FromSeconds(1.5), clock.Elapsed.ToString());
+        Assert.Equal(0L, await page);
+        // Still applies once the query runs.
+        await Assert.ThrowsAsync<TimeoutException>(() => ScalarAsync(host, "SELECT SLEEP(5)"));
+        await host.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Cancelled while it waits behind a long query (Esc on a Data tab page queued behind a query tab's run), the work ends
+    /// now, not when the connection is free; it never runs and the query goes on.
+    /// </summary>
+    [Fact]
+    public async Task CancellingQueuedWorkEndsItAtOnce()
+    {
+        TestServer.RequireServer();
+        var (host, _) = Create();
+        await host.ConnectAsync(Ct);
+        var query = ScalarAsync(host, "SELECT SLEEP(3)");
+        await Task.Delay(200, Ct);
+        using var page = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        var ran = 0;
+        var queued = host.RunPrimaryAsync(async (h, ct) =>
+        {
+            Interlocked.Exchange(ref ran, 1);
+            return await h.ExecuteScalarAsync("SELECT 1", ct);
+        }, page.Token, applyQueryTimeout: false);
+        await Task.Delay(100, Ct);
+        var clock = Stopwatch.StartNew();
+
+        await page.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => queued);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(1), clock.Elapsed.ToString());
+        Assert.False(query.IsCompleted);
+        Assert.Equal(0L, await query);
+        Assert.Equal(0, Volatile.Read(ref ran));
+        // The lane drops it when it gets there and goes on.
+        Assert.Equal(1L, await ScalarAsync(host, "SELECT 1"));
+        await host.DisposeAsync();
+    }
+
     [Fact]
     public async Task StartupScriptAndTimeZoneOnEveryConnection()
     {

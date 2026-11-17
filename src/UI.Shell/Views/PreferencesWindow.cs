@@ -54,6 +54,7 @@ public sealed class PreferencesWindow : Window
     private bool _autoReconnect;
     private bool _restoreLastDatabase;
     private bool _openTablesInDataTab;
+    private bool _checkForUpdates;
     private string _theme;
     private readonly CommandRegistry _shortcuts;
 
@@ -90,6 +91,7 @@ public sealed class PreferencesWindow : Window
             ResultMemoryMb = d.ResultMemoryMb,
             SpillQuotaMb = d.SpillQuotaMb,
             GlobalResultMemoryMb = d.GlobalResultMemoryMb,
+            AdjustMemoryToComputer = d.AdjustMemoryToComputer,
             MaxColumnWidth = d.MaxColumnWidth,
             FontName = d.FontName,
             FontSize = d.FontSize,
@@ -98,6 +100,7 @@ public sealed class PreferencesWindow : Window
         _autoReconnect = context.Settings.SessionManager.AutoReconnect;
         _restoreLastDatabase = context.Settings.SessionManager.RestoreLastUsedDatabase;
         _openTablesInDataTab = context.Settings.Tree.OpenTablesInDataTab;
+        _checkForUpdates = context.Settings.Updates.CheckOnStartup;
         _shortcuts = HeidiSqlCatalog.CreateRegistry();
         _shortcuts.ImportShortcutOverrides(context.Commands.ExportShortcutOverrides());
 
@@ -170,6 +173,7 @@ public sealed class PreferencesWindow : Window
         panel.Children.Add(Check("Restore last used database on startup", _restoreLastDatabase, v => _restoreLastDatabase = v));
         panel.Children.Add(Check("Display bars in various list columns", _bars, v => _bars = v));
         panel.Children.Add(Check("Open tables and views on their data (Data tab) instead of their structure", _openTablesInDataTab, v => _openTablesInDataTab = v));
+        panel.Children.Add(Check("Check for updates on startup (once a day, on GitHub)", _checkForUpdates, v => _checkForUpdates = v));
         var snippets = new TextBox
         {
             Text = _query.SnippetsDirectory ?? string.Empty,
@@ -215,8 +219,19 @@ public sealed class PreferencesWindow : Window
         panel.Children.Add(Labeled("Memory per result (MB):", Number(_data.ResultMemoryMb, 16, 65_536, v => _data.ResultMemoryMb = v)));
         panel.Children.Add(Labeled("Memory for all results (MB):", Number(_data.GlobalResultMemoryMb, 64, 262_144, v => _data.GlobalResultMemoryMb = v)));
         panel.Children.Add(Labeled("Disk space for large results (MB, 0 = none):", Number(_data.SpillQuotaMb, 0, 1_048_576, v => _data.SpillQuotaMb = v)));
-        panel.Children.Add(Note("Results above the memory limits go to temporary files on disk instead of being cut."));
+        panel.Children.Add(Check("Lower the memory limits to fit this computer", _data.AdjustMemoryToComputer, v => _data.AdjustMemoryToComputer = v));
+        panel.Children.Add(Note(MemoryNote(_context.Machine)));
         return panel;
+    }
+
+    /// <summary>What happens above the limits, what this computer has and how far the option lowers the limits there.</summary>
+    internal static string MemoryNote(MachineProfile machine)
+    {
+        ArgumentNullException.ThrowIfNull(machine);
+        var note = "Results above the memory limits go to temporary files on disk instead of being cut. This computer: " + machine.Description + ".";
+        return machine.MemoryBytes <= 0
+            ? note + " Its memory is unknown, so the limits are used as they are."
+            : note + string.Create(CultureInfo.InvariantCulture, $" With the option on, the limits are at most {machine.ResultMemoryLimitMb:N0} MB per result and {machine.GlobalResultMemoryLimitMb:N0} MB for all results.");
     }
 
     private Control BuildDataEditors()
@@ -448,6 +463,7 @@ public sealed class PreferencesWindow : Window
         data.ResultMemoryMb = _data.ResultMemoryMb;
         data.GlobalResultMemoryMb = _data.GlobalResultMemoryMb;
         data.SpillQuotaMb = _data.SpillQuotaMb;
+        data.AdjustMemoryToComputer = _data.AdjustMemoryToComputer;
         data.MaxColumnWidth = _data.MaxColumnWidth;
         data.FontName = _data.FontName;
         data.FontSize = _data.FontSize;
@@ -455,6 +471,7 @@ public sealed class PreferencesWindow : Window
         settings.SessionManager.AutoReconnect = _autoReconnect;
         settings.SessionManager.RestoreLastUsedDatabase = _restoreLastDatabase;
         settings.Tree.OpenTablesInDataTab = _openTablesInDataTab;
+        settings.Updates.CheckOnStartup = _checkForUpdates;
         settings.Theme = _theme;
         if (Application.Current is { } app)
         {
@@ -492,6 +509,7 @@ public sealed class PreferencesWindow : Window
         current.ResultMemoryMb = data.ResultMemoryMb;
         current.GlobalResultMemoryMb = data.GlobalResultMemoryMb;
         current.SpillQuotaMb = data.SpillQuotaMb;
+        current.AdjustMemoryToComputer = data.AdjustMemoryToComputer;
         current.MaxColumnWidth = data.MaxColumnWidth;
         current.FontName = data.FontName;
         current.FontSize = data.FontSize;
@@ -499,6 +517,7 @@ public sealed class PreferencesWindow : Window
         _context.Settings.SessionManager.AutoReconnect = false;
         _context.Settings.SessionManager.RestoreLastUsedDatabase = true;
         _context.Settings.Tree.OpenTablesInDataTab = new TreeOptions().OpenTablesInDataTab;
+        _context.Settings.Updates.CheckOnStartup = new UpdateOptions().CheckOnStartup;
         _context.Commands.ImportShortcutOverrides(new Dictionary<string, string>());
         _context.SaveSettings();
         Close(true);

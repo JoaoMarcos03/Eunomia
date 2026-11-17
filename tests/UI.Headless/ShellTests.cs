@@ -292,6 +292,41 @@ public sealed class ShellTests
         window.Close();
     }
 
+    /// <summary>
+    /// The memory limits fit the computer (16 GB in the tests: 512 MB per result, 2 GB for all) until the option is
+    /// turned off in the preferences; the page says what the computer has and what the limits are.
+    /// </summary>
+    [AvaloniaFact]
+    public void PreferencesFitTheMemoryToTheComputer()
+    {
+        var settings = new AppSettings();
+        settings.Data.ResultMemoryMb = 4096;
+        settings.Data.GlobalResultMemoryMb = 8192;
+        var window = Open(settings);
+        Assert.Equal(512L * 1024 * 1024, window.Context.ResultMemoryBytes);
+        Assert.Equal(2048L * 1024 * 1024, window.Context.GlobalResultMemoryBytes);
+
+        var prefs = new PreferencesWindow(window.Context, PreferencesWindow.DataPage);
+        prefs.Show();
+        var texts = prefs.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+        Assert.Contains(texts, t => t is not null && t.Contains("This computer: 8 processors, 16.0 GB of memory.", StringComparison.Ordinal)
+            && t.Contains("at most 512 MB per result and 2,048 MB for all results", StringComparison.Ordinal));
+        var fit = prefs.GetLogicalDescendants().OfType<CheckBox>().Distinct().Single(c => Equals(c.Content, "Lower the memory limits to fit this computer"));
+        Assert.True(fit.IsChecked);
+
+        fit.IsChecked = false;
+        prefs.Apply();
+        prefs.Close();
+        Assert.False(window.Context.Settings.Data.AdjustMemoryToComputer);
+        Assert.Equal(4096L * 1024 * 1024, window.Context.ResultMemoryBytes);
+        Assert.Equal(8192L * 1024 * 1024, window.Context.GlobalResultMemoryBytes);
+        window.Close();
+    }
+
+    [Fact]
+    public void AComputerOfUnknownMemoryKeepsTheLimits() =>
+        Assert.EndsWith("Its memory is unknown, so the limits are used as they are.", PreferencesWindow.MemoryNote(MachineProfile.Unknown), StringComparison.Ordinal);
+
     [AvaloniaFact]
     public void TabBarClosesTabsToTheRightAndPersistsItsOptions()
     {

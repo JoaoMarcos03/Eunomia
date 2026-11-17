@@ -154,9 +154,10 @@ internal sealed class ConnectionLane : IAsyncDisposable
             {
                 continue;
             }
-            if (item.Token.IsCancellationRequested)
+            if (!item.TryStart() || item.Token.IsCancellationRequested)
             {
                 item.SetCanceled();
+                item.Dispose();
                 continue;
             }
             Volatile.Write(ref _current, item);
@@ -283,6 +284,10 @@ internal sealed class ConnectionLane : IAsyncDisposable
         private readonly CancellationTokenSource _work = new();
         private readonly CancellationTokenRegistration _abandoned;
         private readonly CancellationTokenRegistration _closing;
+        private readonly CancellationTokenRegistration _dropped;
+
+        /// <summary>0 waiting in the queue, 1 taken to run, 2 cancelled while it waited.</summary>
+        private int _state;
 
         protected WorkItem(SessionLogCategory logAs, bool retryAfterReconnect, CancellationToken caller, CancellationToken shutdown, TimeSpan abandonGrace)
         {
@@ -291,7 +296,18 @@ internal sealed class ConnectionLane : IAsyncDisposable
             _cts = CancellationTokenSource.CreateLinkedTokenSource(caller, shutdown);
             _abandoned = caller.Register(() => CancelWork(abandonGrace));
             _closing = shutdown.Register(() => CancelWork(TimeSpan.Zero));
+            // Cancelled while it waits (behind a long query): the caller gets it now, not when the connection is free.
+            _dropped = _cts.Token.Register(() =>
+            {
+                if (Interlocked.CompareExchange(ref _state, 2, 0) == 0)
+                {
+                    SetCanceled();
+                }
+            });
         }
+
+        /// <summary>Takes the item from the queue to run it; <c>false</c> when it was cancelled while it waited.</summary>
+        public bool TryStart() => Interlocked.CompareExchange(ref _state, 1, 0) == 0;
 
         public SessionLogCategory LogAs { get; }
 
@@ -340,6 +356,7 @@ internal sealed class ConnectionLane : IAsyncDisposable
 
         public void Dispose()
         {
+            _dropped.Dispose();
             _abandoned.Dispose();
             _closing.Dispose();
             _cts.Dispose();

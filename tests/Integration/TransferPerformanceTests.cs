@@ -177,17 +177,17 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         var exportTheirs = new List<TimeSpan>();
         double exportPeak = 0;
         // The first run (-1) warms up the JIT, the server and the disk cache and does not count.
+        SqlExportRequest Export(SqlExportTarget target, string path) => new()
+        {
+            Dump = new SqlDumpOptions { CreateTables = true, DropTables = true, Data = DumpDataMode.Insert, MaxInsertSizeKb = 1024 },
+            Databases = [new SqlExportDatabase("eunomia_perf_src", objects)],
+            Target = target,
+            Path = path,
+            ConsistentSnapshot = true,
+        };
         for (var run = -1; run < Runs; run++)
         {
-            var request = new SqlExportRequest
-            {
-                Dump = new SqlDumpOptions { CreateTables = true, DropTables = true, Data = DumpDataMode.Insert, MaxInsertSizeKb = 1024 },
-                Databases = [new SqlExportDatabase("eunomia_perf_src", objects)],
-                Target = SqlExportTarget.File,
-                Path = ours,
-                ConsistentSnapshot = true,
-            };
-            var (elapsed, peak) = await MeasureAsync(() => new SqlExportJob(_host, request).RunAsync(null, Ct));
+            var (elapsed, peak) = await MeasureAsync(() => new SqlExportJob(_host, Export(SqlExportTarget.File, ours)).RunAsync(null, Ct));
             if (run >= 0)
             {
                 exportOurs.Add(elapsed);
@@ -205,6 +205,20 @@ public sealed class TransferPerformanceTests : IAsyncLifetime
         var pr13 = Median(exportTheirs) / Median(exportOurs);
         Report(string.Create(CultureInfo.InvariantCulture,
             $"PR-13: {Rows} rows; Eunomia {Median(exportOurs).TotalSeconds:F2} s ({oursMb:F0} MB, {oursMb / Median(exportOurs).TotalSeconds:F1} MB/s, peak +{exportPeak:F0} MB); mysqldump {Median(exportTheirs).TotalSeconds:F2} s ({theirsMb:F0} MB, {theirsMb / Median(exportTheirs).TotalSeconds:F1} MB/s); relative throughput {pr13 * 100:F0}%; runs {All(exportOurs)} vs {All(exportTheirs)}"));
+
+        // The same export to a ZIP: what the compression costs next to the file (a 9 GB dump to a ZIP, 16 Nov 2026).
+        var zipped = Path.Combine(_directory, "ours.zip");
+        var exportZip = new List<TimeSpan>();
+        double zipPeak = 0;
+        for (var run = 0; run < Runs; run++)
+        {
+            var (elapsed, peak) = await MeasureAsync(() => new SqlExportJob(_host, Export(SqlExportTarget.Zip, zipped)).RunAsync(null, Ct));
+            exportZip.Add(elapsed);
+            zipPeak = Math.Max(zipPeak, peak);
+        }
+        var zipMb = new FileInfo(zipped).Length / (1024.0 * 1024);
+        Report(string.Create(CultureInfo.InvariantCulture,
+            $"PR-13 ZIP: Eunomia {Median(exportZip).TotalSeconds:F2} s ({oursMb:F0} MB of SQL, {oursMb / Median(exportZip).TotalSeconds:F1} MB/s, ZIP {zipMb:F1} MB = {zipMb / oursMb * 100:F1}%, peak +{zipPeak:F0} MB); to the file {Median(exportOurs).TotalSeconds:F2} s; runs {All(exportZip)}"));
 
         // PR-14: the same file (the mysqldump one) through mysql and through Run SQL file.
         var importOurs = new List<TimeSpan>();

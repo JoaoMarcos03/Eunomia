@@ -117,4 +117,122 @@ public sealed class DataLoadCancelTests
             await ExecAsync(cs, $"DROP DATABASE IF EXISTS `{db}`; DROP DATABASE IF EXISTS `{db2}`");
         }
     }
+
+    /// <summary>
+    /// A page slower than the query timeout (an 11 GB table) loads instead of timing out; the label counts the time, Esc
+    /// cancels it, and the filter corrected afterwards applies.
+    /// </summary>
+    [AvaloniaFact(Timeout = UiTimeouts.Default)]
+    public async Task APageSlowerThanTheQueryTimeoutLoadsAndEscCancelsIt()
+    {
+        var cs = ConnectionString();
+        Assert.SkipWhen(cs is null, "No test server.");
+        var db = NewDatabaseName("eunomia_dt_");
+        await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.big (id INT PRIMARY KEY); INSERT INTO `{db}`.big VALUES (1), (2), (3);");
+        try
+        {
+            var (window, context, session, connector, log) = CreateShell(cs, db);
+            session.QueryTimeout = 1;
+            Assert.True(await window.ConnectAsync(window, session, null));
+            var model = window.Tree.Tree.Model!;
+            var root = await WaitAsync(() => model.Roots.FirstOrDefault());
+            var dbNode = await WaitAsync(() => root.Children?.SingleOrDefault(n => n.Name == db));
+            await model.ExpandAsync(dbNode);
+            var big = Child(dbNode, "big");
+            var host = connector.Open.Single().Host;
+            var label = window.DataView.Label;
+            window.ShowDataTab();
+            window.Tree.Tree.FocusedNode = big;
+            await WaitAsync(() => window.DataGrid.RowCount == 3 && !host.IsPrimaryBusy ? "ok" : null);
+
+            // 3 rows × 1 s: 3 s for the page, over the 1 s timeout. The label counts the time from the first second on (its
+            // timer ticks every second: a page much shorter than 2 s could end before a late tick on a busy machine).
+            window.DataView.FilterEditor.Text = "SLEEP(1) = 0";
+            Assert.True(await context.Commands.ExecuteAsync("filter.apply"));
+            await WaitAsync(() => label.Text!.Contains("(Esc to cancel)", StringComparison.Ordinal) ? "ok" : null);
+            await WaitAsync(() => window.DataGrid.RowCount == 3 && !host.IsPrimaryBusy && label.Text!.Contains("match to filter", StringComparison.Ordinal) ? "ok" : null);
+            Assert.DoesNotContain(log.Snapshot(), l => l.Kind == Eunomia.Presentation.Logging.LogLineKind.Error);
+
+            // Esc while the page runs: cancelled at once, the connection free.
+            window.DataView.FilterEditor.Text = "SLEEP(10) = 0";
+            Assert.True(await context.Commands.ExecuteAsync("filter.apply"));
+            await WaitAsync(() => host.IsPrimaryBusy ? "ok" : null);
+            Assert.True(context.Commands.StateOf("operation.cancel").CanExecute);
+            var clock = Stopwatch.StartNew();
+            Assert.True(await context.Commands.ExecuteAsync("operation.cancel"));
+            await WaitAsync(() => label.Text!.EndsWith("cancelled", StringComparison.Ordinal) && !host.IsPrimaryBusy ? "ok" : null, Quick);
+            Assert.True(clock.Elapsed < Quick, clock.Elapsed.ToString());
+
+            // The slow filter, corrected after Esc (the table was left unloaded), applies.
+            window.DataView.FilterEditor.Text = string.Empty;
+            Assert.True(await context.Commands.ExecuteAsync("filter.apply"));
+            await WaitAsync(() => window.DataGrid.RowCount == 3 && !host.IsPrimaryBusy && label.Text!.Contains("rows total", StringComparison.Ordinal) ? "ok" : null);
+            Assert.DoesNotContain(log.Snapshot(), l => l.Kind == Eunomia.Presentation.Logging.LogLineKind.Error);
+
+            await connector.DisconnectAllAsync();
+            window.Close();
+        }
+        finally
+        {
+            await ExecAsync(cs, $"DROP DATABASE IF EXISTS `{db}`");
+        }
+    }
+
+    /// <summary>
+    /// A page waiting for the connection behind a query tab's run: Esc in the Data tab ends it now (it used to wait for the
+    /// run to finish), and the run goes on.
+    /// </summary>
+    [AvaloniaFact(Timeout = UiTimeouts.Default)]
+    public async Task EscEndsAPageQueuedBehindAQueryTabRun()
+    {
+        var cs = ConnectionString();
+        Assert.SkipWhen(cs is null, "No test server.");
+        var db = NewDatabaseName("eunomia_dq_");
+        await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.big (id INT PRIMARY KEY); INSERT INTO `{db}`.big VALUES (1), (2), (3);");
+        try
+        {
+            var (window, context, session, connector, log) = CreateShell(cs, db);
+            Assert.True(await window.ConnectAsync(window, session, null));
+            var model = window.Tree.Tree.Model!;
+            var root = await WaitAsync(() => model.Roots.FirstOrDefault());
+            var dbNode = await WaitAsync(() => root.Children?.SingleOrDefault(n => n.Name == db));
+            await model.ExpandAsync(dbNode);
+            var big = Child(dbNode, "big");
+            var host = connector.Open.Single().Host;
+            var label = window.DataView.Label;
+
+            string State() => $"label='{label.Text}' busy={host.IsPrimaryBusy} database={host.CurrentDatabase}";
+
+            // The database's USE first: otherwise "busy" below could be the USE, and the table's would queue behind the run.
+            window.Tree.Tree.FocusedNode = dbNode;
+            await WaitAsync(() => host.CurrentDatabase == db && !host.IsPrimaryBusy ? "ok" : null, describe: State);
+            window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
+            window.SqlEditor.Text = "SELECT SLEEP(20)";
+            var run = context.Commands.ExecuteAsync("query.run").AsTask();
+            await WaitAsync(() => host.IsPrimaryBusy ? "ok" : null, describe: State);
+            window.Tree.Tree.FocusedNode = big;
+            window.ShowDataTab();
+            await WaitAsync(() => label.Text!.Contains("(Esc to cancel)", StringComparison.Ordinal) ? "ok" : null, describe: State);
+            Assert.True(context.Commands.StateOf("operation.cancel").CanExecute);
+            var clock = Stopwatch.StartNew();
+            Assert.True(await context.Commands.ExecuteAsync("operation.cancel"));
+            await WaitAsync(() => label.Text == $"{db}.big: loading cancelled" ? "ok" : null, Quick);
+            Assert.True(clock.Elapsed < Quick, clock.Elapsed.ToString());
+            Assert.False(run.IsCompleted);
+            Assert.True(host.IsPrimaryBusy);
+
+            // The run is the query tab's to cancel.
+            window.Tabs.SelectedItem = window.Tabs.QueryTabs[0].Item;
+            Assert.True(await context.Commands.ExecuteAsync("operation.cancel"));
+            await run;
+            Assert.DoesNotContain(log.Snapshot(), l => l.Kind == Eunomia.Presentation.Logging.LogLineKind.Error);
+
+            await connector.DisconnectAllAsync();
+            window.Close();
+        }
+        finally
+        {
+            await ExecAsync(cs, $"DROP DATABASE IF EXISTS `{db}`");
+        }
+    }
 }

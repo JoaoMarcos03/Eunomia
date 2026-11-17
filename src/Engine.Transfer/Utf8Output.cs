@@ -110,13 +110,20 @@ public sealed class Utf8Output : IDisposable
         _used = 0;
     }
 
+    /// <summary>Writes what is left; the stream it owns is closed even when that write fails (a full disk), so the caller can delete the file.</summary>
     public void Dispose()
     {
-        Flush();
-        _stream.Flush();
-        if (!_leaveOpen)
+        try
         {
-            _stream.Dispose();
+            Flush();
+            _stream.Flush();
+        }
+        finally
+        {
+            if (!_leaveOpen)
+            {
+                _stream.Dispose();
+            }
         }
     }
 }
