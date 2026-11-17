@@ -128,7 +128,9 @@ public sealed class RunSqlFileDialogTests
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
     public void AFileWithoutUseOnlyAsksForTheDatabase()
     {
-        var dialog = new RunSqlFileDialog("it (127.0.0.1:3306)", [@"C:\a.sql", @"C:\b.sql"], Databases, "shop", []);
+        // Paths of the running system: on Linux and macOS "C:\a.sql" is a file name, not a folder and a name.
+        string[] paths = [Path.Combine(Path.GetTempPath(), "a.sql"), Path.Combine(Path.GetTempPath(), "b.sql")];
+        var dialog = new RunSqlFileDialog("it (127.0.0.1:3306)", paths, Databases, "shop", []);
         dialog.Show();
 
         Assert.Equal("a.sql\nb.sql", dialog.Files);

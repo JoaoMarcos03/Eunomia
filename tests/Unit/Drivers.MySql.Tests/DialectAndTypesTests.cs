@@ -154,7 +154,9 @@ public sealed class DialectAndTypesTests
     {
         var session = new MySqlDialect(MySqlConnectionFactory.ParseIdentity(version, comment)).DumpSession;
 
-        Assert.Contains("SET @OLD_NET_WRITE_TIMEOUT=@@NET_WRITE_TIMEOUT, NET_WRITE_TIMEOUT=GREATEST(@@NET_WRITE_TIMEOUT, 3600)", session.Setup);
+        // A literal: MySQL 8 refuses GREATEST(@@NET_WRITE_TIMEOUT, 3600) (error 1232, a DECIMAL), which MariaDB accepts.
+        Assert.Contains("SET @OLD_NET_WRITE_TIMEOUT=@@NET_WRITE_TIMEOUT, NET_WRITE_TIMEOUT=3600", session.Setup);
+        Assert.DoesNotContain(session.Setup, s => s.Contains("GREATEST", StringComparison.Ordinal));
         Assert.Contains("SET NET_WRITE_TIMEOUT=@OLD_NET_WRITE_TIMEOUT", session.Restore);
         var limits = session.Setup.Where(s => s.Contains("_TIME=0", StringComparison.Ordinal)).ToList();
         if (variable is null)

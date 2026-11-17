@@ -84,13 +84,15 @@ public sealed class MySqlDialect(ServerIdentity server, bool noBackslashEscapes 
     /// on MariaDB, per user, and the SELECT of a large table stopped in the middle with error 3024 or 1969, leaving the
     /// table cut in the file), and a long <c>net_write_timeout</c> (after 60 s, by default, of a client that does not read,
     /// such as a slow disk or network share under the file, the server drops the connection). Each value is restored.
+    /// The timeout is a literal: MySQL 8 refuses <c>GREATEST(@@NET_WRITE_TIMEOUT, 3600)</c> with error 1232 (unsigned and
+    /// signed integers give a DECIMAL), which MariaDB accepts.
     /// </summary>
     private static DumpSessionSql BuildDumpSession(ServerIdentity server)
     {
         List<string> setup =
         [
             "SET @OLD_LOCAL_SQL_MODE=@@SQL_MODE, SQL_MODE=''", "SET @OLD_TIME_ZONE=@@TIME_ZONE", "SET TIME_ZONE='+00:00'",
-            "SET @OLD_NET_WRITE_TIMEOUT=@@NET_WRITE_TIMEOUT, NET_WRITE_TIMEOUT=GREATEST(@@NET_WRITE_TIMEOUT, 3600)",
+            "SET @OLD_NET_WRITE_TIMEOUT=@@NET_WRITE_TIMEOUT, NET_WRITE_TIMEOUT=3600",
         ];
         List<string> restore = ["SET SQL_MODE=@OLD_LOCAL_SQL_MODE", "SET TIME_ZONE=@OLD_TIME_ZONE", "SET NET_WRITE_TIMEOUT=@OLD_NET_WRITE_TIMEOUT"];
         if (StatementTimeVariable(server) is { } limit)
