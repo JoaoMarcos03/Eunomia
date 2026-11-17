@@ -3,20 +3,29 @@
   Starts a local MariaDB/MySQL, in an instance of its own, for the integration tests (tests/Integration).
 
 .DESCRIPTION
-  Uses an mysqld.exe that is already installed (EUNOMIA_MYSQLD variable, or XAMPP in E:\xampp or C:\xampp, or the
-  PATH). Creates a new datadir in %TEMP%\eunomia-it\<name> (it never touches the installed server's datadir),
-  starts on port 33106 on 127.0.0.1 only, with root without a password, and writes the connection string for the
-  tests to %TEMP%\eunomia-it\connection.txt. The tests read EUNOMIA_IT_MYSQL or that file; with neither, they are
-  reported as skipped.
+  Uses an mysqld.exe that is already installed (-Mysqld, the EUNOMIA_MYSQLD variable, or XAMPP in E:\xampp or
+  C:\xampp, or the PATH). Creates a new datadir in %TEMP%\eunomia-it\<name> (it never touches the installed server's
+  datadir), starts on port 33106 on 127.0.0.1 only, with root without a password, and writes the connection string
+  for the tests to %TEMP%\eunomia-it\connection.txt. The tests read EUNOMIA_IT_MYSQL or that file; with neither, they
+  are reported as skipped.
+
+  MariaDB is initialised with mysql_install_db.exe; MySQL 8 (the ZIP from dev.mysql.com, which has no
+  mysql_install_db) with mysqld --initialize-insecure, and it runs with --no-defaults so that no my.ini of another
+  installation is read. Give each server its own -Name and -Port to have several running at once.
 
 .EXAMPLE
   powershell -File tests\Integration\Start-TestServer.ps1
   dotnet test tests\Integration
   powershell -File tests\Integration\Start-TestServer.ps1 -Stop
+
+.EXAMPLE
+  powershell -File tests\Integration\Start-TestServer.ps1 -Mysqld C:\Dev\tools\mysql-8.4.11-winx64\bin\mysqld.exe -Name mysql84 -Port 33184
+  powershell -File tests\Integration\Start-TestServer.ps1 -Name mysql84 -Stop
 #>
 param(
     [int]$Port = 33106,
     [string]$Name = 'mariadb',
+    [string]$Mysqld,
     [switch]$Stop,
     [switch]$Reset
 )
@@ -27,6 +36,10 @@ $pidFile = Join-Path $root "$Name.pid"
 $connFile = Join-Path $root 'connection.txt'
 
 function Find-Mysqld {
+    if ($Mysqld) {
+        if (-not (Test-Path $Mysqld)) { throw "mysqld.exe not found: $Mysqld" }
+        return $Mysqld
+    }
     if ($env:EUNOMIA_MYSQLD -and (Test-Path $env:EUNOMIA_MYSQLD)) { return $env:EUNOMIA_MYSQLD }
     foreach ($candidate in @('E:\xampp\mysql\bin\mysqld.exe', 'C:\xampp\mysql\bin\mysqld.exe')) {
         if (Test-Path $candidate) { return $candidate }
@@ -40,7 +53,15 @@ if ($Stop -or $Reset) {
     if (Test-Path $pidFile) {
         $id = [int](Get-Content $pidFile)
         $p = Get-Process -Id $id -ErrorAction SilentlyContinue
-        if ($p) { $p.Kill(); $p.WaitForExit(10000) | Out-Null }
+        # Only the tree of the pid this script wrote, and only if it is still an mysqld (pids are reused). MySQL 8 on
+        # Windows runs the server as a child of a monitor process, so the children go first.
+        if ($p -and $p.ProcessName -eq 'mysqld') {
+            $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$id AND Name='mysqld.exe'" |
+                ForEach-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue })
+            foreach ($c in $children + $p) {
+                if (-not $c.HasExited) { $c.Kill(); $c.WaitForExit(10000) | Out-Null }
+            }
+        }
         Remove-Item $pidFile -Force
     }
     if ($Stop) { Write-Host 'Test server stopped.'; return }
@@ -48,6 +69,8 @@ if ($Stop -or $Reset) {
 
 $mysqld = Find-Mysqld
 $bin = Split-Path $mysqld
+$installDb = Join-Path $bin 'mysql_install_db.exe'
+$isMariaDb = Test-Path $installDb
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 if ($Reset -and (Test-Path $datadir)) { Remove-Item -Recurse -Force $datadir }
 
@@ -57,15 +80,31 @@ if (Test-Path $pidFile) {
 }
 
 if (-not (Test-Path (Join-Path $datadir 'mysql'))) {
-    $install = Join-Path $bin 'mysql_install_db.exe'
-    & $install "--datadir=$datadir" "--port=$Port" | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw "mysql_install_db failed ($LASTEXITCODE)" }
+    if ($isMariaDb) {
+        & $installDb "--datadir=$datadir" "--port=$Port" | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "mysql_install_db failed ($LASTEXITCODE)" }
+    } else {
+        # MySQL 8 refuses a datadir that exists and is not empty, so a half-made one is started again.
+        if (Test-Path $datadir) { Remove-Item -Recurse -Force $datadir }
+        $basedir = Split-Path $bin
+        # --initialize-insecure only creates root@localhost, which --skip-name-resolve does not match for 127.0.0.1.
+        $initSql = Join-Path $root "$Name-init.sql"
+        Set-Content -Path $initSql -Encoding Ascii -Value @(
+            "CREATE USER 'root'@'127.0.0.1' IDENTIFIED BY '';",
+            "GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION;")
+        & $mysqld --no-defaults --initialize-insecure "--basedir=$basedir" "--datadir=$datadir" "--init-file=$initSql" "--log-error=$root\$Name-init.err"
+        if ($LASTEXITCODE -ne 0) { throw "mysqld --initialize-insecure failed ($LASTEXITCODE): see $root\$Name-init.err" }
+    }
 }
 
-$args = @("--datadir=$datadir", "--port=$Port", '--bind-address=127.0.0.1', '--skip-name-resolve',
-          '--character-set-server=utf8mb4', '--collation-server=utf8mb4_general_ci', '--max-connections=200',
-          "--log-error=$root\$Name.err")
-$process = Start-Process -FilePath $mysqld -ArgumentList $args -WindowStyle Hidden -PassThru
+# --no-defaults has to be the first option.
+$serverArgs = @()
+if (-not $isMariaDb) { $serverArgs += '--no-defaults' }
+$serverArgs += @("--datadir=$datadir", "--port=$Port", '--bind-address=127.0.0.1', '--skip-name-resolve',
+                 '--character-set-server=utf8mb4', '--collation-server=utf8mb4_general_ci', '--max-connections=200',
+                 "--log-error=$root\$Name.err")
+if (-not $isMariaDb) { $serverArgs += @("--basedir=$(Split-Path $bin)", '--mysqlx=OFF') }
+$process = Start-Process -FilePath $mysqld -ArgumentList $serverArgs -WindowStyle Hidden -PassThru
 Set-Content -Path $pidFile -Value $process.Id
 
 # Waits for the port to accept connections.

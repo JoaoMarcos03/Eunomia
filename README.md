@@ -129,7 +129,7 @@ About 1,400 automated tests run locally before each pull request (GitHub only bu
 | `tests/UI.Headless` | Windows and dialogs rendered headless with Avalonia: behaviour, keyboard flows, accessibility names and light/dark screenshot baselines |
 | `tests/Architecture` | Layer dependency rules, and that MySQL-specific types stay in the driver and the SQL language layer |
 
-Integration tests need a server. Set `EUNOMIA_IT_MYSQL` to a connection string for a disposable test server, or on Windows with XAMPP run `powershell -File tests/Integration/Start-TestServer.ps1`. Without a server they are reported as skipped, never as passed.
+Integration tests need a server. Set `EUNOMIA_IT_MYSQL` to a connection string for a disposable test server, or on Windows run `powershell -File tests/Integration/Start-TestServer.ps1` (an installed MariaDB, or `-Mysqld` with the `mysqld.exe` of an unzipped MySQL 8; see `CONTRIBUTING.md`). Without a server they are reported as skipped, never as passed.
 
 Code coverage per project is checked locally against [`build/coverage-baseline.json`](build/coverage-baseline.json), and the baseline only goes up:
 

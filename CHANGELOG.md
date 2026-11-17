@@ -19,6 +19,7 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 - Export to a file or ZIP: writing (and compressing) runs on its own thread, in parallel with reading the rows; the status shows the SQL size and, for a ZIP, the compressed size.
 - Database dumps lift the session's statement time limit (`MAX_EXECUTION_TIME`/`MAX_STATEMENT_TIME`) and set `NET_WRITE_TIMEOUT` to an hour while they read, restoring both at the end.
 - GitHub Actions only builds the packages and publishes the release when a pull request is merged into `main`; the build, tests, coverage, formatting check and benchmarks run locally (the `quality`, `test`, `integration` and `coverage` jobs, the executable smoke test and `bench.yml` were removed).
+- `tests/Integration/Start-TestServer.ps1` also starts the MySQL 8.0/8.4 of the Windows ZIP archives (`-Mysqld`, `-Name`, `-Port`; `--initialize-insecure` with `root@127.0.0.1`, `--no-defaults`, no X Protocol, no service), and `-Stop` also stops MySQL's server process, which runs as a child of a monitor process.
 - Run SQL file: on MySQL 8.4 and later, the import connection turns off `restrict_fk_on_non_standard_key`, so dumps from MySQL 8.0 with foreign keys to non-unique keys load.
 - Run SQL file: the tree, the table structure and the Data tab of other databases no longer wait while an import runs.
 

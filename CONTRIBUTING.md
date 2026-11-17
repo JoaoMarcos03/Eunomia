@@ -26,7 +26,14 @@ Rules, coding standards and process for anyone who contributes. If a rule confli
    dotnet test Eunomia.slnx
    ```
 
-3. Tests against a real server (optional): `powershell -File tests\Integration\Start-TestServer.ps1` on Windows with XAMPP (MariaDB on port 33106, data directory in `%TEMP%\eunomia-it`, never XAMPP's own), or the `EUNOMIA_IT_MYSQL` environment variable with a connection string. Without a server, those tests are reported as skipped.
+3. Tests against a real server (optional): `powershell -File tests\Integration\Start-TestServer.ps1` on Windows with a MariaDB that is already installed (`EUNOMIA_MYSQLD`, XAMPP or the PATH; port 33106, data directory in `%TEMP%\eunomia-it`, never the installed server's own), or the `EUNOMIA_IT_MYSQL` environment variable with a connection string. Without a server, those tests are reported as skipped. For MySQL 8.0 and 8.4, unzip the Windows ZIP archives from dev.mysql.com (nothing installed, no service) and start each one on its own name and port, then run the tests with `EUNOMIA_IT_MYSQL` pointing at it:
+
+   ```powershell
+   powershell -File tests\Integration\Start-TestServer.ps1 -Mysqld C:\Dev\tools\mysql-8.4.11-winx64\bin\mysqld.exe -Name mysql84 -Port 33184
+   $env:EUNOMIA_IT_MYSQL = 'Server=127.0.0.1;Port=33184;User ID=root;Password=;'
+   dotnet test tests\Integration
+   powershell -File tests\Integration\Start-TestServer.ps1 -Name mysql84 -Stop
+   ```
 
 Everyday commands:
 
