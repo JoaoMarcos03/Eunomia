@@ -46,7 +46,7 @@ public sealed class GridContextMenuTests
     }
 
     /// <summary>Opens the submenus of <paramref name="path"/> and clicks (or presses Enter on) its last item.</summary>
-    private static async Task ChooseAsync(Window window, ContextMenu menu, bool keyboard, params string[] path)
+    internal static async Task ChooseAsync(Window window, ContextMenu menu, bool keyboard, params string[] path)
     {
         Assert.True(menu.IsOpen);
         ItemsControl parent = menu;
