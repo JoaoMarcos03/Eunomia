@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Avalonia.Input;
 using Avalonia.Threading;
+using Eunomia.App.Data;
 using Eunomia.Engine.Results;
 using Eunomia.Presentation.Logging;
 using Eunomia.UI.Controls.Common.Input;
@@ -10,26 +12,47 @@ using Eunomia.UI.Features.HostTab;
 namespace Eunomia.UI.Shell;
 
 /// <summary>
-/// Bottom filter panel (Ctrl+Alt+F; appendix C §1.9; appendix D B11; FAM-G14): local case-insensitive regex over the
-/// loaded rows of the active list (Data grid, query tab result tab, the five Host lists, the Database tab list and the
-/// table editor columns), 500 ms after the last key; the clear button applies at once. The text is kept per list;
-/// "x out of y matching. z hidden."; an invalid regex goes to the log and shows everything; the Data grid clears it on
-/// every reload (Next and Show all included).
+/// Bottom filter panel (Ctrl+Alt+F; appendix C §1.9; appendix D B11; FAM-G14): terms separated by <c>;</c>, any of them
+/// (<c>\;</c> is a <c>;</c>), plain text without case or, with the <c>.*</c> button, regular expressions
+/// (<see cref="SearchTerms"/>). The Data grid searches the whole table on the server, together with the WHERE filter, and
+/// keeps the search while it shows the same table (F5, sorting, Next, Show all); the other lists (query tab result tab, the
+/// five Host lists, the Database tab list and the table editor columns) filter the rows shown, "x out of y matching. z
+/// hidden.". It applies 500 ms after the last key, and at once with Enter, the clear button and the <c>.*</c> button. The
+/// text is kept per list; an invalid regex goes to the log; closing the panel clears every list.
 /// </summary>
 public sealed partial class MainWindow
 {
     private const string DataGridFilterKey = "data";
 
+    private const string FilterTip =
+        "Shows the rows with a value that contains the text, in upper or lower case.\n" +
+        "a;b finds a or b (spaces around the ; are ignored); \\; is a ; (a\\;b finds \"a;b\").\n" +
+        ".* (button on the right): each term is a regular expression.\n" +
+        "Data tab: searches the whole table on the server, together with the WHERE filter. Other lists: the rows shown.\n" +
+        "Enter applies at once; closing the panel clears the filter.";
+
     private readonly Dictionary<object, string> _localFilterTexts = [];
+
+    /// <summary>
+    /// Terms last applied to each list (the Data grid's are <see cref="_dataSearch"/>). A list shown again whose text or mode
+    /// changed meanwhile (panel closed, <c>.*</c> toggled on another list) is filtered again.
+    /// </summary>
+    private readonly Dictionary<object, SearchTerms?> _localFilterApplied = [];
+
     private DispatcherTimer? _localFilterTimer;
     private CancellationTokenSource? _localFilterScan;
     private object? _localFilterTarget;
 
-    /// <summary>The Data grid shows a view filtered by the local filter (clearing it restores the whole source).</summary>
-    private bool _dataGridFiltered;
-
     /// <summary>List last typed into in the box (the one the 500 ms timer filters).</summary>
     private object? _localFilterTyped;
+
+    /// <summary>Search of the Data grid (whole table, on the server), or <c>null</c>.</summary>
+    private SearchTerms? _dataSearch;
+
+    /// <summary>Panel label for the Data grid's search, shown again when coming back to the Data tab.</summary>
+    private string _dataSearchInfo = string.Empty;
+
+    private bool FilterRegex => _context.Settings.Display.FilterRegex;
 
     private void InitLocalFilter()
     {
@@ -59,7 +82,22 @@ public sealed partial class MainWindow
             _localFilterTimer.Stop();
             _localFilterTimer.Start();
         };
+        _filterBox.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None)
+            {
+                e.Handled = true;
+                ApplyLocalFilterNow();
+            }
+        };
         _filterBox.WithClearButton(cleared: ClearLocalFilter);
+        _filterRegexButton.IsCheckedChanged += (_, _) =>
+        {
+            _context.Settings.Display.FilterRegex = _filterRegexButton.IsChecked == true;
+            UpdateFilterPlaceholder();
+            ApplyLocalFilterNow();
+        };
+        UpdateFilterPlaceholder();
         _tabs.SelectionChanged += (_, _) => SyncLocalFilterBox();
         // Another table in the Table tab (or the Host and Database tab views being created) changes the list without a tab change.
         foreach (var tab in new[] { _tabs.TableTab, _tabs.HostTab, _tabs.DatabaseTab })
@@ -75,13 +113,35 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>The syntax in the box itself, for the current mode.</summary>
+    private void UpdateFilterPlaceholder() =>
+        _filterBox.PlaceholderText = (FilterRegex ? "Regular expression" : "Text to find") + "  (a;b → a or b,  \\; → ;)";
+
+    /// <summary>Enter and the <c>.*</c> button: the active list's filter at once, without waiting the 500 ms.</summary>
+    private void ApplyLocalFilterNow()
+    {
+        _localFilterTimer?.Stop();
+        if (LocalFilterTarget() is { } target)
+        {
+            // Stored before TextChanged (which arrives later), so it does not start the 500 ms again.
+            _localFilterTexts[target] = _filterBox.Text ?? string.Empty;
+            _ = ApplyLocalFilterAsync();
+        }
+    }
+
     /// <summary>
     /// The Table tab's text belongs to the tab (appendix D B11: per tab), not to the editor: the editor is rebuilt when
     /// coming back to the table or opening another one, and the filter keeps applying to the new editor's columns.
     /// </summary>
     private void ReapplyTableEditorFilter()
     {
-        if (TableEditor is not { } editor || _localFilterTexts.GetValueOrDefault(_tabs.TableTab) is not { Length: > 0 } text || LocalFilterRegex(text) is not { } regex)
+        if (TableEditor is not { } editor || _localFilterTexts.GetValueOrDefault(_tabs.TableTab) is not { Length: > 0 } text)
+        {
+            return;
+        }
+        var terms = SearchTerms.Parse(text, FilterRegex);
+        _localFilterApplied[_tabs.TableTab] = terms;
+        if (LocalFilterRegex(terms) is not { } regex)
         {
             return;
         }
@@ -109,6 +169,26 @@ public sealed partial class MainWindow
             _localFilterTexts[target] = string.Empty;
             _ = ApplyLocalFilterAsync();
         }
+    }
+
+    /// <summary>
+    /// Panel closed: every list loses its text. The active one shows everything at once; the others (the Data grid
+    /// included) when they are shown again (<see cref="SyncLocalFilterBox"/>).
+    /// </summary>
+    private void ClearLocalFilters()
+    {
+        _localFilterTimer?.Stop();
+        _localFilterTexts.Clear();
+        _filterBox.Text = string.Empty;
+        _filterInfo.Text = string.Empty;
+        _ = ApplyLocalFilterAsync();
+    }
+
+    /// <summary>A list that no longer exists (result tab of a run replaced or closed).</summary>
+    private void ForgetLocalFilter(object target)
+    {
+        _localFilterTexts.Remove(target);
+        _localFilterApplied.Remove(target);
     }
 
     /// <summary>List the filter panel filters now (key of the stored text), or <c>null</c>.</summary>
@@ -152,7 +232,10 @@ public sealed partial class MainWindow
         return ReferenceEquals(host.SelectedItem, host.CommandStatisticsTab) ? host.CommandList : host.DatabaseList;
     }
 
-    /// <summary>The active list changed: the box shows that list's stored text.</summary>
+    /// <summary>
+    /// The active list changed: the box shows that list's stored text, and the list is filtered again if its text or the
+    /// mode changed while it was not shown.
+    /// </summary>
     private void SyncLocalFilterBox()
     {
         var target = LocalFilterTarget();
@@ -161,16 +244,23 @@ public sealed partial class MainWindow
             return;
         }
         _localFilterTarget = target;
-        _filterBox.Text = target is not null ? _localFilterTexts.GetValueOrDefault(target) ?? string.Empty : string.Empty;
-        _filterInfo.Text = string.Empty;
+        var text = target is not null ? _localFilterTexts.GetValueOrDefault(target) ?? string.Empty : string.Empty;
+        _filterBox.Text = text;
+        var isData = ReferenceEquals(target, DataGridFilterKey);
+        _filterInfo.Text = isData ? _dataSearchInfo : string.Empty;
+        var applied = isData ? _dataSearch : target is not null ? _localFilterApplied.GetValueOrDefault(target) : null;
+        if (target is not null && !Equals(SearchTerms.Parse(text, FilterRegex), applied))
+        {
+            _ = ApplyLocalFilterAsync();
+        }
     }
 
-    /// <summary>The Data grid reloaded: the local filter is cleared (appendix D B11).</summary>
-    private void ResetDataGridFilter()
+    /// <summary>Another table in the Data tab: its search does not carry over (appendix D B11).</summary>
+    private void ClearDataSearch()
     {
+        _dataSearch = null;
+        _dataSearchInfo = string.Empty;
         _localFilterTexts.Remove(DataGridFilterKey);
-        _localFilterScan?.Cancel();
-        _dataGridFiltered = false;
         if (ReferenceEquals(LocalFilterTarget(), DataGridFilterKey))
         {
             _filterBox.Text = string.Empty;
@@ -178,15 +268,16 @@ public sealed partial class MainWindow
         }
     }
 
-    private Regex? LocalFilterRegex(string text)
+    /// <summary>Regex of the lists filtered in memory; <c>null</c> without terms or when not valid (goes to the log).</summary>
+    private Regex? LocalFilterRegex(SearchTerms? terms)
     {
-        if (string.IsNullOrEmpty(text))
+        if (terms is null)
         {
             return null;
         }
         try
         {
-            return new Regex(text, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
+            return terms.LocalRegex();
         }
         catch (ArgumentException)
         {
@@ -198,11 +289,37 @@ public sealed partial class MainWindow
     private static string MatchText(long matching, long total) =>
         string.Create(CultureInfo.CurrentCulture, $"{matching:N0} out of {total:N0} matching. {total - matching:N0} hidden.");
 
+    /// <summary>Panel label for the Data grid's search, from the rows loaded and the exact count, if there is one.</summary>
+    private static string DataSearchInfo(TableBrowser browser, long? total, bool exact)
+    {
+        var loaded = browser.Loaded;
+        var more = browser.CanLoadMore ? ". Next or Show all for more." : ".";
+        if (exact && total is { } all)
+        {
+            return all <= loaded
+                ? $"{MatchingRows(all)}."
+                : string.Create(CultureInfo.CurrentCulture, $"First {loaded:N0} of {MatchingRows(all)}{more}");
+        }
+        return loaded < browser.Wanted ? $"{MatchingRows(loaded)}." : $"First {MatchingRows(loaded)}{more}";
+    }
+
+    private static string MatchingRows(long count) =>
+        string.Create(CultureInfo.CurrentCulture, $"{count:N0} matching {(count == 1 ? "row" : "rows")}");
+
     internal async Task ApplyLocalFilterAsync()
     {
-        var target = LocalFilterTarget();
-        var text = _filterBox.Text ?? string.Empty;
-        var regex = LocalFilterRegex(text);
+        if (LocalFilterTarget() is not { } target)
+        {
+            return;
+        }
+        var terms = SearchTerms.Parse(_filterBox.Text, FilterRegex);
+        if (ReferenceEquals(target, DataGridFilterKey))
+        {
+            ApplyDataSearch(terms);
+            return;
+        }
+        _localFilterApplied[target] = terms;
+        var regex = LocalFilterRegex(terms);
         switch (target)
         {
             case TreeListControl list:
@@ -263,45 +380,29 @@ public sealed partial class MainWindow
                     _context.Status.SetIdle();
                 }
                 break;
-            case DataGridFilterKey when _browser is { } browser && _browserRows is { } source:
-                _localFilterScan?.Cancel();
-                var scan = new CancellationTokenSource();
-                _localFilterScan = scan;
-                if (regex is null)
-                {
-                    // With no filter applied, nothing to restore: SetSource took the focus and the scroll to the first row.
-                    if (_dataGridFiltered)
-                    {
-                        DataGrid.SetSource(new ProjectedRowSource(source, _dataVisibleColumns));
-                        _dataGridFiltered = false;
-                    }
-                    _filterInfo.Text = string.Empty;
-                    return;
-                }
-                _context.Status.Busy = "Filtering rows ...";
-                try
-                {
-                    var filtered = await FilteredRowSource.CreateAsync(source, regex, scan.Token);
-                    if (scan.IsCancellationRequested || !ReferenceEquals(_browser, browser))
-                    {
-                        return;
-                    }
-                    DataGrid.SetSource(new ProjectedRowSource(filtered, _dataVisibleColumns));
-                    _dataGridFiltered = true;
-                    _filterInfo.Text = MatchText(filtered.MatchCount, filtered.TotalRows);
-                }
-                catch (OperationCanceledException)
-                {
-                }
-                catch (RegexMatchTimeoutException)
-                {
-                    _context.Log.Append(LogCategory.Info, "Filter text is not a valid regular expression");
-                }
-                finally
-                {
-                    _context.Status.SetIdle();
-                }
-                break;
         }
+    }
+
+    /// <summary>
+    /// Data grid: the search runs on the server, on the whole table and together with the WHERE filter; a different one
+    /// reloads the table (the load in progress is cancelled). An invalid regex goes to the log and the grid stays as it is.
+    /// </summary>
+    private void ApplyDataSearch(SearchTerms? search)
+    {
+        if (search is { IsRegex: true } && LocalFilterRegex(search) is null)
+        {
+            return;
+        }
+        if (Equals(search, _dataSearch))
+        {
+            return;
+        }
+        _dataSearch = search;
+        if (search is null)
+        {
+            _dataSearchInfo = string.Empty;
+            _filterInfo.Text = string.Empty;
+        }
+        LoadDataForFocusedNode();
     }
 }

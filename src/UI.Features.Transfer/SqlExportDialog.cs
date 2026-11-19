@@ -53,7 +53,8 @@ public sealed record SqlExportTreeFilters(string Databases, string Tables);
 /// what is visible is exported), Drop/Create of databases and tables (Drop implies Create and shows in bold as "Drop!!"),
 /// data (No data, Delete + insert, Insert, Insert ignore, Replace), Max INSERT size, output (file, ZIP, directory,
 /// clipboard) with recent entries, HeidiSQL's options and the consistent snapshot. The bottom grid shows each object
-/// (Database, Table, Rows "N / P%", Duration) while the job runs; Export becomes Cancel.
+/// (Database, Table, Rows "N / P%", Duration) while the job runs; Export becomes Cancel. With the tree's "Group objects
+/// by type", the objects show in the same groups (issue #5; HeidiSQL's export tree clones the main tree).
 /// </summary>
 public sealed class SqlExportDialog : Window
 {
@@ -109,6 +110,7 @@ public sealed class SqlExportDialog : Window
     private bool _updatingChecks;
     private TreeFilterExpression _databaseMatch = TreeFilterExpression.Empty;
     private TreeFilterExpression _tableMatch = TreeFilterExpression.Empty;
+    private readonly bool _groupObjects;
 
     public SqlExportDialog(
         SqlExportSettings settings,
@@ -118,7 +120,8 @@ public sealed class SqlExportDialog : Window
         string? initialDatabase = null,
         IReadOnlyCollection<string>? initialObjects = null,
         SqlExportTargets? targets = null,
-        SqlExportTreeFilters? treeFilters = null)
+        SqlExportTreeFilters? treeFilters = null,
+        bool groupObjects = false)
     {
         Icon = BrandAssets.WindowIcon;
         ArgumentNullException.ThrowIfNull(settings);
@@ -129,6 +132,7 @@ public sealed class SqlExportDialog : Window
         _loadObjects = loadObjects;
         _run = run;
         _targets = targets;
+        _groupObjects = groupObjects;
         _outputs = [.. FileOutputs];
         if (targets is not null)
         {
@@ -281,6 +285,10 @@ public sealed class SqlExportDialog : Window
         node.Objects!.First(o => o.Info.Ref.Name == name).Check.IsChecked = isChecked;
     }
 
+    /// <summary>The database's group items (Tables, Views, ...); empty without "Group objects by type".</summary>
+    internal IReadOnlyList<TreeViewItem> GroupItems(string database) =>
+        [.. _databases.First(d => d.Name == database).Groups?.Select(g => g.Item) ?? []];
+
     // ---------- Tree ----------
 
     private sealed class DatabaseNode(string name)
@@ -291,10 +299,39 @@ public sealed class SqlExportDialog : Window
 
         public CheckBox Check { get; set; } = null!;
 
+        /// <summary>All the objects, in the order they are exported (with groups too).</summary>
         public List<ObjectNode>? Objects { get; set; }
+
+        /// <summary>With "Group objects by type": the 6 groups, each with its objects.</summary>
+        public List<GroupNode>? Groups { get; set; }
 
         public Task? Loading { get; set; }
     }
+
+    private sealed class GroupNode
+    {
+        public TreeViewItem Item { get; set; } = null!;
+
+        public CheckBox Check { get; set; } = null!;
+
+        public List<ObjectNode> Objects { get; } = [];
+    }
+
+    /// <summary>
+    /// The main tree's groups, in its order (SessionTreeProvider.Groups and KindOf in UI.Shell, which this project does
+    /// not reference): views and materialized views in Views, any other table-like object in Tables.
+    /// </summary>
+    private static readonly string[] GroupCaptions = ["Tables", "Views", "Procedures", "Functions", "Triggers", "Events"];
+
+    private static string GroupOf(DbObjectKind kind) => kind switch
+    {
+        DbObjectKind.View or DbObjectKind.MaterializedView => "Views",
+        DbObjectKind.Procedure => "Procedures",
+        DbObjectKind.Function => "Functions",
+        DbObjectKind.Trigger => "Triggers",
+        DbObjectKind.Event => "Events",
+        _ => "Tables",
+    };
 
     private sealed class ObjectNode(DbObjectInfo info)
     {
@@ -332,6 +369,7 @@ public sealed class SqlExportDialog : Window
             if (node.Objects is { } objects)
             {
                 SetChildren(objects, check);
+                UpdateGroups(node);
             }
             else if (check)
             {
@@ -361,10 +399,13 @@ public sealed class SqlExportDialog : Window
         {
             var child = new ObjectNode(info);
             child.Check = new CheckBox { Content = Text(info.Ref.Name), Padding = new Thickness(4, 0), MinHeight = 24, IsChecked = node.Check.IsChecked == true && _tableMatch.IsMatch(info.Ref.Name) };
-            var kind = new TextBlock { Text = KindText(info.Ref.Kind), Foreground = Brushes.Gray, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             var header = new StackPanel { Orientation = Orientation.Horizontal };
             header.Children.Add(child.Check);
-            header.Children.Add(kind);
+            // In a group, the group already says the kind.
+            if (!_groupObjects)
+            {
+                header.Children.Add(new TextBlock { Text = KindText(info.Ref.Kind), Foreground = Brushes.Gray, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+            }
             child.Item = new TreeViewItem { Header = header };
             child.Check.IsCheckedChanged += (_, _) =>
             {
@@ -376,12 +417,59 @@ public sealed class SqlExportDialog : Window
             children.Add(child);
         }
         node.Objects = children;
-        node.Item.ItemsSource = children.Select(c => c.Item).ToList();
+        if (_groupObjects)
+        {
+            node.Groups = [.. GroupCaptions.Select(caption => BuildGroup(node, caption, children.Where(c => GroupOf(c.Info.Ref.Kind) == caption)))];
+            node.Item.ItemsSource = node.Groups.Select(g => g.Item).ToList();
+        }
+        else
+        {
+            node.Item.ItemsSource = children.Select(c => c.Item).ToList();
+        }
         ApplyFilters();
         if (node.Check.IsChecked == true && children.Count > 0)
         {
             UpdateParent(node);
         }
+        else
+        {
+            UpdateGroups(node);
+        }
+    }
+
+    /// <summary>
+    /// A group as in the main tree, "Tables (12)" (all 6 always show); its check box checks its visible objects, like the
+    /// database's.
+    /// </summary>
+    private GroupNode BuildGroup(DatabaseNode node, string caption, IEnumerable<ObjectNode> objects)
+    {
+        var group = new GroupNode();
+        group.Objects.AddRange(objects);
+        group.Check = new CheckBox
+        {
+            IsThreeState = true,
+            IsChecked = false,
+            Content = Text(string.Create(CultureInfo.InvariantCulture, $"{caption} ({group.Objects.Count})")),
+            Padding = new Thickness(4, 0),
+            MinHeight = 24,
+        };
+        group.Item = new TreeViewItem { Header = group.Check, ItemsSource = group.Objects.Select(o => o.Item).ToList() };
+        group.Check.IsCheckedChanged += (_, _) =>
+        {
+            if (_updatingChecks)
+            {
+                return;
+            }
+            // As on the database: one click checks all or nothing.
+            if (group.Check.IsChecked is null)
+            {
+                group.Check.IsChecked = false;
+                return;
+            }
+            SetChildren(group.Objects, group.Check.IsChecked == true);
+            UpdateParent(node);
+        };
+        return group;
     }
 
     private async Task SelectInitialAsync(DatabaseNode node, IReadOnlyCollection<string>? objects)
@@ -404,6 +492,11 @@ public sealed class SqlExportDialog : Window
         }
         _updatingChecks = false;
         UpdateParent(node);
+        // The groups that hold the chosen objects open, so the selection shows.
+        foreach (var group in node.Groups ?? [])
+        {
+            group.Item.IsExpanded = group.Objects.Any(o => o.Check.IsChecked == true);
+        }
     }
 
     /// <summary>Checking a database checks only the objects that pass the Table filter; unchecking unchecks them all.</summary>
@@ -425,6 +518,29 @@ public sealed class SqlExportDialog : Window
         _updatingChecks = true;
         node.Check.IsChecked = count == 0 ? false : count == objects.Count ? true : null;
         _updatingChecks = false;
+        UpdateGroups(node);
+    }
+
+    /// <summary>
+    /// Each group's state counts only its visible objects, like the database's; a group without visible objects is
+    /// disabled (shown dimmed, like the main tree's empty groups).
+    /// </summary>
+    private void UpdateGroups(DatabaseNode node)
+    {
+        if (node.Groups is null)
+        {
+            return;
+        }
+        var updating = _updatingChecks;
+        _updatingChecks = true;
+        foreach (var group in node.Groups)
+        {
+            var visible = group.Objects.Where(o => _tableMatch.IsMatch(o.Info.Ref.Name)).ToList();
+            var count = visible.Count(o => o.Check.IsChecked == true);
+            group.Check.IsChecked = count == 0 ? false : count == visible.Count ? true : null;
+            group.Check.IsEnabled = visible.Count > 0;
+        }
+        _updatingChecks = updating;
     }
 
     private void ApplyFilters()
@@ -1176,6 +1292,7 @@ public sealed class SqlExportDialog : Window
         string? initialDatabase,
         IReadOnlyCollection<string>? initialObjects,
         SqlExportTargets? targets = null,
-        SqlExportTreeFilters? treeFilters = null) =>
-        new SqlExportDialog(settings, databases, loadObjects, run, initialDatabase, initialObjects, targets, treeFilters).ShowDialog(owner);
+        SqlExportTreeFilters? treeFilters = null,
+        bool groupObjects = false) =>
+        new SqlExportDialog(settings, databases, loadObjects, run, initialDatabase, initialObjects, targets, treeFilters, groupObjects).ShowDialog(owner);
 }

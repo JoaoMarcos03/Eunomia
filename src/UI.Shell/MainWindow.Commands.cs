@@ -44,6 +44,10 @@ public sealed partial class MainWindow
     /// </summary>
     public IInputElement? FocusedElement => CommandTarget(FocusManager?.GetFocusedElement(), _lastFocused);
 
+    /// <summary>Whether the commands act on <paramref name="control"/> or on an element inside it (see <see cref="FocusedElement"/>).</summary>
+    private bool IsCommandTargetIn(Avalonia.Visual control) =>
+        FocusedElement is Avalonia.Visual target && (ReferenceEquals(target, control) || Avalonia.VisualTree.VisualExtensions.IsVisualAncestorOf(control, target));
+
     /// <summary>The menu that contains <paramref name="element"/> (in the logical tree), or null.</summary>
     internal static MenuBase? MenuOf(IInputElement? element)
     {

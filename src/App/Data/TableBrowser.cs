@@ -12,6 +12,9 @@ public sealed record DataBrowseOptions
 
     public string? Filter { get; init; }
 
+    /// <summary>Filter panel search (Ctrl+Alt+F), on the whole table; not saved. Joined to <see cref="Filter"/> with AND.</summary>
+    public SearchTerms? Search { get; init; }
+
     public IReadOnlyList<DataSort> Sort { get; init; } = [];
 
     public int RowsPerStep { get; init; } = DataTabQuery.DefaultRowsPerStep;
@@ -32,6 +35,9 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
     private readonly SessionHost _host;
     private readonly IServerServices _services;
     private readonly DisplayFormatter _raw = new(CultureInfo.InvariantCulture, thousandsSeparator: false);
+
+    /// <summary>The search's condition (<see cref="SearchTerms.Where"/>), worked out once.</summary>
+    private readonly string? _searchWhere;
     private DataSelect _select;
     private MaterializedRowSource? _source;
     private ResultSchema? _schema;
@@ -45,12 +51,22 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         _services = host.ServerServices ?? throw new InvalidOperationException("Not connected.");
         Table = table;
         Options = options;
-        _select = DataTabQuery.Build(_services.Dialect, table, options.Hidden, options.Filter, options.Sort, 0, options.RowsPerStep);
+        _searchWhere = options.Search?.Where(_services.Dialect, table, options.Hidden);
+        _select = DataTabQuery.Build(_services.Dialect, table, options.Hidden, options.Filter, options.Sort, 0, options.RowsPerStep, search: _searchWhere);
     }
 
     public TableDefinition Table { get; }
 
     public DataBrowseOptions Options { get; }
+
+    /// <summary>The rows are limited by the WHERE filter or by the filter panel search.</summary>
+    public bool IsFiltered => DataTabQuery.NormalizeFilter(Options.Filter) is not null || _searchWhere is not null;
+
+    /// <summary>The filter panel search applies (it has terms and the table has visible columns).</summary>
+    public bool IsSearching => _searchWhere is not null;
+
+    /// <summary>The <c>WHERE</c> of every query of this browser (pages, full rows, count, top values).</summary>
+    private string? EffectiveWhere => DataTabQuery.CombineWhere(Options.Filter, _searchWhere);
 
     /// <summary>Last SELECT run (columns, key and cut columns).</summary>
     public DataSelect Select => _select;
@@ -97,7 +113,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
 
     private async Task FetchAsync(long offset, int count, CancellationToken cancellationToken)
     {
-        _select = DataTabQuery.Build(_services.Dialect, Table, Options.Hidden, Options.Filter, Options.Sort, offset, count);
+        _select = DataTabQuery.Build(_services.Dialect, Table, Options.Hidden, Options.Filter, Options.Sort, offset, count, search: _searchWhere);
         Wanted = offset + count;
         var truncatedColumns = _select.Columns
             .Select((name, index) => (name, index))
@@ -151,7 +167,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
     /// </summary>
     public async Task<MaterializedRowSource> LoadFullRowsAsync(CancellationToken cancellationToken)
     {
-        var select = DataTabQuery.Build(_services.Dialect, Table, Options.Hidden, Options.Filter, Options.Sort, 0, (int)Math.Max(1, Loaded), fullRows: true);
+        var select = DataTabQuery.Build(_services.Dialect, Table, Options.Hidden, Options.Filter, Options.Sort, 0, (int)Math.Max(1, Loaded), fullRows: true, search: _searchWhere);
         var options = new ExecuteOptions(BlockSize: Options.RowsPerStep) { CollectWarnings = false };
         MaterializedRowSource? result = null;
         await _host.RunPrimaryAsync(async (handle, ct) =>
@@ -197,7 +213,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         if (exact)
         {
             var sql = "SELECT COUNT(*) FROM " + dialect.QualifiedName(Table.Ref);
-            if (DataTabQuery.WhereClause(Options.Filter) is { } where)
+            if (EffectiveWhere is { } where)
             {
                 sql += " WHERE " + where;
             }
@@ -237,7 +253,7 @@ public sealed class TableBrowser : IFullValueSource, IDisposable
         var dialect = _services.Dialect;
         var col = dialect.QuoteIdentifier(column);
         var sql = $"SELECT {col}, COUNT(*) AS c FROM {dialect.QualifiedName(Table.Ref)}";
-        if (DataTabQuery.WhereClause(Options.Filter) is { } where)
+        if (EffectiveWhere is { } where)
         {
             sql += " WHERE " + where;
         }

@@ -118,7 +118,8 @@ public sealed class HostDatabaseTabTests
             Assert.Equal(["Name", "Rows", "Size", "Created", "Updated", "Engine", "Comment", "Type"], view.VisibleColumns);
             Assert.Equal($"{db}: 3 objects (2 tables, 1 views)", context.Status.Info);
 
-            // Local filter panel on the lists too.
+            // Local filter panel on the lists too (here a regular expression, with .*).
+            window.LocalFilterRegexButton.IsChecked = true;
             window.LocalFilterBox.Text = "^V$";
             await window.ApplyLocalFilterAsync();
             Assert.Equal(["v"], list.VisibleNodes.Select(n => n[0]));

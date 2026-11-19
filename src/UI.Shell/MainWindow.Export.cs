@@ -80,8 +80,7 @@ public sealed partial class MainWindow
             return null;
         }
         var gridRows = (selectedOnly ? SelectedRows() : AllRows(DataGrid)).Where(r => r < projected.RowCount.Count).ToList();
-        var filtered = projected.Inner as FilteredRowSource;
-        var rows = gridRows.Select(r => filtered?.InnerRow(r) ?? r).ToList();
+        var rows = gridRows;
         var visible = Enumerable.Range(0, projected.Schema.Count).ToList();
         if (focusedColumnOnly && DataGrid.Selection.FocusedColumn >= 0)
         {

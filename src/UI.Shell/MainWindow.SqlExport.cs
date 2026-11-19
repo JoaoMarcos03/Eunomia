@@ -53,7 +53,8 @@ public sealed partial class MainWindow
             database,
             objects,
             ExportTargets(open),
-            new SqlExportTreeFilters(_tree.DatabaseFilterBox.Text ?? string.Empty, _tree.TableFilterBox.Text ?? string.Empty));
+            new SqlExportTreeFilters(_tree.DatabaseFilterBox.Text ?? string.Empty, _tree.TableFilterBox.Text ?? string.Empty),
+            _context.Settings.Tree.GroupObjects);
         _context.SaveSettings();
     }
 

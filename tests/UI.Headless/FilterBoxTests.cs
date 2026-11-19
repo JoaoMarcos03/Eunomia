@@ -73,11 +73,19 @@ public sealed class FilterBoxTests
             var editor = await WaitAsync(() => window.TableEditor);
             Dispatcher.UIThread.RunJobs();
 
-            // Before, with the Table tab showing, the filter did nothing.
+            // Before, with the Table tab showing, the filter did nothing. Plain text by default, with terms separated by ';'.
+            Assert.Equal("Text to find  (a;b → a or b,  \\; → ;)", window.LocalFilterBox.PlaceholderText);
             window.LocalFilterBox.Text = "shipping";
             await window.ApplyLocalFilterAsync();
             Assert.Equal(["shipping_rates"], editor.VisibleColumnNames);
             Assert.Equal("1 out of 4 matching. 3 hidden.", window.LocalFilterInfo.Text);
+            window.LocalFilterBox.Text = "CREATED ; ates";
+            await window.ApplyLocalFilterAsync();
+            Assert.Equal(["shipping_rates", "created"], editor.VisibleColumnNames);
+
+            // .* : each term is a regular expression.
+            window.LocalFilterRegexButton.IsChecked = true;
+            Assert.Equal("Regular expression  (a;b → a or b,  \\; → ;)", window.LocalFilterBox.PlaceholderText);
             window.LocalFilterBox.Text = "^(id|rates)$";
             // TextChanged (which stores the list's text) arrives later, as when typing.
             Dispatcher.UIThread.RunJobs();
@@ -136,14 +144,14 @@ public sealed class FilterBoxTests
     }
 
     [AvaloniaFact(Timeout = UiTimeouts.Default)]
-    public async Task WithTheLocalFilterQuickFilterUsesTheRightRowAndNextClearsTheFilter()
+    public async Task WithTheFilterPanelSearchQuickFilterUsesTheRightRowAndNextBringsMoreMatchingRows()
     {
         var cs = ConnectionString();
         Assert.SkipWhen(cs is null, "No test server.");
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_fq_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT PRIMARY KEY, name VARCHAR(20)); " +
-            $"INSERT INTO `{db}`.t VALUES (1, 'ana'), (2, 'rui'), (3, 'eva'), (4, 'rita'), (5, 'ze');");
+            $"INSERT INTO `{db}`.t VALUES (1, 'ana'), (2, 'rui'), (3, 'eva'), (4, 'rita'), (5, 'ze'), (6, 'bob');");
         try
         {
             var settings = new AppSettings();
@@ -158,27 +166,33 @@ public sealed class FilterBoxTests
             window.Tree.Tree.FocusedNode = Child(dbNode, "t");
             await WaitAsync(() => window.DataGrid.RowCount == 4 ? "ok" : null);
 
-            // Only "rui" and "rita": grid row 0 is browser row 1.
-            window.LocalFilterBox.Text = "^r";
+            // The search runs on the server: only "rui" and "rita", and grid row 0 is "rui".
+            window.LocalFilterBox.Text = "r";
             await window.ApplyLocalFilterAsync();
-            Assert.Equal(2, window.DataGrid.RowCount);
+            await WaitAsync(() => window.DataGrid.RowCount == 2 && window.LocalFilterInfo.Text == "2 matching rows." ? "ok" : null);
             window.DataGrid.Focus();
             window.DataGrid.Selection.Focus(0, 1);
             Assert.True(await context.Commands.ExecuteAsync("quickFilter.focused1"));
-            await WaitAsync(() => window.DataBrowser!.Options.Filter == "`name` IN ('rui')" ? "ok" : null);
+            await WaitAsync(() => window.DataBrowser!.Options.Filter == "`name` IN ('rui')" && window.DataGrid.RowCount == 1 ? "ok" : null);
+            // Removing the WHERE filter keeps the search.
             Assert.True(await context.Commands.ExecuteAsync("filter.remove"));
-            await WaitAsync(() => window.DataBrowser!.Options.Filter is null && window.DataGrid.RowCount == 4 ? "ok" : null);
+            await WaitAsync(() => window.DataBrowser!.Options.Filter is null && window.DataGrid.RowCount == 2 ? "ok" : null);
+            Assert.Equal("r", window.LocalFilterBox.Text);
 
-            // Next reloads: the local filter is cleared and the new rows show up.
-            window.LocalFilterBox.Text = "^r";
+            // Next brings more matching rows: 5 of the 6 have an a, an e or a u ("bob" does not).
+            window.LocalFilterBox.Text = "a;e;u";
             await window.ApplyLocalFilterAsync();
-            Assert.Equal(2, window.DataGrid.RowCount);
+            await WaitAsync(() => window.DataGrid.RowCount == 4 && window.DataBrowser!.CanLoadMore ? "ok" : null);
             Assert.True(await context.Commands.ExecuteAsync("data.showNext"));
-            await WaitAsync(() => window.DataGrid.RowCount == 5 ? "ok" : null);
-            Assert.Equal(string.Empty, window.LocalFilterBox.Text);
-            Assert.Equal(string.Empty, window.LocalFilterInfo.Text);
+            await WaitAsync(() => window.DataGrid.RowCount == 5 && window.LocalFilterInfo.Text == "5 matching rows." ? "ok" : null);
+            Assert.Equal("a;e;u", window.LocalFilterBox.Text);
             Assert.Equal(4, window.DataGrid.Selection.FocusedRow);
             Assert.Equal("ze", window.DataGrid.GetDisplayText(4, 1));
+
+            // The clear button: every row again, as many as were requested.
+            Click(FilterBoxes.ClearButtonOf(window.LocalFilterBox)!);
+            await WaitAsync(() => window.DataGrid.RowCount == 6 && window.DataBrowser!.Options.Search is null ? "ok" : null);
+            Assert.Equal(string.Empty, window.LocalFilterInfo.Text);
             window.Close();
         }
         finally

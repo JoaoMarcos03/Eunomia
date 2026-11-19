@@ -326,10 +326,17 @@ public sealed partial class MainWindow
         return true;
     }
 
-    /// <summary>Objects selected in the Database tab list, when it has the focus.</summary>
+    /// <summary>
+    /// Whether the commands act on the Database tab list: it has the focus, or the menu was opened on it (the context menu, and
+    /// the main menu, take the keyboard focus while open). Checking the keyboard focus alone made "Drop ..." chosen in the
+    /// list's context menu drop the database focused in the tree instead of the selected tables.
+    /// </summary>
+    private bool ListIsCommandTarget() => _databaseView is { } view && IsCommandTargetIn(view.List);
+
+    /// <summary>Objects selected in the Database tab list, when the commands act on it (<see cref="ListIsCommandTarget"/>).</summary>
     private (OpenSession Session, string Database, IReadOnlyList<DbObjectRef> Objects)? ListTarget()
     {
-        if (_databaseView is { Database: { } db } view && view.List.IsKeyboardFocusWithin && ActiveSession is { Host.ServerServices: not null } open)
+        if (_databaseView is { Database: { } db } view && ListIsCommandTarget() && ActiveSession is { Host.ServerServices: not null } open)
         {
             var selected = view.SelectedObjects.Select(o => o.Ref).ToList();
             return selected.Count > 0 ? (open, db, selected) : null;

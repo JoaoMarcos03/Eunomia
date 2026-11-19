@@ -116,6 +116,21 @@ public static class DataTabQuery
         return Eunomia.Engine.Sql.Splitting.SqlSplitter.Split(filter) is [{ } single] ? single.Text : filter;
     }
 
+    /// <summary>
+    /// The Data tab <c>WHERE</c>: the filter (<see cref="WhereClause"/>) and the filter panel search
+    /// (<see cref="SearchTerms.Where"/>) joined by <c>AND</c>; <c>null</c> without either. The line break before the
+    /// <c>)</c> keeps a <c>-- comment</c> at the end of the filter from swallowing the rest.
+    /// </summary>
+    public static string? CombineWhere(string? filter, string? search)
+    {
+        var where = WhereClause(filter);
+        if (string.IsNullOrEmpty(search))
+        {
+            return where;
+        }
+        return where is null ? search : "(" + where + "\n) AND (" + search + ")";
+    }
+
     /// <summary>Error for a filter with more than one statement (a <c>;</c> outside strings and comments), or <c>null</c>.</summary>
     public static string? FilterError(string? text) =>
         NormalizeFilter(text) is { } filter && Eunomia.Engine.Sql.Splitting.SqlSplitter.Split(filter).Count > 1
@@ -149,10 +164,11 @@ public static class DataTabQuery
 
     /// <summary>
     /// SELECT of <paramref name="count"/> rows starting at <paramref name="offset"/>. With <paramref name="fullRows"/>,
-    /// nothing is cut (Export and Copy as run it again this way, appendix D B4).
+    /// nothing is cut (Export and Copy as run it again this way, appendix D B4). <paramref name="search"/> is the filter
+    /// panel's condition (<see cref="SearchTerms.Where"/>), joined to the filter with AND.
     /// </summary>
     public static DataSelect Build(IDialect dialect, TableDefinition table, IReadOnlyCollection<string> hidden, string? filter,
-        IReadOnlyList<DataSort> sort, long offset, int count, bool fullRows = false)
+        IReadOnlyList<DataSort> sort, long offset, int count, bool fullRows = false, string? search = null)
     {
         ArgumentNullException.ThrowIfNull(dialect);
         ArgumentNullException.ThrowIfNull(table);
@@ -190,7 +206,7 @@ public static class DataTabQuery
         var sql = new StringBuilder("SELECT ");
         sql.Append(star ? "*" : string.Join(", ", expressions));
         sql.Append(" FROM ").Append(dialect.QualifiedName(table.Ref));
-        if (WhereClause(filter) is { } where)
+        if (CombineWhere(filter, search) is { } where)
         {
             sql.Append(" WHERE ").Append(where);
         }
@@ -259,7 +275,9 @@ public static class DataTabQuery
     /// <summary>
     /// Data tab label (appendix D B6): "db.t: N rows total (exact)"; with a limit or a filter, the total comes from the
     /// approximate (or exact) count and gets ", limited to N" or ", N rows match to filter" appended. The (exact/approximately)
-    /// suffix only on InnoDB. Views: "db.v: N rows".
+    /// suffix only on InnoDB. With a filter (WHERE or the filter panel search), the exact count is of the matching rows:
+    /// "M rows match to filter (exact)"; the approximate one is of the table, and a limited load says "first N matching rows
+    /// loaded" (there may be more). Views: "db.v: N rows".
     /// </summary>
     public static string CountLabel(string database, string table, DataCount count, CultureInfo? culture = null)
     {
@@ -275,6 +293,11 @@ public static class DataTabQuery
         {
             return head + N(count.Loaded) + " rows total" + (count.InnoDb ? " (exact)" : string.Empty);
         }
+        if (count.Filtered && count.TotalExact && count.Total is { } matching)
+        {
+            // COUNT(*) with the WHERE: the matching rows, not the table's.
+            return head + N(matching) + " rows match to filter (exact)" + (count.Loaded < matching ? ", limited to " + N(count.Loaded) : string.Empty);
+        }
         var total = count.Total ?? count.Loaded;
         var text = head + N(total) + " rows total";
         if (count.InnoDb)
@@ -283,6 +306,10 @@ public static class DataTabQuery
         }
         if (count.Filtered)
         {
+            if (count.Limited)
+            {
+                return text + $", first {N(count.Loaded)} matching rows loaded";
+            }
             return text + (count.Loaded == total ? ", all rows match to filter" : $", {N(count.Loaded)} rows match to filter");
         }
         return text + ", limited to " + N(count.Loaded);
@@ -292,7 +319,7 @@ public static class DataTabQuery
 /// <summary>Numbers for the Data tab label.</summary>
 /// <param name="Loaded">Rows loaded in the grid.</param>
 /// <param name="Limited">The SELECT may have left rows out (it loaded as many as it asked for).</param>
-/// <param name="Filtered">There is a WHERE filter.</param>
+/// <param name="Filtered">There is a WHERE filter or a filter panel search.</param>
 /// <param name="Total">Table count (approximate from <c>SHOW TABLE STATUS</c>, or exact from <c>COUNT(*)</c>).</param>
 /// <param name="TotalExact">The count is exact.</param>
 /// <param name="InnoDb">InnoDB engine (the suffix only appears there).</param>

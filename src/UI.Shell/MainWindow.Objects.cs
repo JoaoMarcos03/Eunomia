@@ -29,7 +29,7 @@ public sealed partial class MainWindow
         var c = _context.Commands;
         _tree.Tree.ContextMenu = _ui.BuildContextMenu(MainMenuLayout.DatabaseMenu);
         c.SetHandler("object.drop", _ => new ValueTask(DropAsync()),
-            () => ListTarget() is not null || TreeTarget() is { } t && (t.Node.IsObject || t.Node.Kind == TreeNodeKind.Database));
+            () => ListIsCommandTarget() ? ListTarget() is not null : TreeTarget() is { } t && (t.Node.IsObject || t.Node.Kind == TreeNodeKind.Database));
         c.SetHandler("object.emptyTables", _ => new ValueTask(EmptyTablesAsync()), () => ObjectsTarget() is { } t && t.Objects.Any(IsTableOrView));
         c.SetHandler("object.selectTopRows", _ => new ValueTask(SelectTopRowsAsync()), () => FocusedObject() is { } o && IsTableOrView(o.Object));
         c.SetHandler("object.createDatabase", _ => new ValueTask(CreateDatabaseAsync()), () => TreeTarget() is { Node.Kind: TreeNodeKind.Session });
@@ -104,20 +104,23 @@ public sealed partial class MainWindow
         return (result == MessageDialogResult.Ok, verified);
     }
 
-    /// <summary>Target objects: the Database tab list selection, if it has the focus; otherwise the object focused in the tree.</summary>
+    /// <summary>
+    /// Target objects: the Database tab list selection, if the commands act on the list (none, with nothing selected: never
+    /// the object focused in the tree); otherwise the object focused in the tree.
+    /// </summary>
     private (OpenSession Session, string Database, IReadOnlyList<DbObjectRef> Objects)? ObjectsTarget()
     {
-        if (ListTarget() is { } list)
+        if (ListIsCommandTarget())
         {
-            return list;
+            return ListTarget();
         }
         return TreeTarget() is ({ } open, _, { Object: { } obj } tag) ? (open, tag.Database, [obj]) : null;
     }
 
-    /// <summary>Focused object (Database tab list with focus, or the tree).</summary>
+    /// <summary>Focused object (Database tab list, if the commands act on it, or the tree).</summary>
     private (OpenSession Session, DbObjectRef Object)? FocusedObject()
     {
-        if (_databaseView is { } view && view.List.IsKeyboardFocusWithin)
+        if (_databaseView is { } view && ListIsCommandTarget())
         {
             return view.List.FocusedNode?.Tag is DbObjectRef obj && ActiveSession is { Host.ServerServices: not null } open ? (open, obj) : null;
         }
@@ -126,7 +129,8 @@ public sealed partial class MainWindow
 
     private async Task DropAsync()
     {
-        if (ListTarget() is null && TreeTarget() is ({ } open, { Kind: TreeNodeKind.Database } node, _))
+        // DROP DATABASE only with the tree as the target: from the Database tab list it is always the selected objects.
+        if (!ListIsCommandTarget() && TreeTarget() is ({ } open, { Kind: TreeNodeKind.Database } node, _))
         {
             if (!await ConfirmImplicitCommitAsync(open) || !(await ConfirmAsync("Confirm", ObjectActions.DropDatabaseQuestion(node.Name) + SessionLine(open))).Ok)
             {
