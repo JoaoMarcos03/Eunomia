@@ -28,7 +28,8 @@ public sealed class DataTabTests
         using var culture = new CultureScope(CultureInfo.InvariantCulture);
         var db = NewDatabaseName("eunomia_df_");
         await ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.t (id INT PRIMARY KEY, name VARCHAR(20)) ENGINE=InnoDB; " +
-            $"INSERT INTO `{db}`.t VALUES (1, 'ana'), (2, 'rui'), (3, 'eva'), (4, 'ana maria');");
+            $"INSERT INTO `{db}`.t VALUES (1, 'ana'), (2, 'rui'), (3, 'eva'), (4, 'ana maria'); " +
+            $"CREATE TABLE `{db}`.u (id INT PRIMARY KEY); INSERT INTO `{db}`.u VALUES (1);");
         try
         {
             var (window, context, session, connector, _) = CreateShell(cs, db);
@@ -73,20 +74,32 @@ public sealed class DataTabTests
             Assert.True(await context.Commands.ExecuteAsync("filter.remove"));
             await WaitAsync(() => window.DataGrid.RowCount == 4 ? "ok" : null);
 
-            // Local filter panel (regex, case-insensitive) over the loaded rows; F5 clears it.
-            window.LocalFilterBox.Text = "^ANA";
+            // Filter panel (appendix D B11): searches the whole table on the server, plain text without case.
+            window.LocalFilterBox.Text = "ANA";
             await window.ApplyLocalFilterAsync();
-            Assert.Equal(2, window.DataGrid.RowCount);
-            Assert.Equal("2 out of 4 matching. 2 hidden.", window.LocalFilterInfo.Text);
+            await WaitAsync(() => window.DataGrid.RowCount == 2 && window.LocalFilterInfo.Text == "2 matching rows." ? "ok" : null);
+            Assert.Contains("LIKE '%ana%'", window.DataBrowser!.Select.Sql, StringComparison.Ordinal);
+            // In plain text a "(" is a "(" (as a regex it was an error): no row has one.
             window.LocalFilterBox.Text = "(";
             await window.ApplyLocalFilterAsync();
-            Assert.Equal(4, window.DataGrid.RowCount);
+            await WaitAsync(() => window.DataGrid.RowCount == 0 && window.LocalFilterInfo.Text == "0 matching rows." ? "ok" : null);
             window.LocalFilterBox.Text = "eva";
             await window.ApplyLocalFilterAsync();
-            Assert.Equal(1, window.DataGrid.RowCount);
+            await WaitAsync(() => window.DataGrid.RowCount == 1 && window.LocalFilterInfo.Text == "1 matching row." ? "ok" : null);
+            // F5 reloads with the search: the new row that matches shows up.
+            await ExecAsync(cs, $"INSERT INTO `{db}`.t VALUES (5, 'eva 2')");
             window.DataGrid.Focus();
             Assert.True(await context.Commands.ExecuteAsync("view.refresh"));
-            await WaitAsync(() => window.DataGrid.RowCount == 4 && window.LocalFilterBox.Text == string.Empty ? "ok" : null);
+            await WaitAsync(() => window.DataGrid.RowCount == 2 && window.LocalFilterBox.Text == "eva" ? "ok" : null);
+            await ExecAsync(cs, $"DELETE FROM `{db}`.t WHERE id = 5");
+            // Another table starts without the search; back in t, every row.
+            window.Tree.Tree.FocusedNode = Child(dbNode, "u");
+            await WaitAsync(() => window.DataBrowser?.Table.Ref.Name == "u" && window.DataGrid.RowCount == 1 ? "ok" : null);
+            Assert.Equal(string.Empty, window.LocalFilterBox.Text);
+            Assert.Equal(string.Empty, window.LocalFilterInfo.Text);
+            window.Tree.Tree.FocusedNode = Child(dbNode, "t");
+            await WaitAsync(() => window.DataBrowser?.Table.Ref.Name == "t" && window.DataGrid.RowCount == 4 ? "ok" : null);
+            Assert.False(window.DataBrowser!.IsSearching);
 
             // Export grid rows to a file: JSON in UTF-8 with a BOM, every loaded row.
             var file = Path.Combine(Path.GetTempPath(), $"eunomia-export-{Guid.NewGuid():N}.json");
@@ -162,9 +175,10 @@ public sealed class DataTabTests
             Assert.Equal(500, window.DataGrid.Selection.FocusedRow);
             Assert.Equal(490, window.DataGrid.TopRow);
 
-            // With a local filter ("5": 271 rows), going to the query tab and back: the filter is not applied again.
+            // With a search ("5": 271 rows), going to the query tab and back: the search does not run again.
             window.LocalFilterBox.Text = "5";
             await window.ApplyLocalFilterAsync();
+            await WaitAsync(() => window.DataGrid.RowCount == 271 ? "ok" : null);
             await PauseAsync();
             Assert.Equal(271, window.DataGrid.RowCount);
             window.DataGrid.Selection.Focus(100, 0);

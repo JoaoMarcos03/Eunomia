@@ -111,6 +111,27 @@ public sealed class DataTabQueryTests
     }
 
     [Fact]
+    public void FilterPanelSearchGoesWithTheFilterWithAnd()
+    {
+        var table = Table(Columns, new IndexDefinition("PRIMARY", IndexKind.Primary, ["id"]));
+
+        Assert.EndsWith(" FROM `shop`.`products` WHERE (id > 5\n) AND (`name` LIKE 'a') LIMIT 1000",
+            DataTabQuery.Build(Dialect, table, [], "id > 5;", [], 0, 1000, search: "`name` LIKE 'a'").Sql);
+        Assert.EndsWith(" FROM `shop`.`products` WHERE `name` LIKE 'a' LIMIT 1000",
+            DataTabQuery.Build(Dialect, table, [], null, [], 0, 1000, search: "`name` LIKE 'a'").Sql);
+    }
+
+    [Theory]
+    [InlineData(null, null, null)]
+    [InlineData("id = 1", null, "id = 1")]
+    [InlineData(null, "s", "s")]
+    [InlineData("WHERE id = 1;", "s", "(id = 1\n) AND (s)")]
+    // The line break keeps the comment from swallowing the search.
+    [InlineData("name = 'a;b' -- c;", "s", "(name = 'a;b' -- c;\n) AND (s)")]
+    public void FilterAndSearchCombined(string? filter, string? search, string? expected) =>
+        Assert.Equal(expected, DataTabQuery.CombineWhere(filter, search));
+
+    [Fact]
     public void LabelVariants()
     {
         var c = CultureInfo.InvariantCulture;
@@ -118,8 +139,14 @@ public sealed class DataTabQueryTests
         Assert.Equal("shop.products: 272 rows total", DataTabQuery.CountLabel("shop", "products", new DataCount(272, false, false, null, false, false), c));
         Assert.Equal("shop.products: 12,345 rows total (approximately), limited to 1,000",
             DataTabQuery.CountLabel("shop", "products", new DataCount(1000, true, false, 12_345, false, true), c));
-        Assert.Equal("shop.products: 272 rows total (exact), 3 rows match to filter",
-            DataTabQuery.CountLabel("shop", "products", new DataCount(3, false, true, 272, true, true), c));
+        // With a filter, the exact count is COUNT(*) with the WHERE: the matching rows.
+        Assert.Equal("shop.products: 3 rows match to filter (exact)",
+            DataTabQuery.CountLabel("shop", "products", new DataCount(3, false, true, 3, true, true), c));
+        Assert.Equal("shop.products: 2,500 rows match to filter (exact), limited to 1,000",
+            DataTabQuery.CountLabel("shop", "products", new DataCount(1000, true, true, 2500, true, true), c));
+        // The approximate count is the table's: a limited load may have left matching rows out.
+        Assert.Equal("shop.products: 12,345 rows total (approximately), first 1,000 matching rows loaded",
+            DataTabQuery.CountLabel("shop", "products", new DataCount(1000, true, true, 12_345, false, true), c));
         Assert.Equal("shop.products: 3 rows total, all rows match to filter",
             DataTabQuery.CountLabel("shop", "products", new DataCount(3, false, true, 3, false, false), c));
         Assert.Equal("shop.v: 10 rows", DataTabQuery.CountLabel("shop", "v", new DataCount(10, false, false, null, false, false, IsView: true), c));

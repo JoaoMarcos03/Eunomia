@@ -124,7 +124,7 @@ public sealed partial class MainWindow
         var length = 0;
         foreach (var row in SelectedRows())
         {
-            // With the local filter, the grid row is not the browser row.
+            // A new row has no browser row.
             if (SourceRowOf(row) is not { } sourceRow)
             {
                 continue;

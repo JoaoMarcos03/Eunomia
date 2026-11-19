@@ -510,6 +510,8 @@ This is `editFilterVT` (Ctrl+Alt+F toggles the panel; TextHint "Regular expressi
 - **Per-context text:** the filter text is remembered separately per tab (Data, each result tab, host lists).
 - **History:** 20 entries (`FilterVTHistory`).
 
+Eunomia differs (plain text with `;` between terms, the `.*` button, the Data tab searched on the server): see the provisional decisions in `docs/progress.md`.
+
 ## B12. Per-table persistence
 
 The registry key is `<SessionPath>\<db>|<table>` (`GetRegKeyTable`, [main.pas:11783-11791](https://github.com/HeidiSQL/HeidiSQL/blob/c123ccdb9e3f58d4390a05deb31f6e6effa33875/source/main.pas#L11783-L11791)). [CODE] It stores:

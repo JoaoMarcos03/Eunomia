@@ -418,7 +418,12 @@ public sealed partial class MainWindow
         _log.HorizontalScrollbar = s.Log.HorizontalScrollbar;
         _body.ColumnDefinitions[0].Width = new GridLength(Math.Max(40, s.Panels.TreeWidth));
         SetLogPanel(s.Display.LogPanel);
+        if (!s.Display.FilterPanel)
+        {
+            ClearLocalFilters();
+        }
         _filterPanel.IsVisible = s.Display.FilterPanel;
+        _filterRegexButton.IsChecked = s.Display.FilterRegex;
         _tree.FiltersVisible = s.Display.TreeFilters;
         _tree.Tree.ShowSizes = s.Display.ObjectSizes;
         ApplyEditorOptionsToTabs();

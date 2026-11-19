@@ -195,4 +195,91 @@ public sealed class TableBrowserTests : IAsyncLifetime
             }
         }
     }
+
+    /// <summary>
+    /// Table for the filter panel search: names <c>r1</c>..<c>r2500</c> in a <c>_bin</c> column and, past the first page,
+    /// 2400 <c>Needle</c>, 2401 <c>a;b</c>, 2402 <c>50%</c>, 2403 <c>500</c>, 2404 invalid UTF-8 in the BLOB,
+    /// 2405 <c>blobneedle</c> in the BLOB, 2406 JSON with <c>jsonval</c> and 2407 a date in 2031.
+    /// </summary>
+    private async Task<TableDefinition> SearchTable()
+    {
+        await _host.RunPrimaryAsync(async (h, ct) =>
+        {
+            await h.ExecuteNonQueryAsync(
+                $"CREATE TABLE `{_database}`.s (id INT PRIMARY KEY, name VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin, data BLOB, extra JSON, at DATETIME) ENGINE=InnoDB", ct);
+            await h.ExecuteNonQueryAsync(
+                $"INSERT INTO `{_database}`.s (id, name) SELECT seq, CONCAT('r', seq) " +
+                $"FROM (SELECT a.n + (b.n * 10) + (c.n * 100) + (d.n * 1000) + 1 AS seq FROM {Digits} a, {Digits} b, {Digits} c, {Digits} d) q WHERE seq <= 2500", ct);
+            await h.ExecuteNonQueryAsync(
+                $"UPDATE `{_database}`.s SET name = CASE id WHEN 2400 THEN 'Needle' WHEN 2401 THEN 'a;b' WHEN 2402 THEN '50%' WHEN 2403 THEN '500' ELSE name END, " +
+                "data = CASE id WHEN 2404 THEN 0x00FF41C3 WHEN 2405 THEN 0x626C6F626E6565646C65 END, " +
+                "extra = IF(id = 2406, '{\"k\": \"jsonval\"}', NULL), at = IF(id = 2407, '2031-05-06 07:08:09', NULL) WHERE id >= 2400", ct);
+            return true;
+        }, Ct);
+        return await Table("s");
+    }
+
+    /// <summary>Ids of the rows loaded with the filter panel search <paramref name="text"/> (first page of 1,000, by id), with commas.</summary>
+    private async Task<string> SearchIds(TableDefinition table, string text, bool regex = false, string? filter = null)
+    {
+        var options = new DataBrowseOptions { Search = SearchTerms.Parse(text, regex), Filter = filter, Sort = [new DataSort("id", false)] };
+        using var browser = new TableBrowser(_host, table, options);
+        await browser.LoadAsync(1000, Ct);
+        var ids = new long[browser.Loaded];
+        for (var row = 0; row < ids.Length; row++)
+        {
+            Assert.True(browser.Source!.TryGetRow(row, out var block, out var r));
+            ids[row] = block.GetInt64(r, 0);
+        }
+        return string.Join(",", ids);
+    }
+
+    [Fact]
+    public async Task FilterPanelSearchFindsRowsPastTheFirstPage()
+    {
+        TestServer.RequireServer();
+        var table = await SearchTable();
+
+        // Without case (also in the _bin column and in the BLOB), past row 1,000.
+        Assert.Equal("2400,2405", await SearchIds(table, "NEEDLE"));
+        // ';' separates terms (any of them); '\;' is a ';'.
+        Assert.Equal("2400,2405,2406", await SearchIds(table, "needle ; jsonval"));
+        Assert.Equal("2401", await SearchIds(table, @"a\;b"));
+        // % and _ are not wildcards: 50% does not find 500 (nor the ids 50, 150…).
+        Assert.Equal("2402", await SearchIds(table, "50%"));
+        Assert.Equal("2407", await SearchIds(table, "2031-05"));
+        // Together with the WHERE filter.
+        Assert.Equal("2400", await SearchIds(table, "needle;jsonval", filter: "id < 2405"));
+    }
+
+    [Fact]
+    public async Task FilterPanelRegexSearchOnTextBlobAndDates()
+    {
+        TestServer.RequireServer();
+        var table = await SearchTable();
+
+        // REGEXP without case on CONVERT(… USING utf8mb4): no error 3995 on MySQL 8's BLOB, invalid UTF-8 included (2404);
+        // the backslash goes as _utf8mb4 X'…'.
+        Assert.Equal("2400,2405,2407", await SearchIds(table, @"^needle$;blob.eedle;\d{4}-05-06", regex: true));
+        Assert.Equal("2401", await SearchIds(table, @"^a\;b$", regex: true));
+    }
+
+    [Fact]
+    public async Task NextAndCountWithTheFilterPanelSearch()
+    {
+        TestServer.RequireServer();
+        var table = await SearchTable();
+        // r1, r10..r19, r100..r199 and r1000..r1999: 1,111 rows.
+        var options = new DataBrowseOptions { Search = SearchTerms.Parse("R1", false), RowsPerStep = 1000 };
+        using var browser = new TableBrowser(_host, table, options);
+
+        await browser.LoadAsync(1000, Ct);
+        Assert.Equal(1000, browser.Loaded);
+        Assert.True(browser.CanLoadMore);
+        Assert.True(browser.IsFiltered);
+        await browser.NextAsync(Ct);
+        Assert.Equal(1111, browser.Loaded);
+        Assert.False(browser.CanLoadMore);
+        Assert.Equal((1111L, true), await browser.CountAsync(exact: true, Ct));
+    }
 }

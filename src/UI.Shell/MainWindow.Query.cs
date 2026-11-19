@@ -400,7 +400,7 @@ public sealed partial class MainWindow
         foreach (var result in state.Results)
         {
             result.Sort?.Cancel();
-            _localFilterTexts.Remove(result);
+            ForgetLocalFilter(result);
             result.Result.Source.Dispose();
         }
         state.Results.Clear();

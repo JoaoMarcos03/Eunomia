@@ -119,6 +119,9 @@ public sealed class DisplayOptions
 
     public bool FilterPanel { get; set; } = true;
 
+    /// <summary>The <c>.*</c> button of the filter panel: each term is a regular expression instead of plain text.</summary>
+    public bool FilterRegex { get; set; }
+
     public bool LogPanel { get; set; } = true;
 
     public bool TreeFilters { get; set; } = true;

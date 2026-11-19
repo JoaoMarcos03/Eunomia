@@ -22,12 +22,11 @@ namespace Eunomia.UI.Shell;
 public sealed partial class MainWindow
 {
     private TableBrowser? _browser;
-
-    /// <summary>The browser's rows with the path to the full values (Ctrl+C and editing of cut cells).</summary>
-    private FullValueRowSource? _browserRows;
     private long? _restoreTopRow;
-    private IReadOnlyList<int> _dataVisibleColumns = [];
     private (Guid Session, DbObjectRef Table)? _dataTarget;
+
+    /// <summary>Filter panel search of the last load started (<see cref="_dataSearch"/> different: the table loads again).</summary>
+    private SearchTerms? _dataSearchLoaded;
 
     /// <summary>Tables whose smaller page was already explained in the log (once per run).</summary>
     private readonly HashSet<(Guid Session, DbObjectRef Table)> _reducedStepLogged = [];
@@ -175,13 +174,20 @@ public sealed partial class MainWindow
             return;
         }
         var same = _dataTarget is { } target && target.Session == session.Id && target.Table == obj;
-        if (same && !force && _browser is not null)
+        // The filter panel's search belongs to the table shown (or loading): another table starts without it.
+        var shown = _browser is { } current && _browserSession?.Id == session.Id && current.Table.Ref == obj;
+        if (!same && !shown)
+        {
+            ClearDataSearch();
+        }
+        if (same && !force && _browser is not null && Equals(_dataSearchLoaded, _dataSearch))
         {
             return;
         }
         // The same table keeps the rows already requested; another one, a page (fewer rows when they are large: ReadBrowseOptions).
         var wanted = same && _browser is not null ? _browser.Wanted : 0;
         _dataTarget = (session.Id, obj);
+        _dataSearchLoaded = _dataSearch;
         _ = LoadTableAsync(session, obj, wanted, BeginDataLoad());
     }
 
@@ -245,6 +251,7 @@ public sealed partial class MainWindow
         {
             Hidden = DataTabQuery.ParseHidden(GetTableState(key, "HiddenColumns")),
             Filter = GetTableState(key, "Filter"),
+            Search = _dataSearch,
             Sort = DataTabQuery.ParseSort(GetTableState(key, "Sort")),
             RowsPerStep = step,
             MaximumRows = Math.Max(data.RowsPerStep, data.MaximumRows),
@@ -423,10 +430,8 @@ public sealed partial class MainWindow
         // Reloading the same table (F5, filter, sorting) keeps the focused cell and the scroll (appendix D A9).
         var same = previous is not null && previous.Table.Ref == browser.Table.Ref;
         var (focusRow, focusColumn, topRow) = (DataGrid.Selection.FocusedRow, DataGrid.Selection.FocusedColumn, DataGrid.TopRow);
-        ResetDataGridFilter();
-        _dataVisibleColumns = visible;
-        _browserRows = new FullValueRowSource(source, browser);
-        DataGrid.SetSource(new ProjectedRowSource(_browserRows, visible));
+        // FullValueRowSource: the path to the full values (Ctrl+C and editing of cut cells).
+        DataGrid.SetSource(new ProjectedRowSource(new FullValueRowSource(source, browser), visible));
         if (same && focusRow >= 0)
         {
             DataGrid.Selection.Focus(focusRow, Math.Clamp(focusColumn, 0, Math.Max(0, visible.Count - 1)));
@@ -492,7 +497,7 @@ public sealed partial class MainWindow
         }
         var table = browser.Table.Ref;
         var limited = browser.Loaded >= browser.Wanted;
-        var filtered = DataTabQuery.NormalizeFilter(browser.Options.Filter) is not null;
+        var filtered = browser.IsFiltered;
         var isView = table.Kind is DbObjectKind.View or DbObjectKind.MaterializedView;
         var innoDb = string.Equals(browser.Table.Options.GetValueOrDefault("Engine"), "InnoDB", StringComparison.OrdinalIgnoreCase);
         long? total = null;
@@ -518,6 +523,11 @@ public sealed partial class MainWindow
             return;
         }
         _dataLabel.Text = DataTabQuery.CountLabel(table.Schema, table.Name, new DataCount(browser.Loaded, limited, filtered, total, exact, innoDb, isView));
+        _dataSearchInfo = browser.IsSearching ? DataSearchInfo(browser, total, exact) : string.Empty;
+        if (ReferenceEquals(LocalFilterTarget(), DataGridFilterKey))
+        {
+            _filterInfo.Text = _dataSearchInfo;
+        }
         _dataView.SetPaging(browser.CanLoadMore);
         if (browser.ReachedMaximum)
         {
@@ -534,13 +544,6 @@ public sealed partial class MainWindow
         {
             return;
         }
-        // Next and Show all reload the grid: the local filter is cleared, as on any reload (appendix D B11). Without this,
-        // the grid kept the filtered view without the new rows and the focus went to an index of the full view.
-        if (_dataGridFiltered && _browserRows is { } rows)
-        {
-            DataGrid.SetSource(new ProjectedRowSource(rows, _dataVisibleColumns));
-        }
-        ResetDataGridFilter();
         var firstNew = browser.Loaded;
         var cts = BeginDataLoad();
         _context.Status.Busy = "Fetching rows ...";

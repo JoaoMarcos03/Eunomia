@@ -48,6 +48,7 @@ public sealed partial class MainWindow : Window
     private readonly MainTabsView _tabs;
     private readonly Border _filterPanel;
     private readonly TextBox _filterBox;
+    private readonly Avalonia.Controls.Primitives.ToggleButton _filterRegexButton;
     private readonly TextBlock _filterInfo;
     private readonly SqlLogView _log;
     private readonly GridSplitter _logSplitter;
@@ -124,14 +125,28 @@ public sealed partial class MainWindow : Window
         _tabs.SelectionChanged += (_, _) => OnActiveTabChanged();
         ShellTrace.At("shell-tabs");
 
-        // Filter panel (Ctrl+Alt+F): local regex over the active list (FAM-G14, wired in phase 5).
-        _filterBox = new TextBox { PlaceholderText = "Regular expression", Width = 260, VerticalAlignment = VerticalAlignment.Center, MinHeight = 22, Padding = new Thickness(4, 1) }.Named("Filter");
+        // Filter panel (Ctrl+Alt+F; appendix D B11): terms separated by ';', plain text or regex (.*); the Data tab searches
+        // the whole table on the server, the other lists the rows shown (MainWindow.LocalFilter.cs).
+        _filterBox = new TextBox { Width = 340, VerticalAlignment = VerticalAlignment.Center, MinHeight = 22, Padding = new Thickness(4, 1) }.Named("Filter");
+        ToolTip.SetTip(_filterBox, FilterTip);
+        _filterRegexButton = new Avalonia.Controls.Primitives.ToggleButton
+        {
+            Content = ".*",
+            IsChecked = settings.Display.FilterRegex,
+            MinHeight = 22,
+            Padding = new Thickness(5, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Focusable = false,
+        }.Named("Regular expression");
+        ToolTip.SetTip(_filterRegexButton, "Regular expression: each term is a regular expression instead of plain text");
         var filterClose = new Button { Content = Controls.Common.Icons.IconFactory.CreateImage("close-tab"), Padding = new Thickness(1), Focusable = false, Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
         filterClose.Click += (_, _) => SetFilterPanel(false);
         var filterRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(4, 2) };
         filterRow.Children.Add(filterClose);
         filterRow.Children.Add(new TextBlock { Text = "Filter:", VerticalAlignment = VerticalAlignment.Center });
         filterRow.Children.Add(_filterBox);
+        filterRow.Children.Add(_filterRegexButton);
         _filterInfo = new TextBlock { Name = "filterInfo", VerticalAlignment = VerticalAlignment.Center };
         filterRow.Children.Add(_filterInfo);
         _filterPanel = new Border { Child = filterRow, Height = 26, IsVisible = settings.Display.FilterPanel };
@@ -276,6 +291,8 @@ public sealed partial class MainWindow : Window
     internal TextBox LocalFilterBox => _filterBox;
 
     internal TextBlock LocalFilterInfo => _filterInfo;
+
+    internal Avalonia.Controls.Primitives.ToggleButton LocalFilterRegexButton => _filterRegexButton;
 
     /// <summary>Data tab (tests).</summary>
     internal UI.Features.DataTab.DataTabView DataView => _dataView;
@@ -470,6 +487,11 @@ public sealed partial class MainWindow : Window
         if (visible)
         {
             _filterBox.Focus();
+        }
+        else
+        {
+            // A hidden filter would leave rows out without anyone seeing why (the Data tab's search runs on the server).
+            ClearLocalFilters();
         }
     }
 

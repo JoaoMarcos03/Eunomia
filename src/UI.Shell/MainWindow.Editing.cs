@@ -205,15 +205,8 @@ public sealed partial class MainWindow
     private static bool IsEditable(TableBrowser browser) =>
         RowKey.Of(browser.Table).Columns.All(k => browser.Select.Columns.Contains(k.Name, StringComparer.OrdinalIgnoreCase));
 
-    /// <summary>Browser row behind a grid row (the local filter changes the indexes); <c>null</c> for a new row.</summary>
-    private long? SourceRowOf(long gridRow)
-    {
-        if (gridRow >= DataGrid.SourceRows)
-        {
-            return null;
-        }
-        return DataGrid.Source is ProjectedRowSource { Inner: FilteredRowSource filtered } ? filtered.InnerRow(gridRow) : gridRow;
-    }
+    /// <summary>Browser row behind a grid row (the same index: the filter panel's search runs on the server); <c>null</c> for a new row.</summary>
+    private long? SourceRowOf(long gridRow) => gridRow >= DataGrid.SourceRows ? null : gridRow;
 
     private int GridColumnOf(string name) =>
         DataGrid.Source is { } source ? source.Schema.Columns.ToList().FindIndex(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)) : -1;
