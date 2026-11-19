@@ -11,6 +11,7 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 - Export database as SQL: rows of the **Server: <session>** outputs in the session colour, as in the tree; the target database box is searchable ("Type to search"; the arrow lists them all); an export with errors ends with a message listing the objects that failed.
 - Preferences › Grid formatting › "Lower the memory limits to fit this computer" (on by default): below 8 GB of memory, the limits for results in memory follow the computer (all results: an eighth of the memory, at least 256 MB; one result: a quarter of that, at least 64 MB); values set lower are kept. The page shows the computer's processors and memory.
 - Data tab: while a table loads, the label shows the time taken and "(Esc to cancel)"; after cancelling, it says how many rows were loaded.
+- Export database as SQL: with the tree's **Group objects by type** on, the objects show in the same groups (Tables, Views, Procedures, Functions, Triggers, Events); checking a group checks its visible objects (#5).
 
 ### Changed
 
@@ -22,10 +23,12 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 - `tests/Integration/Start-TestServer.ps1` also starts the MySQL 8.0/8.4 of the Windows ZIP archives (`-Mysqld`, `-Name`, `-Port`; `--initialize-insecure` with `root@127.0.0.1`, `--no-defaults`, no X Protocol, no service), and `-Stop` also stops MySQL's server process, which runs as a child of a monitor process.
 - Run SQL file: on MySQL 8.4 and later, the import connection turns off `restrict_fk_on_non_standard_key`, so dumps from MySQL 8.0 with foreign keys to non-unique keys load.
 - Run SQL file: the tree, the table structure and the Data tab of other databases no longer wait while an import runs.
+- Bottom filter panel (Filter:): plain text by default, with `;` as "or" and `\;` for a literal `;`; the **.\*** button switches to regular expressions. In the Data tab it searches the whole table on the server (with the WHERE filter), so it finds rows beyond the first page, and it stays on F5, sorting and WHERE changes. It applies half a second after typing or at once with Enter; closing the panel clears every filter.
 
 ### Fixed
 
 - Data tab: a large table (11 GB) stopped after 30 s with nothing shown.
+- Drop from the Database tab list's context menu dropped the database focused in the tree instead of the selected objects; with nothing selected in the list, Drop, Empty and Clear filter now do nothing.
 - Copy, Copy as and Edit › Copy on query results acted on the wrong grid, or did nothing, when a menu had taken the focus; keyboard shortcuts no longer run while a menu is open.
 - Cancelling a query or a Data tab load that waits behind another one cancels it at once.
 - Export: a full disk or a lost network share is reported as a file error (not a lost connection); an incomplete file (failed close, damaged ZIP, wrong size) fails the export, and the `.partial` file is deleted on error or cancel (before, a failed ZIP write kept it open).
