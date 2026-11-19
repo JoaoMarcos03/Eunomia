@@ -341,6 +341,73 @@ public sealed class SqlExportDialogTests
     }
 
     /// <summary>
+    /// Issue #5: with the tree's "Group objects by type", the dialog shows the main tree's 6 groups ("Tables (2)", the ones
+    /// without visible objects disabled); a group checks its visible objects and its state counts only them; the export
+    /// keeps the order of the plain list.
+    /// </summary>
+    [AvaloniaFact(Timeout = UiTimeouts.Default)]
+    public async Task GroupObjectsShowsTheMainTreeGroups()
+    {
+        SqlExportRequest? requested = null;
+        var dialog = new SqlExportDialog(
+            new SqlExportSettings { CreateTables = true },
+            ["shop"],
+            (db, _) => Task.FromResult<IReadOnlyList<DbObjectInfo>>([O(db, "orders", DbObjectKind.Table), O(db, "v_orders", DbObjectKind.View),
+                O(db, "customers", DbObjectKind.Table), O(db, "p", DbObjectKind.Procedure), O(db, "trg", DbObjectKind.Trigger)]),
+            (request, _, _) =>
+            {
+                requested = request;
+                return Task.FromResult(new SqlExportResult(false, 0, [], "text", TimeSpan.Zero));
+            },
+            "shop",
+            ["p"],
+            treeFilters: new SqlExportTreeFilters(string.Empty, string.Empty),
+            groupObjects: true);
+        dialog.Show();
+        await dialog.Loading;
+        var database = (CheckBox)dialog.Tree.Items.Cast<TreeViewItem>().Single().Header!;
+        await RealServer.WaitAsync(() => database.IsChecked is null ? "ok" : null);
+
+        var groups = dialog.GroupItems("shop");
+        var checks = groups.Select(g => (CheckBox)g.Header!).ToList();
+        Assert.Equal(["Tables (2)", "Views (1)", "Procedures (1)", "Functions (0)", "Triggers (1)", "Events (0)"], checks.Select(c => ((TextBlock)c.Content!).Text));
+        Assert.Equal([true, true, true, false, true, false], checks.Select(c => c.IsEnabled));
+        // The chosen object comes checked in its group, which opens; the others stay closed.
+        Assert.Equal([false, false, true, false, false, false], checks.Select(c => c.IsChecked));
+        Assert.Equal([false, false, true, false, false, false], groups.Select(g => g.IsExpanded));
+        // The group says the kind: the objects show only their name.
+        var tables = groups[0].Items.Cast<TreeViewItem>().ToList();
+        Assert.Equal(["orders", "customers"], tables.Select(i => ((TextBlock)ObjectCheck(i).Content!).Text));
+        Assert.Single(((StackPanel)tables[0].Header!).Children);
+
+        // A group checks its objects; one unchecked object leaves it partial.
+        checks[0].IsChecked = true;
+        Assert.True(ObjectCheck(tables[1]).IsChecked);
+        dialog.SetObjectChecked("shop", "orders", false);
+        Assert.Null(checks[0].IsChecked);
+        Assert.Null(database.IsChecked);
+
+        // With the Table filter, groups count only their visible objects: Procedures (its "p" checked but hidden) and
+        // Triggers have none and are disabled.
+        dialog.TableFilterBox.Text = "^(o|v|c)";
+        await RealServer.WaitAsync(() => !checks[2].IsEnabled ? "ok" : null);
+        Assert.Equal([true, true, false, false, false, false], checks.Select(c => c.IsEnabled));
+        Assert.Equal([null, false, false, false, false, false], checks.Select(c => c.IsChecked));
+        checks[1].IsChecked = true;
+        checks[0].IsChecked = true;
+        Assert.True(database.IsChecked);
+
+        // The export takes the checked visible objects in the plain list's order, not the groups'.
+        dialog.OutputCombo.SelectedIndex = 3;
+        dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        await RealServer.WaitAsync(() => dialog.StatusText.Text?.StartsWith("Done", StringComparison.Ordinal) == true ? "ok" : null);
+        Assert.Equal(["orders", "v_orders", "customers"], Assert.Single(requested!.Databases).Objects.Select(o => o.Ref.Name));
+        dialog.Close();
+    }
+
+    private static CheckBox ObjectCheck(TreeViewItem item) => (CheckBox)((StackPanel)item.Header!).Children[0];
+
+    /// <summary>
     /// Request of 16 Nov 2026: each "Server:" row of the output list has its session's colour from the settings, as in the
     /// tree (a soft tint and a bar with the full colour), in light and dark; the other rows keep the theme's.
     /// </summary>
@@ -485,7 +552,7 @@ public sealed class SqlExportDialogTests
         await RealServer.ExecAsync(cs, $"CREATE DATABASE `{db}`; CREATE TABLE `{db}`.a (id INT); CREATE TABLE `{db}`.b (id INT); CREATE TABLE `{db}`.c (id INT);");
         try
         {
-            var (window, _, session, connector, _) = RealServer.CreateShell(cs, db);
+            var (window, context, session, connector, _) = RealServer.CreateShell(cs, db);
             Assert.True(await window.ConnectAsync(window, session, null));
             var root = await RealServer.WaitAsync(() => window.Tree.Tree.Model!.Roots.FirstOrDefault());
             window.Tree.Tree.FocusedNode = await RealServer.WaitAsync(() => root.Children?.FirstOrDefault());
@@ -504,7 +571,22 @@ public sealed class SqlExportDialogTests
             await RealServer.WaitAsync(() => ((CheckBox)item.Header!).IsChecked is null ? "ok" : null);
             var checks = item.Items.Cast<TreeViewItem>().Select(i => (CheckBox)((StackPanel)i.Header!).Children[0]).ToList();
             Assert.Equal(["b"], checks.Where(c => c.IsChecked == true).Select(c => ((TextBlock)c.Content!).Text));
+            dialog.Close();
+            await command;
 
+            // With the tree's "Group objects by type" (issue #5), the same selection shows in the open Tables group.
+            context.Settings.Tree.GroupObjects = true;
+            list.Focus();
+            list.FocusedNode = list.Roots.First(n => n[0] == "b");
+            var flat = dialog;
+            command = window.CommandUi.ExecuteAsync("export.databaseAsSql");
+            dialog = await RealServer.WaitAsync(() => window.OwnedWindows.OfType<SqlExportDialog>().FirstOrDefault(d => !ReferenceEquals(d, flat)));
+            await RealServer.WaitAsync(() => dialog.GroupItems(db) is { Count: 6 } g && ((CheckBox)g[0].Header!).IsChecked is null ? "ok" : null);
+            var tables = dialog.GroupItems(db)[0];
+            Assert.Equal("Tables (3)", ((TextBlock)((CheckBox)tables.Header!).Content!).Text);
+            Assert.True(tables.IsExpanded);
+            checks = [.. tables.Items.Cast<TreeViewItem>().Select(i => (CheckBox)((StackPanel)i.Header!).Children[0])];
+            Assert.Equal(["b"], checks.Where(c => c.IsChecked == true).Select(c => ((TextBlock)c.Content!).Text));
             dialog.Close();
             await command;
             await connector.DisconnectAllAsync();
