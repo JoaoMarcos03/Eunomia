@@ -77,6 +77,7 @@ public sealed class CsvReader
     private int _length;
     private bool _eof;
     private int _toSkip;
+    private bool _lastQuoted;
 
     public CsvReader(TextReader reader, CsvOptions options, int bufferSize = 64 * 1024)
     {
@@ -119,7 +120,8 @@ public sealed class CsvReader
                 _toSkip--;
                 continue;
             }
-            if (record.Length == 1 && record[0] is { Length: 0 })
+            // Only a truly empty line: a one-column record whose field was "" is an empty string.
+            if (record.Length == 1 && record[0] is { Length: 0 } && !_lastQuoted)
             {
                 continue;
             }
@@ -298,6 +300,7 @@ public sealed class CsvReader
 
     private void AddValue(bool enclosed, bool isNullMarker)
     {
+        _lastQuoted = enclosed;
         if (!enclosed)
         {
             // \N (with or without a configured escape) and the unquoted word NULL are NULL, as in LOAD DATA.

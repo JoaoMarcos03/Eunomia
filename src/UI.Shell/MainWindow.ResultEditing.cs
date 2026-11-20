@@ -46,8 +46,37 @@ public sealed partial class MainWindow
             return;
         }
         entry.EditTable = table;
+        grid.Edits.RowCommitted += (_, _) => entry.HasSavedEdits = true;
         grid.IsReadOnly = false;
         grid.CommitHandler = commit => CommitResultRowAsync(entry, session, table, columns, commit);
+    }
+
+    /// <summary>
+    /// A local sort or filter of a result tab gives the grid new rows: the values saved in it (shown over the result as
+    /// the query returned it) and the row being edited go away. Asks first; returns whether it may go on.
+    /// </summary>
+    private async Task<bool> ConfirmResultReorderAsync(ResultView entry)
+    {
+        var grid = entry.Grid.Control;
+        if (!entry.HasSavedEdits && !grid.IsEditing && !grid.Edits.HasPending)
+        {
+            return true;
+        }
+        if (!(await ConfirmAsync("Confirm",
+                "Sorting or filtering this result shows its rows as the query returned them: the values saved here are no longer shown (the server has them, run the query again to see them) and unsaved changes are discarded.\n\nContinue?")).Ok)
+        {
+            return false;
+        }
+        // The cell editor first, then the pending row.
+        if (grid.IsEditing)
+        {
+            grid.CancelEditing();
+        }
+        if (grid.Edits.HasPending)
+        {
+            grid.CancelEditing();
+        }
+        return true;
     }
 
     /// <summary>Current value of a result cell: the saved one on top, otherwise the source's (raw text, full binary).</summary>

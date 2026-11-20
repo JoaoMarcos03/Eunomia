@@ -29,19 +29,19 @@ public sealed class SshTunnelFactory(KnownHostsStore knownHosts, Func<SshAgentCl
         var methods = new List<AuthenticationMethod>();
         var disposables = new List<IDisposable>();
 
-        if (options.UseAgent && _agent() is { } agent)
+        if (options.UseAgent)
         {
             try
             {
-                var algorithms = agent.HostAlgorithms();
-                if (algorithms.Count > 0)
+                if (_agent() is { } agent && agent.HostAlgorithms() is { Count: > 0 } algorithms)
                 {
                     methods.Add(new PrivateKeyAuthenticationMethod(options.User, new AgentKeySource(algorithms)));
                 }
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or SocketException or SshException or TimeoutException or InvalidOperationException
+                                           or UnauthorizedAccessException or ArgumentException)
             {
-                // Agent unavailable: moves on to key and password.
+                // Agent unavailable or broken (stale SSH_AUTH_SOCK, pipe timeout, Pageant gone, bad reply): moves on to key and password.
             }
         }
         if (!string.IsNullOrEmpty(options.PrivateKeyPath))

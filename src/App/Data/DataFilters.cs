@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Eunomia.Drivers.Abstractions;
+using Eunomia.Engine.Sql;
 
 namespace Eunomia.App.Data;
 
@@ -146,7 +147,7 @@ public static partial class DataFilters
         switch (column.Type.Kind)
         {
             case LogicalTypeKind.Integer or LogicalTypeKind.Decimal or LogicalTypeKind.Float or LogicalTypeKind.Boolean
-                when Number().IsMatch(value):
+                when SqlLiterals.Number().IsMatch(value):
                 return value;
             case LogicalTypeKind.Bit when value.All(c => c is '0' or '1') && value.Length > 0:
                 return "b'" + value + "'";
@@ -257,7 +258,4 @@ public static partial class DataFilters
         var single = sql.Replace("\n", " ", StringComparison.Ordinal);
         return single.Length <= 100 ? single : single[..99] + "…";
     }
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
-    private static partial System.Text.RegularExpressions.Regex Number();
 }

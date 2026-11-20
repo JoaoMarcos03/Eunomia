@@ -154,6 +154,61 @@ public sealed class SqlFileTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// A packet that fails in the middle: the error points at the statement that failed, the journal moves past the ones the
+    /// server already ran, and resuming does not run them twice (they would be duplicate keys).
+    /// </summary>
+    [Fact]
+    public async Task PacketErrorPointsAtTheFailedStatementAndResumesAfterTheEarlierOnes()
+    {
+        TestServer.RequireServer();
+        const string broken = "INSERT INTO missing_table VALUES (1)";
+        var path = Write("packet.sql", Script(100, broken: broken + ";"));
+        var journal = new TransferJournal(Path.Combine(_directory, "jobs-packet"));
+        var request = Request(path) with { BatchInOneGo = true };
+
+        var first = await new SqlFileJob(_host, request, journal).RunAsync(null, Ct);
+        Assert.True(first.StoppedOnError);
+        var error = Assert.Single(first.ErrorList);
+        Assert.Equal(53, error.Statement);
+        Assert.Equal(60, error.Line);
+        Assert.Equal(broken, error.Sql);
+        Assert.Equal("49", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
+        var entry = Assert.Single(journal.List());
+        Assert.Equal(52, entry.Count);
+
+        await ExecAsync($"CREATE TABLE `{_database}`.missing_table (a INT)");
+        var resumed = await new SqlFileJob(_host, entry, journal).RunAsync(null, Ct);
+        Assert.True(resumed.Completed, string.Join("; ", resumed.ErrorList.Select(e => e.Message)));
+        Assert.Equal(104, resumed.Statements);
+        Assert.Equal("100", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
+        Assert.Empty(journal.List());
+
+        // Without Stop on errors: one error, at the failed statement, and the rest of the packet runs once.
+        await ExecAsync($"DROP TABLE `{_database}`.t, `{_database}`.missing_table");
+        await ExecAsync($"DROP PROCEDURE `{_database}`.p");
+        var lenient = await new SqlFileJob(_host, request with { StopOnErrors = false }).RunAsync(null, Ct);
+        Assert.False(lenient.StoppedOnError);
+        Assert.Equal(53, Assert.Single(lenient.ErrorList).Statement);
+        Assert.Equal(104, lenient.Statements);
+        Assert.Equal("100", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
+    }
+
+    /// <summary>Auto detect sees UTF-8 in the first block; a Latin-1 byte after it fails clearly instead of becoming U+FFFD.</summary>
+    [Fact]
+    public async Task LatinByteAfterTheFirstBlockIsNotValidUtf8()
+    {
+        TestServer.RequireServer();
+        var text = $"CREATE TABLE t (id INT, txt LONGTEXT);\nINSERT INTO t VALUES (1, '{new string('x', 1_200_000)}');\nINSERT INTO t VALUES (2, 'a";
+        var path = Path.Combine(_directory, "latin.sql");
+        File.WriteAllBytes(path, [.. Encoding.ASCII.GetBytes(text), 0xE7, .. "a');\n"u8]);
+
+        var error = await Assert.ThrowsAsync<SqlFileEncodingException>(() => new SqlFileJob(_host, Request(path)).RunAsync(null, Ct));
+
+        Assert.Contains("not valid UTF-8", error.Message, StringComparison.Ordinal);
+        Assert.Equal("0", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t WHERE txt LIKE '%�%'"));
+    }
+
+    /// <summary>
     /// Dump with its own database and settings (like mysqldump and the Eunomia export): resuming replays the file's USE and
     /// SETs, so the rest runs in the file's database, with FOREIGN_KEY_CHECKS=0, the time zone and the variables. A journal
     /// from an older version (without the state) reads them from the start of the file.

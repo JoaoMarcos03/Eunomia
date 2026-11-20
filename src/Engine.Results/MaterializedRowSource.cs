@@ -106,6 +106,11 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         int index;
         lock (_gate)
         {
+            if (_disposed)
+            {
+                // A late block after the result closed: nothing to keep (and the pool no longer counts this result).
+                return;
+            }
             if (block.BlockIndex != _blocks.Count || block.FirstRow != _rows)
             {
                 throw new InvalidOperationException($"Block out of order: {block.BlockIndex} (expected {_blocks.Count}).");
@@ -223,6 +228,7 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
         while (true)
         {
             RowBlock victim;
+            SpillFile spill;
             lock (_gate)
             {
                 if (_resident <= bytes || _disposed)
@@ -242,9 +248,14 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
                     return;
                 }
                 victim = _blocks[candidate]!;
-                _spill ??= new SpillFile(spillDirectory);
+                spill = _spill ??= new SpillFile(spillDirectory);
+                if (!spill.Contains(victim.BlockIndex) && spill.Length + victim.ByteSize > _storage.SpillQuotaBytes)
+                {
+                    // Disk quota reached: the rest stays in memory (Append refuses more when memory runs out too).
+                    return;
+                }
             }
-            _spill.Write(victim);
+            spill.Write(victim);
             var freed = false;
             lock (_gate)
             {
@@ -265,16 +276,20 @@ public sealed class MaterializedRowSource : IRowSource, IDisposable
     public void Dispose()
     {
         long resident;
-        lock (_gate)
+        // Under the eviction lock too: a TrimTo in progress finishes its write before the spill file closes.
+        lock (_trimLock)
         {
-            if (_disposed)
+            lock (_gate)
             {
-                return;
+                if (_disposed)
+                {
+                    return;
+                }
+                _disposed = true;
+                _spill?.Dispose();
+                _spill = null;
+                resident = _resident;
             }
-            _disposed = true;
-            _spill?.Dispose();
-            _spill = null;
-            resident = _resident;
         }
         _storage.Pool?.Unregister(this, resident);
     }

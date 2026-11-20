@@ -32,7 +32,7 @@ public sealed class SqlLogView : Decorator, IEditTarget
 {
     private readonly List<LogLineStyle> _styles = [];
     private readonly LogNumberMargin _numbers;
-    private readonly SqlColorizer _colorizer = new(SqlLanguages.Default);
+    private readonly SqlColorizer _colorizer = new(SqlLanguages.Default) { IndependentLines = true };
     private long _firstNumber = 1;
 
     public SqlLogView()

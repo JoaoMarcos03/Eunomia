@@ -1,10 +1,10 @@
-using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Eunomia.UI.Controls.Common.Brand;
+using Eunomia.UI.Controls.Common.Formatting;
 using Eunomia.UI.Controls.Common.Theming;
 
 namespace Eunomia.UI.Shell.Views;
@@ -84,9 +84,8 @@ public sealed class LargeFilesDialog : Window
         return button;
     }
 
-    internal static string FormatSize(long bytes) => bytes >= 1024L * 1024 * 1024
-        ? string.Create(CultureInfo.CurrentCulture, $"{bytes / (1024.0 * 1024 * 1024):0.0} GiB")
-        : string.Create(CultureInfo.CurrentCulture, $"{bytes / (1024.0 * 1024):0.0} MiB");
+    /// <summary>Same sizes as the rest of the app (<see cref="SizeFormatter"/>); also used by the run window.</summary>
+    internal static string FormatSize(long bytes) => SizeFormatter.Format(bytes);
 
     public static async Task<LargeFilesChoice> ShowAsync(Window owner, IReadOnlyList<(string Path, long Bytes)> files) =>
         await new LargeFilesDialog(files).ShowDialog<LargeFilesChoice?>(owner) ?? LargeFilesChoice.Cancel;

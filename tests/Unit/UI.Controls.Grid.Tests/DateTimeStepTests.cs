@@ -15,6 +15,11 @@ public sealed class DateTimeStepTests
     [InlineData("12:00:00", 0, -1, "11:00:00")]
     [InlineData("", 0, 1, "")]
     [InlineData("abc", 1, 1, "abc")]
+    // Negative TIME is not a date: the hours are not a month (1-12).
+    [InlineData("-01:00:00", 1, -1, "-00:00:00")]
+    [InlineData("-12:00:00", 2, 1, "-13:00:00")]
+    // A segment too long for a long stays as it is.
+    [InlineData("99999999999999999999", 0, 1, "99999999999999999999")]
     public void AddsToTheSegment(string text, int caret, int delta, string expected)
     {
         Assert.Equal(expected, DateTimeCellEditor.Step(text, caret, delta));

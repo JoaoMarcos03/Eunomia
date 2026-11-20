@@ -42,6 +42,9 @@ public sealed class TableEditorView : DockPanel
     private readonly StackPanel _indexRows = new() { Spacing = 2 };
     private readonly StackPanel _fkRows = new() { Spacing = 2 };
     private readonly StackPanel _checkRows = new() { Spacing = 2 };
+
+    // An index's name before its type became PRIMARY, given back if the type changes again.
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<IndexDesign, string> _namesBeforePrimary = new();
     private readonly TabItem _indexesTab = new();
     private readonly TabItem _fksTab = new();
     private readonly TabItem _checksTab = new();
@@ -935,7 +938,7 @@ public sealed class TableEditorView : DockPanel
         {
             candidate = name + "_" + n.ToString(CultureInfo.InvariantCulture);
         }
-        Design.Indexes.Add(new IndexDesign { Name = candidate, Kind = kind, Columns = column.Name });
+        Design.Indexes.Add(new IndexDesign { Name = candidate, Kind = kind, Columns = TableDesign.FormatName(column.Name) });
         Changed();
     }
 
@@ -956,7 +959,7 @@ public sealed class TableEditorView : DockPanel
 
     private void AddIndex()
     {
-        var focused = _selected >= 0 && _selected < Design.Columns.Count ? Design.Columns[_selected].Name : string.Empty;
+        var focused = _selected >= 0 && _selected < Design.Columns.Count ? TableDesign.FormatName(Design.Columns[_selected].Name) : string.Empty;
         Design.Indexes.Add(new IndexDesign { Name = "Index " + (Design.Indexes.Count + 1).ToString(CultureInfo.InvariantCulture), Columns = focused });
         Changed();
     }
@@ -982,13 +985,23 @@ public sealed class TableEditorView : DockPanel
         {
             var row = Row();
             var kinds = new Dictionary<string, IndexKind> { ["PRIMARY"] = IndexKind.Primary, ["KEY"] = IndexKind.Key, ["UNIQUE"] = IndexKind.Unique, ["FULLTEXT"] = IndexKind.FullText, ["SPATIAL"] = IndexKind.Spatial };
-            row.Children.Add(Sized(Text(index.Name, v => index.Name = v).Named("Index name")));
+            var nameBox = Text(index.Name, v => index.Name = v);
+            row.Children.Add(Sized(nameBox.Named("Index name")));
             row.Children.Add(Sized(Choice([.. kinds.Keys], kinds.First(k => k.Value == index.Kind).Key, v =>
             {
+                var wasPrimary = index.Kind == IndexKind.Primary;
                 index.Kind = kinds[v];
-                if (index.Kind == IndexKind.Primary)
+                if (index.Kind == IndexKind.Primary && !wasPrimary)
                 {
+                    _namesBeforePrimary.AddOrUpdate(index, index.Name);
                     index.Name = "PRIMARY";
+                    nameBox.Text = index.Name;
+                }
+                else if (wasPrimary && index.Kind != IndexKind.Primary && string.Equals(index.Name, "PRIMARY", StringComparison.OrdinalIgnoreCase))
+                {
+                    // A KEY or UNIQUE named PRIMARY is refused by the server: back to the name it had, or empty.
+                    index.Name = _namesBeforePrimary.TryGetValue(index, out var before) ? before : string.Empty;
+                    nameBox.Text = index.Name;
                 }
                 Dispatch(RebuildColumns);
             }).Named("Index type")));

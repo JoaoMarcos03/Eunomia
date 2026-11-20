@@ -171,10 +171,14 @@ public sealed class TransactionTracker
                 _autocommitOff = true;
                 break;
             case TransactionEffect.AutocommitOn:
-                _autocommitOff = false;
-                _explicit = false;
-                _active = false;
-                _changes = false;
+                // Only switching from 0 to 1 commits; SET autocommit=1 with it already on leaves a BEGIN open.
+                if (_autocommitOff)
+                {
+                    _autocommitOff = false;
+                    _explicit = false;
+                    _active = false;
+                    _changes = false;
+                }
                 break;
             case TransactionEffect.Change:
                 if (_explicit || _autocommitOff)
@@ -308,10 +312,11 @@ public sealed class TransactionTracker
             }
             else if (c == '/' && i + 1 < text.Length && text[i + 1] == '*')
             {
-                if (i + 2 < text.Length && text[i + 2] == '!')
+                var marker = ExecutableComment.MarkerLength(text, i);
+                if (marker > 0)
                 {
-                    // Executable comment: skips the "/*!" and the version and reads what is inside.
-                    i += 3;
+                    // Executable comment: skips the "/*!" (or "/*M!") and the version and reads what is inside.
+                    i += marker;
                     while (i < text.Length && char.IsAsciiDigit(text[i]))
                     {
                         i++;

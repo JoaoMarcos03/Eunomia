@@ -25,6 +25,11 @@ public sealed partial class MainWindow
     private HostTabView? _hostView;
     private DatabaseTabView? _databaseView;
 
+    // Sessions whose rows the process list and the Database tab list show: after a session switch they show the old
+    // session's rows until the refresh ends, and Kill or Drop must not run those targets on the new active session.
+    private OpenSession? _hostProcessesSession;
+    private OpenSession? _databaseViewSession;
+
     /// <summary>Host tab (created the first time it is needed).</summary>
     internal HostTabView HostView
     {
@@ -116,7 +121,7 @@ public sealed partial class MainWindow
         else if (ReferenceEquals(_tabs.SelectedItem, _tabs.DatabaseTab) && e.Database is { } db && _databaseView?.Database == db
                  && open.Metadata.CachedObjects(db) is { } objects)
         {
-            ShowDatabaseObjects(db, objects.Objects);
+            ShowDatabaseObjects(open, db, objects.Objects);
         }
     }
 
@@ -128,9 +133,12 @@ public sealed partial class MainWindow
             return;
         }
         var view = HostView;
+        var subTab = view.SelectedItem;
+        // A late result (another session became active, or another tab is in view) must not overwrite the list.
+        bool Current() => ReferenceEquals(ActiveSession, open) && ReferenceEquals(_tabs.SelectedItem, _tabs.HostTab) && ReferenceEquals(view.SelectedItem, subTab);
         try
         {
-            if (ReferenceEquals(view.SelectedItem, view.DatabasesTab))
+            if (ReferenceEquals(subTab, view.DatabasesTab))
             {
                 var names = await open.Metadata.GetDatabasesAsync(CancellationToken.None);
                 IReadOnlyDictionary<string, string>? collations = null;
@@ -142,26 +150,45 @@ public sealed partial class MainWindow
                 {
                     _context.Log.Append(LogCategory.Error, ex.Message);
                 }
-                view.ShowDatabases(HostDatabases.Build(names, open.Metadata.CachedObjects, collations));
+                if (Current())
+                {
+                    view.ShowDatabases(HostDatabases.Build(names, open.Metadata.CachedObjects, collations));
+                }
             }
-            else if (ReferenceEquals(view.SelectedItem, view.ProcessesTab))
+            else if (ReferenceEquals(subTab, view.ProcessesTab))
             {
-                view.ShowProcesses(await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetProcessesAsync(ct), CancellationToken.None));
+                var processes = await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetProcessesAsync(ct), CancellationToken.None);
+                if (Current())
+                {
+                    view.ShowProcesses(processes);
+                    _hostProcessesSession = open;
+                }
             }
-            else if (ReferenceEquals(view.SelectedItem, view.VariablesTab))
+            else if (ReferenceEquals(subTab, view.VariablesTab))
             {
                 // The session values are the main connection's (the one for queries and the Data tab).
                 var session = await open.Host.RunPrimaryAsync((h, ct) => h.Metadata.GetVariablesAsync(session: true, ct), CancellationToken.None, applyQueryTimeout: false);
                 var global = await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetVariablesAsync(session: false, ct), CancellationToken.None);
-                view.ShowVariables(HostVariables.Build(session, global));
+                if (Current())
+                {
+                    view.ShowVariables(HostVariables.Build(session, global));
+                }
             }
-            else if (ReferenceEquals(view.SelectedItem, view.StatusTab))
+            else if (ReferenceEquals(subTab, view.StatusTab))
             {
-                view.ShowStatus(HostStatus.Build(await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetStatusAsync(ct), CancellationToken.None)));
+                var status = await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetStatusAsync(ct), CancellationToken.None);
+                if (Current())
+                {
+                    view.ShowStatus(HostStatus.Build(status));
+                }
             }
-            else if (ReferenceEquals(view.SelectedItem, view.CommandStatisticsTab))
+            else if (ReferenceEquals(subTab, view.CommandStatisticsTab))
             {
-                view.ShowCommandStatistics(CommandStatistics.Build(await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetStatusAsync(ct), CancellationToken.None)));
+                var status = await open.Host.RunMetadataAsync((h, ct) => h.Metadata.GetStatusAsync(ct), CancellationToken.None);
+                if (Current())
+                {
+                    view.ShowCommandStatistics(CommandStatistics.Build(status));
+                }
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -189,7 +216,8 @@ public sealed partial class MainWindow
     /// <summary>Kill Process(es) (Del): asks and kills the selected processes, except the session's own connections.</summary>
     private async Task KillProcessesAsync()
     {
-        if (ActiveSession is not { } open || _hostView is not { } view || open.Host.ServerServices is not { } services)
+        if (ActiveSession is not { } open || _hostView is not { } view || open.Host.ServerServices is not { } services
+            || !ReferenceEquals(_hostProcessesSession, open))
         {
             return;
         }
@@ -225,7 +253,13 @@ public sealed partial class MainWindow
         try
         {
             var objects = await open.Metadata.GetObjectsAsync(dbNode.Name, CancellationToken.None);
-            ShowDatabaseObjects(dbNode.Name, objects.Objects);
+            // A late result (another session, database or tab in view) must not overwrite the list.
+            if (!ReferenceEquals(ActiveSession, open) || !ReferenceEquals(_tree.Tree.FocusedNode?.Database, dbNode)
+                || !ReferenceEquals(_tabs.SelectedItem, _tabs.DatabaseTab))
+            {
+                return;
+            }
+            ShowDatabaseObjects(open, dbNode.Name, objects.Objects);
             if (open.Metadata.CachedObjects(dbNode.Name) is { } cached)
             {
                 SessionTreeProvider.ApplyObjects(dbNode, cached);
@@ -238,10 +272,11 @@ public sealed partial class MainWindow
         }
     }
 
-    private void ShowDatabaseObjects(string database, IReadOnlyList<DbObjectInfo> objects)
+    private void ShowDatabaseObjects(OpenSession open, string database, IReadOnlyList<DbObjectInfo> objects)
     {
         var view = DatabaseView;
         view.Show(database, objects);
+        _databaseViewSession = open;
         if (_tree.Tree.FocusedNode?.Tag is TreeObjectTag { Object: { } focused })
         {
             view.Focus(focused);
@@ -336,7 +371,8 @@ public sealed partial class MainWindow
     /// <summary>Objects selected in the Database tab list, when the commands act on it (<see cref="ListIsCommandTarget"/>).</summary>
     private (OpenSession Session, string Database, IReadOnlyList<DbObjectRef> Objects)? ListTarget()
     {
-        if (_databaseView is { Database: { } db } view && ListIsCommandTarget() && ActiveSession is { Host.ServerServices: not null } open)
+        if (_databaseView is { Database: { } db } view && ListIsCommandTarget() && ActiveSession is { Host.ServerServices: not null } open
+            && ReferenceEquals(_databaseViewSession, open))
         {
             var selected = view.SelectedObjects.Select(o => o.Ref).ToList();
             return selected.Count > 0 ? (open, db, selected) : null;

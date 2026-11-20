@@ -75,7 +75,7 @@ public sealed partial class MainWindow
         _dataView.ClearFilterRequested += (_, _) => ClearFilter();
         _dataView.MultiColumnTextChanged += (_, text) =>
         {
-            if (_browser is { } browser && Sessions?.Connector.Find(_dataTarget!.Value.Session)?.Host.ServerServices is { } services)
+            if (_browser is { } browser && _browserSession?.Host.ServerServices is { } services)
             {
                 _dataView.FilterEditor.Text = DataFilters.MultiColumn(services.Dialect, browser.Table.Columns, text);
             }
@@ -214,6 +214,14 @@ public sealed partial class MainWindow
         return _dataLoad is null;
     }
 
+    /// <summary>
+    /// The exception ends a cancelled request: <see cref="OperationCanceledException"/>, or the error of a request already in flight
+    /// when the token was cancelled (the driver's <c>KILL QUERY</c>).
+    /// </summary>
+    internal static bool IsCancel(Exception ex, CancellationToken cancellationToken) =>
+        ex is OperationCanceledException
+        || (cancellationToken.IsCancellationRequested && ex is DbOperationException or Engine.Execution.SessionOperationException);
+
     /// <summary>The Data tab is loading a table of this session.</summary>
     private bool IsLoadingData(OpenSession session) => _dataLoad is not null && _dataTarget?.Session == session.Id;
 
@@ -291,7 +299,11 @@ public sealed partial class MainWindow
             await browser.LoadAsync(wanted, cancellationToken);
             if (cancellationToken.IsCancellationRequested)
             {
-                browser.Dispose();
+                // Already shown (SourceReady): the grid reads it, the next browser shown releases it.
+                if (!ReferenceEquals(_browser, browser))
+                {
+                    browser.Dispose();
+                }
                 return;
             }
             if (!ReferenceEquals(_browser, browser))
@@ -312,11 +324,13 @@ public sealed partial class MainWindow
             }
             await UpdateDataLabelAsync(cancellationToken);
         }
-        catch (Exception ex) when (ex is OperationCanceledException
-                                   || (cancellationToken.IsCancellationRequested && ex is DbOperationException or Engine.Execution.SessionOperationException))
+        catch (Exception ex) when (IsCancel(ex, cancellationToken))
         {
             // Cancelled (Esc, another choice in the tree, Drop of the table): the error of a request already in flight counts as a cancellation.
-            browser?.Dispose();
+            if (!ReferenceEquals(_browser, browser))
+            {
+                browser?.Dispose();
+            }
             if (ReferenceEquals(_dataLoad, cts))
             {
                 // Esc: the table was left unloaded (the grid may still show the previous one); going back to it loads it again.
@@ -326,7 +340,10 @@ public sealed partial class MainWindow
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _context.Log.Append(LogCategory.Error, ex.Message);
-            _dataLabel.Text = $"{obj.Schema}.{obj.Name}: {ex.Message}";
+            if (ReferenceEquals(_dataLoad, cts))
+            {
+                _dataLabel.Text = $"{obj.Schema}.{obj.Name}: {ex.Message}";
+            }
             if (ex is DbOperationException or Engine.Execution.SessionOperationException)
             {
                 ShowError(ex);
@@ -559,7 +576,7 @@ public sealed partial class MainWindow
             }
             await UpdateDataLabelAsync(cts.Token);
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (IsCancel(ex, cts.Token))
         {
             // Esc or another choice: the rows that already arrived stay and Next and Show all continue from there.
         }
@@ -605,7 +622,7 @@ public sealed partial class MainWindow
 
     private Task ChangeSortAsync(IReadOnlyList<DataSort> sort)
     {
-        if (_browser is not { } browser || _dataTarget is not { } target || Sessions?.Connector.Find(target.Session) is not { } session)
+        if (_browser is not { } browser || _browserSession is not { } session)
         {
             return Task.CompletedTask;
         }
@@ -625,7 +642,7 @@ public sealed partial class MainWindow
     /// <summary>Columns (v/t): saves the table's hidden columns and reloads (appendix D B8).</summary>
     private void ShowColumnsPopup()
     {
-        if (_browser is not { } browser || _dataTarget is not { } target || Sessions?.Connector.Find(target.Session) is not { } session)
+        if (_browser is not { } browser || _browserSession is not { } session)
         {
             return;
         }

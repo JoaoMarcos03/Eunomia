@@ -95,6 +95,9 @@ public sealed partial class MainWindow
 
         /// <summary>Source table when the result is editable (appendix D B18).</summary>
         public TableDefinition? EditTable { get; set; }
+
+        /// <summary>Rows were saved in the grid since its source was last set (the saved values are shown over the result).</summary>
+        public bool HasSavedEdits { get; set; }
     }
 
     private void InitQueryCommands()
@@ -679,7 +682,7 @@ public sealed partial class MainWindow
     /// </summary>
     private async Task SortResultAsync(ResultView entry, int column)
     {
-        if (column < 0 || !entry.Result.Source.IsComplete)
+        if (column < 0 || !entry.Result.Source.IsComplete || !await ConfirmResultReorderAsync(entry))
         {
             return;
         }
@@ -700,6 +703,7 @@ public sealed partial class MainWindow
             entry.View = sorted;
             entry.Grid.Control.SortIndicators = new Dictionary<int, GridSortIndicator> { [column] = new(descending, 1) };
             entry.Grid.Control.SetSource(sorted);
+            entry.HasSavedEdits = false;
             if (_localFilterTexts.ContainsKey(entry) && ReferenceEquals(LocalFilterTarget(), entry))
             {
                 await ApplyLocalFilterAsync();

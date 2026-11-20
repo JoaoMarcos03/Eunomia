@@ -114,6 +114,32 @@ public sealed class GridEditBuffer
         return row;
     }
 
+    /// <summary>
+    /// The source grew from <paramref name="oldSourceRows"/> to <paramref name="newSourceRows"/> (Next, Show all): the new
+    /// rows (pending and saved) stay after the source rows, so their indexes move by the difference.
+    /// </summary>
+    public void ShiftInsertedRows(long oldSourceRows, long newSourceRows)
+    {
+        var delta = newSourceRows - oldSourceRows;
+        if (delta == 0 || InsertedRows == 0)
+        {
+            return;
+        }
+        var moved = _committed.Where(e => e.Key >= oldSourceRows).ToList();
+        foreach (var (row, _) in moved)
+        {
+            _committed.Remove(row);
+        }
+        foreach (var (row, cells) in moved)
+        {
+            _committed[row + delta] = cells;
+        }
+        if (PendingRow >= oldSourceRows)
+        {
+            PendingRow += delta;
+        }
+    }
+
     /// <summary>Saves the pending row. Returns <c>false</c> if there was nothing to save.</summary>
     public bool Commit()
     {

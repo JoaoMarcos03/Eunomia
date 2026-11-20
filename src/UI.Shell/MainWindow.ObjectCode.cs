@@ -74,7 +74,7 @@ public sealed partial class MainWindow
                 ShowCodeEditor(session, database, obj, code, code, obj.Kind);
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (IsCancel(ex, cancellationToken))
         {
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -134,9 +134,13 @@ public sealed partial class MainWindow
         }
         var saved = new DbObjectRef(database, database, created.Name, created.Kind);
         view.MarkSaved();
-        _codeEditorObject = saved;
-        _codeEditorOriginal = view.Code;
-        _codeEditorInitial = view.Code;
+        // Another object opened while saving: the editor fields are that object's now.
+        if (ReferenceEquals(CodeEditor, view))
+        {
+            _codeEditorObject = saved;
+            _codeEditorOriginal = view.Code;
+            _codeEditorInitial = view.Code;
+        }
         _context.Log.Append(LogCategory.Info, $"{CodeCaption(created.Kind).Caption} \"{created.Name}\" saved.");
         session.Metadata.Invalidate(database);
         await ReloadDatabaseObjectsAsync(session, database);

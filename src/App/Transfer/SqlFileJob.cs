@@ -64,6 +64,10 @@ public sealed record SqlFileResult(
 public sealed class SqlFileChangedException(string path)
     : Exception($"The file has changed since the import stopped and cannot be resumed: {path}");
 
+/// <summary>The file read as UTF-8 has a byte that is not UTF-8 (a Latin-1 accent after the auto-detected start, say).</summary>
+public sealed class SqlFileEncodingException(string path, long byteOffset, Exception inner)
+    : Exception(string.Create(CultureInfo.InvariantCulture, $"The file is not valid UTF-8 (invalid byte near byte {byteOffset}): {path}. Choose its encoding (ANSI, for example) and run it again."), inner);
+
 /// <summary>
 /// Streaming Run SQL file (27.1 #21; PR-14; sections 13.1–13.3; appendix B §4.2): the file is read in 1 MB blocks
 /// and split by the <see cref="StreamingSqlSplitter"/> (<c>DELIMITER</c> is not lost between blocks), and the
@@ -237,7 +241,7 @@ public sealed class SqlFileJob
                 throw new SqlFileChangedException(_request.Path);
             }
             encodingName = _request.Encoding;
-            encoding = TextFileEncoding.For(encodingName);
+            encoding = Strict(TextFileEncoding.For(encodingName));
             // The file's USE and SETs run before the resume point: without them the rest would run in the database chosen
             // in the dialog and without the dump's settings (FOREIGN_KEY_CHECKS=0, time zone, sql_mode…).
             var state = resume.SessionState ?? await ReadSessionStateAsync(stream, encoding, resume, progress, cancellationToken).ConfigureAwait(false);
@@ -265,7 +269,7 @@ public sealed class SqlFileJob
         {
             var head = await stream.ReadAsync(bytes.AsMemory(0, (int)Math.Min(bytes.Length, stream.Length)), cancellationToken).ConfigureAwait(false);
             (encodingName, var bom) = TextFileEncoding.Detect(bytes.AsSpan(0, head), _request.Encoding);
-            encoding = TextFileEncoding.For(encodingName);
+            encoding = Strict(TextFileEncoding.For(encodingName));
             stream.Seek(bom, SeekOrigin.Begin);
             splitter = new StreamingSqlSplitter(_request.Delimiter);
             byteOffset = bom;
@@ -314,7 +318,7 @@ public sealed class SqlFileJob
             cancellationToken.ThrowIfCancellationRequested();
             var read = await stream.ReadAsync(bytes.AsMemory(0, ChunkSize), cancellationToken).ConfigureAwait(false);
             eof = read == 0;
-            var count = decoder.GetChars(bytes, 0, read, chars, 0, flush: eof);
+            var count = Decode(decoder, bytes, read, chars, eof, stream.Position - read);
             _bytesRead = stream.Position;
 
             // Byte positions of the resume points: counted gradually within the block (each character once).
@@ -346,7 +350,7 @@ public sealed class SqlFileJob
                     Report(progress);
                     continue;
                 }
-                var size = encoding.GetByteCount(statement.Text) + 2;
+                var size = encoding.GetByteCount(statement.Text) + 2 + MarkerBytes;
                 if (packet.Count > 0 && packetBytes + size > maxPacket)
                 {
                     if (await ExecuteAsync(handle, packet, cancellationToken).ConfigureAwait(false))
@@ -387,7 +391,8 @@ public sealed class SqlFileJob
         {
             return Advance(statements, recordSession: false);
         }
-        var sql = run.Count == 1 ? run[0].Statement.Text : string.Join(";\n", run.Select(s => s.Statement.Text));
+        var packet = run.Count > 1;
+        var sql = packet ? PacketSql(statements) : run[0].Statement.Text;
         try
         {
             var affected = await handle.ExecuteNonQueryAsync(sql, cancellationToken).ConfigureAwait(false);
@@ -395,11 +400,28 @@ public sealed class SqlFileJob
         }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested && _host.StatementError(e) is { } error)
         {
+            // In a packet the server ran the statements before the one that failed and stopped there: the marker says how
+            // many, so the error points at that statement and the journal moves past the earlier ones (none runs twice).
+            var failed = 0;
+            if (packet)
+            {
+                var done = await handle.ExecuteScalarAsync("SELECT " + MarkerVariable, cancellationToken).ConfigureAwait(false);
+                failed = done is null or DBNull ? 0 : Convert.ToInt32(done, CultureInfo.InvariantCulture);
+            }
+            while (failed < statements.Count - 1 && Skipped(statements[failed].Statement.Text))
+            {
+                failed++;
+            }
+            if (failed > 0)
+            {
+                Advance([.. statements.Take(failed)], recordSession: true);
+            }
             _errorCount++;
-            var first = run[0].Statement;
+            var statement = statements[failed].Statement;
             if (_errors.Count < MaxErrorsKept)
             {
-                _errors.Add(new SqlFileError(_statements + 1, first.Line + Math.Max(0, (error.Line ?? 1) - 1), error.Message, sql.Length > 2000 ? sql[..2000] : sql));
+                var text = statement.Text;
+                _errors.Add(new SqlFileError(_statements + 1, statement.Line + Math.Max(0, (error.Line ?? 1) - 1), error.Message, text.Length > 2000 ? text[..2000] : text));
             }
             if (_request.StopOnErrors)
             {
@@ -407,9 +429,44 @@ public sealed class SqlFileJob
                 _retryPending = true;
                 return true;
             }
-            return Advance(statements, recordSession: false);
+            Advance([statements[failed]], recordSession: false);
+            return failed + 1 < statements.Count && await ExecuteAsync(handle, [.. statements.Skip(failed + 1)], cancellationToken).ConfigureAwait(false);
         }
         return Advance(statements, recordSession: true);
+    }
+
+    // After each statement of a packet, the packet sets this session variable to the number of statements done.
+    private const string MarkerVariable = "@eunomia_sql_file_done";
+    private const int MarkerBytes = 40;
+
+    /// <summary>The packet's statements (those not skipped), each followed by the marker of how many statements are done.</summary>
+    private string PacketSql(IReadOnlyList<(StreamedStatement Statement, long NextByte)> statements)
+    {
+        var sb = new StringBuilder("SET ").Append(MarkerVariable).Append(" = 0");
+        for (var i = 0; i < statements.Count; i++)
+        {
+            if (!Skipped(statements[i].Statement.Text))
+            {
+                sb.Append(';').Append(statements[i].Statement.Text);
+                sb.Append(CultureInfo.InvariantCulture, $";\nSET {MarkerVariable} = {i + 1}");
+            }
+        }
+        return sb.ToString();
+    }
+
+    private static Encoding Strict(Encoding encoding) => encoding is UTF8Encoding ? new UTF8Encoding(false, throwOnInvalidBytes: true) : encoding;
+
+    /// <summary>Decodes a block; a byte that is not UTF-8 fails the run with a clear message (not U+FFFD and offsets that drift).</summary>
+    private int Decode(Decoder decoder, byte[] bytes, int read, char[] chars, bool flush, long blockStart)
+    {
+        try
+        {
+            return decoder.GetChars(bytes, 0, read, chars, 0, flush);
+        }
+        catch (DecoderFallbackException e)
+        {
+            throw new SqlFileEncodingException(_request.Path, blockStart + Math.Max(0, e.Index), e);
+        }
     }
 
     /// <summary>Moves the resume point past <paramref name="statements"/>; returns <c>false</c> (the job continues).</summary>
@@ -487,7 +544,7 @@ public sealed class SqlFileJob
             cancellationToken.ThrowIfCancellationRequested();
             var read = await stream.ReadAsync(bytes, cancellationToken).ConfigureAwait(false);
             eof = read == 0;
-            var count = decoder.GetChars(bytes, 0, read, chars, 0, flush: eof);
+            var count = Decode(decoder, bytes, read, chars, eof, stream.Position - read);
             splitter.Append(chars.AsSpan(0, count), emitted);
             if (eof)
             {

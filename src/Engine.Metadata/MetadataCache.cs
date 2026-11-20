@@ -241,7 +241,9 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
             return;
         }
         _loadingDetail[database] = detail;
-        _loadingStatistics[database] = Task.Run(async () =>
+        // Assigned under the lock (every caller holds it), so the task sees itself once it takes the lock.
+        Task? self = null;
+        _loadingStatistics[database] = self = Task.Run(async () =>
         {
             try
             {
@@ -250,7 +252,8 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
                     : await Host.RunMetadataAsync((h, ct) => h.Metadata.GetObjectsAsync(database, database, detail, ct), CancellationToken.None, WorkPriority.Statistics).ConfigureAwait(false);
                 lock (_gate)
                 {
-                    if (generation != _generation)
+                    // A refresh of this database (Invalidate) during the read: the result is stale (a dropped table would come back).
+                    if (generation != _generation || !ReferenceEquals(_loadingStatistics.GetValueOrDefault(database), self))
                     {
                         return;
                     }
@@ -267,8 +270,8 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
             {
                 lock (_gate)
                 {
-                    // After a refresh (new generation), the entries already come from another read.
-                    if (generation == _generation)
+                    // After a refresh (new generation, or this database invalidated), the entries already come from another read.
+                    if (generation == _generation && ReferenceEquals(_loadingStatistics.GetValueOrDefault(database), self))
                     {
                         _loadingStatistics.Remove(database);
                         _loadingDetail.Remove(database);
@@ -405,6 +408,9 @@ public sealed class MetadataCache(SessionHost host, MetadataOptions options)
                 _tableEpoch++;
                 _objects.Remove(database);
                 _loadingObjects.Remove(database);
+                _loadingStatistics.Remove(database);
+                _loadingDetail.Remove(database);
+                _pendingStatistics.Remove(database);
                 foreach (var key in _tables.Keys.Where(k => k.Schema == database).ToList())
                 {
                     _tables.Remove(key);

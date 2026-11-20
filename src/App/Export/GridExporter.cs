@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Eunomia.Drivers.Abstractions;
+using Eunomia.Engine.Sql;
 
 namespace Eunomia.App.Export;
 
@@ -301,7 +302,7 @@ public static partial class GridExporter
         }
         // Only hex and numbers go unquoted; everything else (binary shown as text, for example) is always a quoted literal,
         // so a value can never escape the generated INSERT/UPDATE/DELETE.
-        if (column.IsBinary && HexValue().IsMatch(value))
+        if (column.IsBinary && SqlLiterals.Hex().IsMatch(value))
         {
             return value.Length == 2 ? "''" : value;
         }
@@ -309,18 +310,12 @@ public static partial class GridExporter
         {
             return "''";
         }
-        if (column.IsNumeric && NumberValue().IsMatch(value))
+        if (column.IsNumeric && SqlLiterals.Number().IsMatch(value))
         {
             return value;
         }
         return dialect.StringLiteral(value);
     }
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"^0x[0-9a-fA-F]*$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
-    private static partial System.Text.RegularExpressions.Regex HexValue();
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
-    private static partial System.Text.RegularExpressions.Regex NumberValue();
 
     private static void WriteSql(StringBuilder sb, GridExportFormat format, GridExportData data, GridExportOptions options, IDialect dialect)
     {

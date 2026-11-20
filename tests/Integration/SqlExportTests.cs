@@ -425,6 +425,22 @@ public sealed class SqlExportTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// Directory export: names that differ only in case (a server with case-sensitive names) or that become the same file
+    /// name get <c>-2</c>, <c>-3</c>… instead of overwriting each other.
+    /// </summary>
+    [Fact]
+    public void DirectoryFileNamesDoNotCollide()
+    {
+        var root = Path.Combine("x", "out");
+        var paths = SqlExportJob.DirectoryPaths(root, [("db", "table-Users"), ("db", "table-users"), ("db", "table-a:b"), ("db", "table-a?b"), ("db", "table-users-2"), ("DB", "table-USERS"), ("other", "table-users")]);
+        string P(string database, string file) => Path.Combine(root, database, file);
+        Assert.Equal(
+            [P("db", "table-Users.sql"), P("db", "table-users-2.sql"), P("db", "table-a_b.sql"), P("db", "table-a_b-2.sql"),
+                P("db", "table-users-2-2.sql"), P("DB", "table-USERS-3.sql"), P("other", "table-users.sql")],
+            paths);
+    }
+
+    /// <summary>
     /// An error of a local file inside a job connection (here a <c>.partial</c> another program holds open; a full disk
     /// fails the same way) is the export's error, not a lost connection: the session does not reconnect.
     /// </summary>

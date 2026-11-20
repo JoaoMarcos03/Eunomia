@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
+using Eunomia.Engine.Sql;
 
 namespace Eunomia.Engine.Transfer;
 
@@ -120,7 +120,7 @@ public sealed partial class CsvInsertBatcher
         if (numeric)
         {
             var number = _localNumbers is null ? value.Trim() : UnformatNumber(value, _localNumbers);
-            if (NumericLiteral().IsMatch(number))
+            if (SqlLiterals.Number().IsMatch(number))
             {
                 sb.Append(number);
                 return;
@@ -177,7 +177,4 @@ public sealed partial class CsvInsertBatcher
         }
         sb.Append('\'');
     }
-
-    [GeneratedRegex(@"^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$", RegexOptions.CultureInvariant)]
-    private static partial Regex NumericLiteral();
 }
