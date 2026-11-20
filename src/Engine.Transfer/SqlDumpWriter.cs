@@ -179,7 +179,10 @@ public sealed partial class SqlDumpWriter
         var code = CreateTablePrefix().Replace(createTable, "CREATE TABLE IF NOT EXISTS ", 1);
         if (_options.RemoveAutoIncrement)
         {
-            code = AutoIncrementClause().Replace(code, string.Empty);
+            // Only in the table options, after the column list: a column COMMENT or DEFAULT may contain the same text (string
+            // contents never hold a raw line break in SHOW CREATE TABLE, so the first "\n)" ends the columns).
+            var options = code.IndexOf("\n)", StringComparison.Ordinal);
+            code = AutoIncrementClause().Replace(code, string.Empty, 1, Math.Max(options, 0));
         }
         sb.Append(FixNewlines(code)).Append(';').Append(Crlf);
         _output.Write(sb.ToString());
@@ -454,17 +457,28 @@ public sealed partial class SqlDumpWriter
     {
         if (_options.AddComments)
         {
-            sb.Append("-- ").Append(text).Append(Crlf);
+            sb.Append("-- ").Append(SingleLine(text)).Append(Crlf);
         }
     }
 
-    private string StripDefiner(string code) => _options.RemoveDefiner ? DefinerClause().Replace(code, string.Empty) : code;
+    /// <summary>Text for a "-- " comment: a line break (in an object name, say) would end the comment and the rest would run as SQL.</summary>
+    private static string SingleLine(string text) =>
+        text.Any(char.IsControl) ? string.Create(text.Length, text, (span, s) =>
+        {
+            for (var i = 0; i < s.Length; i++)
+            {
+                span[i] = char.IsControl(s[i]) ? ' ' : s[i];
+            }
+        }) : text;
+
+    // Only the clause in the CREATE header: the same text in the body (a string, a comment) stays.
+    private string StripDefiner(string code) => _options.RemoveDefiner ? DefinerClause().Replace(code, "${prefix}", 1) : code;
 
     /// <summary>Identifier always in backticks, as in HeidiSQL's dump.</summary>
     internal static string Quote(string name) => "`" + name.Replace("`", "``", StringComparison.Ordinal) + "`";
 
     private static void HeaderLine(StringBuilder sb, string label, string value) =>
-        sb.Append("-- ").Append(label.PadRight(30)).Append(value).Append(Crlf);
+        sb.Append("-- ").Append(label.PadRight(30)).Append(SingleLine(value)).Append(Crlf);
 
     /// <summary>CRLF line breaks, like HeidiSQL's <c>fixNewlines</c>.</summary>
     internal static string FixNewlines(string text) =>
@@ -502,7 +516,12 @@ public sealed partial class SqlDumpWriter
     [GeneratedRegex(@"\sAUTO_INCREMENT\s*=\s*\d+(?=\s|$)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex AutoIncrementClause();
 
-    [GeneratedRegex(@"\sDEFINER\s*=\s*\S+(?=\s)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    // CREATE [OR REPLACE] [ALGORITHM = x] DEFINER = user[@host] …, with each part bare or quoted (`a b`, 'a b', "a b").
+    [GeneratedRegex(
+        @"^(?<prefix>\s*CREATE(?:\s+OR\s+REPLACE)?(?:\s+ALGORITHM\s*=\s*\w+)?)\s+DEFINER\s*=\s*"
+        + @"(?:`(?:``|[^`])*`|'(?:''|\\.|[^'\\])*'|""(?:""""|\\.|[^""\\])*""|[^\s@`'""]+)"
+        + @"(?:\s*@\s*(?:`(?:``|[^`])*`|'(?:''|\\.|[^'\\])*'|""(?:""""|\\.|[^""\\])*""|[^\s@`'""]+))?(?=\s)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex DefinerClause();
 
     [GeneratedRegex(@"^VARCHAR\(\d+\)", RegexOptions.CultureInvariant)]

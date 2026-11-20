@@ -1,4 +1,6 @@
+using Eunomia.App.Objects;
 using Eunomia.App.Query;
+using Eunomia.App.Transfer;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Drivers.MySql;
 using Eunomia.Engine.Execution;
@@ -111,5 +113,95 @@ public sealed class ReadOnlySessionTests : IAsyncLifetime
         }, Ct));
         Assert.Contains("READ ONLY", error.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal("a", await ValueAsync());
+    }
+
+    private async Task<string?> CountAsync(string table)
+    {
+        await using var connection = new MySqlConnection(TestServer.ConnectionString);
+        await connection.OpenAsync(Ct);
+        await using var cmd = new MySqlCommand($"SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{_database}' AND TABLE_NAME = '{table}'", connection);
+        return Convert.ToString(await cmd.ExecuteScalarAsync(Ct), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string TempFile(string name, string text)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "eunomia-it", "ro-" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, name);
+        File.WriteAllText(path, text);
+        return path;
+    }
+
+    private static int? RefusalCode(Exception error) => error switch
+    {
+        SessionOperationException session => session.Error.Code,
+        DbOperationException db => db.Error.Code,
+        _ => null,
+    };
+
+    private static void DeleteTemp(string path) => Directory.Delete(Path.GetDirectoryName(path)!, recursive: true);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SqlFileIsRefused(bool batch)
+    {
+        TestServer.RequireServer();
+        var path = TempFile("ro.sql", $"UPDATE `{_database}`.t SET v = 'file';\nCREATE TABLE `{_database}`.ro_file (id INT);\n");
+        try
+        {
+            var result = await new SqlFileJob(_host, new SqlFileRequest { Path = path, Database = _database, Session = "prod", BatchInOneGo = batch, StopOnErrors = false }).RunAsync(null, Ct);
+
+            Assert.Equal(2, result.Errors);
+            Assert.All(result.ErrorList, e => Assert.Contains("read-only", e.Message, StringComparison.Ordinal));
+            Assert.Equal("a", await ValueAsync());
+            Assert.Equal("0", await CountAsync("ro_file"));
+        }
+        finally
+        {
+            DeleteTemp(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(CsvImportMethod.Server)]
+    [InlineData(CsvImportMethod.Client)]
+    public async Task CsvImportIsRefused(CsvImportMethod method)
+    {
+        TestServer.RequireServer();
+        var path = TempFile("ro.csv", "1;csv\r\n2;csv\r\n");
+        try
+        {
+            var request = new CsvImportRequest
+            {
+                Path = path,
+                Database = _database,
+                Table = "t",
+                Columns = [new("id", true), new("v", false)],
+                Method = method,
+            };
+
+            var error = await Assert.ThrowsAnyAsync<Exception>(() => new CsvImportJob(_host, request).RunAsync(null, Ct));
+
+            Assert.Equal(1792, RefusalCode(error));
+            Assert.Equal("a", await ValueAsync());
+        }
+        finally
+        {
+            DeleteTemp(path);
+        }
+    }
+
+    [Fact]
+    public async Task TableCopyIsRefused()
+    {
+        TestServer.RequireServer();
+        var source = await new MetadataCache(_host, new MetadataOptions()).GetTableAsync(new DbObjectRef(_database, _database, "t", DbObjectKind.Table), Ct);
+        var request = new TableCopyRequest(_database, "ro_copy", ["id", "v"], [.. source.Indexes.Select(i => i.Name)], [], Data: true, Where: null);
+
+        var error = await Assert.ThrowsAnyAsync<Exception>(() => ObjectActions.RunAsync(_host, TableCopy.Statements(_host.ServerServices!, source, request), Ct));
+
+        Assert.Equal(1792, RefusalCode(error));
+        Assert.Equal("0", await CountAsync("ro_copy"));
     }
 }

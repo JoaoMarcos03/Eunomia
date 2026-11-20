@@ -25,7 +25,8 @@ namespace Eunomia.UI.Controls.Grid;
 public sealed partial class DataGridControl : Control, IEditTarget
 {
     public const double CellPadding = 4;
-    public const int RowNumberColumn = 4095;
+    /// <summary>Column index the <c>#</c> column uses in the text cache (outside the data columns).</summary>
+    public const int RowNumberColumn = -1;
 
     /// <summary>Block columns already in memory that a frame may format on the spot (the rest comes from the background prefetch).</summary>
     private const int SyncFormatBudget = 24;
@@ -42,6 +43,9 @@ public sealed partial class DataGridControl : Control, IEditTarget
     private long _lastRowCount;
     private readonly Dictionary<string, Avalonia.Media.TextFormatting.TextLayout> _sortGlyphCache = new(StringComparer.Ordinal);
     private ImmutableSolidColorBrush? _sessionBrush;
+    private ImmutableSolidColorBrush? _sessionTint;
+    private ImmutablePen? _keyPen;
+    private StreamGeometry? _modifiedMarker;
     private uint _sessionColor;
     private IRowSource? _source;
     private FormattedCellCache? _cells;
@@ -148,6 +152,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         {
             _sessionColor = value;
             _sessionBrush = value == 0 ? null : new ImmutableSolidColorBrush(value | 0xFF000000);
+            _sessionTint = null;
             InvalidateVisual();
         }
     }
@@ -173,6 +178,11 @@ public sealed partial class DataGridControl : Control, IEditTarget
             }
             _topRow = clamped;
             InvalidateVisual();
+            if (IsEditing)
+            {
+                // The open editor moves with its cell.
+                InvalidateArrange();
+            }
             ScrollChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -189,6 +199,11 @@ public sealed partial class DataGridControl : Control, IEditTarget
             }
             _scrollX = clamped;
             InvalidateVisual();
+            if (IsEditing)
+            {
+                // The open editor moves with its cell.
+                InvalidateArrange();
+            }
             ScrollChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -296,7 +311,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
         var row = commit.IsInsert ? commit.Row + (_lastRowCount - sourceBefore) : commit.Row;
         if (ok && Edits.PendingRow == row)
         {
-            Edits.Commit();
+            // Only what was sent is saved: a value typed while the save ran stays pending.
+            Edits.Commit(commit.Values);
             foreach (var (column, value) in result.Row ?? new Dictionary<int, CellValue>())
             {
                 Edits.SetCommitted(row, column, value);
@@ -743,6 +759,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
             EditRefused?.Invoke(this, EventArgs.Empty);
             return;
         }
+        var source = _source;
         var row = Selection.FocusedRow;
         var column = Selection.FocusedColumn;
         string? value;
@@ -758,12 +775,12 @@ public sealed partial class DataGridControl : Control, IEditTarget
         {
             value = await GetRawTextAsync(row, column).ConfigureAwait(true);
         }
-        if (row != Selection.FocusedRow || column != Selection.FocusedColumn || IsEditing)
+        if (!StillEditable(source, row, column))
         {
             return;
         }
         var spec = editor ?? (EditorProvider is { } provider ? await provider(row, column, value).ConfigureAwait(true) : null) ?? new TextCellEditor();
-        if (row != Selection.FocusedRow || column != Selection.FocusedColumn || IsEditing)
+        if (!StillEditable(source, row, column))
         {
             return;
         }
@@ -801,6 +818,13 @@ public sealed partial class DataGridControl : Control, IEditTarget
         _editor.Focus();
     }
 
+    /// <summary>
+    /// After an await in <see cref="BeginEditAsync(GridCellEditor?)"/>: same source, same focused cell, no editor and no
+    /// save started meanwhile (Ctrl+Enter while the value loads).
+    /// </summary>
+    private bool StillEditable(IRowSource source, long row, int column) =>
+        ReferenceEquals(source, _source) && row == Selection.FocusedRow && column == Selection.FocusedColumn && !IsEditing && !IsCommitting;
+
     /// <summary>Closes the in-place editor; with <paramref name="commit"/>, keeps the value in the edit buffer.</summary>
     public void EndEdit(bool commit)
     {
@@ -810,6 +834,9 @@ public sealed partial class DataGridControl : Control, IEditTarget
         }
         var editor = _editor;
         var spec = _editorSpec;
+        // Only takes the focus back when the editor had it (Enter, Esc, Tab): when the focus left for another
+        // control (the SQL editor, a filter box), it stays there.
+        var refocus = editor.IsKeyboardFocusWithin || TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is null;
         _editor = null;
         _editorSpec = null;
         if (commit && spec?.Read(editor, _editOriginalNull ? null : _editOriginalText) is { } value
@@ -821,7 +848,10 @@ public sealed partial class DataGridControl : Control, IEditTarget
         LogicalChildren.Remove(editor);
         _editRow = -1;
         _editColumn = -1;
-        Focus();
+        if (refocus)
+        {
+            Focus();
+        }
         InvalidateVisual();
     }
 
@@ -1014,7 +1044,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
         for (var row = start; row < limit; row++)
         {
             var text = GetDisplayText(row, column);
-            if (text is not null && text.StartsWith(_search, StringComparison.CurrentCultureIgnoreCase))
+            if (text is not null && Culture.CompareInfo.IsPrefix(text, _search, CompareOptions.IgnoreCase))
             {
                 MoveTo(row, column, SelectMode.Replace);
                 break;
@@ -1190,12 +1220,12 @@ public sealed partial class DataGridControl : Control, IEditTarget
         var notches = e.Delta.Y;
         if (PlatformKeys.IsCommand(e.KeyModifiers))
         {
-            FontSize += Math.Sign(notches);
+            FontSize += WholeSteps(ref _zoomWheel, notches, WheelKind.Zoom);
         }
         else if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
             // Alt+wheel changes row.
-            MoveTo(Selection.FocusedRow - (long)Math.Round(notches), Selection.FocusedColumn, SelectMode.Replace);
+            MoveTo(Selection.FocusedRow - WholeSteps(ref _rowWheel, notches, WheelKind.Row), Selection.FocusedColumn, SelectMode.Replace);
         }
         else if (e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.Delta.X != 0)
         {
@@ -1203,9 +1233,43 @@ public sealed partial class DataGridControl : Control, IEditTarget
         }
         else
         {
-            TopRow -= (long)Math.Round(notches * 3);
+            TopRow -= WholeSteps(ref _scrollWheel, notches * 3, WheelKind.Scroll);
         }
         e.Handled = true;
+    }
+
+    private enum WheelKind
+    {
+        Scroll,
+        Row,
+        Zoom,
+    }
+
+    private double _scrollWheel;
+    private double _rowWheel;
+    private double _zoomWheel;
+    private WheelKind _lastWheel;
+
+    /// <summary>
+    /// Whole steps in <paramref name="amount"/> plus what was left over from earlier events (precision touchpads send
+    /// fractions of a notch); the remainder is kept for the next event and forgotten when the gesture changes kind or direction.
+    /// </summary>
+    private long WholeSteps(ref double accumulated, double amount, WheelKind kind)
+    {
+        if (kind != _lastWheel)
+        {
+            _scrollWheel = _rowWheel = _zoomWheel = 0;
+            _lastWheel = kind;
+        }
+        if (Math.Sign(accumulated) != Math.Sign(amount))
+        {
+            accumulated = 0;
+        }
+        accumulated += amount;
+        // A small tolerance so ten 0.1 deltas make a whole step despite rounding.
+        var steps = (long)Math.Truncate(accumulated + (Math.Sign(accumulated) * 1e-9));
+        accumulated -= steps;
+        return steps;
     }
 
     private void StartAutoScroll(Point origin, IPointer pointer)
@@ -1431,11 +1495,19 @@ public sealed partial class DataGridControl : Control, IEditTarget
                 // automatic widths and the focus follow.
                 var first = _lastRowCount == 0;
                 // The new rows stay after the source rows: their keys (and the focus on one) move with the source.
+                var delta = source.RowCount.Count - _lastRowCount;
                 var focusedInserted = Edits.InsertedRows > 0 && Selection.FocusedRow >= _lastRowCount;
+                var editingInserted = Edits.InsertedRows > 0 && IsEditing && _editRow >= _lastRowCount;
                 Edits.ShiftInsertedRows(_lastRowCount, source.RowCount.Count);
                 if (focusedInserted)
                 {
-                    Selection.Focus(Selection.FocusedRow + source.RowCount.Count - _lastRowCount, Selection.FocusedColumn);
+                    Selection.Focus(Selection.FocusedRow + delta, Selection.FocusedColumn);
+                }
+                if (editingInserted)
+                {
+                    // The open editor follows its row, or EndEdit would drop the typed value (another row is pending).
+                    _editRow += delta;
+                    InvalidateArrange();
                 }
                 _lastRowCount = source.RowCount.Count;
                 UpdateRowNumberWidth();
@@ -1495,7 +1567,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
         if (_sessionBrush is { } session)
         {
             // Session colour: a soft tint on the # column and a bar with the full colour on the left.
-            context.FillRectangle(new ImmutableSolidColorBrush(Common.Theming.ColorMath.SessionTint(_sessionColor, p.RowNumberArgb)), area);
+            _sessionTint ??= new ImmutableSolidColorBrush(Common.Theming.ColorMath.SessionTint(_sessionColor, p.RowNumberArgb));
+            context.FillRectangle(_sessionTint, area);
             context.FillRectangle(session, new Rect(0, HeaderHeight, 3, area.Height));
         }
         else
@@ -1515,23 +1588,26 @@ public sealed partial class DataGridControl : Control, IEditTarget
 
     private void DrawModifiedMarker(DrawingContext context, double x, double y)
     {
-        // Red triangle in the top-left corner (section 5.6).
-        var geometry = new StreamGeometry();
-        using (var g = geometry.Open())
+        // Red triangle in the top-left corner (section 5.6): one geometry, moved to each cell.
+        if (_modifiedMarker is null)
         {
-            g.BeginFigure(new Point(x + 1, y + 1), true);
-            g.LineTo(new Point(x + 7, y + 1));
-            g.LineTo(new Point(x + 1, y + 7));
+            _modifiedMarker = new StreamGeometry();
+            using var g = _modifiedMarker.Open();
+            g.BeginFigure(new Point(1, 1), true);
+            g.LineTo(new Point(7, 1));
+            g.LineTo(new Point(1, 7));
             g.EndFigure(true);
         }
-        context.DrawGeometry(_palette.Modified, null, geometry);
+        using (context.PushTransform(Matrix.CreateTranslation(x, y)))
+        {
+            context.DrawGeometry(_palette.Modified, null, _modifiedMarker);
+        }
     }
 
     private void DrawKeyIcon(DrawingContext context, Point origin)
     {
         // Simple drawn key (our own icon, not Icons8): ring + shaft.
-        var brush = _palette.KeyIcon;
-        var pen = new ImmutablePen(brush, 1.5);
+        var pen = _keyPen ??= new ImmutablePen(_palette.KeyIcon, 1.5);
         context.DrawEllipse(null, pen, new Rect(origin.X, origin.Y, 6, 6));
         context.DrawLine(pen, new Point(origin.X + 5, origin.Y + 5), new Point(origin.X + 10, origin.Y + 10));
         context.DrawLine(pen, new Point(origin.X + 8, origin.Y + 8), new Point(origin.X + 9.5, origin.Y + 6.5));
@@ -1643,6 +1719,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
     private void ApplyTheme()
     {
         _palette = ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark ? GridPalette.Dark : GridPalette.Light;
+        _sessionTint = null;
+        _keyPen = null;
         _textCache.Clear();
         ClearHeaderCache();
         InvalidateVisual();

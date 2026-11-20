@@ -110,6 +110,15 @@ public sealed class SqlSplitterTests
     }
 
     [Fact]
+    public void BackslashEscapesFollowTheSqlMode()
+    {
+        const string sql = @"SELECT 'C:\'; SELECT 2; SELECT '\'";
+
+        Assert.Equal([sql], [.. SqlSplitter.Split(sql).Select(s => s.Text)]);
+        Assert.Equal([@"SELECT 'C:\'", "SELECT 2", @"SELECT '\'"], [.. SqlSplitter.Split(sql, backslashEscapes: false).Select(s => s.Text)]);
+    }
+
+    [Fact]
     public void MultiCharacterDelimiter()
     {
         Assert.Equal(["SELECT 1", "SELECT 2"], Texts("SELECT 1 $$ SELECT 2 $$", "$$"));

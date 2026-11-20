@@ -15,13 +15,21 @@ public static class ReadOnlyPolicy
         "BEGIN", "START", "COMMIT", "ROLLBACK", "SAVEPOINT", "RELEASE",
     };
 
-    /// <summary>The statement only reads (or is harmless) and can run in a read-only session.</summary>
+    /// <summary>
+    /// The statement only reads (or is harmless) and can run in a read-only session. The text is read twice, with and without
+    /// backslash escapes in strings: the session may have <c>NO_BACKSLASH_ESCAPES</c> (or turn it on earlier in the same
+    /// batch), and then <c>'C:\'</c> ends at its second quote and what follows is code. Both readings must be allowed.
+    /// </summary>
     public static bool IsAllowed(string statement)
     {
         ArgumentNullException.ThrowIfNull(statement);
-        // Without comments and with strings blanked, each ";" separates statements: all of them must be allowed.
-        return WithoutComments(statement).Split(';').All(IsAllowedSingle);
+        return IsAllowed(statement, backslashEscapes: true)
+               && (!statement.Contains('\\', StringComparison.Ordinal) || IsAllowed(statement, backslashEscapes: false));
     }
+
+    // Without comments and with strings blanked, each ";" separates statements: all of them must be allowed.
+    private static bool IsAllowed(string statement, bool backslashEscapes) =>
+        WithoutComments(statement, backslashEscapes).Split(';').All(IsAllowedSingle);
 
     private static bool IsAllowedSingle(string piece)
     {
@@ -98,7 +106,7 @@ public static class ReadOnlyPolicy
     }
 
     /// <summary>Removes comments (executable <c>/*! … */</c> ones stay, without the markers) and the content of strings and quoted identifiers.</summary>
-    private static string WithoutComments(string text)
+    private static string WithoutComments(string text, bool backslashEscapes)
     {
         var sb = new System.Text.StringBuilder(text.Length);
         for (var i = 0; i < text.Length; i++)
@@ -144,7 +152,7 @@ public static class ReadOnlyPolicy
                 i++;
                 while (i < text.Length && text[i] != quote)
                 {
-                    if (text[i] == '\\' && quote != '`')
+                    if (text[i] == '\\' && quote != '`' && backslashEscapes)
                     {
                         i++;
                     }

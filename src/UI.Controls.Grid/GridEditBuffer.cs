@@ -121,7 +121,19 @@ public sealed class GridEditBuffer
     public void ShiftInsertedRows(long oldSourceRows, long newSourceRows)
     {
         var delta = newSourceRows - oldSourceRows;
-        if (delta == 0 || InsertedRows == 0)
+        if (delta == 0)
+        {
+            return;
+        }
+        if (delta < 0)
+        {
+            // The source shrank: saved values of source rows that no longer exist would sit under the moved new rows.
+            foreach (var row in _committed.Keys.Where(r => r >= newSourceRows && r < oldSourceRows).ToList())
+            {
+                _committed.Remove(row);
+            }
+        }
+        if (InsertedRows == 0)
         {
             return;
         }
@@ -158,6 +170,43 @@ public sealed class GridEditBuffer
             cells[column] = value;
         }
         ClearPending();
+        RowCommitted?.Invoke(this, row);
+        return true;
+    }
+
+    /// <summary>
+    /// Saves only the values in <paramref name="sent"/> (the snapshot sent to the server): a value changed or added after the
+    /// snapshot stays pending, on a row that is no longer new (it now exists on the server).
+    /// </summary>
+    public bool Commit(IReadOnlyDictionary<int, CellValue> sent)
+    {
+        ArgumentNullException.ThrowIfNull(sent);
+        if (!HasPending)
+        {
+            return false;
+        }
+        var row = PendingRow;
+        if (!_committed.TryGetValue(row, out var cells))
+        {
+            cells = [];
+            _committed[row] = cells;
+        }
+        foreach (var (column, value) in sent)
+        {
+            cells[column] = value;
+            if (_pending.TryGetValue(column, out var current) && current == value)
+            {
+                _pending.Remove(column);
+            }
+        }
+        if (_pending.Count == 0)
+        {
+            ClearPending();
+        }
+        else
+        {
+            PendingIsInsert = false;
+        }
         RowCommitted?.Invoke(this, row);
         return true;
     }

@@ -242,6 +242,53 @@ public sealed class SqlDumpWriterTests
         Assert.Equal(string.Concat(Enumerable.Repeat("ação 😀 ", 50)) + new string('\0', 200), Encoding.UTF8.GetString(stream.ToArray()));
     }
 
+    [Fact]
+    public void LineBreaksInANameDoNotEndTheComment()
+    {
+        var options = new SqlDumpOptions { CreateTables = true };
+        var text = Dump(options, w => w.WriteTable("d", "x\r\nDROP DATABASE d;\n-- ", "CREATE TABLE `x` (\n  `a` int\n)"));
+
+        Assert.DoesNotContain("\nDROP DATABASE", text, StringComparison.Ordinal);
+        Assert.Contains("x  DROP DATABASE d; -- ", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DefinerIsRemovedOnlyFromTheHeader()
+    {
+        var options = new SqlDumpOptions { CreateTables = true };
+        var text = Dump(options, w =>
+        {
+            w.WriteRoutine("d", "procedure", "p", "CREATE DEFINER='my user'@'%' PROCEDURE `p`()\nBEGIN\n  SELECT ' DEFINER=x ';\nEND");
+            w.WriteView("d", "v", "CREATE ALGORITHM=UNDEFINED DEFINER=`a b`@`localhost` SQL SECURITY DEFINER VIEW `v` AS select ' DEFINER=y ' AS `s`");
+        });
+
+        Assert.Contains("CREATE PROCEDURE `p`()\r\nBEGIN\r\n  SELECT ' DEFINER=x ';\r\nEND//", text, StringComparison.Ordinal);
+        Assert.Contains("CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `v` AS select ' DEFINER=y ' AS `s`;", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("my user", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AutoIncrementIsRemovedOnlyFromTheTableOptions()
+    {
+        var options = new SqlDumpOptions { CreateTables = true, RemoveAutoIncrement = true };
+        var text = Dump(options, w => w.WriteTable("d", "t", "CREATE TABLE `t` (\n  `id` int NOT NULL AUTO_INCREMENT COMMENT 'starts at AUTO_INCREMENT=5 here'\n) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4"));
+
+        Assert.Contains("COMMENT 'starts at AUTO_INCREMENT=5 here'\r\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CtrlZIsEscaped()
+    {
+        var text = Dump(new SqlDumpOptions { Data = DumpDataMode.Insert }, w =>
+        {
+            w.BeginData("d", "t", 1, false, ["id", "name"]);
+            w.WriteRows(Block(IdName, (1, "a\u001Ab")));
+            w.EndData();
+        });
+
+        Assert.Contains(@"'a\Zb'", text, StringComparison.Ordinal);
+    }
+
     private static readonly ResultSchema IdName = new(
     [
         new ColumnInfo("id", "INT", TypeCategory.Integer, StorageKind.Int64, true, false),

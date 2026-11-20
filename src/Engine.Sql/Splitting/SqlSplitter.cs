@@ -25,7 +25,11 @@ public static class SqlSplitter
         && delimiter.IndexOfAny(['\'', '"', '`']) < 0
         && !delimiter.Any(char.IsWhiteSpace);
 
-    public static IReadOnlyList<SqlStatement> Split(string text, string delimiter = ";")
+    /// <summary>
+    /// Splits <paramref name="text"/>. With <paramref name="backslashEscapes"/> false (the session has
+    /// <c>NO_BACKSLASH_ESCAPES</c>), a backslash in a string is an ordinary character, as the server reads it.
+    /// </summary>
+    public static IReadOnlyList<SqlStatement> Split(string text, string delimiter = ";", bool backslashEscapes = true)
     {
         ArgumentNullException.ThrowIfNull(text);
         if (!IsValidDelimiter(delimiter))
@@ -66,7 +70,7 @@ public static class SqlSplitter
             atLineStart = false;
             if (c is '\'' or '"' or '`')
             {
-                i = SkipQuoted(text, i, ref line);
+                i = SkipQuoted(text, i, ref line, backslashEscapes);
                 continue;
             }
             if (c == '#' || (c == '-' && i + 1 < text.Length && text[i + 1] == '-' && (i + 2 >= text.Length || char.IsWhiteSpace(text[i + 2]))))
@@ -185,7 +189,7 @@ public static class SqlSplitter
         return true;
     }
 
-    private static int SkipQuoted(string text, int i, ref int line)
+    private static int SkipQuoted(string text, int i, ref int line, bool backslashEscapes)
     {
         var quote = text[i];
         i++;
@@ -196,7 +200,7 @@ public static class SqlSplitter
             {
                 line++;
             }
-            if (c == '\\' && quote != '`' && i + 1 < text.Length)
+            if (c == '\\' && backslashEscapes && quote != '`' && i + 1 < text.Length)
             {
                 if (text[i + 1] == '\n')
                 {

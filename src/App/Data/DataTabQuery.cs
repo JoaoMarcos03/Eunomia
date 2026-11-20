@@ -118,17 +118,18 @@ public static class DataTabQuery
 
     /// <summary>
     /// The Data tab <c>WHERE</c>: the filter (<see cref="WhereClause"/>) and the filter panel search
-    /// (<see cref="SearchTerms.Where"/>) joined by <c>AND</c>; <c>null</c> without either. The line break before the
-    /// <c>)</c> keeps a <c>-- comment</c> at the end of the filter from swallowing the rest.
+    /// (<see cref="SearchTerms.Where"/>) joined by <c>AND</c>; <c>null</c> without either. The filter always goes in
+    /// parentheses closed on a new line: a <c>-- comment</c> or <c># comment</c> at its end would otherwise swallow
+    /// whatever is appended after it (the search, ORDER BY, LIMIT, GROUP BY).
     /// </summary>
     public static string? CombineWhere(string? filter, string? search)
     {
-        var where = WhereClause(filter);
+        var where = WhereClause(filter) is { } clause ? "(" + clause + "\n)" : null;
         if (string.IsNullOrEmpty(search))
         {
             return where;
         }
-        return where is null ? search : "(" + where + "\n) AND (" + search + ")";
+        return where is null ? search : where + " AND (" + search + ")";
     }
 
     /// <summary>Error for a filter with more than one statement (a <c>;</c> outside strings and comments), or <c>null</c>.</summary>
