@@ -95,6 +95,23 @@ public sealed class DialectAndTypesTests
     }
 
     [Fact]
+    public void ConnectionsUseTcpKeepalive()
+    {
+        Assert.Equal(30u, MySqlConnectionFactory.CreateBuilder(new ConnectionOptions("db", 3306, "u", null)).Keepalive);
+    }
+
+    [Fact]
+    public void EnumWithABackslashRoundTrips()
+    {
+        var mapper = new MySqlTypeMapper();
+        var type = mapper.Map(@"enum('a\\b','c''d')");
+
+        Assert.Equal([@"a\b", "c'd"], type.Values);
+        Assert.Equal(@"enum('a\\b','c''d')", mapper.ToNative(type));
+        Assert.Equal(type.Values, mapper.Map(mapper.ToNative(type)).Values);
+    }
+
+    [Fact]
     public void FormatsMySqlTime()
     {
         Assert.Equal("-00:00:03", MySqlQueryExecutor.FormatTime(TimeSpan.FromSeconds(-3), 0));

@@ -106,7 +106,9 @@ public sealed class MySqlTypeMapper : ITypeMapper
         _ => declared,
     };
 
-    private static string Quote(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
+    // Like the server's COLUMN_TYPE: the backslash doubled too (Split reads it as an escape).
+    private static string Quote(string value) =>
+        "'" + value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("'", "''", StringComparison.Ordinal) + "'";
 
     /// <summary>Splits <c>name(args) rest</c>; enum/set arguments come unquoted and with <c>''</c> resolved.</summary>
     internal static (string Name, List<string> Args, string Tail) Split(string type)

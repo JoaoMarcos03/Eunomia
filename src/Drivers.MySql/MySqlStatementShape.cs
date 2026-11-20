@@ -16,11 +16,29 @@ internal static class MySqlStatementShape
 
     public static bool MayReturnRows(string sql) => RowKeywords.Contains(LeadingKeyword(sql));
 
+    /// <summary>
+    /// <c>SHOW WARNINGS</c>, <c>SHOW ERRORS</c> or <c>SHOW COUNT(*) …</c>: they read the diagnostics area themselves, and an
+    /// appended <c>SHOW WARNINGS</c> would only show the same rows again.
+    /// </summary>
+    public static bool IsDiagnostics(string sql)
+    {
+        ArgumentNullException.ThrowIfNull(sql);
+        var i = 0;
+        return NextWord(sql, ref i).Equals("SHOW", StringComparison.OrdinalIgnoreCase)
+               && NextWord(sql, ref i).ToUpperInvariant() is "WARNINGS" or "ERRORS" or "COUNT";
+    }
+
     /// <summary>First word outside comments and parentheses; empty in a <c>/*! */</c> conditional comment.</summary>
     public static string LeadingKeyword(string sql)
     {
         ArgumentNullException.ThrowIfNull(sql);
         var i = 0;
+        return NextWord(sql, ref i);
+    }
+
+    /// <summary>The word after <paramref name="i"/> (whitespace, comments and parentheses skipped); <paramref name="i"/> ends after it.</summary>
+    private static string NextWord(string sql, ref int i)
+    {
         while (i < sql.Length)
         {
             var c = sql[i];

@@ -19,6 +19,18 @@ public sealed class StatementShapeTests
     }
 
     [Theory]
+    [InlineData("SHOW WARNINGS", true)]
+    [InlineData("  /* x */ show errors LIMIT 5", true)]
+    [InlineData("SHOW COUNT(*) WARNINGS", true)]
+    [InlineData("SHOW TABLES", false)]
+    [InlineData("SELECT 'SHOW WARNINGS'", false)]
+    [InlineData("SHOW", false)]
+    public void DiagnosticsAreNotFollowedBySHOWWARNINGS(string sql, bool diagnostics)
+    {
+        Assert.Equal(diagnostics, MySqlStatementShape.IsDiagnostics(sql));
+    }
+
+    [Theory]
     [InlineData("SELECT 'a''b', \"c\\\"d\", `e``f`", true)]
     [InlineData("SELECT 1 -- end", true)]
     [InlineData("SELECT 1 /* fechado */", true)]
