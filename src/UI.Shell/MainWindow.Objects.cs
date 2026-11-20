@@ -122,7 +122,8 @@ public sealed partial class MainWindow
     {
         if (_databaseView is { } view && ListIsCommandTarget())
         {
-            return view.List.FocusedNode?.Tag is DbObjectRef obj && ActiveSession is { Host.ServerServices: not null } open ? (open, obj) : null;
+            // The list may still show the previous session's objects while the new one loads.
+            return view.List.FocusedNode?.Tag is DbObjectRef obj && ActiveSession is { Host.ServerServices: not null } open && ReferenceEquals(_databaseViewSession, open) ? (open, obj) : null;
         }
         return TreeTarget() is ({ } session, _, { Object: { } focused }) ? (session, focused) : null;
     }
@@ -178,7 +179,7 @@ public sealed partial class MainWindow
         if (_tree.Tree.FocusedNode?.Tag is TreeObjectTag { Object: { } focused } tag && tag.Session == session.Id && dropped(focused))
         {
             _navigation?.Cancel();
-            _editorLoad?.Cancel();
+            _editorLoad.Cancel();
         }
         if (_dataTarget is { } target && target.Session == session.Id && dropped(target.Table))
         {
@@ -225,6 +226,11 @@ public sealed partial class MainWindow
         {
             await open.Host.UseDatabaseAsync(table.Schema, CancellationToken.None);
             UpdateCurrentDatabase(open);
+            // The query runs on the focused session: another session chosen during the USE would get this SELECT.
+            if (!ReferenceEquals(ActiveSession, open))
+            {
+                return;
+            }
         }
         var tab = _tabs.AddQueryTab();
         QueryEditorOf(tab).Text = sql;

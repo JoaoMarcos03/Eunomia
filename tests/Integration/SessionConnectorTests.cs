@@ -53,6 +53,68 @@ public sealed class SessionConnectorTests
     }
 
     [Fact]
+    public async Task AccessDeniedKeepsAskingForCredentials()
+    {
+        TestServer.RequireServer();
+        // Nothing in the vault: the password is asked for.
+        var connector = new SessionConnector(new MySqlProvider(), new MemorySecretStore(), null, null);
+        var (_, session) = Create();
+        session.PasswordSaved = false;
+        Assert.True(connector.NeedsCredentials(session));
+
+        var error = await Assert.ThrowsAnyAsync<Exception>(() => connector.ConnectAsync(session, new LoginCredentials(session.User, "wrong-password"), Ct));
+
+        Assert.Contains("Access denied", error.Message, StringComparison.Ordinal);
+        Assert.True(connector.NeedsCredentials(session));
+        Assert.Empty(connector.Open);
+    }
+
+    /// <summary>A closed session whose prompted password was good keeps it after a wrong retry, and reconnects with it.</summary>
+    [Fact]
+    public async Task WrongRetryKeepsTheGoodPromptedPassword()
+    {
+        TestServer.RequireServer();
+        var good = new MySqlConnectionStringBuilder(TestServer.ConnectionString!).Password;
+        var connector = new SessionConnector(new MySqlProvider(), new MemorySecretStore(), null, null);
+        var (_, session) = Create();
+        session.PasswordSaved = false;
+
+        var first = await connector.ConnectAsync(session, new LoginCredentials(session.User, good), Ct);
+        await first.Host.DisposeAsync();
+        await Assert.ThrowsAnyAsync<Exception>(() => connector.ConnectAsync(session, new LoginCredentials(session.User, "wrong-password"), Ct));
+
+        Assert.False(connector.NeedsCredentials(session));
+        var again = await connector.ConnectAsync(session, null, Ct);
+        Assert.NotSame(first, again);
+        Assert.Same(again, Assert.Single(connector.Open));
+        await connector.DisconnectAllAsync();
+    }
+
+    /// <summary>Two connects of the same session at the same time open one host; the second gets the first one's session.</summary>
+    [Fact]
+    public async Task ConcurrentConnectsOpenOneSession()
+    {
+        TestServer.RequireServer();
+        var (connector, session) = Create();
+        var opened = 0;
+        connector.SessionOpened += (_, _) => Interlocked.Increment(ref opened);
+
+        var all = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => Task.Run(() => connector.ConnectAsync(session, null, Ct), Ct)));
+
+        Assert.All(all, o => Assert.Same(all[0], o));
+        Assert.Equal(1, opened);
+        Assert.Equal(1, session.Statistics.ConnectCount);
+        Assert.Single(connector.Open);
+
+        // A closed session is replaced, and its host disposed.
+        await all[0].Host.DisposeAsync();
+        var replacement = await connector.ConnectAsync(session, null, Ct);
+        Assert.NotSame(all[0], replacement);
+        Assert.Same(replacement, Assert.Single(connector.Open));
+        await connector.DisconnectAllAsync();
+    }
+
+    [Fact]
     public async Task ListsTheDatabasesWithATemporaryConnection()
     {
         TestServer.RequireServer();

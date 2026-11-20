@@ -32,6 +32,9 @@ public sealed partial class MainWindow
     private DispatcherTimer? _statusTimer;
     private DateTimeOffset _lastServerPoll = DateTimeOffset.MinValue;
 
+    /// <summary>Session whose Uptime and Server time the status bar shows (or is polling for).</summary>
+    private Guid? _serverClockShown;
+
     /// <summary>Exports and imports settings files (the composition root wires it to Infra.Settings).</summary>
     public Func<string, string>? ImportSettingsFile { get; init; }
 
@@ -283,8 +286,11 @@ public sealed partial class MainWindow
         try
         {
             await _model.ExpandAsync(node);
-            var last = _context.Settings.SessionManager.RestoreLastUsedDatabase ? ActiveSession?.Definition.LastUsedDatabase : null;
-            if (!string.IsNullOrEmpty(last) && node.Children?.FirstOrDefault(c => c.Name == last) is { } db)
+            // This node's session, not the focused one: another session may have been chosen while this one expanded.
+            var open = node.Tag is Guid id ? Sessions?.Connector.Find(id) : null;
+            var last = _context.Settings.SessionManager.RestoreLastUsedDatabase ? open?.Definition.LastUsedDatabase : null;
+            if (!string.IsNullOrEmpty(last) && node.Children?.FirstOrDefault(c => c.Name == last) is { } db
+                && (_tree.Tree.FocusedNode is not { } focused || ReferenceEquals(focused.Session, node)))
             {
                 // RestoreLastUsedDB: the last database used is selected and opened (appendix D A7).
                 _tree.Tree.FocusedNode = db;
@@ -531,6 +537,7 @@ public sealed partial class MainWindow
             {
                 status.ShowDisconnected();
             }
+            _serverClockShown = null;
             return;
         }
         var host = session.Host;
@@ -543,7 +550,16 @@ public sealed partial class MainWindow
         {
             status.Busy = "Executing query ...";
         }
-        if (DateTimeOffset.UtcNow - _lastServerPoll > TimeSpan.FromSeconds(20))
+        if (_serverClockShown != session.Id)
+        {
+            // Another session: its own values right away, never the previous session's uptime meanwhile.
+            _serverClockShown = session.Id;
+            status.Uptime = string.Empty;
+            status.ServerTime = string.Empty;
+            _lastServerPoll = DateTimeOffset.UtcNow;
+            _ = PollServerClockAsync(session);
+        }
+        else if (DateTimeOffset.UtcNow - _lastServerPoll > TimeSpan.FromSeconds(20))
         {
             _lastServerPoll = DateTimeOffset.UtcNow;
             _ = PollServerClockAsync(session);
@@ -591,14 +607,24 @@ public sealed partial class MainWindow
                 // Server clock for Insert value ▸ (datetime, date, time, year).
                 _serverClockOffsets[session.Id] = wall - DateTime.Now;
             }
+            if (!ShowsServerClockOf(session))
+            {
+                return;
+            }
             var connectedFor = session.Host.ConnectedAt is { } at ? DateTimeOffset.UtcNow - at : TimeSpan.Zero;
             _context.Status.ShowConnection(connectedFor, seconds is { } s2 ? TimeSpan.FromSeconds(s2) : null, serverNow);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _context.Status.Uptime = "Uptime: unknown";
+            if (ShowsServerClockOf(session))
+            {
+                _context.Status.Uptime = "Uptime: unknown";
+            }
         }
     }
+
+    /// <summary>A poll's answer is shown only while its session is still the focused one.</summary>
+    private bool ShowsServerClockOf(OpenSession session) => _serverClockShown == session.Id && ReferenceEquals(ActiveSession, session);
 
     /// <summary>Opens Preferences from the Session Manager.</summary>
     private sealed class PreferencesWindowLauncher(ShellContext context)

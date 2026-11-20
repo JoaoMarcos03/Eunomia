@@ -136,7 +136,7 @@ public sealed partial class MainWindow
         }
         _tabs.TableTab.IsVisible = true;
         _tabs.SelectedItem = _tabs.TableTab;
-        await OpenTableEditorAsync(target.Session, target.Database, null);
+        await OpenTableEditorAsync(target.Session, target.Database, null, _editorLoad.Begin().Token);
     }
 
     /// <summary>
@@ -167,7 +167,7 @@ public sealed partial class MainWindow
                 d => string.Join(";\n", services.Ddl.Create(d.ToDefinition(services.Types, services.Dialect))) + ";",
                 baseline is null ? null : d => string.Join(";\n", TableEditing.Statements(services, baseline, d)) + (TableEditing.Statements(services, baseline, d).Count > 0 ? ";" : string.Empty));
             view.SaveRequested += (_, _) => _ = SaveTableAsync(view);
-            view.DiscardRequested += (_, _) => _ = OpenTableEditorAsync(session, database, baseline is null ? null : table);
+            view.DiscardRequested += (_, _) => _ = OpenTableEditorAsync(session, database, baseline is null ? null : table, _editorLoad.Begin().Token);
             _tableEditorSession = session;
             _tableEditorBaseline = baseline;
             _tableEditorTable = original?.Ref;
@@ -186,6 +186,24 @@ public sealed partial class MainWindow
 
     /// <summary>Save: validates, runs the CREATE or the ALTER, reloads the database in the tree and reads the saved table again.</summary>
     internal async Task<bool> SaveTableAsync(TableEditorView view)
+    {
+        // Save clicked again (or Ctrl+S) while the confirmations or the ALTER are still running: one save at a time.
+        if (_savingObject)
+        {
+            return false;
+        }
+        _savingObject = true;
+        try
+        {
+            return await SaveTableCoreAsync(view);
+        }
+        finally
+        {
+            _savingObject = false;
+        }
+    }
+
+    private async Task<bool> SaveTableCoreAsync(TableEditorView view)
     {
         if (_tableEditorSession is not { Host.ServerServices: { } services } session)
         {
@@ -214,6 +232,8 @@ public sealed partial class MainWindow
         {
             return false;
         }
+        // The reload after saving belongs to this save: a node chosen while the ALTER runs starts its own load and wins.
+        var reload = _editorLoad.Begin();
         _context.Status.Busy = "Saving table ...";
         try
         {
@@ -230,10 +250,10 @@ public sealed partial class MainWindow
         }
         session.Metadata.Invalidate(design.Database);
         var saved = new DbObjectRef(design.Database, design.Database, design.Name, DbObjectKind.Table);
-        // Another object opened while the ALTER ran: it stays.
-        if (ReferenceEquals(TableEditor, view))
+        // Another object opened (or being opened) while the ALTER ran: it stays.
+        if (reload.IsCurrent && ReferenceEquals(TableEditor, view))
         {
-            await OpenTableEditorAsync(session, design.Database, saved);
+            await OpenTableEditorAsync(session, design.Database, saved, reload.Token);
         }
         _context.Log.Append(LogCategory.Info, $"Table \"{design.Name}\" saved.");
         return true;

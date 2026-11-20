@@ -22,7 +22,7 @@ public sealed partial class MainWindow
 {
     private TreeNode? _previousTreeNode;
     private bool _restoringTreeNode;
-    private CancellationTokenSource? _editorLoad;
+    private readonly LoadSlot _editorLoad = new();
 
     /// <summary>Work requested for the focused node (the object's definition), cancelled on the next choice.</summary>
     private CancellationTokenSource? _navigation;
@@ -33,7 +33,7 @@ public sealed partial class MainWindow
         _navigation?.Cancel();
         var navigation = new CancellationTokenSource();
         _navigation = navigation;
-        _editorLoad?.Cancel();
+        _editorLoad.Cancel();
         if (!IsDataTarget(node))
         {
             AbandonDataLoad();
@@ -128,15 +128,7 @@ public sealed partial class MainWindow
         _tabs.TableTab.IsVisible = isObject;
         if (isObject)
         {
-            var (caption, icon) = obj!.Kind switch
-            {
-                TreeNodeKind.View => ("View", "view"),
-                TreeNodeKind.Procedure => ("Procedure", "procedure"),
-                TreeNodeKind.Function => ("Function", "function"),
-                TreeNodeKind.Trigger => ("Trigger", "trigger"),
-                TreeNodeKind.Event => ("Event", "event"),
-                _ => ("Table", "table"),
-            };
+            var (caption, icon) = ObjectCaption(obj!.Kind);
             MainTabsView.SetFixedHeader(_tabs.TableTab, caption + ": " + obj.Name, icon);
         }
         _tabs.DataTab.IsVisible = obj is { Kind: TreeNodeKind.Table or TreeNodeKind.View };
@@ -145,6 +137,17 @@ public sealed partial class MainWindow
             _tabs.SelectedItem = isObject ? _tabs.TableTab : db is not null ? _tabs.DatabaseTab : _tabs.HostTab;
         }
     }
+
+    /// <summary>Caption and icon of the Table tab for an object of the kind.</summary>
+    private static (string Caption, string Icon) ObjectCaption(TreeNodeKind kind) => kind switch
+    {
+        TreeNodeKind.View => ("View", "view"),
+        TreeNodeKind.Procedure => ("Procedure", "procedure"),
+        TreeNodeKind.Function => ("Function", "function"),
+        TreeNodeKind.Trigger => ("Trigger", "trigger"),
+        TreeNodeKind.Event => ("Event", "event"),
+        _ => ("Table", "table"),
+    };
 
     /// <summary><c>USE</c> only when the database changes; on error, a dialog and back to the previous node (appendix D A11).</summary>
     private async Task<bool> UseDatabaseAsync(OpenSession open, string database, TreeNode node)
@@ -220,14 +223,12 @@ public sealed partial class MainWindow
         {
             return;
         }
-        _editorLoad?.Cancel();
-        var cts = new CancellationTokenSource();
-        _editorLoad = cts;
+        var load = _editorLoad.Begin();
         if (obj.Kind == DbObjectKind.Table)
         {
-            _ = OpenTableEditorAsync(open, tag.Database, obj, cts.Token);
+            _ = OpenTableEditorAsync(open, tag.Database, obj, load.Token);
             return;
         }
-        _ = OpenObjectCodeEditorAsync(open, tag.Database, obj, cts.Token);
+        _ = OpenObjectCodeEditorAsync(open, tag.Database, obj, load.Token);
     }
 }

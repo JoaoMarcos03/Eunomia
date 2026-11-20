@@ -20,6 +20,9 @@ public sealed partial class MainWindow
     private string? _codeEditorOriginal;
     private string _codeEditorInitial = string.Empty;
 
+    /// <summary>A table or object save is running (confirmations included): a second Save does nothing.</summary>
+    private bool _savingObject;
+
     /// <summary>Code editor open in the Table tab (tests).</summary>
     internal ObjectCodeEditorView? CodeEditor => _tabs.TableTab.Content as ObjectCodeEditorView;
 
@@ -37,14 +40,7 @@ public sealed partial class MainWindow
         }
     }
 
-    private static (string Caption, string Icon) CodeCaption(DbObjectKind kind) => kind switch
-    {
-        DbObjectKind.View => ("View", "view"),
-        DbObjectKind.Procedure => ("Procedure", "procedure"),
-        DbObjectKind.Function => ("Function", "function"),
-        DbObjectKind.Trigger => ("Trigger", "trigger"),
-        _ => ("Event", "event"),
-    };
+    private static (string Caption, string Icon) CodeCaption(DbObjectKind kind) => ObjectCaption(SessionTreeProvider.KindOf(kind));
 
     /// <summary>Create new ▸ View/Stored procedure/…: the template in the Table tab (a trigger uses the focused table).</summary>
     private async Task CreateCodeObjectAsync(DbObjectKind kind)
@@ -104,6 +100,23 @@ public sealed partial class MainWindow
 
     /// <summary>Save: checks it is a CREATE, saves, reloads the database in the tree and focuses the saved object.</summary>
     internal async Task<bool> SaveObjectCodeAsync(ObjectCodeEditorView view)
+    {
+        if (_savingObject)
+        {
+            return false;
+        }
+        _savingObject = true;
+        try
+        {
+            return await SaveObjectCodeCoreAsync(view);
+        }
+        finally
+        {
+            _savingObject = false;
+        }
+    }
+
+    private async Task<bool> SaveObjectCodeCoreAsync(ObjectCodeEditorView view)
     {
         if (_codeEditorSession is not { } session || _codeEditorDatabase is not { } database)
         {

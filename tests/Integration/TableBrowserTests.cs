@@ -121,7 +121,7 @@ public sealed class TableBrowserTests : IAsyncLifetime
         using var browser = new TableBrowser(_host, await Table("t"), options);
         await browser.LoadAsync(10, Ct);
 
-        Assert.Contains("WHERE id <= 30 ORDER BY `id` DESC LIMIT 10", browser.Select.Sql, StringComparison.Ordinal);
+        Assert.Contains("WHERE (id <= 30\n) ORDER BY `id` DESC LIMIT 10", browser.Select.Sql, StringComparison.Ordinal);
         Assert.Equal(30, browser.Source!.TryGetBlock(0, out var block) ? block.GetInt64(0, 0) : 0);
         var (exact, isExact) = await browser.CountAsync(exact: true, Ct);
         Assert.Equal(30, exact);
@@ -129,6 +129,26 @@ public sealed class TableBrowserTests : IAsyncLifetime
         var (approximate, isApproximateExact) = await browser.CountAsync(exact: false, Ct);
         Assert.NotNull(approximate);
         Assert.False(isApproximateExact);
+    }
+
+    [Theory]
+    [InlineData("id <= 30 -- the first ones")]
+    [InlineData("id <= 30 # the first ones")]
+    public async Task ACommentAtTheEndOfTheFilterKeepsOrderLimitAndGroupBy(string filter)
+    {
+        TestServer.RequireServer();
+        var options = new DataBrowseOptions { Filter = filter, Sort = [new DataSort("id", true)], RowsPerStep = 10 };
+        using var browser = new TableBrowser(_host, await Table("t"), options);
+        await browser.LoadAsync(10, Ct);
+
+        // ORDER BY id DESC LIMIT 10 still applies: 10 rows, the first is 30.
+        Assert.Equal(10, browser.Loaded);
+        Assert.Equal(30, browser.Source!.TryGetBlock(0, out var block) ? block.GetInt64(0, 0) : 0);
+        Assert.Equal(30, (await browser.CountAsync(exact: true, Ct)).Rows);
+        // GROUP BY … LIMIT 50 of "More values" still applies: 30 values, one row each.
+        var values = await browser.TopValuesAsync("id", Ct);
+        Assert.Equal(30, values.Count);
+        Assert.All(values, v => Assert.Equal(1, v.Count));
     }
 
     [Fact]

@@ -146,7 +146,8 @@ public sealed partial class MainWindow
     /// </summary>
     private async Task PopupEditAsync(DataGridControl grid, GridPopupEditEventArgs request, OpenSession? session, TableDefinition? table)
     {
-        var info = grid.Source is { } source && request.Column < source.Schema.Count ? source.Schema[request.Column] : null;
+        var rows = grid.Source;
+        var info = rows is { } source && request.Column < source.Schema.Count ? source.Schema[request.Column] : null;
         var name = info?.Name ?? string.Empty;
         var tableColumn = string.IsNullOrEmpty(info?.SourceColumn) ? name : info.SourceColumn;
         var definition = table?.Columns.FirstOrDefault(c => string.Equals(c.Name, tableColumn, StringComparison.OrdinalIgnoreCase));
@@ -166,6 +167,13 @@ public sealed partial class MainWindow
                 });
         if (value is not null && value != request.Value)
         {
+            // The grid reloaded while the editor was open (auto refresh, another table, a filter): the row number now
+            // points at another row, so the value is not written anywhere.
+            if (!ReferenceEquals(grid.Source, rows) || request.Row >= grid.RowCount)
+            {
+                ShowEditError("The rows changed while the editor was open; the value was not applied.");
+                return;
+            }
             await grid.SetCellValueAsync(request.Row, request.Column, new CellValue(value));
         }
     }

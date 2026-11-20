@@ -350,7 +350,9 @@ public sealed partial class MainWindow
             case ResultView entry:
                 if (regex is null && ReferenceEquals(entry.Grid.Control.Source, entry.View))
                 {
-                    // Nothing filtered: setting the same source again would only drop the grid's edits.
+                    // Nothing filtered: setting the same source again would only drop the grid's edits. A scan still
+                    // running for this text would otherwise filter the grid after it was cleared.
+                    _localFilterScan?.Cancel();
                     _filterInfo.Text = string.Empty;
                     return;
                 }
@@ -376,6 +378,7 @@ public sealed partial class MainWindow
                     var filteredResult = await FilteredRowSource.CreateAsync(view, regex, resultScan.Token);
                     if (resultScan.IsCancellationRequested || !ReferenceEquals(entry.View, view))
                     {
+                        ForgetUnappliedFilter(target, terms, previousTerms);
                         return;
                     }
                     entry.Grid.Control.SetSource(filteredResult);
@@ -384,6 +387,7 @@ public sealed partial class MainWindow
                 }
                 catch (OperationCanceledException)
                 {
+                    ForgetUnappliedFilter(target, terms, previousTerms);
                 }
                 catch (RegexMatchTimeoutException)
                 {
@@ -394,6 +398,18 @@ public sealed partial class MainWindow
                     _context.Status.SetIdle();
                 }
                 break;
+        }
+    }
+
+    /// <summary>
+    /// A scan cancelled before it filtered the grid (another filter started, here or on another result): the box must not
+    /// bring back a text the grid does not apply. A newer text for the same target stays.
+    /// </summary>
+    private void ForgetUnappliedFilter(object target, SearchTerms? terms, SearchTerms? previousTerms)
+    {
+        if (ReferenceEquals(_localFilterApplied.GetValueOrDefault(target), terms))
+        {
+            _localFilterApplied[target] = previousTerms;
         }
     }
 

@@ -395,7 +395,7 @@ public sealed partial class MainWindow
             }
             foreach (var row in data.Rows)
             {
-                sb.Append(string.Join('\t', row.Select(v => v ?? DisplayFormatter.NullText))).Append(Environment.NewLine);
+                sb.Append(string.Join('\t', row.Select(v => v?.Replace('\0', ' ') ?? DisplayFormatter.NullText))).Append(Environment.NewLine);
             }
         }
         else if (FocusedTreeList() is { } list)

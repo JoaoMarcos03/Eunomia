@@ -287,7 +287,8 @@ public sealed partial class MainWindow
     /// <summary>F2 rename in the list: <c>RENAME TABLE</c> for tables and views; other kinds are not renamed here.</summary>
     internal async Task RenameObjectAsync(TreeListRenameEventArgs e)
     {
-        if (ActiveSession is not { } open || e.Node.Tag is not DbObjectRef obj || open.Host.ServerServices is not { } services)
+        if (ActiveSession is not { } open || e.Node.Tag is not DbObjectRef obj || open.Host.ServerServices is not { } services
+            || !ReferenceEquals(_databaseViewSession, open))
         {
             return;
         }
