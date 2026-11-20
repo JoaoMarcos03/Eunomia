@@ -13,7 +13,7 @@ namespace Eunomia.Drivers.MySql;
 /// </summary>
 public sealed partial class MySqlDmlComposer(MySqlDialect dialect) : IDmlComposer
 {
-    [GeneratedRegex(@"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$", RegexOptions.CultureInvariant)]
     private static partial Regex Number();
 
     [GeneratedRegex(@"^0x[0-9a-fA-F]*$", RegexOptions.CultureInvariant)]

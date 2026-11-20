@@ -24,9 +24,7 @@ public static class SecretKeys
 
     public static string SshPassword(Guid session) => $"ssh/{session:D}";
 
-    public static string SshPassphrase(Guid session) => $"sshkey/{session:D}";
-
-    public static IEnumerable<string> All(Guid session) => [Password(session), SshPassword(session), SshPassphrase(session)];
+    public static IEnumerable<string> All(Guid session) => [Password(session), SshPassword(session)];
 }
 
 /// <summary>In-memory vault (tests; ad hoc sessions from the command line).</summary>

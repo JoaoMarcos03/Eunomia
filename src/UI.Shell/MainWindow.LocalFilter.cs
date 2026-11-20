@@ -318,6 +318,7 @@ public sealed partial class MainWindow
             ApplyDataSearch(terms);
             return;
         }
+        var previousTerms = _localFilterApplied.GetValueOrDefault(target);
         _localFilterApplied[target] = terms;
         var regex = LocalFilterRegex(terms);
         switch (target)
@@ -347,6 +348,17 @@ public sealed partial class MainWindow
                 }
                 break;
             case ResultView entry:
+                if (regex is null && ReferenceEquals(entry.Grid.Control.Source, entry.View))
+                {
+                    // Nothing filtered: setting the same source again would only drop the grid's edits.
+                    _filterInfo.Text = string.Empty;
+                    return;
+                }
+                if (!await ConfirmResultReorderAsync(entry))
+                {
+                    _localFilterApplied[target] = previousTerms;
+                    return;
+                }
                 _localFilterScan?.Cancel();
                 var resultScan = new CancellationTokenSource();
                 _localFilterScan = resultScan;
@@ -354,6 +366,7 @@ public sealed partial class MainWindow
                 if (regex is null)
                 {
                     entry.Grid.Control.SetSource(view);
+                    entry.HasSavedEdits = false;
                     _filterInfo.Text = string.Empty;
                     return;
                 }
@@ -366,6 +379,7 @@ public sealed partial class MainWindow
                         return;
                     }
                     entry.Grid.Control.SetSource(filteredResult);
+                    entry.HasSavedEdits = false;
                     _filterInfo.Text = MatchText(filteredResult.MatchCount, filteredResult.TotalRows);
                 }
                 catch (OperationCanceledException)

@@ -49,6 +49,9 @@ public sealed class SqlColorizer(ISqlLanguage language) : DocumentColorizingTran
 
     public SqlEditorPalette Palette { get; set; } = SqlEditorPalette.Light;
 
+    /// <summary>Each line starts in the <see cref="LexerState.Normal"/> state (the log: an open quote stays on its line).</summary>
+    public bool IndependentLines { get; init; }
+
     /// <summary>Invalidates the state from the (1-based) line that changed.</summary>
     public void InvalidateFrom(int lineNumber) => _validLines = Math.Min(_validLines, Math.Max(0, lineNumber - 1));
 
@@ -113,7 +116,7 @@ public sealed class SqlColorizer(ISqlLanguage language) : DocumentColorizingTran
     /// <summary>Lexer state at the start of the (1-based) line, computing any missing earlier lines.</summary>
     private LexerState StateBefore(TextDocument document, int lineNumber)
     {
-        if (lineNumber <= 1)
+        if (lineNumber <= 1 || IndependentLines)
         {
             return LexerState.Normal;
         }

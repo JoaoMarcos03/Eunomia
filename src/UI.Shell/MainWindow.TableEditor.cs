@@ -174,8 +174,7 @@ public sealed partial class MainWindow
             _tabs.TableTab.Content = view;
             Views.MainTabsView.SetFixedHeader(_tabs.TableTab, "Table: " + (original is null ? "[Untitled]" : original.Ref.Name), "table");
         }
-        catch (Exception ex) when (cancellationToken.IsCancellationRequested
-                                   && ex is OperationCanceledException or DbOperationException or Engine.Execution.SessionOperationException)
+        catch (Exception ex) when (IsCancel(ex, cancellationToken))
         {
             // Cancelled (another choice in the tree, Drop of the object): the error of a request already in flight does not matter either.
         }
@@ -231,7 +230,11 @@ public sealed partial class MainWindow
         }
         session.Metadata.Invalidate(design.Database);
         var saved = new DbObjectRef(design.Database, design.Database, design.Name, DbObjectKind.Table);
-        await OpenTableEditorAsync(session, design.Database, saved);
+        // Another object opened while the ALTER ran: it stays.
+        if (ReferenceEquals(TableEditor, view))
+        {
+            await OpenTableEditorAsync(session, design.Database, saved);
+        }
         _context.Log.Append(LogCategory.Info, $"Table \"{design.Name}\" saved.");
         return true;
     }

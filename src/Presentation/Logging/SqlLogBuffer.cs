@@ -130,12 +130,12 @@ public sealed class SqlLogBuffer(LogOptions options, TimeProvider? clock = null)
     {
         // The log memo has one line per entry: line breaks become spaces.
         var text = message.Replace("\r\n", " ", StringComparison.Ordinal).Replace('\n', ' ').Replace('\r', ' ').Trim();
+        // Passwords in CREATE USER / SET PASSWORD stay out of the log (section 23.2), also when an error quotes the SQL.
+        text = Eunomia.Engine.Sql.SecretMasking.MaskSql(text);
         LogLineKind kind;
         if (category is LogCategory.UserSql or LogCategory.InternalSql or LogCategory.Script)
         {
             kind = LogLineKind.Sql;
-            // Passwords in CREATE USER / SET PASSWORD stay out of the log (section 23.2).
-            text = Eunomia.Engine.Sql.SecretMasking.MaskSql(text);
             if (delimiter.Length > 0 && !text.EndsWith(delimiter, StringComparison.Ordinal))
             {
                 text += delimiter;

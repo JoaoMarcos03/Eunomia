@@ -157,6 +157,7 @@ public sealed partial class MainWindow
             await ShowSessionManagerAsync(startup: true);
             return;
         }
+        Sessions.Connector.ApplyCommandLineSecrets(request, session, Sessions.Catalog);
         var credentials = request.Password is not null ? new LoginCredentials(session.User, request.Password) : null;
         if (!await ConnectAsync(this, session, credentials) && Sessions.Connector.Open.Count == 0)
         {

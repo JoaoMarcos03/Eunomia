@@ -14,6 +14,7 @@ using Eunomia.Engine.Transfer;
 using Eunomia.UI.Controls.Common.Accessibility;
 using Eunomia.UI.Controls.Common.Brand;
 using Eunomia.UI.Controls.Common.Dialogs;
+using Eunomia.UI.Controls.Common.Formatting;
 using Eunomia.UI.Controls.Common.Input;
 using Eunomia.UI.Controls.Common.Text;
 using Eunomia.UI.Controls.Common.Theming;
@@ -833,8 +834,8 @@ public sealed class SqlExportDialog : Window
     {
         var culture = CultureInfo.CurrentCulture;
         var size = target == SqlExportTarget.Zip && result.FileBytes is { } zipBytes
-            ? $"{FormatBytes(result.BytesWritten)} of SQL in a {FormatBytes(zipBytes)} ZIP file,"
-            : FormatBytes(result.BytesWritten);
+            ? $"{SizeFormatter.Format(result.BytesWritten)} of SQL in a {SizeFormatter.Format(zipBytes)} ZIP file,"
+            : SizeFormatter.Format(result.BytesWritten);
         return string.Create(culture, $"Done: {size} in {result.Elapsed.TotalSeconds:0.0} s")
             + (failed > 0 ? string.Create(culture, $", {failed:N0} object(s) with errors.") : ".");
     }
@@ -1010,7 +1011,7 @@ public sealed class SqlExportDialog : Window
             return string.Create(CultureInfo.CurrentCulture, $"Stopped at query #{import.Statements + 1:N0} on {where}: {import.ErrorList.LastOrDefault()?.Message}");
         }
         return string.Create(CultureInfo.CurrentCulture,
-            $"Done: {FormatBytes(result.Export.BytesWritten)} exported and {import.Statements:N0} queries run on {where} in {(result.Export.Elapsed + import.Elapsed).TotalSeconds:0.0} s.");
+            $"Done: {SizeFormatter.Format(result.Export.BytesWritten)} exported and {import.Statements:N0} queries run on {where} in {(result.Export.Elapsed + import.Elapsed).TotalSeconds:0.0} s.");
     }
 
     /// <summary>
@@ -1146,7 +1147,7 @@ public sealed class SqlExportDialog : Window
             // next ones may be finishing on another connection. The count and the oldest running object show that the
             // export is moving on (or which object it is waiting for).
             var finished = progress.Items.Count(i => i.State is SqlExportItemState.Done or SqlExportItemState.Skipped or SqlExportItemState.Failed);
-            var text = string.Create(CultureInfo.CurrentCulture, $"Exporting... {FormatBytes(progress.BytesWritten)}, {finished:N0} of {progress.Items.Count:N0} objects");
+            var text = string.Create(CultureInfo.CurrentCulture, $"Exporting... {SizeFormatter.Format(progress.BytesWritten)}, {finished:N0} of {progress.Items.Count:N0} objects");
             if (progress.Items.FirstOrDefault(i => i.State == SqlExportItemState.Running) is { } oldest && oldest.Duration >= SlowObject)
             {
                 text += string.Create(CultureInfo.CurrentCulture, $", waiting for {oldest.Name} ({oldest.Duration.TotalSeconds:0} s)");
@@ -1157,14 +1158,6 @@ public sealed class SqlExportDialog : Window
 
     /// <summary>From this point on, the status line says which object the export is waiting for.</summary>
     private static readonly TimeSpan SlowObject = TimeSpan.FromSeconds(5);
-
-    private static string FormatBytes(long bytes) => bytes switch
-    {
-        >= 1024L * 1024 * 1024 => string.Create(CultureInfo.CurrentCulture, $"{bytes / (1024.0 * 1024 * 1024):0.00} GiB"),
-        >= 1024L * 1024 => string.Create(CultureInfo.CurrentCulture, $"{bytes / (1024.0 * 1024):0.0} MiB"),
-        >= 1024 => string.Create(CultureInfo.CurrentCulture, $"{bytes / 1024.0:0.0} KiB"),
-        _ => string.Create(CultureInfo.CurrentCulture, $"{bytes} B"),
-    };
 
     private static string KindText(DbObjectKind kind) => kind switch
     {

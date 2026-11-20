@@ -156,10 +156,12 @@ public static class SessionStatements
             }
             else if (c == '/' && i + 1 < text.Length && text[i + 1] == '*')
             {
-                if (i + 2 < text.Length && text[i + 2] == '!')
+                // Executable comment, "/*!" or MariaDB's "/*M!": the version is skipped and what is inside is read.
+                var marker = i + 2 < text.Length && text[i + 2] == '!' ? 3
+                    : i + 3 < text.Length && text[i + 2] is 'M' or 'm' && text[i + 3] == '!' ? 4 : 0;
+                if (marker > 0)
                 {
-                    // Executable comment: the version is skipped and what is inside is read.
-                    i += 3;
+                    i += marker;
                     while (i < text.Length && char.IsAsciiDigit(text[i]))
                     {
                         i++;

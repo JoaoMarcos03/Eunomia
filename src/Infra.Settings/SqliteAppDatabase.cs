@@ -14,6 +14,9 @@ public sealed class SqliteAppDatabase : IAppDatabase
 {
     public const int SchemaVersion = 1;
 
+    private const int SqliteCorrupt = 11;
+    private const int SqliteNotADatabase = 26;
+
     private readonly SqliteConnection _connection;
     private readonly Lock _gate = new();
 
@@ -28,8 +31,9 @@ public sealed class SqliteAppDatabase : IAppDatabase
         {
             _connection = OpenAndMigrate(path);
         }
-        catch (SqliteException)
+        catch (SqliteException ex) when (ex.SqliteErrorCode is SqliteCorrupt or SqliteNotADatabase)
         {
+            // Only a damaged file is set aside: busy, locked or unopenable (another instance, permissions) go up as errors.
             // A file that is not an SQLite database or is damaged: set aside (with the WAL) and a new one is started.
             var stamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
             CorruptBackup = $"{path}.corrupt-{stamp}";

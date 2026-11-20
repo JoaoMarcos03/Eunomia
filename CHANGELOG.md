@@ -27,6 +27,15 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 
 ### Fixed
 
+- Read-only sessions: `INTO OUTFILE`/`DUMPFILE` and `READ WRITE` split by line breaks, `SET STATEMENT … FOR`, `SET transaction_read_only` and MariaDB `/*M! … */` comments got through.
+- The SQL log and query history masked fewer passwords than they should (`SOURCE_PASSWORD=`, `PASSWORD='x'` without spaces, `REPLACE '<old>'`, and error lines).
+- Grid: BIT(64) with every bit set failed to load; partial zero dates (`2024-00-00`) showed as `0000-00-00`; a SET cell left empty wrote `''` over NULL; stepping a negative TIME failed; new rows lost their edits when more rows loaded; edits made during a save were lost.
+- CSV import: a quoted empty one-column record was skipped; TRUNCATE ran before a server import that `local_infile=OFF` refuses.
+- Run SQL file: an error in a multi-statement packet pointed at its first statement and resume ran the earlier ones again; a file that is not valid UTF-8 now fails with a clear message instead of drifting.
+- Sessions: a wrong prompted password stayed cached; the SSH agent fallback missed agent errors; `--ssh-password` was ignored and a `-d` clone with overrides lost its saved secrets.
+- Late results after switching session, database or object no longer overwrite the current view, and Kill/Drop/Empty/Save act on the object that was shown when you asked.
+- Copy all lines missed rows not loaded yet; per-object export files with names that differ only in case overwrote each other; a local sort or filter on an edited result tab now asks first.
+- Auto upper case no longer upper-cases table and column names (`from event`, `t.status`); the SQL log colours each line on its own.
 - Data tab: a large table (11 GB) stopped after 30 s with nothing shown.
 - Drop from the Database tab list's context menu dropped the database focused in the tree instead of the selected objects; with nothing selected in the list, Drop, Empty and Clear filter now do nothing.
 - Copy, Copy as and Edit › Copy on query results acted on the wrong grid, or did nothing, when a menu had taken the focus; keyboard shortcuts no longer run while a menu is open.

@@ -172,7 +172,8 @@ public sealed class HostTabView : TabControl
     public void ShowStatus(IReadOnlyList<HostStatusRow> rows)
     {
         ArgumentNullException.ThrowIfNull(rows);
-        var nodes = rows.Select(r => TreeListRows.Create([r.Name, r.Value, r.PerHour, r.PerSecond], StatusFormats, tag: r)).ToList();
+        // Tagged by name (not by the row, whose values change on every refresh) so SetRoots keeps the selection.
+        var nodes = rows.Select(r => TreeListRows.Create([r.Name, r.Value, r.PerHour, r.PerSecond], StatusFormats, tag: r.Name)).ToList();
         StatusList.SetRoots(nodes);
         SetCaption(StatusTab, "Status", rows.Count);
     }
@@ -201,6 +202,16 @@ public sealed class HostTabView : TabControl
             ProcessFormats,
             tag: p)).ToList();
         TreeListRows.ApplyBars(nodes, [5]);
+        // SetRoots keeps the selection by tag equality, but a process's Time and State change on every refresh: the old
+        // nodes take the new record with the same Id first, so the selection and the focus survive the refresh.
+        var byId = processes.GroupBy(p => p.Id).ToDictionary(g => g.Key, g => g.First());
+        foreach (var old in ProcessList.AllNodes())
+        {
+            if (old.Tag is ServerProcess p && byId.TryGetValue(p.Id, out var fresh))
+            {
+                old.Tag = fresh;
+            }
+        }
         ProcessList.SetRoots(nodes);
         ProcessSql.Text = (ProcessList.FocusedNode?.Tag as ServerProcess)?.Info ?? string.Empty;
         SetCaption(ProcessesTab, "Processes", processes.Count);

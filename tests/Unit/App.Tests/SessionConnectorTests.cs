@@ -65,14 +65,50 @@ public sealed class SessionConnectorTests
         s.Ssh.Active = true;
         s.Ssh.User = "deploy";
         s.Ssh.PrivateKeyFile = "C:\\keys\\id";
-        secrets.Set(SecretKeys.SshPassphrase(s.Id), "frase");
+        secrets.Set(SecretKeys.SshPassword(s.Id), "ssh-pw");
 
         var ssh = Connector(secrets).ToSettings(s).Connection.Ssh!;
 
         Assert.Equal(("10.0.0.5", 22, "deploy"), (ssh.Host, ssh.Port, ssh.User));
         Assert.Equal("C:\\keys\\id", ssh.PrivateKeyPath);
-        Assert.Null(ssh.Password);
-        Assert.Equal(SecretKeys.SshPassphrase(s.Id), ssh.Passphrase!.Value.Key);
+        Assert.Equal(SecretKeys.SshPassword(s.Id), ssh.Password!.Value.Key);
+        Assert.Null(ssh.Passphrase);
+    }
+
+    [Fact]
+    public void CommandLineSshPasswordAndSavedSecretsReachTheAdHocClone()
+    {
+        var secrets = new MemorySecretStore();
+        var catalog = new SessionCatalog();
+        var saved = new SessionDefinition { Name = "prod", Host = "prod", User = "root", PasswordSaved = true, NetType = NetType.MySqlSshTunnel };
+        saved.Ssh.Active = true;
+        catalog.Sessions.Add(saved);
+        secrets.Set(SecretKeys.Password(saved.Id), "pw");
+        var connector = Connector(secrets);
+
+        // -d with an override: a clone with a new id, which has nothing in the vault.
+        var request = CommandLine.Parse(["-d=prod", "-u=reader", "--ssh-password=ssh-pw"]);
+        var clone = CommandLine.Resolve(request, catalog)!;
+        Assert.Null(connector.ToSettings(clone).Connection.Ssh!.Password);
+
+        connector.ApplyCommandLineSecrets(request, clone, catalog);
+
+        Assert.False(connector.NeedsCredentials(clone));
+        Assert.Equal(SecretKeys.SshPassword(clone.Id), connector.ToSettings(clone).Connection.Ssh!.Password!.Value.Key);
+        Assert.Null(secrets.Get(SecretKeys.Password(clone.Id)));
+        Assert.Null(secrets.Get(SecretKeys.SshPassword(clone.Id)));
+    }
+
+    [Fact]
+    public async Task WrongPromptedPasswordIsNotCached()
+    {
+        var connector = Connector(new MemorySecretStore());
+        var s = new SessionDefinition { Host = "db.example.com" };
+        Assert.True(connector.NeedsCredentials(s));
+
+        await Assert.ThrowsAnyAsync<Exception>(() => connector.ConnectAsync(s, new LoginCredentials("app", "wrong"), TestContext.Current.CancellationToken));
+
+        Assert.True(connector.NeedsCredentials(s));
     }
 
     [Fact]

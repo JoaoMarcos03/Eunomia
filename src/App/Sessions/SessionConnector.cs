@@ -109,10 +109,13 @@ public sealed class SessionConnector(
             throw new NotSupportedException($"\"{NetTypes.DisplayName(session.NetType)}\" is not supported in this version.");
         }
         var definition = session.Clone();
+        var passwordKey = SecretKeys.Password(session.Id);
+        var previousPassword = _prompted.Get(passwordKey);
         if (credentials is not null)
         {
             definition.User = credentials.User;
-            _prompted.Set(SecretKeys.Password(session.Id), credentials.Password);
+            // Needed while connecting (ResolveSecret); it stays in memory only if the connection succeeds.
+            _prompted.Set(passwordKey, credentials.Password);
         }
         var settings = ToSettings(definition);
         var host = new SessionHost(settings, new SessionServices
@@ -132,6 +135,18 @@ public sealed class SessionConnector(
         }
         catch
         {
+            if (credentials is not null)
+            {
+                // A wrong password must not stay cached (NeedsCredentials would stop asking for it).
+                if (previousPassword is null)
+                {
+                    _prompted.Delete(passwordKey);
+                }
+                else
+                {
+                    _prompted.Set(passwordKey, previousPassword);
+                }
+            }
             session.Statistics.RefusedCount++;
             await host.DisposeAsync().ConfigureAwait(false);
             throw;
@@ -190,6 +205,32 @@ public sealed class SessionConnector(
         }
     }
 
+    /// <summary>
+    /// Command line, before connecting <paramref name="session"/> (from <see cref="CommandLine.Resolve"/>): a <c>-d</c> clone with
+    /// overrides has a new id, so it takes the saved session's secrets; <c>--ssh-password</c> goes on top. Memory only, never
+    /// the vault (<c>-p</c> arrives as the login credentials).
+    /// </summary>
+    public void ApplyCommandLineSecrets(CommandLineRequest request, SessionDefinition session, SessionCatalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (request.SessionPath is { } path && catalog.FindByPath(path) is { } saved && saved.Id != session.Id)
+        {
+            foreach (var (from, to) in SecretKeys.All(saved.Id).Zip(SecretKeys.All(session.Id)))
+            {
+                if (secrets.Get(from) is { } value)
+                {
+                    _prompted.Set(to, value);
+                }
+            }
+        }
+        if (request.SshPassword is { } sshPassword)
+        {
+            _prompted.Set(SecretKeys.SshPassword(session.Id), sshPassword);
+        }
+    }
+
     public async Task DisconnectAsync(OpenSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -227,8 +268,9 @@ public sealed class SessionConnector(
         SshTunnelOptions? sshOptions = null;
         if (s.Ssh.Active)
         {
-            var sshPassword = secrets.Get(SecretKeys.SshPassword(s.Id)) is not null ? new SecretReference(SecretKeys.SshPassword(s.Id)) : (SecretReference?)null;
-            var passphrase = secrets.Get(SecretKeys.SshPassphrase(s.Id)) is not null ? new SecretReference(SecretKeys.SshPassphrase(s.Id)) : (SecretReference?)null;
+            var sshPassword = (secrets.Get(SecretKeys.SshPassword(s.Id)) ?? _prompted.Get(SecretKeys.SshPassword(s.Id))) is not null
+                ? new SecretReference(SecretKeys.SshPassword(s.Id))
+                : (SecretReference?)null;
             sshOptions = new SshTunnelOptions(
                 string.IsNullOrWhiteSpace(s.Ssh.Host) ? s.Host : s.Ssh.Host,
                 s.Ssh.Port,
@@ -237,7 +279,6 @@ public sealed class SessionConnector(
                 string.IsNullOrWhiteSpace(s.Ssh.PrivateKeyFile) ? null : s.Ssh.PrivateKeyFile,
                 s.Ssh.LocalPort)
             {
-                Passphrase = passphrase,
                 UseAgent = s.Ssh.UseAgent,
                 Timeout = TimeSpan.FromSeconds(Math.Max(1, s.Ssh.Timeout) + 6),
             };

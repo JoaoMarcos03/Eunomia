@@ -257,7 +257,7 @@ public sealed class SqlExportDialogTests
         dialog.ExportButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         var message = await RealServer.WaitAsync(() => UnexpectedDialogGuardAttribute.TakeOpened() is [var opened] ? opened : null);
 
-        Assert.Equal("Done: 9.00 GiB of SQL in a 860.0 MiB ZIP file, in 312.4 s, 13 object(s) with errors.", dialog.StatusText.Text);
+        Assert.Equal("Done: 9.0 GiB of SQL in a 860.0 MiB ZIP file, in 312.4 s, 13 object(s) with errors.", dialog.StatusText.Text);
         Assert.StartsWith("MessageDialog \"Export finished with errors\": 13 object(s) could not be exported.", message, StringComparison.Ordinal);
         Assert.Contains("\nshop.t0: Query execution was interrupted", message, StringComparison.Ordinal);
         Assert.Contains("\nshop.t9: Query execution was interrupted", message, StringComparison.Ordinal);

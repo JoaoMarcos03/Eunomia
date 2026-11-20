@@ -553,6 +553,7 @@ public sealed class SqlExportJob
         var header = await HeaderAsync(cancellationToken).ConfigureAwait(false);
         var connections = _request.ConsistentSnapshot ? 1 : Math.Max(1, Math.Min(_host.Settings.MaxJobConnections, _items.Count));
         var next = -1;
+        var paths = DirectoryPaths(_request.Path, _items);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var workers = Enumerable.Range(0, connections).Select(_ => _host.RunJobAsync(
             async (handle, ct) =>
@@ -564,9 +565,8 @@ public sealed class SqlExportJob
                     while ((index = Interlocked.Increment(ref next)) < _items.Count)
                     {
                         var item = _items[index];
-                        var directory = System.IO.Path.Combine(_request.Path, SafeFileName(item.Database));
-                        LocalFileException.Guard(() => Directory.CreateDirectory(directory));
-                        var path = System.IO.Path.Combine(directory, SafeFileName(TypeName(item.Info!.Ref.Kind) + "-" + item.Info.Ref.Name) + ".sql");
+                        var path = paths[index];
+                        LocalFileException.Guard(() => Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!));
                         var partial = path + ".partial";
                         try
                         {
@@ -576,7 +576,7 @@ public sealed class SqlExportJob
                                 var writer = new SqlDumpWriter(output, Options);
                                 writer.WriteHeader(header);
                                 await ExportItemAsync(handle, item, writer, output, ct).ConfigureAwait(false);
-                                if (item.Info.Ref.Kind == DbObjectKind.View)
+                                if (item.Info!.Ref.Kind == DbObjectKind.View)
                                 {
                                     await ExportItemAsync(handle, new Item(item.Database, item.Info, Pass.FinalView), writer, output, ct).ConfigureAwait(false);
                                 }
@@ -1002,6 +1002,30 @@ public sealed class SqlExportJob
         DbObjectKind.View => "view",
         _ => "table",
     };
+
+    /// <summary>
+    /// File of each item in a directory export: <c>database/type-name.sql</c>. Names that differ only in case (the file
+    /// system may ignore it) or that <see cref="SafeFileName"/> makes equal get <c>-2</c>, <c>-3</c>… instead of overwriting.
+    /// </summary>
+    private static List<string> DirectoryPaths(string root, IReadOnlyList<Item> items) =>
+        DirectoryPaths(root, items.Select(i => (i.Database, TypeName(i.Info!.Ref.Kind) + "-" + i.Info.Ref.Name)).ToList());
+
+    internal static List<string> DirectoryPaths(string root, IReadOnlyList<(string Database, string Name)> items)
+    {
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var paths = new List<string>(items.Count);
+        foreach (var (database, name) in items)
+        {
+            var stem = System.IO.Path.Combine(root, SafeFileName(database), SafeFileName(name));
+            var path = stem + ".sql";
+            for (var n = 2; !used.Add(path); n++)
+            {
+                path = stem + "-" + n.ToString(CultureInfo.InvariantCulture) + ".sql";
+            }
+            paths.Add(path);
+        }
+        return paths;
+    }
 
     internal static string SafeFileName(string name)
     {

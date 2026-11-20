@@ -552,12 +552,53 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         {
             return;
         }
+        if (IsObjectName(document, token.Start, token.Start + token.Length))
+        {
+            return;
+        }
         var word = document.GetText(token.Start, token.Length);
         var upper = word.ToUpperInvariant();
         if (!string.Equals(word, upper, StringComparison.Ordinal))
         {
             document.Replace(token.Start, token.Length, upper);
         }
+    }
+
+    private static readonly string[] ObjectNameAfter = ["FROM", "JOIN", "INTO", "UPDATE", "TABLE", "EXISTS"];
+
+    // Keywords that can follow those words and are still keywords (CREATE TABLE IF NOT EXISTS, INTO OUTFILE, FROM DUAL…).
+    private static readonly string[] KeywordsAfterObjectWord = ["IF", "IGNORE", "LOW_PRIORITY", "OUTFILE", "DUMPFILE", "LATERAL", "DUAL"];
+
+    /// <summary>
+    /// The word between <paramref name="start"/> and <paramref name="end"/> names a table or a column (<c>from event</c>,
+    /// <c>t.status</c>, <c>event.id</c>): it keeps its case.
+    /// </summary>
+    private static bool IsObjectName(TextDocument document, int start, int end)
+    {
+        if (end < document.TextLength && document.GetCharAt(end) == '.')
+        {
+            return true;
+        }
+        if (KeywordsAfterObjectWord.Any(k => string.Equals(k, document.GetText(start, end - start), StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+        var i = start;
+        while (i > 0 && char.IsWhiteSpace(document.GetCharAt(i - 1)))
+        {
+            i--;
+        }
+        if (i > 0 && document.GetCharAt(i - 1) == '.')
+        {
+            return true;
+        }
+        var wordEnd = i;
+        while (i > 0 && (char.IsLetterOrDigit(document.GetCharAt(i - 1)) || document.GetCharAt(i - 1) is '_' or '$'))
+        {
+            i--;
+        }
+        var previous = document.GetText(i, wordEnd - i);
+        return ObjectNameAfter.Any(k => string.Equals(k, previous, StringComparison.OrdinalIgnoreCase));
     }
 
     private void OnDocumentChanged(object? sender, DocumentChangeEventArgs e)

@@ -576,8 +576,16 @@ public sealed class SchemaVisualizerView : DockPanel
         {
             return;
         }
-        await using var stream = File.Create(path);
-        Canvas.ExportPng(stream, wholeDiagram);
+        try
+        {
+            await using var stream = File.Create(path);
+            Canvas.ExportPng(stream, wholeDiagram);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Called fire-and-forget from the menu: an unhandled error here would be lost (or bring the app down).
+            _status.Text = "Export failed: " + ex.Message;
+        }
     }
 
     private static TextBlock Label(string text) => new() { Text = text, VerticalAlignment = VerticalAlignment.Center };

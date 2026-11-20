@@ -52,7 +52,7 @@ public sealed record CsvImportRequest
 public sealed record CsvImportProgress(long BytesRead, long TotalBytes, long Rows, TimeSpan Elapsed);
 
 /// <summary>The server does not accept <c>LOAD DATA LOCAL</c>: the message says how to proceed.</summary>
-public sealed class CsvLocalInfileDisabledException(string serverMessage, Exception inner)
+public sealed class CsvLocalInfileDisabledException(string serverMessage, Exception? inner)
     : Exception(serverMessage + "\n\nThe server does not accept LOAD DATA LOCAL (local_infile is OFF, the default in MySQL 8). "
         + "Use \"Client parses file contents\", or enable it on the server with SET GLOBAL local_infile = 1.", inner);
 
@@ -128,6 +128,11 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
             {
                 if (request.Truncate)
                 {
+                    // The load would fail after the TRUNCATE emptied the table: with local_infile off, fail before it.
+                    if (await LocalInfileOffAsync(handle, cancellationToken).ConfigureAwait(false))
+                    {
+                        throw new CsvLocalInfileDisabledException("local_infile is OFF on the server; the table was not emptied.", null);
+                    }
                     await TruncateAsync(handle, cancellationToken).ConfigureAwait(false);
                 }
                 var columns = new List<string>();
@@ -162,6 +167,20 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
                 Interlocked.Exchange(ref _rows, loaded.Rows);
                 return loaded.Warnings;
             }
+        }
+    }
+
+    /// <summary><c>@@GLOBAL.local_infile</c> is 0; a server without the variable is left to the load's own error.</summary>
+    private async Task<bool> LocalInfileOffAsync(IDbConnectionHandle handle, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var value = await handle.ExecuteScalarAsync("SELECT @@GLOBAL.local_infile", cancellationToken).ConfigureAwait(false);
+            return value is not null and not DBNull && Convert.ToInt64(value, CultureInfo.InvariantCulture) == 0;
+        }
+        catch (Exception e) when (!cancellationToken.IsCancellationRequested && host.StatementError(e) is not null)
+        {
+            return false;
         }
     }
 

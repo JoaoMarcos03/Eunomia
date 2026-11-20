@@ -5,7 +5,8 @@ namespace Eunomia.Engine.Sql;
 /// <summary>
 /// Masks secrets in SQL that goes to logs (section 23.2): the literals after <c>IDENTIFIED BY</c> /
 /// <c>IDENTIFIED WITH … BY|AS</c>, <c>SET PASSWORD … =</c>, <c>PASSWORD('…')</c> / <c>OLD_PASSWORD('…')</c>,
-/// <c>MASTER_PASSWORD =</c> and <c>PASSWORD '…'</c> (<c>CREATE SERVER</c> options) become <c>'***'</c>. The rest of the
+/// <c>MASTER_PASSWORD =</c>, <c>SOURCE_PASSWORD =</c>, <c>PASSWORD = …</c> (<c>START REPLICA</c>), <c>PASSWORD '…'</c>
+/// (<c>CREATE SERVER</c> options) and the old password in <c>REPLACE '…'</c> (<c>ALTER USER</c>, <c>SET PASSWORD</c>) become <c>'***'</c>. The rest of the
 /// SQL stays as it is.
 /// </summary>
 public static partial class SecretMasking
@@ -37,7 +38,7 @@ public static partial class SecretMasking
     private const string Literal = @"(?:'(?:[^'\\]|\\.|'')*'|""(?:[^""\\]|\\.|"""")*"")";
 
     [GeneratedRegex(
-        @"(?<prefix>\bIDENTIFIED\s+(?:WITH\s+\S+\s+)?(?:BY|AS)\s+(?:PASSWORD\s+)?|\bSET\s+PASSWORD\b[^=;]*=\s*(?:(?:OLD_)?PASSWORD\s*\(\s*)?|\b(?:OLD_)?PASSWORD\s*\(\s*|\bMASTER_PASSWORD\s*=\s*|\bPASSWORD\s+)"
+        @"(?<prefix>\bIDENTIFIED\s+(?:WITH\s+\S+\s+)?(?:BY|AS)\s+(?:PASSWORD\s+)?|\bSET\s+PASSWORD\b[^=;]*=\s*(?:(?:OLD_)?PASSWORD\s*\(\s*)?|\b(?:OLD_)?PASSWORD\s*\(\s*|\b(?:MASTER|SOURCE)_PASSWORD\s*=\s*|\bPASSWORD(?:\s*=\s*|\s+)|(?<=['""]\s*)\bREPLACE\s+)"
         + Literal,
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline)]
     private static partial Regex Secret();

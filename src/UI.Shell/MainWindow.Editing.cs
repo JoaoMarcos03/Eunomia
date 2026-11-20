@@ -360,12 +360,34 @@ public sealed partial class MainWindow
         var rows = grid.Selection.Count > 0
             ? grid.Selection.Ranges.SelectMany(r => LongRange(r.Start, r.End)).Where(r => r < grid.RowCount).ToList()
             : [grid.Selection.FocusedRow];
-        if (rows.Count == 0 || !(await ConfirmAsync("Confirm", string.Create(CultureInfo.InvariantCulture, $"Delete {rows.Count} row(s)?") + SessionLine(session))).Ok)
+        if (rows.Count == 0)
         {
             return;
         }
         // A new unsaved row is just discarded.
-        if (grid.Edits.HasPending && grid.Edits.PendingIsInsert && rows.Remove(grid.Edits.PendingRow))
+        var discardPending = grid.Edits.HasPending && grid.Edits.PendingIsInsert && rows.Remove(grid.Edits.PendingRow);
+        // The keys of every row (they may need the server) before the question: a reload while it is open (Next, auto-refresh)
+        // would make the row numbers point at other rows.
+        var originals = new List<IReadOnlyDictionary<string, CellLiteral>>();
+        try
+        {
+            foreach (var row in rows.Where(r => r < grid.SourceRows || grid.Edits.TryGetCommitted(r, 0, out _)))
+            {
+                originals.Add(await OriginalKeyAsync(browser, row));
+            }
+        }
+        catch (Exception ex) when (ex is RowWriteException or DbOperationException or Engine.Execution.SessionOperationException)
+        {
+            ShowEditError(ex.Message);
+            return;
+        }
+        var count = rows.Count + (discardPending ? 1 : 0);
+        if (!(await ConfirmAsync("Confirm", string.Create(CultureInfo.InvariantCulture, $"Delete {count} row(s)?") + SessionLine(session))).Ok
+            || !ReferenceEquals(_browser, browser))
+        {
+            return;
+        }
+        if (discardPending && grid.Edits.HasPending && grid.Edits.PendingIsInsert)
         {
             grid.CancelEditing();
         }
@@ -373,12 +395,7 @@ public sealed partial class MainWindow
         var deleted = 0;
         try
         {
-            // First the keys of every row (they may need the server), then the DELETEs in a transaction of their own.
-            var originals = new List<IReadOnlyDictionary<string, CellLiteral>>();
-            foreach (var row in rows.Where(r => r < grid.SourceRows || grid.Edits.TryGetCommitted(r, 0, out _)))
-            {
-                originals.Add(await OriginalKeyAsync(browser, row));
-            }
+            // Then the DELETEs in a transaction of their own.
             _context.Status.Busy = string.Create(CultureInfo.InvariantCulture, $"Deleting {originals.Count} row(s) ...");
             var progress = new Progress<int>(done => _context.Status.Progress = (double)done / Math.Max(1, originals.Count));
             // An open user transaction may be left with part of the rows deleted: it reloads anyway.

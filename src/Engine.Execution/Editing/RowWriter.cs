@@ -65,7 +65,7 @@ public sealed partial class RowWriter(SessionHost host)
 {
     private IServerServices Services => host.ServerServices ?? throw new InvalidOperationException("The session is not connected.");
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
+    [System.Text.RegularExpressions.GeneratedRegex(@"^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
     private static partial System.Text.RegularExpressions.Regex Number();
 
     /// <summary>

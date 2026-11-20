@@ -371,7 +371,8 @@ public sealed class DataTabView : DockPanel
             {
                 return;
             }
-            var value = all.IsChecked != false;
+            // Three-state cycle: from "all" (true) a click gives null, which must deselect, not select everything again.
+            var value = all.IsChecked == true;
             foreach (var key in visible.Keys.ToList())
             {
                 visible[key] = value;

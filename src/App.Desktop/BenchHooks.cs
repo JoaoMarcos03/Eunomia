@@ -94,6 +94,7 @@ internal static class BenchHooks
         }
         else
         {
+            sessions.Connector.ApplyCommandLineSecrets(request, session, sessions.Catalog);
             var credentials = request.Password is not null ? new Eunomia.App.Sessions.LoginCredentials(session.User, request.Password) : null;
             error = await window.ConnectQuietAsync(session, credentials);
         }

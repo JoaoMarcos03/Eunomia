@@ -31,7 +31,8 @@ public static class ReadOnlyPolicy
             return true;
         }
         var first = FirstWord(code);
-        var upper = code.ToUpperInvariant();
+        // Whitespace collapsed to one space, so "INTO\nOUTFILE" and "READ\tWRITE" match their phrases.
+        var upper = string.Join(' ', code.ToUpperInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         switch (first.ToUpperInvariant())
         {
             case "SELECT" or "TABLE" or "VALUES":
@@ -54,7 +55,11 @@ public static class ReadOnlyPolicy
                 return !ContainsWord(upper, "GLOBAL") && !ContainsWord(upper, "PERSIST") && !ContainsWord(upper, "PERSIST_ONLY")
                        && !upper.Contains("@@GLOBAL.", StringComparison.Ordinal) && !upper.Contains("@@PERSIST", StringComparison.Ordinal)
                        && !ContainsWord(upper, "PASSWORD") && !upper.Contains("DEFAULT ROLE", StringComparison.Ordinal)
-                       && !upper.Contains("READ WRITE", StringComparison.Ordinal);
+                       && !upper.Contains("READ WRITE", StringComparison.Ordinal)
+                       // SET STATEMENT … FOR <statement> (MariaDB) runs any statement; these variables turn the read-only mode off.
+                       // (Contains, not ContainsWord: "@@SESSION.TX_READ_ONLY" must match too.)
+                       && !ContainsWord(upper, "STATEMENT") && !upper.Contains("TRANSACTION_READ_ONLY", StringComparison.Ordinal)
+                       && !upper.Contains("TX_READ_ONLY", StringComparison.Ordinal);
             default:
                 return ReadWords.Contains(first);
         }
@@ -109,10 +114,11 @@ public static class ReadOnlyPolicy
             }
             else if (c == '/' && i + 1 < text.Length && text[i + 1] == '*')
             {
-                if (i + 2 < text.Length && text[i + 2] == '!')
+                var marker = ExecutableComment.MarkerLength(text, i);
+                if (marker > 0)
                 {
                     // Executable comment: its content counts (skips the version).
-                    i += 3;
+                    i += marker;
                     while (i < text.Length && char.IsAsciiDigit(text[i]))
                     {
                         i++;

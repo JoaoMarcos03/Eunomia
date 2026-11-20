@@ -280,6 +280,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
             return false;
         }
         var commit = new GridRowCommit(Edits.PendingRow, Edits.PendingIsInsert, new Dictionary<int, CellValue>(Edits.PendingValues));
+        var sourceBefore = _lastRowCount;
         IsCommitting = true;
         GridCommitResult result;
         try
@@ -291,18 +292,20 @@ public sealed partial class DataGridControl : Control, IEditTarget
             IsCommitting = false;
         }
         var ok = result.Ok;
-        if (ok && Edits.PendingRow == commit.Row)
+        // A new row moved if more source rows arrived during the save.
+        var row = commit.IsInsert ? commit.Row + (_lastRowCount - sourceBefore) : commit.Row;
+        if (ok && Edits.PendingRow == row)
         {
             Edits.Commit();
             foreach (var (column, value) in result.Row ?? new Dictionary<int, CellValue>())
             {
-                Edits.SetCommitted(commit.Row, column, value);
+                Edits.SetCommitted(row, column, value);
             }
         }
-        else if (!ok && Edits.PendingRow == commit.Row && Selection.FocusedRow != commit.Row)
+        else if (!ok && Edits.PendingRow == row && Selection.FocusedRow != row)
         {
             // The row stays changed and the focus goes back to it (like HeidiSQL).
-            FocusCell(commit.Row, Math.Max(0, Selection.FocusedColumn));
+            FocusCell(row, Math.Max(0, Selection.FocusedColumn));
         }
         InvalidateVisual();
         return ok;
@@ -363,7 +366,7 @@ public sealed partial class DataGridControl : Control, IEditTarget
     /// <summary>Puts a value in a cell (Insert value ▸, Ctrl+V, Ctrl+X), saving the pending row of another row first.</summary>
     public async Task<bool> SetCellValueAsync(long row, int column, CellValue value)
     {
-        if (_source is null || row < 0 || row >= RowCount || column < 0 || column >= Columns.Count)
+        if (IsCommitting || _source is null || row < 0 || row >= RowCount || column < 0 || column >= Columns.Count)
         {
             return false;
         }
@@ -658,7 +661,8 @@ public sealed partial class DataGridControl : Control, IEditTarget
                 _ = CommitPendingAsync();
                 return true;
             case GridCommand.DiscardRow:
-                if (Edits.HasPending)
+                // During a save the pending row is on its way to the server: discarding it now would lose the result.
+                if (Edits.HasPending && !IsCommitting)
                 {
                     var wasInsert = Edits.PendingIsInsert;
                     Edits.Discard();
@@ -1426,6 +1430,13 @@ public sealed partial class DataGridControl : Control, IEditTarget
                 // New rows streaming in (Next, Show all, query): the scrollbar, the # column and, on the first arrival, the
                 // automatic widths and the focus follow.
                 var first = _lastRowCount == 0;
+                // The new rows stay after the source rows: their keys (and the focus on one) move with the source.
+                var focusedInserted = Edits.InsertedRows > 0 && Selection.FocusedRow >= _lastRowCount;
+                Edits.ShiftInsertedRows(_lastRowCount, source.RowCount.Count);
+                if (focusedInserted)
+                {
+                    Selection.Focus(Selection.FocusedRow + source.RowCount.Count - _lastRowCount, Selection.FocusedColumn);
+                }
                 _lastRowCount = source.RowCount.Count;
                 UpdateRowNumberWidth();
                 if (first)

@@ -37,7 +37,8 @@ public sealed class HeidiSettingsFile
             {
                 continue;
             }
-            var parts = line.Split(Delimiter);
+            // At most 3 parts: the value itself may hold the delimiter.
+            var parts = line.Split(Delimiter, 3);
             if (parts.Length != 3 || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var type))
             {
                 file.InvalidLines++;

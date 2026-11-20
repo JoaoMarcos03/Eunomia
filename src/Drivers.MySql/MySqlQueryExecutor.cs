@@ -346,7 +346,9 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
             switch (info.Storage)
             {
                 case StorageKind.Int64:
-                    builder.SetInt64(row, c, Convert.ToInt64(reader.GetValue(c), CultureInfo.InvariantCulture));
+                    // BIT(64) comes as ulong: kept as its two's-complement bits (the formatter prints the binary digits).
+                    var raw = reader.GetValue(c);
+                    builder.SetInt64(row, c, raw is ulong bits ? unchecked((long)bits) : Convert.ToInt64(raw, CultureInfo.InvariantCulture));
                     break;
                 case StorageKind.Decimal:
                     var d = reader.GetDecimal(c);
@@ -381,7 +383,7 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         {
             string s => s,
             DateTime dt => FormatDateTime(dt, info),
-            MySqlDateTime md => md.IsValidDateTime ? FormatDateTime(md.GetDateTime(), info) : ZeroDate(info),
+            MySqlDateTime md => md.IsValidDateTime ? FormatDateTime(md.GetDateTime(), info) : InvalidDate(md, info),
             TimeSpan ts => FormatTime(ts, info.Scale),
             MySqlDecimal md => md.ToString(),
             byte[] b => System.Text.Encoding.UTF8.GetString(b),
@@ -400,8 +402,17 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         return info.Scale > 0 ? text + "." + Fraction(value.Ticks % TimeSpan.TicksPerSecond, info.Scale) : text;
     }
 
-    private static string ZeroDate(ColumnInfo info) =>
-        info.NativeType == "DATE" ? "0000-00-00" : info.Scale > 0 ? "0000-00-00 00:00:00." + new string('0', info.Scale) : "0000-00-00 00:00:00";
+    /// <summary>Zero or partial zero date (2024-00-00, 0000-01-15): the server's fields as they came, not 0000-00-00.</summary>
+    private static string InvalidDate(MySqlDateTime md, ColumnInfo info)
+    {
+        var date = string.Create(CultureInfo.InvariantCulture, $"{md.Year:0000}-{md.Month:00}-{md.Day:00}");
+        if (info.NativeType == "DATE")
+        {
+            return date;
+        }
+        var text = string.Create(CultureInfo.InvariantCulture, $"{date} {md.Hour:00}:{md.Minute:00}:{md.Second:00}");
+        return info.Scale > 0 ? text + "." + Fraction(md.Microsecond * 10L, info.Scale) : text;
+    }
 
     /// <summary>MySQL TIME: can be negative and exceed 24 h (−838:59:59 to 838:59:59).</summary>
     internal static string FormatTime(TimeSpan value, int fractionDigits)

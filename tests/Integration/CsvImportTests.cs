@@ -161,6 +161,24 @@ public sealed class CsvImportTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task TruncateWithLocalInfileOffKeepsTheRows()
+    {
+        TestServer.RequireServer();
+        await ExecAsync($"INSERT INTO `{_database}`.t VALUES (99, 'kept', 1, 'x')");
+        var path = Write("f.csv", "id;name;price;note\r\n1;a;1;x\r\n", new UTF8Encoding(false));
+        await ExecAsync("SET GLOBAL local_infile = 0");
+        try
+        {
+            await Assert.ThrowsAsync<CsvLocalInfileDisabledException>(() => new CsvImportJob(_host, Request(path, CsvImportMethod.Server) with { Truncate = true }).RunAsync(null, Ct));
+        }
+        finally
+        {
+            await ExecAsync("SET GLOBAL local_infile = 1");
+        }
+        Assert.Equal("99|kept|1.00|x", await RowsAsync());
+    }
+
+    [Fact]
     public async Task CancelInServerMode()
     {
         TestServer.RequireServer();

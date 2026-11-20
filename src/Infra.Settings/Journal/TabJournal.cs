@@ -150,32 +150,85 @@ public sealed class TabJournal : ITabJournal
         }
         lock (_io)
         {
+            try
+            {
+                foreach (var (tab, text) in resets)
+                {
+                    if (!IsRemoved(tab))
+                    {
+                        WriteSnapshot(tab, text);
+                    }
+                    resets.Remove(tab);
+                }
+                foreach (var (tab, list) in edits)
+                {
+                    if (IsRemoved(tab))
+                    {
+                        edits.Remove(tab);
+                        continue;
+                    }
+                    using (var stream = new FileStream(JournalPath(tab), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                    {
+                        var start = stream.Seek(0, SeekOrigin.End);
+                        try
+                        {
+                            foreach (var edit in list)
+                            {
+                                WriteRecord(stream, EncodeEdit(edit));
+                            }
+                            stream.Flush(flushToDisk: true);
+                        }
+                        catch (IOException)
+                        {
+                            // Takes back what was written, so the edits kept for the next Flush are not applied twice.
+                            stream.SetLength(start);
+                            throw;
+                        }
+                    }
+                    edits.Remove(tab);
+                    var count = _editsSinceSnapshot.GetValueOrDefault(tab) + list.Count;
+                    _editsSinceSnapshot[tab] = count;
+                    if (count >= CompactAfterEdits)
+                    {
+                        WriteSnapshot(tab, Replay(JournalPath(tab)));
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Requeue(resets, edits);
+                throw;
+            }
+        }
+    }
+
+    private bool IsRemoved(Guid tab)
+    {
+        lock (_gate)
+        {
+            return _removed.Contains(tab);
+        }
+    }
+
+    /// <summary>After a failed write, what was not written goes back to the pending, before what arrived meanwhile.</summary>
+    private void Requeue(Dictionary<Guid, string> resets, Dictionary<Guid, List<TextEdit>> edits)
+    {
+        lock (_gate)
+        {
+            // A Reset (or Remove) during the Flush supersedes what was taken out.
+            var superseded = _resets.Keys.Concat(_removed).ToHashSet();
             foreach (var (tab, text) in resets)
             {
-                WriteSnapshot(tab, text);
+                if (!superseded.Contains(tab))
+                {
+                    _resets[tab] = text;
+                }
             }
             foreach (var (tab, list) in edits)
             {
-                lock (_gate)
+                if (!superseded.Contains(tab))
                 {
-                    if (_removed.Contains(tab))
-                    {
-                        continue;
-                    }
-                }
-                using (var stream = new FileStream(JournalPath(tab), FileMode.Append, FileAccess.Write, FileShare.Read))
-                {
-                    foreach (var edit in list)
-                    {
-                        WriteRecord(stream, EncodeEdit(edit));
-                    }
-                    stream.Flush(flushToDisk: true);
-                }
-                var count = _editsSinceSnapshot.GetValueOrDefault(tab) + list.Count;
-                _editsSinceSnapshot[tab] = count;
-                if (count >= CompactAfterEdits)
-                {
-                    WriteSnapshot(tab, Replay(JournalPath(tab)));
+                    _pending[tab] = _pending.TryGetValue(tab, out var newer) ? [.. list, .. newer] : list;
                 }
             }
         }

@@ -111,7 +111,13 @@ public sealed partial class MainWindow
             {
                 _context.Status.Busy = "Fetching full rows ...";
                 full = await browser.LoadFullRowsAsync(CancellationToken.None);
-                from = full;
+                // Without ORDER BY (or with ties in the sort) the server may return the rows in another order: each row is
+                // found again by its key. A row no longer there: the cut values are exported, not another row's.
+                if (await RowsByKeyAsync(source, full, rows, browser.Select.KeyColumns) is { } matched)
+                {
+                    from = full;
+                    rows = matched;
+                }
             }
             var data = await GridExportSource.ReadAsync(from, rows, columns, browser.Table.Ref.Name, browser.Select.KeyColumns, _context.Settings.Data.BlobAsText, CancellationToken.None);
             return WithCommittedValues(DataGrid, data, gridRows, gridColumns);
@@ -121,6 +127,44 @@ public sealed partial class MainWindow
             full?.Dispose();
             _context.Status.SetIdle();
         }
+    }
+
+    /// <summary>
+    /// Rows of <paramref name="full"/> with the same key as <paramref name="rows"/> of <paramref name="source"/> (the key
+    /// columns are never cut); <c>null</c> if there is no key or some row is not in <paramref name="full"/>.
+    /// </summary>
+    internal static async Task<List<long>?> RowsByKeyAsync(IRowSource source, IRowSource full, IReadOnlyList<long> rows, IReadOnlyList<string> keys)
+    {
+        static List<int> Positions(ResultSchema schema, IReadOnlyList<string> keys) =>
+            keys.Select(k => schema.Columns.ToList().FindIndex(c => string.Equals(c.Name, k, StringComparison.OrdinalIgnoreCase))).ToList();
+        static string KeyText(RowBlock block, int row, List<int> columns) =>
+            string.Join('\u0001', columns.Select(c => DisplayFormatter.FormatRaw(block, row, c) ?? "\u0002"));
+        var sourceKeys = Positions(source.Schema, keys);
+        var fullKeys = Positions(full.Schema, keys);
+        if (keys.Count == 0 || sourceKeys.Contains(-1) || fullKeys.Contains(-1))
+        {
+            return null;
+        }
+        var index = new Dictionary<string, long>(StringComparer.Ordinal);
+        for (var b = 0; (long)b * full.BlockSize < full.RowCount.Count; b++)
+        {
+            var block = await full.GetBlockAsync(b, CancellationToken.None);
+            for (var r = 0; r < block.RowCount; r++)
+            {
+                index.TryAdd(KeyText(block, r, fullKeys), block.FirstRow + r);
+            }
+        }
+        var result = new List<long>(rows.Count);
+        foreach (var row in rows)
+        {
+            var block = await source.GetBlockAsync((int)(row / source.BlockSize), CancellationToken.None);
+            if (!index.TryGetValue(KeyText(block, (int)(row - block.FirstRow), sourceKeys), out var at))
+            {
+                return null;
+            }
+            result.Add(at);
+        }
+        return result;
     }
 
     private static List<long> AllRows(DataGridControl grid)
@@ -338,9 +382,20 @@ public sealed partial class MainWindow
         var sb = new StringBuilder();
         if (FocusedGrid() is { Source: { } source } grid)
         {
-            for (long r = 0; r < grid.RowCount; r++)
+            // Every row, also the ones not in the grid's cache (the display text of those is not available without I/O).
+            var result = FocusedResultView();
+            var data = result is not null ? await ReadResultExportAsync(result, selectedOnly: false, focusedColumnOnly: false)
+                : ReferenceEquals(grid, DataGrid) ? await ReadDataGridExportAsync(selectedOnly: false)
+                : null;
+            if (data is null)
             {
-                sb.Append(string.Join('\t', Enumerable.Range(0, source.Schema.Count).Select(c => grid.GetDisplayText(r, c) ?? string.Empty))).Append(Environment.NewLine);
+                var count = source.RowCount.Count;
+                var columns = Enumerable.Range(0, source.Schema.Count).Select(c => (c, new GridExportColumn(source.Schema[c].Name, source.Schema[c]))).ToList();
+                data = await GridExportSource.ReadAsync(source, AllRows(grid).Where(r => r < count).ToList(), columns, string.Empty, [], _context.Settings.Data.BlobAsText, CancellationToken.None);
+            }
+            foreach (var row in data.Rows)
+            {
+                sb.Append(string.Join('\t', row.Select(v => v ?? DisplayFormatter.NullText))).Append(Environment.NewLine);
             }
         }
         else if (FocusedTreeList() is { } list)

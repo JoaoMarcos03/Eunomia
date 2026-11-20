@@ -160,7 +160,8 @@ public sealed class SetCellEditor(IReadOnlyList<string> items) : GridCellEditor
     {
         var panel = (StackPanel)((ScrollViewer)((Border)control).Child!).Content!;
         var value = string.Join(",", panel.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (string)c.Tag!));
-        return string.Equals(value, original ?? string.Empty, StringComparison.Ordinal) && original is not null ? null : new CellValue(value);
+        // Same rule as TextCellEditor.Read: NULL with nothing checked stays NULL (no change).
+        return (original is null ? value.Length > 0 : value != original) ? new CellValue(value) : null;
     }
 }
 
@@ -213,10 +214,16 @@ public sealed class DateTimeCellEditor : GridCellEditor
             end++;
         }
         var segment = text[start..end];
-        var number = long.Parse(segment, CultureInfo.InvariantCulture) + delta;
+        if (!long.TryParse(segment, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
+        {
+            return text;
+        }
+        number += delta;
         // Limits per position in the yyyy-mm-dd hh:mm:ss format.
         var separator = start > 0 ? text[start - 1] : '\0';
-        var isDate = text.IndexOf(' ', StringComparison.Ordinal) is var space && (space < 0 || start < space) && text.Contains('-', StringComparison.Ordinal);
+        // A date starts with yyyy-; a negative TIME (-01:00:00) also has a '-'.
+        var startsWithYear = text.Length > 4 && text[4] == '-' && text[..4].All(char.IsAsciiDigit);
+        var isDate = text.IndexOf(' ', StringComparison.Ordinal) is var space && (space < 0 || start < space) && startsWithYear;
         var dashBefore = text[..start].Count(c => c == '-');
         var colonBefore = text[..start].Count(c => c == ':');
         (long Min, long Max) range = separator switch
