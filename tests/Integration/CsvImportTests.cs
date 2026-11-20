@@ -10,6 +10,7 @@ using MySqlConnector;
 namespace Eunomia.Integration.Tests;
 
 /// <summary>CSV import in server and client modes (phase 8; FAM-E07; PR-15; appendix B §3).</summary>
+[Collection(ServerGlobalsCollection.Name)]
 public sealed class CsvImportTests : IAsyncLifetime
 {
     private SessionHost _host = null!;
@@ -77,6 +78,36 @@ public sealed class CsvImportTests : IAsyncLifetime
 
     private Task<string?> RowsAsync() =>
         ScalarAsync($"SELECT GROUP_CONCAT(CONCAT_WS('|', id, IFNULL(name, '<NULL>'), IFNULL(price, '<NULL>'), IFNULL(note, '<NULL>')) ORDER BY id SEPARATOR ' ; ') FROM `{_database}`.t");
+
+    /// <summary>Auto detect sees UTF-8 in the first 1 MB; a Latin-1 byte after it fails the import, naming its line and offset.</summary>
+    [Theory]
+    [InlineData(CsvImportMethod.Server)]
+    [InlineData(CsvImportMethod.Client)]
+    public async Task InvalidUtf8AfterTheFirstMegabyteFails(CsvImportMethod method)
+    {
+        TestServer.RequireServer();
+        var bytes = new List<byte>(Encoding.UTF8.GetBytes("id;name;price;note\r\n"));
+        var line = 1;
+        while (bytes.Count < 1100 * 1024)
+        {
+            line++;
+            bytes.AddRange(Encoding.UTF8.GetBytes(string.Create(CultureInfo.InvariantCulture, $"{line};ação {line};1;x\r\n")));
+        }
+        line++;
+        bytes.AddRange(Encoding.UTF8.GetBytes(string.Create(CultureInfo.InvariantCulture, $"{line};Z")));
+        var offset = bytes.Count;
+        bytes.AddRange([0xE9, (byte)';', (byte)'1', (byte)';', (byte)'x', (byte)'\r', (byte)'\n']);
+        var path = Path.Combine(_directory, "latin1.csv");
+        await File.WriteAllBytesAsync(path, [.. bytes], Ct);
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => new CsvImportJob(_host, Request(path, method)).RunAsync(null, Ct));
+
+        Assert.Contains(string.Create(CultureInfo.InvariantCulture, $"line {line} (byte offset {offset})"), error.Message, StringComparison.Ordinal);
+        if (method == CsvImportMethod.Server)
+        {
+            Assert.Equal("0", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.t"));
+        }
+    }
 
     [Theory]
     [InlineData(CsvImportMethod.Server)]

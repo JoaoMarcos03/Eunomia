@@ -27,8 +27,11 @@ public sealed partial class DataGridControl
 
     async Task IEditTarget.CutAsync()
     {
+        // The cell copied is the one emptied, even if the focus moves while the clipboard is written.
+        var row = Selection.FocusedRow;
+        var column = Selection.FocusedColumn;
         await CopyFocusedCellAsync().ConfigureAwait(true);
-        await SetCellValueAsync(Selection.FocusedRow, Selection.FocusedColumn, new CellValue(string.Empty)).ConfigureAwait(true);
+        await SetCellValueAsync(row, column, new CellValue(string.Empty)).ConfigureAwait(true);
     }
 
     async Task IEditTarget.PasteAsync()

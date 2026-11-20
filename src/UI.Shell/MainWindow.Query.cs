@@ -306,7 +306,7 @@ public sealed partial class MainWindow
         var session = target is { Host.State: SessionState.Ready } ready ? ready : null;
         var selected = session is not null && _tree.Tree.FocusedNode?.Tag is TreeObjectTag { Object: { } obj } tag && tag.Session == session.Id ? obj : null;
         var delimiter = _context.Settings.Query.Delimiter;
-        var completion = new QueryCompletion(session);
+        var completion = new QueryCompletion(session, _context.Diagnostics);
         return Task.Run(() => completion.ProposeAsync(text, caret, delimiter, selected, cancellationToken), cancellationToken);
     }
 
@@ -430,8 +430,30 @@ public sealed partial class MainWindow
 
     private async Task RunQueryAsync(RunScope scope)
     {
-        var view = ActiveQueryView!;
-        if (await QuerySessionAsync(StateOf(view)) is not { } session)
+        // F9 again while the first run is still asking (connect, confirmations) or running: one run per tab. The run is
+        // claimed before the first await, so a second F9 cannot get past this check.
+        if (ActiveQueryView is not { } view || StateOf(view) is not { Run: null } state)
+        {
+            return;
+        }
+        using var cts = new CancellationTokenSource();
+        state.Run = cts;
+        try
+        {
+            await RunQueryCoreAsync(view, state, scope, cts);
+        }
+        finally
+        {
+            if (ReferenceEquals(state.Run, cts))
+            {
+                state.Run = null;
+            }
+        }
+    }
+
+    private async Task RunQueryCoreAsync(QueryTabView view, QueryTabState state, RunScope scope, CancellationTokenSource cts)
+    {
+        if (await QuerySessionAsync(state) is not { } session)
         {
             return;
         }
@@ -474,17 +496,19 @@ public sealed partial class MainWindow
                 _context.Settings.Query.WarnUnsafeUpdates = false;
             }
         }
+        if (cts.IsCancellationRequested)
+        {
+            // Stopped (or the tab closed) while asking.
+            return;
+        }
 
         // The Data tab load on the same session is cancelled: the query does not wait for it on the primary connection.
         if (IsLoadingData(session))
         {
             AbandonDataLoad();
         }
-        var state = StateOf(view);
         ClearQueryResults(view, state);
         view.Editor.ErrorLine = null;
-        using var cts = new CancellationTokenSource();
-        state.Run = cts;
         state.Session = session;
         var color = session.Color is { } rgb ? 0xFF000000 | rgb : 0;
         var runner = new QueryRunner(session.Host);
@@ -548,10 +572,6 @@ public sealed partial class MainWindow
         }
         finally
         {
-            if (ReferenceEquals(state.Run, cts))
-            {
-                state.Run = null;
-            }
             _context.Status.SetIdle();
             session.Definition.LastUsedDatabase = session.Host.CurrentDatabase ?? session.Definition.LastUsedDatabase;
         }

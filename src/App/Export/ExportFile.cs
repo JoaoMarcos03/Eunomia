@@ -1,10 +1,11 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Eunomia.App.Export;
 
 /// <summary>Output file of Export grid rows (appendix B §1.4): name placeholders and encodings.</summary>
-public static class ExportFile
+public static partial class ExportFile
 {
     /// <summary>Encodings of the dialog, in HeidiSQL's order (no UTF-7, obsolete in .NET); the default is "UTF-8".</summary>
     public static readonly IReadOnlyList<string> Encodings = ["ANSI", "ASCII", "Unicode", "Unicode Big Endian", "UTF-8", "UTF-8-BOM"];
@@ -13,39 +14,43 @@ public static class ExportFile
 
     /// <summary>
     /// <c>%session %host %u %db %date %d %m %y %h %i %s</c> (session, host, user, database, date, day, month, year, hour,
-    /// minute, second). Characters that are invalid in a file name become <c>_</c> in the values.
+    /// minute, second). The values become valid file names (<see cref="FileNames.Safe"/>). One pass over the template: a
+    /// value with <c>%</c> in it (a database called <c>%d</c>) stays as it is.
     /// </summary>
     public static string ExpandPlaceholders(string template, string session, string host, string user, string database, DateTime now)
     {
         ArgumentNullException.ThrowIfNull(template);
-        static string Safe(string value)
-        {
-            var invalid = Path.GetInvalidFileNameChars();
-            return new string(value.Select(c => invalid.Contains(c) ? '_' : c).ToArray());
-        }
         var c = CultureInfo.InvariantCulture;
-        return template
-            .Replace("%session", Safe(session), StringComparison.Ordinal)
-            .Replace("%host", Safe(host), StringComparison.Ordinal)
-            .Replace("%date", now.ToString("yyyy-MM-dd", c), StringComparison.Ordinal)
-            .Replace("%db", Safe(database), StringComparison.Ordinal)
-            .Replace("%u", Safe(user), StringComparison.Ordinal)
-            .Replace("%d", now.ToString("dd", c), StringComparison.Ordinal)
-            .Replace("%m", now.ToString("MM", c), StringComparison.Ordinal)
-            .Replace("%y", now.ToString("yyyy", c), StringComparison.Ordinal)
-            .Replace("%h", now.ToString("HH", c), StringComparison.Ordinal)
-            .Replace("%i", now.ToString("mm", c), StringComparison.Ordinal)
-            .Replace("%s", now.ToString("ss", c), StringComparison.Ordinal);
+        return Placeholder().Replace(template, match => match.Groups[1].Value switch
+        {
+            "session" => FileNames.Safe(session),
+            "host" => FileNames.Safe(host),
+            "date" => now.ToString("yyyy-MM-dd", c),
+            "db" => FileNames.Safe(database),
+            "u" => FileNames.Safe(user),
+            "d" => now.ToString("dd", c),
+            "m" => now.ToString("MM", c),
+            "y" => now.ToString("yyyy", c),
+            "h" => now.ToString("HH", c),
+            "i" => now.ToString("mm", c),
+            _ => now.ToString("ss", c),
+        });
     }
+
+    /// <summary>The longer names first: <c>%date</c> and <c>%db</c> are not <c>%d</c>.</summary>
+    [GeneratedRegex("%(session|host|date|db|u|d|m|y|h|i|s)", RegexOptions.CultureInvariant)]
+    private static partial Regex Placeholder();
 
     /// <summary>File bytes in the chosen encoding (BOM only for UTF-8-BOM and the Unicode ones).</summary>
     public static byte[] Encode(string text, string encoding)
     {
         ArgumentNullException.ThrowIfNull(text);
         var enc = EncodingOf(encoding);
-        var preamble = enc.GetPreamble();
-        var body = enc.GetBytes(text);
-        return [.. preamble, .. body];
+        var preamble = enc.Preamble;
+        var bytes = new byte[preamble.Length + enc.GetByteCount(text)];
+        preamble.CopyTo(bytes);
+        enc.GetBytes(text, bytes.AsSpan(preamble.Length));
+        return bytes;
     }
 
     /// <summary>The encoding by its name in the list (ANSI = code page of the current culture).</summary>
@@ -53,7 +58,7 @@ public static class ExportFile
         encoding switch
         {
             "ANSI" => AnsiEncoding(),
-            "ASCII" => CodePage(437),
+            "ASCII" => CodePage(20127),
             "Unicode" => new UnicodeEncoding(bigEndian: false, byteOrderMark: true),
             "Unicode Big Endian" => new UnicodeEncoding(bigEndian: true, byteOrderMark: true),
             "UTF-8-BOM" => new UTF8Encoding(encoderShouldEmitUTF8Identifier: true),

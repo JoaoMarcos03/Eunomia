@@ -56,6 +56,60 @@ public sealed class CommandLineTests
         Assert.Equal(("bastion", 2222, "deploy"), (s.Ssh.Host, s.Ssh.Port, s.Ssh.User));
     }
 
+    [Theory]
+    [InlineData("-W=1")]
+    [InlineData("--ssl=TRUE")]
+    [InlineData("-sP=2222")]
+    [InlineData("-su=deploy")]
+    [InlineData("-sk=C:\\keys\\id")]
+    public void EveryConnectionParameterIsAnOverride(string arg)
+    {
+        var catalog = new SessionCatalog();
+        var saved = new SessionDefinition { Name = "prod", Host = "prod" };
+        catalog.Sessions.Add(saved);
+
+        var request = CommandLine.Parse(["-d=prod", arg]);
+        var session = CommandLine.Resolve(request, catalog)!;
+
+        Assert.True(request.HasConnectionOverrides);
+        Assert.NotEqual(saved.Id, session.Id);
+    }
+
+    [Fact]
+    public void FlagsAreCaseInsensitiveAndApplied()
+    {
+        var s = CommandLine.Resolve(CommandLine.Parse(["-h=db", "-W=True", "--ssl=TRUE", "-sP=2222", "-su=deploy"]), new SessionCatalog())!;
+
+        Assert.True(s.WindowsAuth);
+        Assert.True(s.Ssl.Active);
+        Assert.Equal((2222, "deploy"), (s.Ssh.Port, s.Ssh.User));
+        Assert.False(CommandLine.Parse(["--ssl=no"]).Ssl);
+    }
+
+    [Fact]
+    public void SshPasswordAloneIsNotAnOverride()
+    {
+        Assert.False(CommandLine.Parse(["-d=prod", "--ssh-password=x"]).HasConnectionOverrides);
+    }
+
+    [Fact]
+    public void EqualsSignInsideAQuotedValue()
+    {
+        var r = CommandLine.Parse(["-p\"a=b\"", "-u=\"x=y\""]);
+
+        Assert.Equal("a=b", r.Password);
+        Assert.Equal("x=y", r.User);
+    }
+
+    [Fact]
+    public void FlagWithoutAValueLeavesTheSqlFile()
+    {
+        var r = CommandLine.Parse(["-h=db", "-u", "Script.SQL"]);
+
+        Assert.Null(r.User);
+        Assert.Equal(["Script.SQL"], r.SqlFiles);
+    }
+
     [Fact]
     public void WithNothingItIsEmpty()
     {

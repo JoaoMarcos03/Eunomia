@@ -70,4 +70,24 @@ public sealed class ReadOnlyPolicyTests
     {
         Assert.False(ReadOnlyPolicy.IsAllowed(sql), sql);
     }
+
+    // With NO_BACKSLASH_ESCAPES (set before, or earlier in the same batch), 'C:\' ends at its second quote and the rest is code.
+    [Theory]
+    [InlineData(@"SELECT 'C:\'; SET SESSION TRANSACTION READ WRITE; DELETE FROM t; SELECT '")]
+    [InlineData(@"SET sql_mode = 'NO_BACKSLASH_ESCAPES'; SELECT 'C:\'; DELETE FROM t; SELECT '")]
+    [InlineData(@"SELECT ""C:\""; UPDATE t SET a = 1; SELECT """)]
+    public void BackslashBeforeAQuoteDoesNotHideAWrite(string sql)
+    {
+        Assert.False(ReadOnlyPolicy.IsAllowed(sql), sql);
+    }
+
+    [Theory]
+    [InlineData(@"SELECT 'a\\b'")]
+    [InlineData(@"SELECT 'C:\temp\x'")]
+    [InlineData(@"SELECT 'it\'s'")]
+    [InlineData("SELECT 'it''s'")]
+    public void BackslashesInReadsStillGoThrough(string sql)
+    {
+        Assert.True(ReadOnlyPolicy.IsAllowed(sql), sql);
+    }
 }

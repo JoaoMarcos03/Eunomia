@@ -122,7 +122,8 @@ public sealed class MySqlQueryExecutor(MySqlConnectionHandle handle) : IQueryExe
         MySqlCommand? cmd = null;
         // SHOW WARNINGS follows in the same command (multi-statement): the last result set, if it has its shape, holds the
         // statement's warnings and not a result.
-        var withWarnings = options.CollectWarnings && MySqlStatementShape.MayReturnRows(sql) && MySqlStatementShape.EndsInCode(sql);
+        var withWarnings = options.CollectWarnings && MySqlStatementShape.MayReturnRows(sql) && !MySqlStatementShape.IsDiagnostics(sql)
+                           && MySqlStatementShape.EndsInCode(sql);
         List<(string Level, int Code, string Message)>? warnings = null;
         try
         {

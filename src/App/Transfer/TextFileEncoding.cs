@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Eunomia.App.Export;
 using Eunomia.App.Query;
@@ -66,6 +67,110 @@ internal static class TextFileEncoding
             await stream.DisposeAsync().ConfigureAwait(false);
             throw;
         }
+    }
+}
+
+/// <summary>
+/// Read stream that checks that every byte passing through is valid UTF-8 (Auto detect only looks at the first 1 MB, and
+/// a lenient decoder turned a Latin-1 byte further on into U+FFFD, or the server cut the value). The first invalid
+/// sequence fails the read with <see cref="InvalidDataException"/>, naming its line and byte offset in the file;
+/// <see cref="Error"/> keeps it for when a reader (MySqlConnector's LOAD DATA) replaces it with an error of its own.
+/// </summary>
+internal sealed class Utf8ValidatingStream(Stream inner, long startOffset) : Stream
+{
+    private readonly Decoder _decoder = new UTF8Encoding(false, throwOnInvalidBytes: true).GetDecoder();
+    private readonly char[] _chars = new char[4096];
+    private long _offset = startOffset;
+    private long _line = 1;
+
+    /// <summary>The invalid UTF-8 found, if any.</summary>
+    public InvalidDataException? Error { get; private set; }
+
+    public override bool CanRead => true;
+
+    public override bool CanSeek => false;
+
+    public override bool CanWrite => false;
+
+    public override long Length => inner.Length;
+
+    public override long Position
+    {
+        get => inner.Position;
+        set => throw new NotSupportedException();
+    }
+
+    public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
+
+    public override int Read(Span<byte> buffer)
+    {
+        var n = inner.Read(buffer);
+        Validate(buffer[..n]);
+        return n;
+    }
+
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        var n = await inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+        Validate(buffer.Span[..n]);
+        return n;
+    }
+
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+        ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+    private void Validate(ReadOnlySpan<byte> bytes)
+    {
+        if (Error is not null)
+        {
+            throw Error;
+        }
+        // At the end of the file (0 bytes), a sequence cut there is invalid too.
+        var flush = bytes.IsEmpty;
+        var done = 0;
+        try
+        {
+            do
+            {
+                _decoder.Convert(bytes[done..], _chars, flush, out var used, out _, out var completed);
+                done += used;
+                if (completed)
+                {
+                    break;
+                }
+            }
+            while (done < bytes.Length);
+        }
+        catch (DecoderFallbackException e)
+        {
+            // Index is relative to the bytes of the failing call; negative when the sequence began in an earlier read.
+            var at = done + e.Index;
+            var lines = at > 0 ? bytes[..Math.Min(at, bytes.Length)].Count((byte)'\n') : 0;
+            Error = new InvalidDataException(string.Create(CultureInfo.InvariantCulture,
+                $"The file is not valid UTF-8 at line {_line + lines} (byte offset {_offset + at}). Choose the file's encoding instead of \"{SqlFile.AutoDetect}\" or UTF-8."), e);
+            throw Error;
+        }
+        _line += bytes.Count((byte)'\n');
+        _offset += bytes.Length;
+    }
+
+    public override void Flush()
+    {
+    }
+
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+    public override void SetLength(long value) => throw new NotSupportedException();
+
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            inner.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }
 

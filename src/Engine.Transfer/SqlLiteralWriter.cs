@@ -22,12 +22,13 @@ internal enum SqlLiteralKind
 /// <summary>
 /// MySQL/MariaDB SQL literals written straight as UTF-8, without a string per value (appendix B §2.3.4): NULL,
 /// numbers unquoted, BIT as <c>b'…'</c>, binary and geometry as <c>_binary 0x…</c> (empty as <c>''</c>), text
-/// single-quoted with <c>\\</c>, <c>\'</c>, <c>\r</c>, <c>\n</c> and <c>\0</c>. FLOAT and DOUBLE with the shortest value
-/// that round-trips to the same number.
+/// single-quoted with <c>\\</c>, <c>\'</c>, <c>\r</c>, <c>\n</c>, <c>\0</c> and <c>\Z</c> (Ctrl+Z, which ends the
+/// file for the mysql client on Windows, as in mysqldump). FLOAT and DOUBLE with the shortest value that round-trips to
+/// the same number.
 /// </summary>
 internal static class SqlLiteralWriter
 {
-    private static readonly SearchValues<byte> Special = SearchValues.Create("\\'\r\n\0"u8);
+    private static readonly SearchValues<byte> Special = SearchValues.Create("\\'\r\n\0\x1A"u8);
     private static readonly byte[] HexDigits = "0123456789ABCDEF"u8.ToArray();
 
     public static SqlLiteralKind KindOf(ColumnInfo column)
@@ -132,6 +133,7 @@ internal static class SqlLiteralWriter
                 (byte)'\r' => (byte)'r',
                 (byte)'\n' => (byte)'n',
                 0 => (byte)'0',
+                0x1A => (byte)'Z',
                 var b => b,
             });
             utf8 = utf8[(hit + 1)..];

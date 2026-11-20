@@ -64,6 +64,7 @@ public sealed class SessionConnector(
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly MemorySecretStore _prompted = new();
     private readonly List<OpenSession> _open = [];
+    private readonly Dictionary<Guid, SemaphoreSlim> _connecting = [];
     private readonly Lock _gate = new();
 
     public IReadOnlyList<OpenSession> Open
@@ -95,18 +96,42 @@ public sealed class SessionConnector(
 
     /// <summary>
     /// Connects. If it is already open, returns the existing one (like HeidiSQL's "Connect to", which only focuses the node).
-    /// Errors (including <see cref="SshHostKeyException"/>) reach the caller; the failure statistic goes up.
+    /// Errors (including <see cref="SshHostKeyException"/>) reach the caller; the failure statistic goes up. One connect at a
+    /// time per session: a second one waits and gets the first one's session. A failed or closed session is replaced, and
+    /// its host disposed.
     /// </summary>
     public async Task<OpenSession> ConnectAsync(SessionDefinition session, LoginCredentials? credentials, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session);
-        if (Find(session.Id) is { } existing && existing.Host.State is not (SessionState.Failed or SessionState.Closed))
-        {
-            return existing;
-        }
         if (!NetTypes.IsSupported(session.NetType))
         {
             throw new NotSupportedException($"\"{NetTypes.DisplayName(session.NetType)}\" is not supported in this version.");
+        }
+        SemaphoreSlim gate;
+        lock (_gate)
+        {
+            if (!_connecting.TryGetValue(session.Id, out gate!))
+            {
+                _connecting[session.Id] = gate = new SemaphoreSlim(1, 1);
+            }
+        }
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await ConnectOnceAsync(session, credentials, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task<OpenSession> ConnectOnceAsync(SessionDefinition session, LoginCredentials? credentials, CancellationToken cancellationToken)
+    {
+        var replaced = Find(session.Id);
+        if (replaced is not null && replaced.Host.State is not (SessionState.Failed or SessionState.Closed))
+        {
+            return replaced;
         }
         var definition = session.Clone();
         var passwordKey = SecretKeys.Password(session.Id);
@@ -162,6 +187,11 @@ public sealed class SessionConnector(
             _open.RemoveAll(o => o.Id == session.Id);
             _open.Add(open);
         }
+        if (replaced is not null)
+        {
+            // Its connections, tunnel and keep-alive timer go, and with the host the handlers subscribed to it.
+            await replaced.Host.DisposeAsync().ConfigureAwait(false);
+        }
         SessionOpened?.Invoke(this, open);
         return open;
     }
@@ -175,18 +205,18 @@ public sealed class SessionConnector(
         ArgumentNullException.ThrowIfNull(session);
         var probe = session.Clone();
         probe.Id = Guid.NewGuid();
+        // The session's secrets as ResolveSecretAsync finds them: asked for in this run first, then the vault.
+        foreach (var (from, to) in SecretKeys.All(session.Id).Zip(SecretKeys.All(probe.Id)))
+        {
+            if ((_prompted.Get(from) ?? secrets.Get(from)) is { } value)
+            {
+                _prompted.Set(to, value);
+            }
+        }
         if (credentials is not null)
         {
             probe.User = credentials.User;
             _prompted.Set(SecretKeys.Password(probe.Id), credentials.Password);
-        }
-        else if (secrets.Get(SecretKeys.Password(session.Id)) is { } saved)
-        {
-            _prompted.Set(SecretKeys.Password(probe.Id), saved);
-        }
-        if (secrets.Get(SecretKeys.SshPassword(session.Id)) is { } sshPassword)
-        {
-            _prompted.Set(SecretKeys.SshPassword(probe.Id), sshPassword);
         }
         var settings = ToSettings(probe) with { SeparateMetadataConnection = false, KeepAlive = null, StartupScriptPath = null };
         var host = new SessionHost(settings, new SessionServices { Provider = provider, Ssh = ssh, ResolveSecret = ResolveSecretAsync, Clock = _clock });
@@ -238,7 +268,10 @@ public sealed class SessionConnector(
         {
             _open.Remove(session);
         }
-        _prompted.Delete(SecretKeys.Password(session.Id));
+        foreach (var key in SecretKeys.All(session.Id))
+        {
+            _prompted.Delete(key);
+        }
         await session.Host.DisposeAsync().ConfigureAwait(false);
         SessionClosed?.Invoke(this, session);
     }

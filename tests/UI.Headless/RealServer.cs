@@ -45,13 +45,13 @@ internal static class RealServer
     }
 
     /// <summary>
-    /// Runs the UI jobs until <paramref name="probe"/> returns a value (10 s by default). On timeout the message carries
+    /// Runs the UI jobs until <paramref name="probe"/> returns a value (30 s by default, above the ~10 s DDL lock waits seen when other test classes run DDL on the same server). On timeout the message carries
     /// <paramref name="describe"/>'s account of the state, so an intermittent failure says what it saw.
     /// </summary>
     public static async Task<T> WaitAsync<T>(Func<T?> probe, TimeSpan? timeout = null, Func<string>? describe = null)
         where T : class
     {
-        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(10));
+        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(30));
         while (DateTime.UtcNow < deadline)
         {
             Dispatcher.UIThread.RunJobs();

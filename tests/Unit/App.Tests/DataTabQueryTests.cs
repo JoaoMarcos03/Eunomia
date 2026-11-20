@@ -73,7 +73,7 @@ public sealed class DataTabQueryTests
 
         var select = DataTabQuery.Build(Dialect, table, [], "  WHERE name LIKE 'a%'\n", sort, 2000, 1000);
 
-        Assert.Equal("SELECT * FROM `shop`.`products` WHERE name LIKE 'a%' ORDER BY `name` ASC, `id` DESC LIMIT 2000, 1000", select.Sql);
+        Assert.Equal("SELECT * FROM `shop`.`products` WHERE (name LIKE 'a%'\n) ORDER BY `name` ASC, `id` DESC LIMIT 2000, 1000", select.Sql);
     }
 
     [Theory]
@@ -123,13 +123,25 @@ public sealed class DataTabQueryTests
 
     [Theory]
     [InlineData(null, null, null)]
-    [InlineData("id = 1", null, "id = 1")]
+    [InlineData("id = 1", null, "(id = 1\n)")]
     [InlineData(null, "s", "s")]
     [InlineData("WHERE id = 1;", "s", "(id = 1\n) AND (s)")]
     // The line break keeps the comment from swallowing the search.
     [InlineData("name = 'a;b' -- c;", "s", "(name = 'a;b' -- c;\n) AND (s)")]
     public void FilterAndSearchCombined(string? filter, string? search, string? expected) =>
         Assert.Equal(expected, DataTabQuery.CombineWhere(filter, search));
+
+    [Theory]
+    [InlineData("id > 5 -- only the big ones")]
+    [InlineData("id > 5 # only the big ones")]
+    public void ACommentAtTheEndOfTheFilterDoesNotSwallowOrderByAndLimit(string filter)
+    {
+        var table = Table([Col("id", "int(11)", false), Col("name", "varchar(10)")], new IndexDefinition("PRIMARY", IndexKind.Primary, ["id"]));
+
+        var sql = DataTabQuery.Build(Dialect, table, [], filter, [new DataSort("id", true)], 0, 1000).Sql;
+
+        Assert.EndsWith(" WHERE (" + filter + "\n) ORDER BY `id` DESC LIMIT 1000", sql);
+    }
 
     [Fact]
     public void LabelVariants()

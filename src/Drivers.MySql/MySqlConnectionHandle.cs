@@ -72,6 +72,8 @@ public sealed class MySqlConnectionFactory : IConnectionFactory
             CharacterSet = "utf8mb4",
             // 12.4: if KILL QUERY does not answer within 2 s, the socket is closed.
             CancellationTimeout = 2,
+            // TCP keepalive: a dropped network (VPN, NAT timeout) is noticed by the OS instead of a read that never returns.
+            Keepalive = 30,
         };
         if (options.TlsFiles is { } files)
         {

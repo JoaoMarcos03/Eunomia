@@ -89,7 +89,7 @@ public sealed record GridExportOptions
 /// <summary>Cell values to export (appendix B §1.2).</summary>
 public static class GridExportValues
 {
-    /// <summary>Raw text of a cell: binary as lowercase hex (<c>asLowercaseHex</c>), NULs replaced by spaces.</summary>
+    /// <summary>Raw text of a cell: binary as lowercase hex (<c>asLowercaseHex</c>). NULs are kept; GridExporter swaps them for spaces outside SQL.</summary>
     public static string? Text(RowBlock block, int row, int column, bool blobAsText = false)
     {
         ArgumentNullException.ThrowIfNull(block);
@@ -103,12 +103,11 @@ public static class GridExportValues
             var bytes = block.GetBytes(row, column);
             if (blobAsText)
             {
-                return Encoding.UTF8.GetString(bytes).Replace('\0', ' ');
+                return Encoding.UTF8.GetString(bytes);
             }
             return bytes.Length == 0 ? string.Empty : "0x" + Convert.ToHexStringLower(bytes);
         }
         // Lossless: DOUBLE with every digit, BIT in bits, text without the cut suffix.
-        var text = DisplayFormatter.FormatRaw(block, row, column) ?? string.Empty;
-        return text.Replace('\0', ' ');
+        return DisplayFormatter.FormatRaw(block, row, column) ?? string.Empty;
     }
 }

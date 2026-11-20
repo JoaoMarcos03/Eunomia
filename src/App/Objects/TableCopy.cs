@@ -87,7 +87,7 @@ public static class TableCopy
         }
         var list = string.Join(", ", columns);
         var sql = $"INSERT INTO {dialect.QualifiedName(target.Ref)} ({list}) SELECT {list} FROM {dialect.QualifiedName(source)}";
-        return DataTabQuery.WhereClause(where) is { } filter ? sql + " WHERE " + filter : sql;
+        return DataTabQuery.CombineWhere(where, null) is { } filter ? sql + " WHERE " + filter : sql;
     }
 
     /// <summary>Copy table statements, in order: the CREATE and, with the data, the INSERT … SELECT.</summary>

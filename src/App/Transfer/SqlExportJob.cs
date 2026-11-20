@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.ExceptionServices;
 using System.Threading.Channels;
+using Eunomia.App.Export;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Engine.Execution;
 using Eunomia.Engine.Execution.Editing;
@@ -387,7 +388,8 @@ public sealed class SqlExportJob
             {
                 if (completed)
                 {
-                    File.Move(partial, _request.Path, overwrite: true);
+                    // A target that cannot be replaced (open in another program, read-only) fails the export as a file error.
+                    LocalFileException.Guard(() => File.Move(partial, _request.Path, overwrite: true));
                 }
                 else
                 {
@@ -469,9 +471,10 @@ public sealed class SqlExportJob
             {
                 await Task.WhenAll(workers).ConfigureAwait(false);
             }
-            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            catch (Exception)
             {
-                // Every object is in the output: an error of a worker without objects, or while restoring the session, does not count.
+                // Every object is in the output: an error of a worker without objects, or while restoring the session, does
+                // not count; nor does a cancel that arrives now (it threw away a complete export).
             }
         }
         catch
@@ -1005,7 +1008,7 @@ public sealed class SqlExportJob
 
     /// <summary>
     /// File of each item in a directory export: <c>database/type-name.sql</c>. Names that differ only in case (the file
-    /// system may ignore it) or that <see cref="SafeFileName"/> makes equal get <c>-2</c>, <c>-3</c>… instead of overwriting.
+    /// system may ignore it) or that <see cref="FileNames.Safe"/> makes equal get <c>-2</c>, <c>-3</c>… instead of overwriting.
     /// </summary>
     private static List<string> DirectoryPaths(string root, IReadOnlyList<Item> items) =>
         DirectoryPaths(root, items.Select(i => (i.Database, TypeName(i.Info!.Ref.Kind) + "-" + i.Info.Ref.Name)).ToList());
@@ -1016,7 +1019,7 @@ public sealed class SqlExportJob
         var paths = new List<string>(items.Count);
         foreach (var (database, name) in items)
         {
-            var stem = System.IO.Path.Combine(root, SafeFileName(database), SafeFileName(name));
+            var stem = System.IO.Path.Combine(root, FileNames.Safe(database), FileNames.Safe(name));
             var path = stem + ".sql";
             for (var n = 2; !used.Add(path); n++)
             {
@@ -1025,11 +1028,5 @@ public sealed class SqlExportJob
             paths.Add(path);
         }
         return paths;
-    }
-
-    internal static string SafeFileName(string name)
-    {
-        var invalid = System.IO.Path.GetInvalidFileNameChars();
-        return string.Concat(name.Select(c => Array.IndexOf(invalid, c) >= 0 ? '_' : c));
     }
 }

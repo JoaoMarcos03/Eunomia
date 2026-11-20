@@ -239,12 +239,17 @@ public sealed class TransactionTracker
             case "SET":
                 return Autocommit(statement) ?? TransactionEffect.None;
             case "CREATE" or "DROP":
-                return second == "TEMPORARY" ? TransactionEffect.None : TransactionEffect.ImplicitCommit;
+                // CREATE OR REPLACE TEMPORARY TABLE (MariaDB) does not commit either.
+                var temporary = second == "TEMPORARY"
+                                || (first == "CREATE" && second == "OR" && words.Count > 3
+                                    && words[2].Equals("REPLACE", StringComparison.OrdinalIgnoreCase)
+                                    && words[3].Equals("TEMPORARY", StringComparison.OrdinalIgnoreCase));
+                return temporary ? TransactionEffect.None : TransactionEffect.ImplicitCommit;
             case "LOAD":
                 return second is "DATA" or "XML" ? TransactionEffect.Change : TransactionEffect.ImplicitCommit;
             case "WITH":
-                // CTE followed by UPDATE/DELETE (MySQL 8): the word is searched for in the text.
-                var upper = statement.ToUpperInvariant();
+                // CTE followed by UPDATE/DELETE (MySQL 8): the word is searched for in the code (not in strings or comments).
+                var upper = CodeMask(statement);
                 return upper.Contains("UPDATE ", StringComparison.Ordinal) || upper.Contains("DELETE ", StringComparison.Ordinal) || upper.Contains("INSERT ", StringComparison.Ordinal)
                     ? TransactionEffect.Change
                     : TransactionEffect.None;
@@ -260,18 +265,31 @@ public sealed class TransactionTracker
     /// <summary><c>SET [SESSION|LOCAL|@@[session.]]autocommit = 0|1|ON|OFF</c>, also among other assignments.</summary>
     private static TransactionEffect? Autocommit(string statement)
     {
+        // The name and "=" are searched for in the code ("SET @note = 'autocommit=0'" is not one); the value is read from
+        // the text, so a quoted 'OFF' still counts.
+        var code = CodeMask(statement);
         var text = statement.ToUpperInvariant();
-        var at = text.IndexOf("AUTOCOMMIT", StringComparison.Ordinal);
+        var at = -1;
+        for (var from = 0; (from = code.IndexOf("AUTOCOMMIT", from, StringComparison.Ordinal)) >= 0; from++)
+        {
+            var after = from + "AUTOCOMMIT".Length;
+            if ((from == 0 || !(char.IsLetterOrDigit(code[from - 1]) || code[from - 1] == '_'))
+                && (after >= code.Length || !(char.IsLetterOrDigit(code[after]) || code[after] is '_' or '@' or '.')))
+            {
+                at = from;
+                break;
+            }
+        }
         if (at < 0)
         {
             return null;
         }
         var i = at + "AUTOCOMMIT".Length;
-        while (i < text.Length && (char.IsWhiteSpace(text[i]) || text[i] == ':'))
+        while (i < code.Length && (char.IsWhiteSpace(code[i]) || code[i] == ':'))
         {
             i++;
         }
-        if (i >= text.Length || text[i] != '=')
+        if (i >= code.Length || code[i] != '=')
         {
             return null;
         }
@@ -291,6 +309,47 @@ public sealed class TransactionTracker
             "1" or "ON" or "TRUE" => TransactionEffect.AutocommitOn,
             _ => null,
         };
+    }
+
+    /// <summary>
+    /// The statement in upper case with the content of strings, quoted identifiers and comments blanked, at the same
+    /// positions (<c>/*! … */</c> ones count as code).
+    /// </summary>
+    private static string CodeMask(string statement)
+    {
+        var mask = statement.ToUpperInvariant().ToCharArray();
+        var i = 0;
+        while (i < mask.Length)
+        {
+            var c = mask[i];
+            var start = i;
+            if (c is '\'' or '"' or '`')
+            {
+                i++;
+                while (i < mask.Length && mask[i] != c)
+                {
+                    i += mask[i] == '\\' && c != '`' ? 2 : 1;
+                }
+                i = Math.Min(i + 1, mask.Length);
+            }
+            else if (c == '#' || (c == '-' && i + 2 < mask.Length && mask[i + 1] == '-' && char.IsWhiteSpace(mask[i + 2])))
+            {
+                var end = Array.IndexOf(mask, '\n', i);
+                i = end < 0 ? mask.Length : end;
+            }
+            else if (c == '/' && i + 1 < mask.Length && mask[i + 1] == '*' && ExecutableComment.MarkerLength(statement, i) == 0)
+            {
+                var end = statement.IndexOf("*/", i + 2, StringComparison.Ordinal);
+                i = end < 0 ? mask.Length : end + 2;
+            }
+            else
+            {
+                i++;
+                continue;
+            }
+            Array.Fill(mask, ' ', start, i - start);
+        }
+        return new string(mask);
     }
 
     /// <summary>First words of the statement, without comments (<c>/*! … */</c> ones count as code).</summary>

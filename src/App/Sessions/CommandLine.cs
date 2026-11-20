@@ -37,9 +37,13 @@ public sealed record CommandLineRequest
     /// <summary><c>.sql</c> files to open in query tabs.</summary>
     public IReadOnlyList<string> SqlFiles { get; init; } = [];
 
-    /// <summary>Any connection parameter (then an ad hoc session is created on top of <c>-d</c> or the defaults).</summary>
+    /// <summary>
+    /// Any connection parameter (then an ad hoc session is created on top of <c>-d</c> or the defaults). The SSH password
+    /// is not one: it only goes to memory for this run (<see cref="SessionConnector.ApplyCommandLineSecrets"/>).
+    /// </summary>
     public bool HasConnectionOverrides =>
-        Host is not null || Port is not null || User is not null || Password is not null || Databases is not null || NetType is not null || SshHost is not null;
+        Host is not null || Port is not null || User is not null || Password is not null || Databases is not null || NetType is not null
+        || WindowsAuth is not null || Ssl is not null || SshHost is not null || SshPort is not null || SshUser is not null || SshKey is not null;
 
     public bool IsEmpty => SessionPath is null && !HasConnectionOverrides && SqlFiles.Count == 0;
 }
@@ -81,7 +85,8 @@ public static class CommandLine
                 continue;
             }
             var value = inline;
-            if (value is null && i + 1 < args.Count && !args[i + 1].StartsWith('-'))
+            // A .sql path after a flag without a value is a file to open, not the flag's value.
+            if (value is null && i + 1 < args.Count && !args[i + 1].StartsWith('-') && !args[i + 1].EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
             {
                 value = args[++i];
             }
@@ -92,7 +97,7 @@ public static class CommandLine
         }
         string? V(string key) => values.TryGetValue(key, out var v) ? v : null;
         int? I(string key) => int.TryParse(V(key), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
-        bool? B(string key) => V(key) is { } b ? b is "1" or "true" : null;
+        bool? B(string key) => V(key) is { } b ? b == "1" || b.Equals("true", StringComparison.OrdinalIgnoreCase) : null;
         return new CommandLineRequest
         {
             SessionPath = V("description"),
@@ -142,10 +147,10 @@ public static class CommandLine
         {
             session.Ssh.Active = true;
             session.Ssh.Host = request.SshHost;
-            session.Ssh.Port = request.SshPort ?? session.Ssh.Port;
-            session.Ssh.User = request.SshUser ?? session.Ssh.User;
-            session.Ssh.PrivateKeyFile = request.SshKey ?? session.Ssh.PrivateKeyFile;
         }
+        session.Ssh.Port = request.SshPort ?? session.Ssh.Port;
+        session.Ssh.User = request.SshUser ?? session.Ssh.User;
+        session.Ssh.PrivateKeyFile = request.SshKey ?? session.Ssh.PrivateKeyFile;
         session.Folder = [];
         session.Name = $"{session.Host}-{Guid.NewGuid().ToString("N")[..4]}";
         return session;
@@ -154,13 +159,14 @@ public static class CommandLine
     private static (string Name, string? Value) SplitArgument(string arg)
     {
         var body = arg.TrimStart('-');
+        // Whichever comes first separates the name: in -p"a=b" the '=' belongs to the quoted value.
         var eq = body.IndexOf('=', StringComparison.Ordinal);
-        if (eq >= 0)
-        {
-            return (body[..eq], Unquote(body[(eq + 1)..]));
-        }
         var quote = body.IndexOf('"', StringComparison.Ordinal);
-        return quote > 0 ? (body[..quote], Unquote(body[quote..])) : (body, null);
+        if (quote > 0 && (eq < 0 || quote < eq))
+        {
+            return (body[..quote], Unquote(body[quote..]));
+        }
+        return eq >= 0 ? (body[..eq], Unquote(body[(eq + 1)..])) : (body, null);
     }
 
     private static string Unquote(string value) =>

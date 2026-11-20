@@ -339,6 +339,11 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // A browser that never reached the grid still holds its connection and reader.
+            if (!ReferenceEquals(_browser, browser))
+            {
+                browser?.Dispose();
+            }
             _context.Log.Append(LogCategory.Error, ex.Message);
             if (ReferenceEquals(_dataLoad, cts))
             {
@@ -561,6 +566,11 @@ public sealed partial class MainWindow
         {
             return;
         }
+        // Another table is loading (the grid still shows this one until it arrives): Next must not cancel that load.
+        if (!IsShownTarget(browser))
+        {
+            return;
+        }
         var firstNew = browser.Loaded;
         var cts = BeginDataLoad();
         _context.Status.Busy = "Fetching rows ...";
@@ -627,9 +637,25 @@ public sealed partial class MainWindow
             return Task.CompletedTask;
         }
         SetTableState(KeyOf(session, browser.Table.Ref), "Sort", sort.Count > 0 ? DataTabQuery.FormatSort(sort) : null);
-        LoadDataForFocusedNode(force: true);
+        ReloadIfFocused(session, browser);
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// After saving the shown table's sort or columns: reloads it, but only while it is still the focused one (with another
+    /// table focused, its load is already on the way and the state applies the next time this one opens).
+    /// </summary>
+    private void ReloadIfFocused(OpenSession session, TableBrowser browser)
+    {
+        if (FocusedTable() is (var id, var table) && id == session.Id && table == browser.Table.Ref)
+        {
+            LoadDataForFocusedNode(force: true);
+        }
+    }
+
+    /// <summary>The browser is the Data tab's target, not a table left on screen while another one loads.</summary>
+    private bool IsShownTarget(TableBrowser browser) =>
+        _dataTarget is not { } target || (target.Session == _browserSession?.Id && target.Table == browser.Table.Ref);
 
     private void ShowSortingPopup()
     {
@@ -649,7 +675,7 @@ public sealed partial class MainWindow
         _dataView.ShowColumnsPopup(browser.Table.Columns.Select(c => c.Name).ToList(), browser.Options.Hidden, hidden =>
         {
             SetTableState(KeyOf(session, browser.Table.Ref), "HiddenColumns", hidden.Count > 0 ? DataTabQuery.FormatHidden(hidden) : null);
-            LoadDataForFocusedNode(force: true);
+            ReloadIfFocused(session, browser);
         });
     }
 }

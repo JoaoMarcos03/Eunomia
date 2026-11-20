@@ -108,4 +108,23 @@ public sealed class SessionStatementsTests
         Assert.Equal("USE first", log.Statements[0]);
         Assert.Equal($"SET @v{(SessionStateLog.MaxStatements * 3) - 1} = {(SessionStateLog.MaxStatements * 3) - 1}", log.Statements[^1]);
     }
+
+    [Fact]
+    public void StringsAndCommentsDoNotDecideTheKind()
+    {
+        // GLOBAL inside a string (with an escaped quote, or never closed) is not a global scope.
+        Assert.Equal(SessionStatementKind.Set, SessionStatements.Classify(@"SET @a = 'it\'s GLOBAL'"));
+        Assert.Equal(SessionStatementKind.Set, SessionStatements.Classify("SET @a = 'GLOBAL"));
+        // A backtick only in a comment: USE without a name.
+        Assert.Null(SessionStatements.UseTarget("USE /* ` */"));
+    }
+
+    [Fact]
+    public void TheSameStatementTwiceIsKeptOnce()
+    {
+        var log = new SessionStateLog();
+        Assert.True(log.Record("SET @a = 1"));
+        Assert.False(log.Record("  SET @a = 1  "));
+        Assert.Single(log.Statements);
+    }
 }

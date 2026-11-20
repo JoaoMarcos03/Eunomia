@@ -14,6 +14,9 @@ internal sealed class ConnectionLane : IAsyncDisposable
     private readonly Channel<WorkItem>[] _queues;
     private readonly SemaphoreSlim _pending = new(0);
     private readonly CancellationTokenSource _shutdown = new();
+
+    /// <summary>Kept apart: the token of a disposed source cannot be read (RunAsync racing DisposeAsync).</summary>
+    private readonly CancellationToken _shutdownToken;
     private readonly Func<CancellationToken, Task<IDbConnectionHandle>> _open;
     private readonly Func<ConnectionLane, IDbConnectionHandle, CancellationToken, Task> _afterOpen;
     private readonly Func<Exception, DbError?> _translate;
@@ -43,6 +46,7 @@ internal sealed class ConnectionLane : IAsyncDisposable
         _log = log;
         Clock = clock;
         _queues = [Channel.CreateUnbounded<WorkItem>(), Channel.CreateUnbounded<WorkItem>(), Channel.CreateUnbounded<WorkItem>()];
+        _shutdownToken = _shutdown.Token;
         Touch();
         _loop = Task.Run(LoopAsync);
     }
@@ -82,7 +86,8 @@ internal sealed class ConnectionLane : IAsyncDisposable
     /// Queues the work. Cancelled by the caller while waiting, it does not run; already running, with
     /// <paramref name="abandonGrace"/> it still has that much time to finish before the command is cancelled on the server
     /// (the result is discarded anyway). Cancelling a short read with <c>KILL QUERY</c> opens another connection and costs
-    /// more than letting it finish. Esc (<see cref="CancelCurrent"/>) and closing cancel immediately.
+    /// more than letting it finish. Esc (<see cref="CancelCurrent"/>) and closing cancel immediately. Queued on a closed (or
+    /// closing) connection, the task is cancelled.
     /// </summary>
     public Task<T> RunAsync<T>(
         Func<IDbConnectionHandle, CancellationToken, Task<T>> work,
@@ -92,13 +97,53 @@ internal sealed class ConnectionLane : IAsyncDisposable
         CancellationToken cancellationToken,
         TimeSpan abandonGrace = default)
     {
-        var item = new WorkItem<T>(work, logAs, retryAfterReconnect, cancellationToken, _shutdown.Token, abandonGrace);
+        if (_shutdownToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<T>(_shutdownToken);
+        }
+        var item = new WorkItem<T>(work, logAs, retryAfterReconnect, cancellationToken, _shutdownToken, abandonGrace);
         if (!_queues[(int)priority].Writer.TryWrite(item))
         {
-            throw new ObjectDisposedException(Name);
+            item.Dispose();
+            return Task.FromCanceled<T>(_shutdownToken.IsCancellationRequested ? _shutdownToken : new CancellationToken(true));
         }
-        _pending.Release();
+        try
+        {
+            _pending.Release();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Closed between the write and here: the loop is gone and the shutdown already cancelled the item.
+            item.SetCanceled();
+            item.Dispose();
+        }
         return item.Task;
+    }
+
+    /// <summary>
+    /// Pings with a deadline (keep-alive and reconnect): a connection that does not answer within <paramref name="timeout"/>
+    /// (a dropped VPN, without a TCP reset) is treated as lost instead of blocking the queue forever.
+    /// </summary>
+    public Task<bool> PingAsync(TimeSpan timeout, WorkPriority priority, SessionLogCategory logAs, bool retryAfterReconnect, CancellationToken cancellationToken) =>
+        RunAsync((h, ct) => PingWithTimeoutAsync(h, timeout, Clock, ct), priority, logAs, retryAfterReconnect, cancellationToken);
+
+    private static async Task<bool> PingWithTimeoutAsync(IDbConnectionHandle handle, TimeSpan timeout, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        using var ping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var task = handle.PingAsync(ping.Token);
+        try
+        {
+            await task.WaitAsync(timeout, clock, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (TimeoutException)
+        {
+            await ping.CancelAsync().ConfigureAwait(false);
+            // The abandoned ping fails when the connection is closed: observed so it does not go unobserved.
+            _ = task.ContinueWith(t => _ = t.Exception, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            throw new ConnectionStalledException(new DbError(2013, "HY000",
+                $"The server did not answer a ping within {timeout.TotalSeconds:0} seconds (the network may have dropped)."));
+        }
     }
 
     /// <summary>Cancels the operation in progress (the driver sends <c>KILL QUERY</c>, section 12.4).</summary>
@@ -180,6 +225,7 @@ internal sealed class ConnectionLane : IAsyncDisposable
             while (q.Reader.TryRead(out var left))
             {
                 left.SetCanceled();
+                left.Dispose();
             }
         }
     }
@@ -206,8 +252,9 @@ internal sealed class ConnectionLane : IAsyncDisposable
             }
             catch (Exception ex) when (ex is not SessionConnectionLostException)
             {
-                var error = _translate(ex);
-                if (error is not null && _classify(error).Category == DbErrorCategory.ConnectionLost)
+                var stalled = ex as ConnectionStalledException;
+                var error = stalled?.Error ?? _translate(ex);
+                if (error is not null && (stalled is not null || _classify(error).Category == DbErrorCategory.ConnectionLost))
                 {
                     var wasOpen = _handle is not null;
                     await DropHandleAsync().ConfigureAwait(false);
@@ -248,9 +295,19 @@ internal sealed class ConnectionLane : IAsyncDisposable
             }
             Issued?.Invoke(this, sql);
         };
-        _handle = handle;
         _currentCategory = SessionLogCategory.InternalSql;
-        await _afterOpen(this, handle, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _afterOpen(this, handle, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Only a fully prepared connection is kept: one cancelled before the read-only guard, the time zone or the USE
+            // would be reused by the next work as if it had them.
+            await DisposeQuietlyAsync(handle).ConfigureAwait(false);
+            throw;
+        }
+        _handle = handle;
         if (reopening)
         {
             Reopened?.Invoke(this);
@@ -263,16 +320,27 @@ internal sealed class ConnectionLane : IAsyncDisposable
         var handle = Interlocked.Exchange(ref _handle, null);
         if (handle is not null)
         {
-            try
-            {
-                await handle.DisposeAsync().ConfigureAwait(false);
-            }
-#pragma warning disable CA1031 // Closing an already broken connection cannot fail the operation.
-            catch (Exception)
-#pragma warning restore CA1031
-            {
-            }
+            await DisposeQuietlyAsync(handle).ConfigureAwait(false);
         }
+    }
+
+    private static async Task DisposeQuietlyAsync(IDbConnectionHandle handle)
+    {
+        try
+        {
+            await handle.DisposeAsync().ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Closing an already broken connection cannot fail the operation.
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+        }
+    }
+
+    /// <summary>The connection stopped answering (ping deadline): handled as a lost connection.</summary>
+    private sealed class ConnectionStalledException(DbError error) : Exception(error.Message)
+    {
+        public DbError Error { get; } = error;
     }
 
     private abstract class WorkItem : IDisposable

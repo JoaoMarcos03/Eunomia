@@ -248,13 +248,21 @@ public sealed class SessionHost : IAsyncDisposable
             options = options with { Host = "127.0.0.1", Port = tunnel.LocalPort, Ssh = null };
         }
         var handle = await _services.Provider.Connections.OpenAsync(options, _services.ResolveSecret, cancellationToken).ConfigureAwait(false);
-        handle.CommandIssued += sql => Log(SessionLogCategory.Script, sql);
-        await ProtectAsync(handle, cancellationToken).ConfigureAwait(false);
-        if (Settings.TimeZone is { Length: > 0 } tz)
+        try
         {
-            await TryRunAsync(handle, "SET time_zone = " + _services.Provider.ForServer(handle.Server).Dialect.StringLiteral(tz), cancellationToken).ConfigureAwait(false);
+            handle.CommandIssued += sql => Log(SessionLogCategory.Script, sql);
+            await ProtectAsync(handle, cancellationToken).ConfigureAwait(false);
+            if (Settings.TimeZone is { Length: > 0 } tz)
+            {
+                await TryRunAsync(handle, "SET time_zone = " + _services.Provider.ForServer(handle.Server).Dialect.StringLiteral(tz), cancellationToken).ConfigureAwait(false);
+            }
+            return handle;
         }
-        return handle;
+        catch
+        {
+            await handle.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
     }
 
     /// <summary>
@@ -365,11 +373,8 @@ public sealed class SessionHost : IAsyncDisposable
         return lane;
     }
 
-    private static async Task<bool> PingAsync(IDbConnectionHandle handle, CancellationToken cancellationToken)
-    {
-        await handle.PingAsync(cancellationToken).ConfigureAwait(false);
-        return true;
-    }
+    /// <summary>Deadline of a keep-alive or reconnect ping: the connect timeout (the driver's default, 15 s, without one).</summary>
+    private TimeSpan PingTimeout => Settings.Connection.ConnectTimeout is { } t && t > TimeSpan.Zero ? t : TimeSpan.FromSeconds(15);
 
     private ClassifiedError Classify(DbError error) => (ServerServices?.Errors ?? _services.Provider.Errors).Classify(error);
 
@@ -425,11 +430,9 @@ public sealed class SessionHost : IAsyncDisposable
         {
             await TryRunAsync(handle, readOnly, cancellationToken).ConfigureAwait(false);
         }
-        handle.Guard = sql =>
-        {
-            var statements = sql.Contains(';', StringComparison.Ordinal) ? _services.SplitScript(sql) : [sql];
-            return statements.All(ReadOnlyPolicy.IsAllowed) ? null : new DbError(1792, "25006", ReadOnlyPolicy.RefusalMessage(Name));
-        };
+        // The whole text, not split first: the policy reads it with and without backslash escapes (the session may have
+        // NO_BACKSLASH_ESCAPES, or turn it on in the same batch), and a split with one reading would hide the other.
+        handle.Guard = sql => ReadOnlyPolicy.IsAllowed(sql) ? null : new DbError(1792, "25006", ReadOnlyPolicy.RefusalMessage(Name));
     }
 
     /// <summary>State replayed on every new connection (12.2): read-only mode, database, time zone and startup script.</summary>
@@ -530,7 +533,7 @@ public sealed class SessionHost : IAsyncDisposable
             {
                 return;
             }
-            await primary.RunAsync(PingAsync,
+            await primary.PingAsync(PingTimeout,
                 WorkPriority.Visible, SessionLogCategory.InternalSql, retryAfterReconnect: true, CancellationToken.None).ConfigureAwait(false);
             ConnectedAt = _services.Clock.GetUtcNow();
             SetState(SessionState.Ready, null);
@@ -559,7 +562,7 @@ public sealed class SessionHost : IAsyncDisposable
         {
             if (lane is { IsOpen: true, IsBusy: false, HasPendingWork: false } && now - lane.LastActivity >= interval)
             {
-                _ = lane.RunAsync(PingAsync,
+                _ = lane.PingAsync(PingTimeout,
                     WorkPriority.Statistics, SessionLogCategory.Debug, retryAfterReconnect: false, CancellationToken.None)
                     .ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
             }

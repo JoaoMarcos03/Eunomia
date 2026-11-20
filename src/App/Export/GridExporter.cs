@@ -23,7 +23,10 @@ public static partial class GridExporter
         var columns = Enumerable.Range(0, data.Columns.Count)
             .Where(i => options.IncludeAutoIncrement || !data.Columns[i].IsAutoIncrement)
             .ToList();
-        var rows = data.Rows.Select(r => (IReadOnlyList<string?>)columns.Select(i => Clean(r[i], options)).ToList()).ToList();
+        // SQL keeps NULs (the dialect writes them as an escape); the text formats get a space instead.
+        var sql = format is GridExportFormat.SqlInserts or GridExportFormat.SqlInsertIgnores or GridExportFormat.SqlReplaces
+            or GridExportFormat.SqlDeletesInserts or GridExportFormat.SqlUpdates;
+        var rows = data.Rows.Select(r => (IReadOnlyList<string?>)columns.Select(i => Clean(r[i], options, sql)).ToList()).ToList();
         var cols = columns.Select(i => data.Columns[i]).ToList();
         var view = data with { Columns = cols, Rows = rows };
         var sb = new StringBuilder();
@@ -43,7 +46,7 @@ public static partial class GridExporter
                 break;
             case GridExportFormat.SqlInserts or GridExportFormat.SqlInsertIgnores or GridExportFormat.SqlReplaces
                 or GridExportFormat.SqlDeletesInserts or GridExportFormat.SqlUpdates:
-                WriteSql(sb, format, view, options, dialect);
+                WriteSql(sb, format, view, data, options, dialect);
                 break;
             case GridExportFormat.Latex:
                 WriteLatex(sb, view, options);
@@ -86,8 +89,18 @@ public static partial class GridExporter
     private static string Ind(string indent, int count) => string.Concat(Enumerable.Repeat(indent, count));
 
     /// <summary>"Remove linebreaks from contents": CRLF, CR and LF become a space.</summary>
-    private static string? Clean(string? value, GridExportOptions options) =>
-        value is null || !options.RemoveLinebreaks ? value : value.Replace("\r\n", " ", StringComparison.Ordinal).Replace('\r', ' ').Replace('\n', ' ');
+    private static string? Clean(string? value, GridExportOptions options, bool sql)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+        if (!sql)
+        {
+            value = value.Replace('\0', ' ');
+        }
+        return options.RemoveLinebreaks ? value.Replace("\r\n", " ", StringComparison.Ordinal).Replace('\r', ' ').Replace('\n', ' ') : value;
+    }
 
     /// <summary><c>UnescapeString</c>: <c>\t \n \r \0 \b \Z \\</c>.</summary>
     public static string Unescape(string value)
@@ -317,7 +330,10 @@ public static partial class GridExporter
         return dialect.StringLiteral(value);
     }
 
-    private static void WriteSql(StringBuilder sb, GridExportFormat format, GridExportData data, GridExportOptions options, IDialect dialect)
+    /// <param name="data">The exported columns and values.</param>
+    /// <param name="full">Every column with the original values, row for row: the WHERE takes its key from here, so a key
+    /// left out of the export (auto-increment) or a value whose line breaks were removed still finds the row.</param>
+    private static void WriteSql(StringBuilder sb, GridExportFormat format, GridExportData data, GridExportData full, GridExportOptions options, IDialect dialect)
     {
         var table = dialect.QuoteIdentifier(data.TableName);
         // Generated columns are left out of the list and the values.
@@ -325,9 +341,10 @@ public static partial class GridExporter
         var columnList = options.IncludeColumnNames
             ? " (" + string.Join(", ", exported.Select(i => dialect.QuoteIdentifier(data.Columns[i].Name))) + ")"
             : string.Empty;
-        var keys = data.KeyColumns.Count > 0 ? data.KeyColumns : data.Columns.Select(c => c.Name).ToList();
-        foreach (var row in data.Rows)
+        var keys = full.KeyColumns.Count > 0 ? full.KeyColumns : full.Columns.Select(c => c.Name).ToList();
+        for (var r = 0; r < data.Rows.Count; r++)
         {
+            var row = data.Rows[r];
             var values = string.Join(", ", exported.Select(i => SqlValue(data.Columns[i], row[i], dialect)));
             switch (format)
             {
@@ -341,13 +358,13 @@ public static partial class GridExporter
                     sb.Append("REPLACE INTO ").Append(table).Append(columnList).Append(" VALUES (").Append(values).Append(");").Append(Crlf);
                     break;
                 case GridExportFormat.SqlDeletesInserts:
-                    sb.Append("DELETE FROM ").Append(table).Append(" WHERE ").Append(Where(data, row, keys, dialect)).Append(';').Append(Crlf);
+                    sb.Append("DELETE FROM ").Append(table).Append(" WHERE ").Append(Where(full, full.Rows[r], keys, dialect)).Append(';').Append(Crlf);
                     sb.Append("INSERT INTO ").Append(table).Append(columnList).Append(" VALUES (").Append(values).Append(");").Append(Crlf);
                     break;
                 default:
                     // The SET takes every exported column, key included.
                     var set = string.Join(", ", exported.Select(i => dialect.QuoteIdentifier(data.Columns[i].Name) + "=" + SqlValue(data.Columns[i], row[i], dialect)));
-                    sb.Append("UPDATE ").Append(table).Append(" SET ").Append(set).Append(" WHERE ").Append(Where(data, row, keys, dialect)).Append(';').Append(Crlf);
+                    sb.Append("UPDATE ").Append(table).Append(" SET ").Append(set).Append(" WHERE ").Append(Where(full, full.Rows[r], keys, dialect)).Append(';').Append(Crlf);
                     break;
             }
         }
@@ -430,15 +447,17 @@ public static partial class GridExporter
 
     private static void WriteTextile(StringBuilder sb, GridExportData data, GridExportOptions options, bool jira)
     {
+        // A '|' in a value or name started a new cell: Jira escapes it with a backslash, Textile as an HTML entity.
+        string Cell(string value) => value.Replace("|", jira ? "\\|" : "&#124;", StringComparison.Ordinal);
         if (options.IncludeColumnNames)
         {
             sb.Append(jira
-                ? "|| " + string.Join(" || ", data.Columns.Select(c => c.Name)) + " ||"
-                : "|_. " + string.Join(" |_. ", data.Columns.Select(c => c.Name)) + " |").Append(Crlf);
+                ? "|| " + string.Join(" || ", data.Columns.Select(c => Cell(c.Name))) + " ||"
+                : "|_. " + string.Join(" |_. ", data.Columns.Select(c => Cell(c.Name))) + " |").Append(Crlf);
         }
         foreach (var row in data.Rows)
         {
-            sb.Append("| ").Append(string.Join(" | ", row.Select(v => v ?? string.Empty))).Append(" |").Append(Crlf);
+            sb.Append("| ").Append(string.Join(" | ", row.Select(v => Cell(v ?? string.Empty)))).Append(" |").Append(Crlf);
         }
     }
 

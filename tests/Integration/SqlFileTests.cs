@@ -462,6 +462,175 @@ public sealed class SqlFileTests : IAsyncLifetime
         Assert.Equal(0, result.Errors);
     }
 
+    /// <summary>
+    /// File of single-row INSERTs into a PK table (rows 1..<paramref name="rows"/>), with <c>SELECT SLEEP(5)</c> after row
+    /// <paramref name="sleepAfter"/>. All statements have the same length, so <see cref="StatementsPerPacket"/> sets the packets.
+    /// </summary>
+    private string SleepFile(string name, int rows, int sleepAfter)
+    {
+        var sb = new StringBuilder();
+        for (var i = 1; i <= rows; i++)
+        {
+            sb.Append(CultureInfo.InvariantCulture, $"INSERT INTO k VALUES ({i:000});\n");
+            if (i == sleepAfter)
+            {
+                sb.Append("SELECT SLEEP(5) AS sleeper;\n");
+            }
+        }
+        return Write(name, sb.ToString());
+    }
+
+    // "INSERT INTO k VALUES (001)" and "SELECT SLEEP(5) AS sleeper" are 26 characters; the job adds 2 + 128 per statement.
+    private static long StatementsPerPacket(int count) => count * (26 + 2 + 128);
+
+    private async Task<long> WaitForSleepAsync()
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        while (clock.Elapsed < TimeSpan.FromSeconds(30))
+        {
+            var id = await ScalarAsync($"SELECT ID FROM information_schema.PROCESSLIST WHERE DB = '{_database}' AND INFO LIKE '%SLEEP(5)%' AND ID <> CONNECTION_ID() LIMIT 1");
+            if (!string.IsNullOrEmpty(id))
+            {
+                return long.Parse(id, CultureInfo.InvariantCulture);
+            }
+            await Task.Delay(50, Ct);
+        }
+        throw new TimeoutException("The SLEEP did not start.");
+    }
+
+    /// <summary>
+    /// The job connection is killed in the middle of a packet: the journal stays after the last packet that ran whole, and
+    /// resuming inserts nothing twice.
+    /// </summary>
+    [Fact]
+    public async Task KilledConnectionInAPacketResumesAfterTheLastWholePacket()
+    {
+        TestServer.RequireServer();
+        await ExecAsync($"CREATE TABLE `{_database}`.k (id INT PRIMARY KEY)");
+        // Packets of 3: [1,2,3] [4,5,6] [SLEEP,7,8] [9,10,11] [12].
+        var path = SleepFile("killed.sql", 12, sleepAfter: 6);
+        var journal = new TransferJournal(Path.Combine(_directory, "jobs-killed"));
+        var request = Request(path) with { BatchInOneGo = true };
+        var run = new SqlFileJob(_host, request, journal) { MaxPacketBytes = StatementsPerPacket(3) }.RunAsync(null, Ct);
+
+        var id = await WaitForSleepAsync();
+        await ExecAsync($"KILL {id}");
+        await Assert.ThrowsAnyAsync<Exception>(() => run);
+
+        Assert.Equal("6", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.k"));
+        var entry = Assert.Single(journal.List());
+        Assert.Equal(6, entry.Count);
+        var resumed = await new SqlFileJob(_host, entry, journal) { MaxPacketBytes = StatementsPerPacket(3) }.RunAsync(null, Ct);
+        Assert.True(resumed.Completed, string.Join("; ", resumed.ErrorList.Select(e => e.Message)));
+        Assert.Equal(0, resumed.Errors);
+        Assert.Equal(13, resumed.Statements);
+        Assert.Equal("12", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.k"));
+        Assert.Empty(journal.List());
+    }
+
+    /// <summary>
+    /// Cancel in the middle of a packet: the statements of the packet that finished stay done and the journal moves past
+    /// them, so resuming inserts nothing twice.
+    /// </summary>
+    [Fact]
+    public async Task CancelInAPacketResumesAfterTheStatementsDone()
+    {
+        TestServer.RequireServer();
+        await ExecAsync($"CREATE TABLE `{_database}`.k (id INT PRIMARY KEY)");
+        // Packets of 3: [1,2,3] [4,SLEEP,5] [6,7,8] [9,10,11] [12].
+        var path = SleepFile("cancelled.sql", 12, sleepAfter: 4);
+        var journal = new TransferJournal(Path.Combine(_directory, "jobs-cancelled"));
+        var request = Request(path) with { BatchInOneGo = true };
+        using var cancel = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        var run = new SqlFileJob(_host, request, journal) { MaxPacketBytes = StatementsPerPacket(3) }.RunAsync(null, cancel.Token);
+
+        await WaitForSleepAsync();
+        await cancel.CancelAsync();
+        var first = await run;
+
+        Assert.True(first.Cancelled);
+        var entry = Assert.Single(journal.List());
+        var done = long.Parse(await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.k") ?? "0", CultureInfo.InvariantCulture);
+        // Row 4 ran before the SLEEP; row 5 too if the server finished the packet after the cancel.
+        Assert.InRange(done, 4, 5);
+        Assert.Equal(done, first.AffectedRows);
+        Assert.InRange(entry.Count, 4, 6);
+        var resumed = await new SqlFileJob(_host, entry, journal) { MaxPacketBytes = StatementsPerPacket(3) }.RunAsync(null, Ct);
+        Assert.True(resumed.Completed, string.Join("; ", resumed.ErrorList.Select(e => e.Message)));
+        Assert.Equal(0, resumed.Errors);
+        Assert.Equal("12", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.k"));
+        Assert.Empty(journal.List());
+    }
+
+    /// <summary>An unclosed <c>DELIMITER $$</c> stops at the max_allowed_packet guard; the job is not completed.</summary>
+    [Fact]
+    public async Task UnclosedDelimiterStopsAtThePacketGuard()
+    {
+        TestServer.RequireServer();
+        var sb = new StringBuilder("CREATE TABLE u (id INT);\nDELIMITER $$\n");
+        for (var i = 0; i < 500; i++)
+        {
+            sb.Append(CultureInfo.InvariantCulture, $"INSERT INTO u VALUES ({i});\n");
+        }
+        var path = Write("unclosed.sql", sb.ToString());
+        var journal = new TransferJournal(Path.Combine(_directory, "jobs-unclosed"));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new SqlFileJob(_host, Request(path), journal) { ChunkSize = 1024, MaxPendingBytes = 4096 }.RunAsync(null, Ct));
+
+        Assert.Contains("No delimiter (\"$$\")", error.Message, StringComparison.Ordinal);
+        var entry = Assert.Single(journal.List());
+        Assert.Equal(1, entry.Count);
+        Assert.Equal("0", await ScalarAsync($"SELECT COUNT(*) FROM `{_database}`.u"));
+    }
+
+    /// <summary>
+    /// In a packet, the error line is the file's: the server counts it from the start of the failed statement, and the
+    /// rows of the statements before it count; the statement shown has its secrets masked.
+    /// </summary>
+    [Fact]
+    public async Task PacketErrorLineIsTheFileLineAndKeepsTheEarlierRows()
+    {
+        TestServer.RequireServer();
+        const string broken = "INSERT INTO t\r\nVALUES (1,, 'x')";
+        var path = Write("line.sql", Script(100, broken: broken + ";"));
+        var request = Request(path) with { BatchInOneGo = true };
+
+        var result = await new SqlFileJob(_host, request).RunAsync(null, Ct);
+
+        Assert.True(result.StoppedOnError);
+        var error = Assert.Single(result.ErrorList);
+        Assert.Equal(53, error.Statement);
+        Assert.Equal(61, error.Line);
+        Assert.Equal(49, result.AffectedRows);
+        // One statement at a time: the same line.
+        await ExecAsync($"DROP DATABASE `{_database}`");
+        await ExecAsync($"CREATE DATABASE `{_database}`");
+        var single = await new SqlFileJob(_host, Request(path)).RunAsync(null, Ct);
+        Assert.Equal(61, Assert.Single(single.ErrorList).Line);
+
+        await ExecAsync($"DROP DATABASE `{_database}`");
+        await ExecAsync($"CREATE DATABASE `{_database}`");
+        const string secret = "ALTER USER 'nobody_eunomia'@'%' IDENTIFIED BY 'hunter2'";
+        var masked = await new SqlFileJob(_host, Request(Write("secret.sql", "SELECT 1;\n" + secret + ";\nSELECT 2;\n")) with { BatchInOneGo = true }).RunAsync(null, Ct);
+        var maskedError = Assert.Single(masked.ErrorList);
+        Assert.Equal(2, maskedError.Statement);
+        Assert.DoesNotContain("hunter2", maskedError.Sql, StringComparison.Ordinal);
+    }
+
+    /// <summary>A statement that reads <c>ROW_COUNT()</c> sees the statement before it, in a packet too.</summary>
+    [Fact]
+    public async Task RowCountInAPacketSeesThePreviousStatement()
+    {
+        TestServer.RequireServer();
+        var path = Write("rowcount.sql", "CREATE TABLE r (id INT);\nINSERT INTO r VALUES (1), (2), (3);\nSET @seen = ROW_COUNT();\nCREATE TABLE seen AS SELECT @seen AS n;\n");
+
+        var result = await new SqlFileJob(_host, Request(path) with { BatchInOneGo = true }).RunAsync(null, Ct);
+
+        Assert.True(result.Completed, string.Join("; ", result.ErrorList.Select(e => e.Message)));
+        Assert.Equal("3", await ScalarAsync($"SELECT n FROM `{_database}`.seen"));
+    }
+
     [Fact]
     public void EncodingDetection()
     {

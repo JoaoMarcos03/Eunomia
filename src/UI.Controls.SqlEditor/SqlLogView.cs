@@ -182,6 +182,9 @@ public sealed class SqlLogView : Decorator, IEditTarget
     /// <summary>Line backgrounds by kind, below the text and the selection.</summary>
     private sealed class LineBackgroundRenderer(SqlLogView owner) : IBackgroundRenderer
     {
+        // One brush per kind and theme, not one per line and frame.
+        private readonly Dictionary<(LogLineStyle, bool), IBrush> _brushes = [];
+
         public KnownLayer Layer => KnownLayer.Background;
 
         public void Draw(TextView textView, DrawingContext drawingContext)
@@ -196,7 +199,12 @@ public sealed class SqlLogView : Decorator, IEditTarget
                 }
                 var y = line.VisualTop - textView.VerticalOffset;
                 var rect = new Rect(0, y, textView.Bounds.Width + textView.HorizontalOffset, line.Height);
-                drawingContext.FillRectangle(new SolidColorBrush(BackgroundOf(style, dark)), rect);
+                if (!_brushes.TryGetValue((style, dark), out var brush))
+                {
+                    brush = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(BackgroundOf(style, dark));
+                    _brushes[(style, dark)] = brush;
+                }
+                drawingContext.FillRectangle(brush, rect);
             }
         }
     }
@@ -205,6 +213,13 @@ public sealed class SqlLogView : Decorator, IEditTarget
     private sealed class LogNumberMargin(SqlLogView owner) : AbstractMargin
     {
         private const double Padding = 6;
+
+        // Brushes, typeface and number texts are kept while the theme and the font stay the same.
+        private readonly Dictionary<long, FormattedText> _texts = [];
+        private IBrush? _background;
+        private IBrush? _foreground;
+        private Typeface _typeface;
+        private (bool Dark, FontFamily? Family, double Size) _cacheKey;
 
         protected override Size MeasureOverride(Size availableSize)
         {
@@ -216,18 +231,24 @@ public sealed class SqlLogView : Decorator, IEditTarget
         public override void Render(DrawingContext context)
         {
             var view = TextView;
-            var dark = owner.ActualThemeVariant == ThemeVariant.Dark;
-            var theme = dark ? ThemeTokens.Dark : ThemeTokens.Light;
-            context.FillRectangle(new SolidColorBrush(theme.Color("log.gutter")), new Rect(Bounds.Size));
+            UpdateCache();
+            context.FillRectangle(_background!, new Rect(Bounds.Size));
             if (view is null || !view.VisualLinesValid)
             {
                 return;
             }
-            var brush = new SolidColorBrush(theme.Color("log.gutter.text"));
+            if (_texts.Count > 1024)
+            {
+                _texts.Clear();
+            }
             foreach (var line in view.VisualLines)
             {
                 var number = owner._firstNumber + line.FirstDocumentLine.LineNumber - 1;
-                var text = Layout(number.ToString(CultureInfo.InvariantCulture), brush);
+                if (!_texts.TryGetValue(number, out var text))
+                {
+                    text = Layout(number.ToString(CultureInfo.InvariantCulture), _foreground);
+                    _texts[number] = text;
+                }
                 var y = line.GetTextLineVisualYPosition(line.TextLines[0], VisualYPosition.TextTop) - view.VerticalOffset;
                 context.DrawText(text, new Point(Bounds.Width - Padding - text.Width, y));
             }
@@ -248,8 +269,25 @@ public sealed class SqlLogView : Decorator, IEditTarget
 
         private void OnVisualLinesChanged(object? sender, EventArgs e) => InvalidateVisual();
 
-        private FormattedText Layout(string text, IBrush? brush = null) =>
-            new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
-                new Typeface(owner.Editor.FontFamily), owner.Editor.FontSize, brush ?? Brushes.Gray);
+        private void UpdateCache()
+        {
+            var key = (owner.ActualThemeVariant == ThemeVariant.Dark, owner.Editor.FontFamily, owner.Editor.FontSize);
+            if (key == _cacheKey && _background is not null)
+            {
+                return;
+            }
+            _cacheKey = key;
+            var theme = key.Item1 ? ThemeTokens.Dark : ThemeTokens.Light;
+            _background = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(theme.Color("log.gutter"));
+            _foreground = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(theme.Color("log.gutter.text"));
+            _typeface = new Typeface(owner.Editor.FontFamily);
+            _texts.Clear();
+        }
+
+        private FormattedText Layout(string text, IBrush? brush = null)
+        {
+            UpdateCache();
+            return new(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _typeface, owner.Editor.FontSize, brush ?? Brushes.Gray);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using Eunomia.App.Export;
 
 namespace Eunomia.App.Data;
 
@@ -80,12 +81,7 @@ public static class BlobContent
     public static string SuggestedFileName(string column, bool binary, ReadOnlySpan<byte> data)
     {
         ArgumentNullException.ThrowIfNull(column);
-        var invalid = Path.GetInvalidFileNameChars().Concat(['/', '\\', ':', '*', '?', '"', '<', '>', '|']).ToHashSet();
-        var name = new string([.. column.Select(c => invalid.Contains(c) || char.IsControl(c) ? '_' : c)]).Trim().TrimEnd('.');
-        if (name.Length == 0)
-        {
-            name = "blob";
-        }
+        var name = FileNames.Safe(column.Trim(), empty: "blob");
         var extension = !binary ? ".txt" : ImageFormatOf(data) is { } format ? Extension(format) : ".bin";
         return name + extension;
     }

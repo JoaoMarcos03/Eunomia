@@ -44,6 +44,24 @@ public sealed class MarkupColorizer : DocumentColorizingTransformer
     /// <summary>Invalidates the state from the (1-based) line that changed.</summary>
     public void InvalidateFrom(int lineNumber) => _validLines = Math.Min(_validLines, Math.Max(0, lineNumber - 1));
 
+    /// <summary>
+    /// A change on the (1-based) line was applied: invalidates the state from that line and returns whether the following
+    /// lines may change colour (the state at the end of the line changed, or it is not known). <paramref name="sameLines"/>:
+    /// the change added or removed no line break, so the cached state of the line is still the one from before the change.
+    /// </summary>
+    public bool InvalidateChangedLine(TextDocument document, int lineNumber, bool sameLines)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var known = sameLines && lineNumber >= 1 && lineNumber <= _validLines;
+        var before = known ? _endStates[lineNumber - 1] : default;
+        InvalidateFrom(lineNumber);
+        if (!known)
+        {
+            return true;
+        }
+        return lineNumber < document.LineCount && StateBefore(document, lineNumber + 1) != before;
+    }
+
     protected override void ColorizeLine(DocumentLine line)
     {
         if (line.Length == 0 || line.Length > TextValueEditor.MaxHighlightedLineLength)

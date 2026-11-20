@@ -345,6 +345,12 @@ public sealed partial class MainWindow
                 await MessageDialog.ShowAsync(this, "Interrupted import", $"Session \"{entry.Session}\" is not available.", MessageDialogButtons.Ok);
                 continue;
             }
+            if (open.Definition.ReadOnly)
+            {
+                // The import's statements change data: refused like a new Run SQL file, and the journal stays for later.
+                ShowEditError(ReadOnlyMessage(open));
+                continue;
+            }
             RunningFiles = RunSqlFilesAsync(open, [], entry.Options.GetValueOrDefault("encoding") ?? SqlFile.AutoDetect, entry);
             await RunningFiles;
         }

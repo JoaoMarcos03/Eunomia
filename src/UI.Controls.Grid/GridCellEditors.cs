@@ -147,13 +147,21 @@ public sealed class SetCellEditor(IReadOnlyList<string> items) : GridCellEditor
             // The value stays in Tag: Content is only the drawn text (a string lost its first "_" to AccessText).
             panel.Children.Add(new CheckBox { Content = LiteralText.Of(item), Tag = item, IsChecked = chosen.Contains(item), FontFamily = font, FontSize = fontSize, MinHeight = 0, Padding = new Thickness(2, 0) });
         }
-        return new Border
+        var border = new Border
         {
             Child = new ScrollViewer { Content = panel },
             BorderThickness = new Thickness(1),
-            BorderBrush = Brushes.Gray,
-            Background = Brushes.White,
         };
+        // Colours from the theme tokens, like the grid it sits on (fixed white was unreadable in dark).
+        void ApplyTheme()
+        {
+            var palette = border.ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark ? GridPalette.Dark : GridPalette.Light;
+            border.Background = palette.Background;
+            border.BorderBrush = palette.Muted;
+        }
+        ApplyTheme();
+        border.ActualThemeVariantChanged += (_, _) => ApplyTheme();
+        return border;
     }
 
     public override CellValue? Read(Control control, string? original)
