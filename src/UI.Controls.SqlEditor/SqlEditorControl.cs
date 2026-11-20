@@ -564,14 +564,27 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         }
     }
 
-    private static readonly string[] ObjectNameAfter = ["FROM", "JOIN", "INTO", "UPDATE", "TABLE", "EXISTS"];
+    private static readonly string[] ObjectNameAfter =
+        ["FROM", "JOIN", "INTO", "UPDATE", "TABLE", "EXISTS", "REFERENCES", "TRUNCATE", "TABLES", "TO", "ON", "USE"];
 
-    // Keywords that can follow those words and are still keywords (CREATE TABLE IF NOT EXISTS, INTO OUTFILE, FROM DUAL…).
-    private static readonly string[] KeywordsAfterObjectWord = ["IF", "IGNORE", "LOW_PRIORITY", "OUTFILE", "DUMPFILE", "LATERAL", "DUAL"];
+    // Keywords that can follow those words and are still keywords (CREATE TABLE IF NOT EXISTS, INTO OUTFILE, FROM DUAL,
+    // TRUNCATE TABLE, ON DUPLICATE KEY UPDATE, ON DELETE CASCADE, SHOW TABLES FROM, ROLLBACK TO SAVEPOINT, USE INDEX…).
+    private static readonly string[] KeywordsAfterObjectWord =
+    [
+        "IF", "IGNORE", "LOW_PRIORITY", "OUTFILE", "DUMPFILE", "LATERAL", "DUAL", "TABLE", "DUPLICATE", "DELETE", "UPDATE",
+        "SCHEDULE", "COMPLETION", "FUNCTION", "PROCEDURE", "FROM", "IN", "LIKE", "WHERE", "SAVEPOINT", "NOT", "INDEX", "KEY", "WITH",
+    ];
+
+    // Words that start a table list: after a comma at the same level, the next word is a table too (FROM a, b).
+    private static readonly string[] TableListAfter = ["FROM", "UPDATE", "TABLE", "TABLES", "DELETE"];
+
+    // Words that end a table list (or start another clause) when looking back from a comma.
+    private static readonly string[] ClauseWords =
+        ["SELECT", "WHERE", "SET", "ON", "USING", "GROUP", "ORDER", "BY", "HAVING", "LIMIT", "VALUES", "VALUE", "INTO", "UNION", "WINDOW", "RETURNING"];
 
     /// <summary>
     /// The word between <paramref name="start"/> and <paramref name="end"/> names a table or a column (<c>from event</c>,
-    /// <c>t.status</c>, <c>event.id</c>): it keeps its case.
+    /// <c>t.status</c>, <c>event.id</c>, <c>from a, status</c>, <c>references event(id)</c>): it keeps its case.
     /// </summary>
     private static bool IsObjectName(TextDocument document, int start, int end)
     {
@@ -583,34 +596,117 @@ public sealed partial class SqlEditorControl : Decorator, IEditTarget
         {
             return false;
         }
-        var i = start;
-        while (i > 0 && char.IsWhiteSpace(document.GetCharAt(i - 1)))
-        {
-            i--;
-        }
+        var i = SkipSpacesBack(document, start);
         if (i > 0 && document.GetCharAt(i - 1) == '.')
         {
             return true;
         }
-        var wordEnd = i;
-        while (i > 0 && (char.IsLetterOrDigit(document.GetCharAt(i - 1)) || document.GetCharAt(i - 1) is '_' or '$'))
+        if (i > 0 && document.GetCharAt(i - 1) == ',')
+        {
+            return InTableList(document, i - 1);
+        }
+        var (_, previous) = WordBefore(document, i);
+        return ObjectNameAfter.Any(k => string.Equals(k, previous, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// The comma at <paramref name="comma"/> separates tables: looking back at the same parenthesis level, a word that
+    /// starts a table list (FROM, UPDATE, DROP TABLE, LOCK TABLES) comes before any word of another clause.
+    /// </summary>
+    private static bool InTableList(TextDocument document, int comma)
+    {
+        var depth = 0;
+        var i = comma;
+        var limit = Math.Max(0, comma - 4096);
+        while (i > limit)
+        {
+            var c = document.GetCharAt(i - 1);
+            if (c == ';')
+            {
+                return false;
+            }
+            if (c == ')')
+            {
+                depth++;
+                i--;
+            }
+            else if (c == '(')
+            {
+                if (--depth < 0)
+                {
+                    return false; // Inside parentheses: a column list or arguments, not tables.
+                }
+                i--;
+            }
+            else if (IsWordChar(c))
+            {
+                var (wordStart, word) = WordBefore(document, i);
+                i = wordStart;
+                if (depth > 0)
+                {
+                    continue;
+                }
+                if (TableListAfter.Any(k => string.Equals(k, word, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return true;
+                }
+                if (ClauseWords.Any(k => string.Equals(k, word, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                i--;
+            }
+        }
+        return false;
+    }
+
+    private static int SkipSpacesBack(TextDocument document, int i)
+    {
+        while (i > 0 && char.IsWhiteSpace(document.GetCharAt(i - 1)))
         {
             i--;
         }
-        var previous = document.GetText(i, wordEnd - i);
-        return ObjectNameAfter.Any(k => string.Equals(k, previous, StringComparison.OrdinalIgnoreCase));
+        return i;
     }
+
+    private static (int Start, string Word) WordBefore(TextDocument document, int end)
+    {
+        var i = end;
+        while (i > 0 && IsWordChar(document.GetCharAt(i - 1)))
+        {
+            i--;
+        }
+        return (i, document.GetText(i, end - i));
+    }
+
+    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '_' or '$';
 
     private void OnDocumentChanged(object? sender, DocumentChangeEventArgs e)
     {
         // The error line stays marked until the next edit (section 4.7).
         ErrorLine = null;
-        var line = Editor.Document.GetLineByOffset(Math.Min(e.Offset, Editor.Document.TextLength)).LineNumber;
-        _colorizer.InvalidateFrom(line);
-        // An open string or comment changes the following lines: redraws the visible area.
-        Editor.TextArea.TextView.Redraw();
+        var document = Editor.Document;
+        var line = document.GetLineByOffset(Math.Min(e.Offset, document.TextLength));
+        // An open or closed string or comment changes the following lines: then it redraws the visible area, otherwise
+        // only the changed line.
+        if (_colorizer.InvalidateChangedLine(document, line.LineNumber, !AddsOrRemovesLines(e)))
+        {
+            Editor.TextArea.TextView.Redraw();
+        }
+        else
+        {
+            Editor.TextArea.TextView.Redraw(line);
+        }
         ScheduleFoldings();
     }
+
+    internal static bool AddsOrRemovesLines(DocumentChangeEventArgs e) =>
+        HasLineBreak(e.RemovedText) || HasLineBreak(e.InsertedText);
+
+    private static bool HasLineBreak(ITextSource text) => text.TextLength > 0 && text.IndexOfAny(['\r', '\n'], 0, text.TextLength) >= 0;
 
     private void ApplyTheme()
     {

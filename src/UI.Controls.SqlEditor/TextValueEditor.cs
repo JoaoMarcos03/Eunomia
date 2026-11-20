@@ -39,9 +39,22 @@ public sealed class TextValueEditor : Decorator
         Editor.Options.EnableRectangularSelection = false;
         Editor.Document.Changed += (_, e) =>
         {
-            var line = Editor.Document.GetLineByOffset(Math.Min(e.Offset, Editor.Document.TextLength)).LineNumber;
+            var document = Editor.Document;
+            var line = document.GetLineByOffset(Math.Min(e.Offset, document.TextLength)).LineNumber;
+            var sameLines = !SqlEditorControl.AddsOrRemovesLines(e);
+            // Typing "/*" or "<!--" changes the colour of the following lines too: then the visible area is redrawn.
+            var following = _active switch
+            {
+                MarkupColorizer => _markup.InvalidateChangedLine(document, line, sameLines),
+                SqlColorizer => _sql.InvalidateChangedLine(document, line, sameLines),
+                _ => false,
+            };
             _markup.InvalidateFrom(line);
             _sql.InvalidateFrom(line);
+            if (following)
+            {
+                Editor.TextArea.TextView.Redraw();
+            }
         };
         Editor.ActualThemeVariantChanged += (_, _) => ApplyTheme();
         Editor.AttachedToVisualTree += (_, _) => ApplyTheme();

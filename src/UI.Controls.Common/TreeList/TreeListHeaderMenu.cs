@@ -28,9 +28,18 @@ public static class TreeListHeaderMenu
         var copy = new MenuItem { Header = "Copy column names" };
         copy.Click += async (_, _) =>
         {
-            if (TopLevel.GetTopLevel(list)?.Clipboard is { } clipboard)
+            if (TopLevel.GetTopLevel(list)?.Clipboard is not { } clipboard)
+            {
+                return;
+            }
+            try
             {
                 await clipboard.SetTextAsync(string.Join("\t", list.Columns.Where(c => c.Visible).Select(c => c.Header)));
+            }
+            catch (Exception)
+            {
+                // An async void handler: a busy or failing clipboard (another application holding it) must not end the
+                // application; the copy just does not happen.
             }
         };
         var items = new List<object> { toggleAll, copy, new Separator() };

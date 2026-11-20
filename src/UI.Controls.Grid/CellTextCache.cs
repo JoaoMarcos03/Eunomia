@@ -13,8 +13,8 @@ namespace Eunomia.UI.Controls.Grid;
 /// </summary>
 internal sealed class CellTextCache
 {
-    private readonly Dictionary<long, Entry> _entries = [];
-    private readonly List<long> _evict = [];
+    private readonly Dictionary<(long Row, int Column), Entry> _entries = [];
+    private readonly List<(long Row, int Column)> _evict = [];
     private int _frame;
 
     public CellTextCache(int capacity) => Capacity = capacity;
@@ -62,10 +62,12 @@ internal sealed class CellTextCache
 
     private Entry Get(long row, int column, ReadOnlySpan<char> span, GlyphRunFactory glyphs, Typeface typeface, double fontSize, IBrush brush, bool alignRight, double maxWidth)
     {
-        var key = (row << 12) | (uint)column;
+        var key = (row, column);
         if (_entries.TryGetValue(key, out var entry)
             && entry.Text.AsSpan().SequenceEqual(span)
             && entry.MaxWidth == maxWidth
+            && entry.AlignRight == alignRight
+            && entry.Typeface == typeface
             && (entry.Run is not null || ReferenceEquals(entry.Brush, brush)))
         {
             entry.Frame = _frame;
@@ -77,14 +79,14 @@ internal sealed class CellTextCache
         var text = span.ToString();
         if (glyphs.TryCreate(text, maxWidth, alignRight, out var run, out var offsetX))
         {
-            entry = new Entry(text, null, maxWidth) { Run = run, OffsetX = offsetX };
+            entry = new Entry(text, null, maxWidth, alignRight, typeface) { Run = run, OffsetX = offsetX };
         }
         else
         {
             // Text far larger than can fit is cut before shaping (the ellipsis still shows).
             var maxChars = (int)(maxWidth / 2.5) + 4;
             var shaped = text.Length > maxChars ? text[..SafeCut(text, maxChars)] + "…" : text;
-            entry = new Entry(text, brush, maxWidth)
+            entry = new Entry(text, brush, maxWidth, alignRight, typeface)
             {
                 Layout = new TextLayout(
                     shaped,
@@ -141,7 +143,7 @@ internal sealed class CellTextCache
     private static int SafeCut(string text, int length) =>
         char.IsHighSurrogate(text[length - 1]) ? length - 1 : length;
 
-    private sealed class Entry(string text, IBrush? brush, double maxWidth)
+    private sealed class Entry(string text, IBrush? brush, double maxWidth, bool alignRight, Typeface typeface)
     {
         public string Text { get; } = text;
 
@@ -149,6 +151,10 @@ internal sealed class CellTextCache
         public IBrush? Brush { get; } = brush;
 
         public double MaxWidth { get; } = maxWidth;
+
+        public bool AlignRight { get; } = alignRight;
+
+        public Typeface Typeface { get; } = typeface;
 
         public GlyphRun? Run { get; init; }
 
