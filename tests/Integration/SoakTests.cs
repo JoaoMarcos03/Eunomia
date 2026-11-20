@@ -21,6 +21,7 @@ namespace Eunomia.Integration.Tests;
 /// short requests on the metadata connections measuring the latency (the "user browsing"). Results in
 /// <c>%TEMP%\eunomia-it\soak.txt</c>. The 24 h run and the input latency in the real UI are left for the reference machine.
 /// </summary>
+[Collection(ServerGlobalsCollection.Name)]
 public sealed class SoakTests : IAsyncLifetime
 {
     private readonly List<SessionHost> _hosts = [];

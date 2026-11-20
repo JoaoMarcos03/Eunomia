@@ -120,4 +120,23 @@ public sealed class StreamingSqlSplitterTests
         splitter.Complete(output);
         return output;
     }
+
+    [Fact]
+    public void InvalidStartDelimiterAndSecondCompleteAreHandled()
+    {
+        Assert.Throws<ArgumentException>(() => new StreamingSqlSplitter(new SplitterPosition(0, 1, " ")));
+        var splitter = new StreamingSqlSplitter();
+        var output = new List<StreamedStatement>();
+        splitter.Append("SELECT 1", output);
+        splitter.Complete(output);
+        splitter.Complete(output);
+        Assert.Single(output);
+    }
+
+    [Fact]
+    public void AWordThatStartsWithDelimiterIsNotTheCommand()
+    {
+        var statements = SplitInChunks("DELIMITERX = 1;\nSELECT 2;", 4, new StreamingSqlSplitter());
+        Assert.Equal(["DELIMITERX = 1", "SELECT 2"], statements.Select(s => s.Text));
+    }
 }
