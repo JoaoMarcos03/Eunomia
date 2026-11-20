@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Eunomia.App.Export;
 using Eunomia.App.Query;
 using Eunomia.Drivers.Abstractions;
@@ -76,7 +77,7 @@ public sealed class SqlFileEncodingException(string path, long byteOffset, Excep
 /// counted and the job continues. The journal keeps the position after the last statement run (bytes, characters, line
 /// and delimiter), and the file's size and fingerprint: a stopped job (cancel, error, crash) resumes from that point.
 /// </summary>
-public sealed class SqlFileJob
+public sealed partial class SqlFileJob
 {
     private const int ChunkBytes = 1024 * 1024;
     private const int MaxErrorsKept = 1000;
@@ -132,6 +133,12 @@ public sealed class SqlFileJob
 
     /// <summary>Size of the blocks read from the file (tests use small blocks to land on the boundaries).</summary>
     internal int ChunkSize { get; init; } = ChunkBytes;
+
+    /// <summary>Packet size instead of the server's <c>max_allowed_packet</c> (tests choose where the packets end).</summary>
+    internal long? MaxPacketBytes { get; init; }
+
+    /// <summary>Limit of the unfinished statement instead of the one derived from <c>max_allowed_packet</c> (tests).</summary>
+    internal long? MaxPendingBytes { get; init; }
 
     public static SqlFileRequest RequestOf(TransferJournalEntry entry)
     {
@@ -218,12 +225,15 @@ public sealed class SqlFileJob
         {
             await TryExecuteAsync(handle, setup, cancellationToken).ConfigureAwait(false);
         }
+        // The job connection may come from the pool with the markers of an earlier job (see PacketSql).
+        await handle.ExecuteNonQueryAsync($"SET {MarkerVariable} = NULL, {RowsVariable} = NULL", cancellationToken).ConfigureAwait(false);
         if (_request.Database is { Length: > 0 } database)
         {
             await handle.ExecuteNonQueryAsync(dialect.ChangeDatabase(database), cancellationToken).ConfigureAwait(false);
             _database = database;
         }
-        var maxPacket = Convert.ToInt64(await handle.ExecuteScalarAsync("SELECT @@max_allowed_packet", cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture);
+        var maxPacket = MaxPacketBytes
+            ?? Convert.ToInt64(await handle.ExecuteScalarAsync("SELECT @@max_allowed_packet", cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture);
 
         // A file that does not read (deleted, on a lost network share) fails the run, not the connection: see LocalFileException.
         await using var stream = LocalFileStream.Open(_request.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 1, FileOptions.SequentialScan);
@@ -311,7 +321,7 @@ public sealed class SqlFileJob
         var packet = new List<(StreamedStatement Statement, long NextByte)>();
         long packetBytes = 0;
         // Limit of the unfinished statement: larger than the server accepts is useless (and memory stays constant).
-        var maxPending = Math.Max(16L * 1024 * 1024, maxPacket + (1024 * 1024));
+        var maxPending = MaxPendingBytes ?? Math.Max(16L * 1024 * 1024, maxPacket + (1024 * 1024));
         var eof = false;
         while (!eof)
         {
@@ -351,7 +361,8 @@ public sealed class SqlFileJob
                     continue;
                 }
                 var size = encoding.GetByteCount(statement.Text) + 2 + MarkerBytes;
-                if (packet.Count > 0 && packetBytes + size > maxPacket)
+                // A statement that reads the previous one's diagnostics starts a packet: no marker goes before it (see PacketSql).
+                if (packet.Count > 0 && (packetBytes + size > maxPacket || ReadsDiagnostics().IsMatch(statement.Text)))
                 {
                     if (await ExecuteAsync(handle, packet, cancellationToken).ConfigureAwait(false))
                     {
@@ -392,21 +403,37 @@ public sealed class SqlFileJob
             return Advance(statements, recordSession: false);
         }
         var packet = run.Count > 1;
-        var sql = packet ? PacketSql(statements) : run[0].Statement.Text;
+        var first = _statements;
+        var sql = packet ? PacketSql(statements, first) : run[0].Statement.Text;
         try
         {
             var affected = await handle.ExecuteNonQueryAsync(sql, cancellationToken).ConfigureAwait(false);
             _affected += Math.Max(0, affected);
         }
+        catch (Exception e) when (packet && (cancellationToken.IsCancellationRequested || _host.StatementError(e) is null))
+        {
+            // Cancelled or connection lost in the middle of a packet: the statements the server finished stay done. After a
+            // cancel the connection is alive and the marker says how many, so the journal moves past them. After a dropped
+            // connection the marker is gone with the session: the journal stays after the last whole packet, and resuming
+            // runs again the statements of this packet that finished before the drop.
+            var (done, rows) = await PacketProgressAsync(handle, first, statements.Count).ConfigureAwait(false);
+            if (done > 0)
+            {
+                _affected += rows;
+                Advance([.. statements.Take(done)], recordSession: true);
+            }
+            throw;
+        }
         catch (Exception e) when (!cancellationToken.IsCancellationRequested && _host.StatementError(e) is { } error)
         {
             // In a packet the server ran the statements before the one that failed and stopped there: the marker says how
-            // many, so the error points at that statement and the journal moves past the earlier ones (none runs twice).
+            // many (and their affected rows), so the error points at that statement and the journal moves past the earlier
+            // ones (none runs twice).
             var failed = 0;
             if (packet)
             {
-                var done = await handle.ExecuteScalarAsync("SELECT " + MarkerVariable, cancellationToken).ConfigureAwait(false);
-                failed = done is null or DBNull ? 0 : Convert.ToInt32(done, CultureInfo.InvariantCulture);
+                (failed, var rows) = await PacketProgressAsync(handle, first, statements.Count).ConfigureAwait(false);
+                _affected += rows;
             }
             while (failed < statements.Count - 1 && Skipped(statements[failed].Statement.Text))
             {
@@ -420,8 +447,8 @@ public sealed class SqlFileJob
             var statement = statements[failed].Statement;
             if (_errors.Count < MaxErrorsKept)
             {
-                var text = statement.Text;
-                _errors.Add(new SqlFileError(_statements + 1, statement.Line + Math.Max(0, (error.Line ?? 1) - 1), error.Message, text.Length > 2000 ? text[..2000] : text));
+                var text = SecretMasking.MaskSql(statement.Text);
+                _errors.Add(new SqlFileError(_statements + 1, statement.Line + ErrorLine(error) - 1, error.Message, text.Length > 2000 ? text[..2000] : text));
             }
             if (_request.StopOnErrors)
             {
@@ -435,24 +462,92 @@ public sealed class SqlFileJob
         return Advance(statements, recordSession: true);
     }
 
-    // After each statement of a packet, the packet sets this session variable to the number of statements done.
+    // Between the statements of a packet, the packet sets these session variables: the job's number of statements done
+    // (unique, so a value left by an earlier packet is never taken for this one's) and the rows the packet's statements
+    // affected so far.
     private const string MarkerVariable = "@eunomia_sql_file_done";
-    private const int MarkerBytes = 40;
+    private const string RowsVariable = "@eunomia_sql_file_rows";
+    private const int MarkerBytes = 128;
+    private static readonly TimeSpan MarkerTimeout = TimeSpan.FromSeconds(10);
 
-    /// <summary>The packet's statements (those not skipped), each followed by the marker of how many statements are done.</summary>
-    private string PacketSql(IReadOnlyList<(StreamedStatement Statement, long NextByte)> statements)
+    /// <summary>
+    /// The packet's statements (those not skipped), with the marker of how many statements are done between them. The
+    /// marker is a statement, so it resets <c>ROW_COUNT()</c>, the warnings and the like for the statement after it:
+    /// nothing goes before the packet's first statement or after its last, and a statement that reads them
+    /// (<see cref="ReadsDiagnostics"/>) always starts a packet, so it sees the statement before it.
+    /// </summary>
+    private string PacketSql(IReadOnlyList<(StreamedStatement Statement, long NextByte)> statements, long first)
     {
-        var sb = new StringBuilder("SET ").Append(MarkerVariable).Append(" = 0");
+        var sb = new StringBuilder();
+        var marked = false;
         for (var i = 0; i < statements.Count; i++)
         {
-            if (!Skipped(statements[i].Statement.Text))
+            if (Skipped(statements[i].Statement.Text))
             {
-                sb.Append(';').Append(statements[i].Statement.Text);
-                sb.Append(CultureInfo.InvariantCulture, $";\nSET {MarkerVariable} = {i + 1}");
+                continue;
             }
+            if (sb.Length > 0)
+            {
+                var rows = marked ? RowsVariable + " + " : string.Empty;
+                sb.Append(CultureInfo.InvariantCulture, $";\nSET {MarkerVariable} = {first + i}, {RowsVariable} = {rows}GREATEST(ROW_COUNT(), 0);\n");
+                marked = true;
+            }
+            sb.Append(statements[i].Statement.Text);
         }
         return sb.ToString();
     }
+
+    /// <summary>
+    /// How many of the packet's statements finished (at most all but the last; 0 if the marker is not this packet's or
+    /// cannot be read, the connection dropped say) and the rows they affected.
+    /// </summary>
+    private static async Task<(int Done, long Rows)> PacketProgressAsync(IDbConnectionHandle handle, long first, int count)
+    {
+        if (!handle.IsOpen)
+        {
+            return (0, 0);
+        }
+        try
+        {
+            using var timeout = new CancellationTokenSource(MarkerTimeout);
+            var marker = await handle.ExecuteScalarAsync($"SELECT {MarkerVariable}", timeout.Token).ConfigureAwait(false);
+            var done = marker is null or DBNull ? 0 : Convert.ToInt64(marker, CultureInfo.InvariantCulture) - first;
+            if (done <= 0)
+            {
+                return (0, 0);
+            }
+            var rows = await handle.ExecuteScalarAsync($"SELECT {RowsVariable}", timeout.Token).ConfigureAwait(false);
+            return ((int)Math.Min(done, count - 1), rows is null or DBNull ? 0 : Convert.ToInt64(rows, CultureInfo.InvariantCulture));
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // The real error is the statement's (or the dropped connection's): this one must not hide it.
+            return (0, 0);
+        }
+    }
+
+    /// <summary>
+    /// Line of the error within the failed statement (1 if the server does not say): syntax errors end in
+    /// <c>at line N</c>, which the server counts from the start of the failed statement, in a packet too.
+    /// </summary>
+    internal static int ErrorLine(DbError error)
+    {
+        if (error.Line is > 0 and var line)
+        {
+            return line;
+        }
+        var match = ErrorLinePattern().Match(error.Message);
+        return match.Success && int.TryParse(match.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) && parsed > 0 ? parsed : 1;
+    }
+
+    [GeneratedRegex(@"' at line (\d{1,9})\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex ErrorLinePattern();
+
+    /// <summary>The statement reads the previous statement's diagnostics (<c>ROW_COUNT()</c>, warnings, errors).</summary>
+    [GeneratedRegex(
+        @"\bROW_COUNT\s*\(|\bFOUND_ROWS\s*\(|@@(?:SESSION\.)?(?:WARNING|ERROR)_COUNT\b|\bSHOW\s+(?:COUNT\s*\(\s*\*\s*\)\s+)?(?:WARNINGS|ERRORS)\b|\bDIAGNOSTICS\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ReadsDiagnostics();
 
     private static Encoding Strict(Encoding encoding) => encoding is UTF8Encoding ? new UTF8Encoding(false, throwOnInvalidBytes: true) : encoding;
 
