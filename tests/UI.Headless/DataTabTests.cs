@@ -47,12 +47,12 @@ public sealed class DataTabTests
             window.DataView.FilterEditor.Text = "WHERE id > 2";
             Assert.True(await context.Commands.ExecuteAsync("filter.apply"));
             await WaitAsync(() => window.DataGrid.RowCount == 2 && window.DataView.Label.Text!.Contains("rows match to filter", StringComparison.Ordinal) ? "ok" : null);
-            Assert.Contains("WHERE id > 2", window.DataBrowser!.Select.Sql, StringComparison.Ordinal);
+            Assert.Contains("WHERE (id > 2\n)", window.DataBrowser!.Select.Sql, StringComparison.Ordinal);
             Assert.True(window.DataView.RecentFilters.IsVisible);
 
             // Multi-column filter: rewrites the filter with LIKE on every column.
             window.DataView.MultiColumnBox.Text = "ana";
-            await WaitAsync(() => window.DataView.FilterEditor.Text == "`id` LIKE '%ana%' OR `name` LIKE '%ana%'" ? "ok" : null);
+            await WaitAsync(() => window.DataView.FilterEditor.Text == "`id` LIKE '%ana%' ESCAPE '!' OR `name` LIKE '%ana%' ESCAPE '!'" ? "ok" : null);
             Assert.True(await context.Commands.ExecuteAsync("filter.apply"));
             await WaitAsync(() => window.DataGrid.RowCount == 2 && window.DataBrowser!.Options.Filter!.Contains("LIKE", StringComparison.Ordinal) ? "ok" : null);
             Assert.Equal(2, ((System.Collections.IList)window.DataView.RecentFilters.ItemsSource!).Count);

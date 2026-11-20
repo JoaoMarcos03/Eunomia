@@ -116,11 +116,12 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
     private async Task<long> RunServerAsync(CancellationToken cancellationToken)
     {
         var (file, encodingName) = await TextFileEncoding.OpenAsync(request.Path, request.Encoding, cancellationToken).ConfigureAwait(false);
+        var start = file.Position;
         _counter = new CountingStream(file, cancellationToken);
         var encoding = TextFileEncoding.For(encodingName);
-        Stream source = encoding is UTF8Encoding
-            ? _counter
-            : System.Text.Encoding.CreateTranscodingStream(_counter, encoding, new UTF8Encoding(false), leaveOpen: false);
+        var validator = encoding is UTF8Encoding ? new Utf8ValidatingStream(_counter, start) : null;
+        Stream source = validator
+            ?? System.Text.Encoding.CreateTranscodingStream(_counter, encoding, new UTF8Encoding(false), leaveOpen: false);
         await using (source.ConfigureAwait(false))
         {
             var handle = await host.OpenDedicatedAsync(o => o with { AllowLocalInfile = true }, cancellationToken).ConfigureAwait(false);
@@ -159,6 +160,11 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
                 try
                 {
                     loaded = await LoadAsync(handle, source, columns, expressions, csv, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception) when (validator?.Error is { } invalid)
+                {
+                    // The server may answer the cut file with an error of its own; the transaction undid the rows.
+                    throw invalid;
                 }
                 catch (Exception e) when (!cancellationToken.IsCancellationRequested && host.StatementError(e) is { Code: LocalInfileDisabled or NotAllowedCommand or InfileCapabilityDisabled } error)
                 {
@@ -224,7 +230,10 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
     private async Task<long> RunClientAsync(CancellationToken cancellationToken)
     {
         var (file, encodingName) = await TextFileEncoding.OpenAsync(request.Path, request.Encoding, cancellationToken).ConfigureAwait(false);
+        var start = file.Position;
         _counter = new CountingStream(file, cancellationToken);
+        var encoding = TextFileEncoding.For(encodingName);
+        Stream text = encoding is UTF8Encoding ? new Utf8ValidatingStream(_counter, start) : _counter;
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var channel = Channel.CreateBounded<Batch>(new BoundedChannelOptions(2) { SingleReader = true, SingleWriter = true });
 
@@ -234,7 +243,7 @@ public sealed class CsvImportJob(SessionHost host, CsvImportRequest request)
             {
                 try
                 {
-                    using var reader = new StreamReader(_counter, TextFileEncoding.For(encodingName), detectEncodingFromByteOrderMarks: false, 1024 * 1024);
+                    using var reader = new StreamReader(text, encoding, detectEncodingFromByteOrderMarks: false, 1024 * 1024);
                     var csv = new CsvReader(reader, request.Csv);
                     var batcher = new CsvInsertBatcher(request.Database, request.Table, request.Columns, request.Duplicates, request.LowPriority,
                         request.LocalNumbers ? request.NumberFormat : null);

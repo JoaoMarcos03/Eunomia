@@ -22,8 +22,10 @@ public sealed class DataFiltersTests
     public void MultiColumnLikeOnEveryColumn()
     {
         Assert.Equal(
-            "`id` LIKE '%a''b%' OR `name` LIKE '%a''b%' OR CAST(`created` AS CHAR) LIKE '%a''b%'",
+            "`id` LIKE '%a''b%' ESCAPE '!' OR `name` LIKE '%a''b%' ESCAPE '!' OR\nCAST(`created` AS CHAR) LIKE '%a''b%' ESCAPE '!'",
             DataFilters.MultiColumn(Dialect, [Id, Name, Created], "a'b"));
+        // %, _ and ! match themselves.
+        Assert.Equal("`name` LIKE '%50!%!_a!!%' ESCAPE '!'", DataFilters.MultiColumn(Dialect, [Name], "50%_a!"));
         Assert.Equal(string.Empty, DataFilters.MultiColumn(Dialect, [Id], string.Empty));
         var many = DataFilters.MultiColumn(Dialect, Enumerable.Range(0, 12).Select(i => Col("coluna_" + i, "text", LogicalTypeKind.Text)), "x");
         Assert.Contains(" OR\n", many, StringComparison.Ordinal);
@@ -88,6 +90,28 @@ public sealed class DataFiltersTests
         Assert.Equal("(`id` = 1 OR `id` = 2)\nAND `name` = 'a'", DataFilters.Combine("`id` = 1 OR `id` = 2", "`name` = 'a'"));
         Assert.Equal("`id` = 1 AND x", DataFilters.Combine("`id` = 1 AND x", "`id` = 1"));
     }
+
+    [Theory]
+    // Whole terms: `id` = 1 is not part of `id` = 10, nor the other way round.
+    [InlineData("`id` = 10", "`id` = 1", "`id` = 10\nAND `id` = 1")]
+    [InlineData("`id` = 1", "`id` = 10", "`id` = 1\nAND `id` = 10")]
+    [InlineData("`name` = 'a AND `id` = 1'", "`id` = 1", "`name` = 'a AND `id` = 1'\nAND `id` = 1")]
+    // The same term already there (also in parentheses, or behind a BETWEEN … AND …).
+    [InlineData("`id` = 1", "`id` = 1", "`id` = 1")]
+    [InlineData("(`id` = 1)\nAND `name` = 'a'", "`id` = 1", "(`id` = 1)\nAND `name` = 'a'")]
+    [InlineData("`n` BETWEEN 1 AND 5 AND `id` = 1", "`id` = 1", "`n` BETWEEN 1 AND 5 AND `id` = 1")]
+    [InlineData("`n` BETWEEN 1 AND 5", "5", "`n` BETWEEN 1 AND 5\nAND 5")]
+    // The added filter has every term of the current one.
+    [InlineData("`id` = 1", "`id` = 1 AND `name` = 'a'", "`id` = 1 AND `name` = 'a'")]
+    // OR without spaces around it is still an OR; an OR inside parentheses or a string is not.
+    [InlineData("`id` = 1 OR(`id` = 2)", "`name` = 'a'", "(`id` = 1 OR(`id` = 2))\nAND `name` = 'a'")]
+    [InlineData("`id` = 1 ||`id` = 2", "`name` = 'a'", "(`id` = 1 ||`id` = 2)\nAND `name` = 'a'")]
+    [InlineData("(`id` = 1 OR `id` = 2)", "`name` = 'a OR b'", "(`id` = 1 OR `id` = 2)\nAND `name` = 'a OR b'")]
+    [InlineData("`color` = 'red'", "`id` = 1", "`color` = 'red'\nAND `id` = 1")]
+    // A comment at the end does not swallow the closing parenthesis.
+    [InlineData("`id` = 1 OR `id` = 2 -- c", "`name` = 'a'", "(`id` = 1 OR `id` = 2 -- c\n)\nAND `name` = 'a'")]
+    public void CombineComparesWholeTerms(string existing, string added, string expected) =>
+        Assert.Equal(expected, DataFilters.Combine(existing, added));
 
     [Fact]
     public void CaptionCutAt100()

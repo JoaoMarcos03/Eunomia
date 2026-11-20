@@ -45,7 +45,7 @@ public static partial class DataFilters
             return string.Empty;
         }
         var like = dialect.CaseInsensitiveLike == LikeOperator.ILike ? " ILIKE " : " LIKE ";
-        var literal = dialect.StringLiteral("%" + text + "%");
+        var literal = LikePattern(dialect, text, anyBefore: true, anyAfter: true);
         var result = new StringBuilder();
         var lineLength = 0;
         foreach (var column in columns)
@@ -228,28 +228,165 @@ public static partial class DataFilters
     }
 
     /// <summary>
-    /// Shift when choosing a Quick Filter: joins it to the current filter with AND, unless one already contains the other.
-    /// Each part goes in parentheses when it has an OR, so the AND does not change its meaning.
+    /// Shift when choosing a Quick Filter: joins it to the current filter with AND, unless one already has every AND term
+    /// of the other (whole terms are compared: <c>id = 1</c> is not in <c>id = 10</c>). Each part goes in parentheses
+    /// when it has a top-level OR, so the AND does not change its meaning.
     /// </summary>
     public static string Combine(string? existing, string added)
     {
         ArgumentNullException.ThrowIfNull(added);
         var current = DataTabQuery.NormalizeFilter(existing);
-        if (current is null || current.Contains(added, StringComparison.Ordinal))
+        if (current is null)
         {
-            return current ?? added;
+            return added;
         }
-        if (added.Contains(current, StringComparison.Ordinal))
+        var currentTerms = AndTerms(current);
+        var addedTerms = AndTerms(added);
+        if (addedTerms.All(currentTerms.Contains))
+        {
+            return current;
+        }
+        if (currentTerms.All(addedTerms.Contains))
         {
             return added;
         }
         return Wrap(current) + "\nAND " + Wrap(added);
     }
 
-    private static string Wrap(string condition) =>
-        condition.Contains(" OR ", StringComparison.OrdinalIgnoreCase) || condition.Contains("\nOR", StringComparison.OrdinalIgnoreCase) || condition.Contains("OR\n", StringComparison.OrdinalIgnoreCase)
-            ? "(" + condition + ")"
-            : condition;
+    private static string Wrap(string condition)
+    {
+        if (!Operators(condition).Any(o => o is "OR" or "XOR"))
+        {
+            return condition;
+        }
+        // A line comment at the end would swallow the ")".
+        return "(" + condition + (EndsInLineComment(condition) ? "\n)" : ")");
+    }
+
+    /// <summary>Top-level AND terms of <paramref name="condition"/>, trimmed and without enclosing parentheses (the AND of a BETWEEN stays).</summary>
+    private static HashSet<string> AndTerms(string condition)
+    {
+        var terms = new HashSet<string>(StringComparer.Ordinal);
+        var start = 0;
+        var between = false;
+        foreach (var (index, length, word) in OperatorPositions(condition))
+        {
+            if (word == "BETWEEN")
+            {
+                between = true;
+            }
+            else if (word == "AND" && between)
+            {
+                between = false;
+            }
+            else if (word == "AND")
+            {
+                terms.Add(Unwrap(condition[start..index]));
+                start = index + length;
+            }
+        }
+        terms.Add(Unwrap(condition[start..]));
+        return terms;
+    }
+
+    private static string Unwrap(string term)
+    {
+        term = term.Trim();
+        while (term.Length >= 2 && term[0] == '(' && term[^1] == ')'
+            && Code(term).First(c => c.Depth == 0 && term[c.Index] == ')').Index == term.Length - 1)
+        {
+            term = term[1..^1].Trim();
+        }
+        return term;
+    }
+
+    private static IEnumerable<string> Operators(string condition) => OperatorPositions(condition).Select(o => o.Word);
+
+    /// <summary>AND, OR, XOR, BETWEEN (and <c>&amp;&amp;</c>, <c>||</c>) outside strings, quoted names, comments and parentheses.</summary>
+    private static IEnumerable<(int Index, int Length, string Word)> OperatorPositions(string condition)
+    {
+        foreach (var (i, depth) in Code(condition))
+        {
+            var c = condition[i];
+            var previous = i > 0 ? condition[i - 1] : ' ';
+            if (depth != 0)
+            {
+                continue;
+            }
+            if (c is '&' or '|' && i + 1 < condition.Length && condition[i + 1] == c && previous != c)
+            {
+                yield return (i, 2, c == '&' ? "AND" : "OR");
+            }
+            else if (char.IsAsciiLetter(c) && !IsWordChar(previous))
+            {
+                var end = i;
+                while (end < condition.Length && IsWordChar(condition[end]))
+                {
+                    end++;
+                }
+                var word = condition[i..end].ToUpperInvariant();
+                if (word is "AND" or "OR" or "XOR" or "BETWEEN")
+                {
+                    yield return (i, end - i, word);
+                }
+            }
+        }
+    }
+
+    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c is '_' or '$';
+
+    private static bool EndsInLineComment(string condition)
+    {
+        var last = Code(condition).Select(c => c.Index).DefaultIfEmpty(-1).Last();
+        var rest = condition[(last + 1)..].TrimStart();
+        return rest.StartsWith('#') || rest.StartsWith("--", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Positions of the characters of <paramref name="sql"/> outside strings, quoted names and comments, with the
+    /// parenthesis depth (a parenthesis has the depth outside it).
+    /// </summary>
+    private static IEnumerable<(int Index, int Depth)> Code(string sql)
+    {
+        var depth = 0;
+        for (var i = 0; i < sql.Length; i++)
+        {
+            var c = sql[i];
+            var next = i + 1 < sql.Length ? sql[i + 1] : '\0';
+            if (c is '\'' or '"' or '`')
+            {
+                i++;
+                while (i < sql.Length && !(sql[i] == c && (i + 1 >= sql.Length || sql[i + 1] != c)))
+                {
+                    i += sql[i] == c || (sql[i] == '\\' && c != '`') ? 2 : 1;
+                }
+                continue;
+            }
+            if (c == '#' || (c == '-' && next == '-'))
+            {
+                while (i < sql.Length && sql[i] != '\n')
+                {
+                    i++;
+                }
+                continue;
+            }
+            if (c == '/' && next == '*')
+            {
+                var end = sql.IndexOf("*/", i + 2, StringComparison.Ordinal);
+                i = end < 0 ? sql.Length : end + 1;
+                continue;
+            }
+            if (c == ')')
+            {
+                depth--;
+            }
+            yield return (i, depth);
+            if (c == '(')
+            {
+                depth++;
+            }
+        }
+    }
 
     /// <summary>Caption of a menu item: the SQL, cut at 100 characters (<c>StrEllipsis(Hint, 100)</c>).</summary>
     public static string Caption(string sql)

@@ -14,6 +14,16 @@ public sealed class SecretMaskingFix2Tests
         Assert.True(SecretMasking.ContainsSecret(sql));
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM users WHERE password = 'x'")]
+    [InlineData("UPDATE users SET password = 'x' WHERE id = 1")]
+    [InlineData("SELECT password 'pw' FROM users")]
+    public void PasswordColumnsAreNotSecrets(string sql)
+    {
+        Assert.Equal(sql, SecretMasking.MaskSql(sql));
+        Assert.False(SecretMasking.ContainsSecret(sql));
+    }
+
     [Fact]
     public void MariaDbExecutableCommentCountsForUse()
     {

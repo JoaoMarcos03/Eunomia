@@ -88,4 +88,20 @@ public sealed class SqlExportOutputTests : IDisposable
 
         Assert.Throws<IOException>(() => SqlExportJob.VerifyOutput(zip, isZip: true, Sql.Length));
     }
+
+    /// <summary>
+    /// Directory export: names that differ only in case (a server with case-sensitive names) or that become the same file
+    /// name (Windows rules on every system) get <c>-2</c>, <c>-3</c>… instead of overwriting each other.
+    /// </summary>
+    [Fact]
+    public void DirectoryFileNamesDoNotCollide()
+    {
+        var root = Path.Combine("x", "out");
+        var paths = SqlExportJob.DirectoryPaths(root, [("db", "table-Users"), ("db", "table-users"), ("db", "table-a:b"), ("db", "table-a?b"), ("db", "table-users-2"), ("DB", "table-USERS"), ("other", "table-users")]);
+        string P(string database, string file) => Path.Combine(root, database, file);
+        Assert.Equal(
+            [P("db", "table-Users.sql"), P("db", "table-users-2.sql"), P("db", "table-a_b.sql"), P("db", "table-a_b-2.sql"),
+                P("db", "table-users-2-2.sql"), P("DB", "table-USERS-3.sql"), P("other", "table-users.sql")],
+            paths);
+    }
 }

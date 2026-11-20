@@ -163,4 +163,44 @@ public sealed class GridExporterTests
         var lines = Export(GridExportFormat.DelimitedText, new GridExportOptions { RemoveLinebreaks = true, ToClipboard = false }, Sample(["1", "a\r\nb\nc", null]));
         Assert.Contains("1;a b c;\\N", lines, StringComparison.Ordinal);
     }
+
+    /// <summary>Without the auto-increment column, UPDATE and DELETE still find the row by its key.</summary>
+    [Fact]
+    public void WhereKeepsTheKeyLeftOutOfTheExport()
+    {
+        var options = new GridExportOptions { IncludeAutoIncrement = false, ToClipboard = false };
+
+        Assert.Equal("UPDATE `t` SET `name`='a\"b', `note`=NULL WHERE `id`=1;\r\n", Export(GridExportFormat.SqlUpdates, options));
+        Assert.Equal("DELETE FROM `t` WHERE `id`=1;\r\nINSERT INTO `t` (`name`, `note`) VALUES ('a\"b', NULL);\r\n", Export(GridExportFormat.SqlDeletesInserts, options));
+    }
+
+    /// <summary>The WHERE takes the original value: with line breaks removed from the SET, it still matches the row.</summary>
+    [Fact]
+    public void WhereUsesTheOriginalValue()
+    {
+        var data = Sample(["1", "a\nb", null]) with { KeyColumns = [] };
+
+        var update = Export(GridExportFormat.SqlUpdates, new GridExportOptions { RemoveLinebreaks = true, ToClipboard = false }, data);
+
+        Assert.Equal("UPDATE `t` SET `id`=1, `name`='a b', `note`=NULL WHERE `id`=1 AND `name`='a\nb' AND `note` IS NULL;\r\n", update);
+    }
+
+    [Fact]
+    public void TextileAndJiraEscapeThePipe()
+    {
+        var data = Sample(["1", "x | y", null]);
+
+        Assert.Contains("| 1 | x &#124; y |  |", Export(GridExportFormat.Textile, data: data), StringComparison.Ordinal);
+        Assert.Contains("| 1 | x \\| y |  |", Export(GridExportFormat.JiraTextile, data: data), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SqlKeepsNulButTextFormatsUseASpace()
+    {
+        var data = Sample(["1", "a\0b", null]);
+        var sql = Export(GridExportFormat.SqlInserts, data: data);
+        Assert.DoesNotContain("'a b'", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain('\0', sql);
+        Assert.Contains("1;a b;\\N", Export(GridExportFormat.DelimitedText, data: data), StringComparison.Ordinal);
+    }
 }

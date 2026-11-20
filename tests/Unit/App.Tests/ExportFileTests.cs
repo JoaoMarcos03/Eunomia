@@ -26,6 +26,23 @@ public sealed class ExportFileTests
         Assert.Equal(6, ExportFile.Encodings.Count);
     }
 
+    /// <summary>A value that holds a placeholder (a database called <c>%d</c>) is not expanded a second time.</summary>
+    [Fact]
+    public void PlaceholdersAreExpandedOnce()
+    {
+        var now = new DateTime(2026, 10, 6, 9, 5, 7);
+        Assert.Equal("%d_%u.sql", ExportFile.ExpandPlaceholders("%db_%session.sql", "%u", "h", "root", "%d", now));
+        Assert.Equal("CON_.sql", ExportFile.ExpandPlaceholders("%db.sql", "s", "h", "u", "CON", now));
+    }
+
+    /// <summary>ASCII is 7 bits (code page 20127): a character outside it becomes <c>?</c>, never a Latin-1 byte.</summary>
+    [Fact]
+    public void AsciiIsSevenBits()
+    {
+        Assert.Equal(20127, ExportFile.EncodingOf("ASCII").CodePage);
+        Assert.Equal([0x61, 0x3F], ExportFile.Encode("aé", "ASCII"));
+    }
+
     [Fact]
     public void ExtensionFollowsTheFormatAndTheFormatFollowsTheExtension()
     {

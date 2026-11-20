@@ -1,4 +1,5 @@
 using System.Globalization;
+using Eunomia.App.Export;
 using Eunomia.App.Settings;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Engine.Sql;
@@ -136,8 +137,7 @@ public static class QueryHelpers
     public static string SnippetFileName(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
-        var invalid = Path.GetInvalidFileNameChars();
-        var clean = new string([.. name.Trim().Select(c => invalid.Contains(c) ? '_' : c)]);
+        var clean = FileNames.Safe(name.Trim());
         return clean.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) ? clean : clean + ".sql";
     }
 }

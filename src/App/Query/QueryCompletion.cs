@@ -1,3 +1,4 @@
+using Eunomia.App.Diagnostics;
 using Eunomia.App.Sessions;
 using Eunomia.Drivers.Abstractions;
 using Eunomia.Engine.Sql;
@@ -13,7 +14,7 @@ namespace Eunomia.App.Query;
 /// Identifiers are inserted in backticks when needed, or whenever the word starts with a backtick. Metadata errors
 /// give a shorter list. Without a connected session, only functions and keywords.
 /// </summary>
-public sealed class QueryCompletion(OpenSession? session)
+public sealed class QueryCompletion(OpenSession? session, IDiagnosticLog? log = null)
 {
     /// <summary>Connected session (the steps that need metadata only run with it).</summary>
     private OpenSession Session => session ?? throw new InvalidOperationException("No session.");
@@ -159,7 +160,7 @@ public sealed class QueryCompletion(OpenSession? session)
     }
 
     /// <summary>Metadata errors do not interrupt the autocomplete (cancellation does).</summary>
-    private static async Task<T?> TryAsync<T>(Func<Task<T>> load)
+    private async Task<T?> TryAsync<T>(Func<Task<T>> load)
         where T : class
     {
         try
@@ -168,6 +169,8 @@ public sealed class QueryCompletion(OpenSession? session)
         }
         catch (Exception ex) when (ex is not (OperationCanceledException or OutOfMemoryException))
         {
+            // The list goes without this part; the reason is kept for the diagnostic log.
+            log?.Write(DiagnosticLevel.Warning, "completion", "Metadata for autocomplete failed.", ex);
             return null;
         }
     }
