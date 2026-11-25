@@ -20,6 +20,14 @@ public sealed class QueryTextTests
     }
 
     [Fact]
+    public void RunningLabelShowsTheTimeAndHowToCancel()
+    {
+        Assert.Equal("Executing query #1 of 3 ...", QueryText.RunningLabel(1, 3, TimeSpan.FromMilliseconds(900)));
+        Assert.Equal("Executing query #2 of 3 ... 1 s (Esc to cancel)", QueryText.RunningLabel(2, 3, TimeSpan.FromSeconds(1.5)));
+        Assert.Equal("Executing query #1 of 1 ... 2 min 05 s (Esc to cancel)", QueryText.RunningLabel(1, 1, TimeSpan.FromSeconds(125)));
+    }
+
+    [Fact]
     public void ResultTabNames()
     {
         Assert.Equal(["a", "b c"], QueryText.ResultNames("-- names: a, b c\nSELECT 1; SELECT 2"));

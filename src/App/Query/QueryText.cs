@@ -95,6 +95,25 @@ public static partial class QueryText
     }
 
     /// <summary>
+    /// Status while a run goes on: "Executing query #n of m ...", and from the first second on the time the run has taken and
+    /// how to stop it (editor queries have no query timeout).
+    /// </summary>
+    public static string RunningLabel(int number, int total, TimeSpan elapsed)
+    {
+        var label = string.Create(CultureInfo.InvariantCulture, $"Executing query #{number} of {total} ...");
+        return elapsed < TimeSpan.FromSeconds(1) ? label : $"{label} {ElapsedText(elapsed)} (Esc to cancel)";
+    }
+
+    /// <summary>Whole seconds taken: "12 s", from a minute on "2 min 05 s".</summary>
+    public static string ElapsedText(TimeSpan elapsed)
+    {
+        var seconds = (long)elapsed.TotalSeconds;
+        return seconds < 60
+            ? string.Create(CultureInfo.InvariantCulture, $"{seconds} s")
+            : string.Create(CultureInfo.InvariantCulture, $"{seconds / 60} min {seconds % 60:00} s");
+    }
+
+    /// <summary>
     /// Final message in the SQL log (appendix C §4.4): <c>Affected rows: n  Found rows: n  Warnings: n  Duration for k [of m]
     /// query|queries: x.xxx sec. (+ y sec. network)</c>.
     /// </summary>

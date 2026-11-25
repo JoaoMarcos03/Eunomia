@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Globalization;
 using Eunomia.App.Query;
 using Eunomia.Drivers.MySql;
 using Eunomia.Engine.Execution;
@@ -145,5 +147,75 @@ public sealed class QueryRunnerTests : IAsyncLifetime
 
         Assert.Equal(1, summary.Warnings);
         Assert.Contains(messages, m => m.StartsWith("Warning: (1292)", StringComparison.Ordinal));
+    }
+
+    /// <summary>A session of its own with a short query timeout, which editor queries must not apply.</summary>
+    private static async Task<SessionHost> HostWithTimeoutAsync(TimeSpan timeout)
+    {
+        var password = new MySqlConnectionStringBuilder(TestServer.ConnectionString!).Password;
+        var host = new SessionHost(new SessionConnectionSettings("it", TestServer.Options()) { KeepAlive = null, QueryTimeout = timeout }, new SessionServices
+        {
+            Provider = new MySqlProvider(),
+            ResolveSecret = (_, _) => ValueTask.FromResult(password),
+        });
+        await host.ConnectAsync(Ct);
+        return host;
+    }
+
+    private static async Task<long> RunningAsync(string marker)
+    {
+        await using var other = await TestServer.OpenAsync();
+        return Convert.ToInt64(await other.ExecuteScalarAsync(
+            $"SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE INFO LIKE '%{marker}%' AND INFO NOT LIKE '%PROCESSLIST%'", Ct), CultureInfo.InvariantCulture);
+    }
+
+    [Fact]
+    public async Task EditorQueriesRunPastTheSessionQueryTimeout()
+    {
+        TestServer.RequireServer();
+        await using var host = await HostWithTimeoutAsync(TimeSpan.FromSeconds(1));
+        const string sql = "SELECT SLEEP(3) AS slept;";
+
+        var summary = await new QueryRunner(host).RunAsync(sql, SqlSplitter.Split(sql), new QueryRunOptions(), Ct);
+
+        Assert.Empty(summary.Errors);
+        Assert.Equal(1, summary.Executed);
+        Assert.True(summary.Duration >= TimeSpan.FromSeconds(2.5), $"Duration {summary.Duration}.");
+    }
+
+    [Fact]
+    public async Task CancellingAnEditorQueryStopsItOnTheServer()
+    {
+        TestServer.RequireServer();
+        await using var host = await HostWithTimeoutAsync(TimeSpan.FromSeconds(1));
+        var marker = "eunomia_cancel_" + Guid.NewGuid().ToString("N")[..8];
+        var sql = $"SELECT SLEEP(60) AS {marker};";
+        using var cts = new CancellationTokenSource();
+        var run = new QueryRunner(host).RunAsync(sql, SqlSplitter.Split(sql), new QueryRunOptions(), cts.Token);
+
+        // Running on the server, and past the session's 1 s query timeout.
+        var deadline = Stopwatch.StartNew();
+        while (await RunningAsync(marker) == 0)
+        {
+            Assert.True(deadline.Elapsed < TimeSpan.FromSeconds(10), "The query never showed in PROCESSLIST.");
+            await Task.Delay(100, Ct);
+        }
+        await Task.Delay(1500, Ct);
+        Assert.False(run.IsCompleted);
+        Assert.Equal(1, await RunningAsync(marker));
+
+        var clock = Stopwatch.StartNew();
+        await cts.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
+        Assert.True(clock.Elapsed < TimeSpan.FromSeconds(3), $"Cancel took {clock.Elapsed.TotalMilliseconds:F0} ms.");
+
+        // KILL QUERY, not only the client giving up: the statement is gone from the server.
+        while (await RunningAsync(marker) > 0)
+        {
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), "The query is still running on the server after the cancel.");
+            await Task.Delay(100, Ct);
+        }
+        // The session goes on working.
+        Assert.Equal(1, (await new QueryRunner(host).RunAsync("SELECT 1;", SqlSplitter.Split("SELECT 1;"), new QueryRunOptions(), Ct)).Executed);
     }
 }
