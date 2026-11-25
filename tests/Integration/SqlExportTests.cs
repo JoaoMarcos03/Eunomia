@@ -277,6 +277,41 @@ public sealed class SqlExportTests : IAsyncLifetime
         Assert.Empty(Directory.EnumerateFiles(_directory, "export-*"));
     }
 
+    /// <summary>
+    /// A BLOB larger than half of <c>max_allowed_packet</c> does not fit the server as a hex literal (two characters per
+    /// byte): the import stopped at that row and the target lost that table's last row and every object after it (a 1 GB
+    /// database came back smaller). The value and the table after it must arrive.
+    /// </summary>
+    [Fact]
+    public async Task BlobLargerThanHalfThePacketReachesTheTarget()
+    {
+        TestServer.RequireServer();
+        var source = await NewEmptyDatabaseAsync();
+        var target = await NewEmptyDatabaseAsync();
+        var packet = Convert.ToInt64(await ScalarAsync("SELECT @@max_allowed_packet"), System.Globalization.CultureInfo.InvariantCulture);
+        var size = packet * 6 / 10;
+        await ExecAsync(
+            $"CREATE TABLE `{source}`.a_big (id INT PRIMARY KEY, b LONGBLOB)",
+            $"INSERT INTO `{source}`.a_big VALUES (1, REPEAT(0x00FF27225C3B0A0D1A80, {size / 10})), (2, 0xCAFE)",
+            $"CREATE TABLE `{source}`.b_after (id INT PRIMARY KEY)",
+            $"INSERT INTO `{source}`.b_after VALUES (1), (2), (3)");
+        var objects = await _host.RunMetadataAsync((h, ct) => h.Metadata.GetObjectsAsync(source, source, ObjectDetail.Statistics, ct), Ct);
+        var request = new SqlExportRequest
+        {
+            Dump = new SqlDumpOptions { CreateTables = true, Data = DumpDataMode.DeleteInsert, MaxInsertSizeKb = 1024, RemoveDefiner = true },
+            Databases = [new SqlExportDatabase(source, [.. objects.OrderBy(o => o.Ref.Name, StringComparer.OrdinalIgnoreCase)])],
+            Target = SqlExportTarget.Database,
+            TargetDatabase = target,
+        };
+
+        var result = await new SqlExportToServerJob(_host, _host, request, _directory).RunAsync(null, null, Ct);
+
+        Assert.True(result.Completed, result.NotImported);
+        Assert.Equal(await ChecksumAsync(source, "a_big"), await ChecksumAsync(target, "a_big"));
+        Assert.Equal(size / 10 * 10, Convert.ToInt64(await ScalarAsync($"SELECT LENGTH(b) FROM `{target}`.a_big WHERE id = 1"), System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(3L, Convert.ToInt64(await ScalarAsync($"SELECT COUNT(*) FROM `{target}`.b_after"), System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     /// <summary>"Delete + insert" without Create replaces the rows of the target table and only those.</summary>
     [Fact]
     public async Task DeleteInsertIntoAnotherDatabaseReplacesItsRows()
