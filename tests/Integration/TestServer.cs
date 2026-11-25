@@ -44,6 +44,26 @@ internal static class TestServer
         }
     }
 
+    /// <summary>
+    /// A second server, for exports from one server to another (for example MySQL 8.4 to MariaDB): connection string in
+    /// <c>EUNOMIA_IT_MYSQL_TARGET</c>. Without it, those tests are skipped.
+    /// </summary>
+    public static string? TargetConnectionString { get; } =
+        Environment.GetEnvironmentVariable("EUNOMIA_IT_MYSQL_TARGET") is { } target && !string.IsNullOrWhiteSpace(target) ? target : null;
+
+    public static void RequireTargetServer()
+    {
+        RequireServer();
+        Assert.SkipWhen(TargetConnectionString is null, "No second test server: set EUNOMIA_IT_MYSQL_TARGET to test exports between servers.");
+    }
+
+    /// <summary>Connection options and password from a connection string (for the second server).</summary>
+    public static (ConnectionOptions Options, string Password) OptionsFor(string connectionString)
+    {
+        var b = new MySqlConnectionStringBuilder(connectionString);
+        return (new ConnectionOptions(b.Server, (int)b.Port, b.UserID, b.Password.Length > 0 ? new SecretReference("pw") : null, null, TlsMode.Preferred), b.Password);
+    }
+
     public static void RequireServer() =>
         Assert.SkipWhen(ConnectionString is null, "No test server: run tests/Integration/Start-TestServer.ps1 or set EUNOMIA_IT_MYSQL.");
 
