@@ -242,6 +242,32 @@ public sealed class SqlDumpWriterTests
     }
 
     [Fact]
+    public void TriggerSqlModeLeavesOutModesMySql8Removed()
+    {
+        var options = new SqlDumpOptions { CreateTables = true };
+        var text = Dump(options, w => w.WriteTrigger(
+            "d", "trg", "STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION",
+            "CREATE TRIGGER `trg` BEFORE INSERT ON `t` FOR EACH ROW SET NEW.v = 1"));
+
+        Assert.Contains("SQL_MODE='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';", text, StringComparison.Ordinal);
+        Assert.Equal("PIPES_AS_CONCAT,ANSI_QUOTES", SqlDumpWriter.PortableSqlMode("PIPES_AS_CONCAT,no_table_options,ANSI_QUOTES,NO_FIELD_OPTIONS,NO_KEY_OPTIONS"));
+        Assert.Equal(string.Empty, SqlDumpWriter.PortableSqlMode("NO_AUTO_CREATE_USER"));
+    }
+
+    [Theory]
+    [InlineData("CREATE DEFINER=`a.b`@`%` TRIGGER `shop`.`trg` BEFORE INSERT ON `shop`.`t` FOR EACH ROW SET NEW.v = shop.f()")]
+    [InlineData("CREATE TRIGGER shop . trg\nafter update on shop.t FOR EACH ROW SET NEW.v = shop.f()")]
+    [InlineData("CREATE TRIGGER IF NOT EXISTS `trg` BEFORE DELETE ON `t` FOR EACH ROW SET NEW.v = shop.f()")]
+    public void TriggerHeaderWithoutTheDatabase(string create)
+    {
+        var options = new SqlDumpOptions { CreateTables = true };
+        var text = Dump(options, w => w.WriteTrigger("shop", "trg", string.Empty, create));
+
+        Assert.Matches(@"TRIGGER (IF NOT EXISTS )?`?trg`?\s+\w+ \w+ (?i:on) `?t`? FOR EACH ROW SET NEW\.v = shop\.f\(\)//", text);
+        Assert.DoesNotContain("a.b", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TypeOfTheViewsTemporaryTable()
     {
         Assert.Equal("VARCHAR(1)", SqlDumpWriter.PlaceholderType("varchar(255)"));

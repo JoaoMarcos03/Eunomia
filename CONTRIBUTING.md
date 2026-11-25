@@ -35,6 +35,12 @@ Rules, coding standards and process for anyone who contributes. If a rule confli
    powershell -File tests\Integration\Start-TestServer.ps1 -Name mysql84 -Stop
    ```
 
+   Exports from one server to another (for example MySQL 8.4 to MariaDB and back) need a second server in `EUNOMIA_IT_MYSQL_TARGET`; without it, those tests are skipped:
+
+   ```powershell
+   $env:EUNOMIA_IT_MYSQL_TARGET = 'Server=127.0.0.1;Port=33106;User ID=root;Password=;'
+   ```
+
 Everyday commands:
 
 ```bash

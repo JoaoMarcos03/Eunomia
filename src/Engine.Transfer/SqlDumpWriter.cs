@@ -234,7 +234,24 @@ public sealed partial class SqlDumpWriter
         _output.Write(sb.ToString());
     }
 
-    /// <summary>Trigger with the SQL_MODE it was created with, between <c>DELIMITER //</c> and <c>DELIMITER ;</c>.</summary>
+    /// <summary>
+    /// Modes that MySQL 8.0 removed and that never change what a trigger does (<c>NO_AUTO_CREATE_USER</c> is about
+    /// <c>GRANT</c>, the others about <c>SHOW CREATE</c>). MariaDB has <c>NO_AUTO_CREATE_USER</c> in its default sql_mode, so
+    /// a dump from MariaDB or MySQL 5.7 stopped at its first trigger on MySQL 8 ("Variable 'sql_mode' can't be set").
+    /// </summary>
+    private static readonly string[] RemovedModes = ["NO_AUTO_CREATE_USER", "NO_FIELD_OPTIONS", "NO_KEY_OPTIONS", "NO_TABLE_OPTIONS"];
+
+    /// <summary>The trigger's sql_mode without <see cref="RemovedModes"/>; every mode that changes behaviour stays.</summary>
+    internal static string PortableSqlMode(string sqlMode) =>
+        string.Join(',', sqlMode.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Where(mode => !RemovedModes.Contains(mode, StringComparer.OrdinalIgnoreCase)));
+
+    /// <summary>
+    /// Trigger with the SQL_MODE it was created with (without <see cref="RemovedModes"/>), between <c>DELIMITER //</c> and
+    /// <c>DELIMITER ;</c>. A database before the trigger's or the table's name in the header is left out, as for the other
+    /// objects: MariaDB keeps the statement as it was typed (<c>CREATE TRIGGER `shop`.trg … ON `shop`.t</c>), and the
+    /// trigger went back to the source database instead of the one the dump is loaded into.
+    /// </summary>
     public void WriteTrigger(string database, string trigger, string sqlMode, string createTrigger)
     {
         ArgumentNullException.ThrowIfNull(sqlMode);
@@ -245,8 +262,8 @@ public sealed partial class SqlDumpWriter
             return;
         }
         var sb = ObjectBlock("trigger", database, trigger, "TRIGGER");
-        sb.Append("SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='").Append(sqlMode.Replace("'", "''", StringComparison.Ordinal)).Append("';").Append(Crlf);
-        Delimited(sb, createTrigger);
+        sb.Append("SET @OLDTMP_SQL_MODE=@@SQL_MODE, SQL_MODE='").Append(PortableSqlMode(sqlMode).Replace("'", "''", StringComparison.Ordinal)).Append("';").Append(Crlf);
+        Delimited(sb, TriggerSchema().Replace(createTrigger, "${head}${name}", 1));
         sb.Append("SET SQL_MODE=@OLDTMP_SQL_MODE;").Append(Crlf);
         _output.Write(sb.ToString());
     }
@@ -523,6 +540,16 @@ public sealed partial class SqlDumpWriter
         + @"(?:\s*@\s*(?:`(?:``|[^`])*`|'(?:''|\\.|[^'\\])*'|""(?:""""|\\.|[^""\\])*""|[^\s@`'""]+))?(?=\s)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex DefinerClause();
+
+    // CREATE [DEFINER = …] TRIGGER [IF NOT EXISTS] [db.]name {BEFORE|AFTER} {INSERT|UPDATE|DELETE} ON [db.]table: only the
+    // header; quoted parts (the definer) are skipped whole.
+    [GeneratedRegex(
+        @"^(?<head>\s*CREATE\b(?:`(?:``|[^`])*`|'(?:''|\\.|[^'\\])*'|""(?:""""|\\.|[^""\\])*""|[^`'""])*?\sTRIGGER\s+(?:IF\s+NOT\s+EXISTS\s+)?)"
+        + @"(?:(?:`(?:``|[^`])*`|[\w$]+)\s*\.\s*)?"
+        + @"(?<name>(?:`(?:``|[^`])*`|[\w$]+)\s+(?:BEFORE|AFTER)\s+(?:INSERT|UPDATE|DELETE)\s+ON\s+)"
+        + @"(?:(?:`(?:``|[^`])*`|[\w$]+)\s*\.\s*)?(?=`|[\w$])",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex TriggerSchema();
 
     [GeneratedRegex(@"^VARCHAR\(\d+\)", RegexOptions.CultureInvariant)]
     private static partial Regex VarcharLength();
