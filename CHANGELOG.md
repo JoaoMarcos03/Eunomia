@@ -29,6 +29,8 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 ### Fixed
 
 - Export database as SQL: a BLOB larger than half of the target's `max_allowed_packet` made a statement the server refused, and the import stopped there, leaving every later table, view and routine out. Binary values of 1 MiB or more are now written as `FROM_BASE64('…')` (4/3 of the value instead of twice its size in hex).
+- Export database as SQL from MariaDB (or MySQL 5.7) to MySQL 8: the import stopped at the first trigger, because its `SQL_MODE` kept `NO_AUTO_CREATE_USER`, which MySQL 8 removed. That mode, and the other removed ones that never change a trigger, are left out.
+- Export database as SQL into another database: a MariaDB trigger created as `` `db`.trg … ON `db`.t `` went back to the source database (or failed on another server). The database before the trigger's and the table's name is now left out.
 - Read-only sessions: `INTO OUTFILE`/`DUMPFILE` and `READ WRITE` split by line breaks, `SET STATEMENT … FOR`, `SET transaction_read_only` and MariaDB `/*M! … */` comments got through.
 - The SQL log and query history masked fewer passwords than they should (`SOURCE_PASSWORD=`, `PASSWORD='x'` without spaces, `REPLACE '<old>'`, and error lines).
 - Grid: BIT(64) with every bit set failed to load; partial zero dates (`2024-00-00`) showed as `0000-00-00`; a SET cell left empty wrote `''` over NULL; stepping a negative TIME failed; new rows lost their edits when more rows loaded; edits made during a save were lost.
