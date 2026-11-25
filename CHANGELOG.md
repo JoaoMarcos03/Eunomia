@@ -16,6 +16,7 @@ Visible changes to Eunomia, in the [Keep a Changelog](https://keepachangelog.com
 ### Changed
 
 - Data tab pages, and the full load used by Export grid rows and Copy as, no longer stop at the 30 s query timeout; the timeout of other queries counts from when the statement starts, not from when it was queued behind another one.
+- Queries run from the SQL editor no longer stop at the session's query timeout (30 s by default): they run until they end or **Esc** (Cancel running operation) stops them, which also stops the statement on the server (`KILL QUERY`). While a query runs, the status bar shows the time taken and "(Esc to cancel)". The session's Query timeout still applies to grid edits and to COMMIT/ROLLBACK.
 - Data tab: tables with large rows (BLOBs) are read in smaller pages (at least 10 rows), so the first rows of a very large table show without the server reading gigabytes first; the SQL log says so once per table.
 - Export to a file or ZIP: writing (and compressing) runs on its own thread, in parallel with reading the rows; the status shows the SQL size and, for a ZIP, the compressed size.
 - Database dumps lift the session's statement time limit (`MAX_EXECUTION_TIME`/`MAX_STATEMENT_TIME`) and set `NET_WRITE_TIMEOUT` to an hour while they read, restoring both at the end.

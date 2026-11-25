@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using Avalonia.Threading;
 using Eunomia.App.Commands;
@@ -512,11 +513,23 @@ public sealed partial class MainWindow
         state.Session = session;
         var color = session.Color is { } rgb ? 0xFF000000 | rgb : 0;
         var runner = new QueryRunner(session.Host);
+        // Editor queries have no query timeout: the status shows the time the run has taken and how to stop it, every second.
+        var clock = Stopwatch.StartNew();
+        var position = (Number: 1, Total: statements.Count);
+        void ShowRunning()
+        {
+            if (ReferenceEquals(state.Run, cts))
+            {
+                _context.Status.Busy = QueryText.RunningLabel(position.Number, position.Total, clock.Elapsed);
+            }
+        }
+        var ticker = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => ShowRunning());
         runner.Progress += (_, p) => Dispatcher.Post(() =>
         {
             if (ReferenceEquals(state.Run, cts))
             {
-                _context.Status.Busy = string.Create(CultureInfo.InvariantCulture, $"Executing query #{p.Number} of {p.Total} ...");
+                position = p;
+                ShowRunning();
                 _context.Status.Progress = p.Total > 1 ? (double)(p.Number - 1) / p.Total : null;
             }
         });
@@ -532,7 +545,8 @@ public sealed partial class MainWindow
         runner.Message += (_, m) => _context.Log.Append(LogCategory.Info, m);
         var batchText = scope is RunScope.Current or RunScope.Explain ? statements[0].Text : text;
         var started = DateTimeOffset.Now;
-        _context.Status.Busy = string.Create(CultureInfo.InvariantCulture, $"Executing query #1 of {statements.Count} ...");
+        ShowRunning();
+        ticker.Start();
         QueryRunSummary? summary = null;
         try
         {
@@ -572,6 +586,7 @@ public sealed partial class MainWindow
         }
         finally
         {
+            ticker.Stop();
             _context.Status.SetIdle();
             session.Definition.LastUsedDatabase = session.Host.CurrentDatabase ?? session.Definition.LastUsedDatabase;
         }

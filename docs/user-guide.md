@@ -134,6 +134,7 @@ Pre-release builds (`-beta`, `-rc`…) are told about pre-releases and releases;
 
 - **Ctrl+T** opens a new tab, **Ctrl+F4** closes it. Tabs come back after closing the app or after a crash (with the text up to about 2 s before).
 - **F9** runs everything, **Ctrl+F9** the selection, **Ctrl+Shift+F9** the statement under the cursor. "Send batch in one go" and "Stop on errors" are in the SQL menu.
+- Long queries: editor queries have no query timeout. The status bar shows the time taken; **Esc** or the Stop button cancels the query, and the server stops it too.
 - Each tab runs on the tree's session, or on the session it was pinned to ("Pin tab to session" in the tab menu). Cancelling (the red button) stops only this tab's query.
 - Autocomplete with **Ctrl+Space** (tables, columns, functions, keywords, variables), Find/Replace with **Ctrl+F**/**Ctrl+R** and **F3**, comment lines, **Ctrl+U**/**Ctrl+L** for upper/lower case, **Alt+↑/↓** to move lines.
 - Results in tabs (**Alt+←/→**), with local sorting and filtering. A result from a single table with a key can be edited as in the Data tab.

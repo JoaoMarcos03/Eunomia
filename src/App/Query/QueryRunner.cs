@@ -67,6 +67,10 @@ public sealed record QueryRunSummary(
 /// <c>max_allowed_packet</c>, Stop on errors, up to 10 result sets streaming (later ones are discarded with a warning),
 /// warnings and messages to the log, and the "Affected rows … Duration for k of m queries" summary. Runs on the primary connection.
 /// </summary>
+/// <remarks>
+/// Without the session's query timeout, like the Data tab: a statement on a large database runs until it ends or the
+/// cancellation token stops it (the driver sends <c>KILL QUERY</c>, so the statement also stops on the server).
+/// </remarks>
 public sealed class QueryRunner(SessionHost host)
 {
     /// <summary>Overhead per statement in a packet (HeidiSQL counts ~20 bytes).</summary>
@@ -117,7 +121,7 @@ public sealed class QueryRunner(SessionHost host)
                 }
             }
             return true;
-        }, cancellationToken).ConfigureAwait(false);
+        }, cancellationToken, applyQueryTimeout: false).ConfigureAwait(false);
 
         async Task RunPacketsAsync(IDbConnectionHandle handle, CancellationToken ct)
         {

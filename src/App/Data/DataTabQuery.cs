@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Eunomia.App.Query;
 using Eunomia.Drivers.Abstractions;
 
 namespace Eunomia.App.Data;
@@ -59,10 +60,7 @@ public static class DataTabQuery
         {
             return $"{schema}.{name}: loading ...";
         }
-        var time = seconds < 60
-            ? string.Create(CultureInfo.InvariantCulture, $"{seconds} s")
-            : string.Create(CultureInfo.InvariantCulture, $"{seconds / 60} min {seconds % 60:00} s");
-        return $"{schema}.{name}: loading ... {time} (Esc to cancel)";
+        return $"{schema}.{name}: loading ... {QueryText.ElapsedText(elapsed)} (Esc to cancel)";
     }
 
     /// <summary>Label after a load was cancelled: the rows that arrived stay (Next continues from them), or none.</summary>
