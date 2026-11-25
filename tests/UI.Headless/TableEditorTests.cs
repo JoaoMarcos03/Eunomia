@@ -61,8 +61,9 @@ public sealed class TableEditorTests
             Assert.Contains("ADD INDEX `ix_age` (`age`)", editor.AlterCodeText, StringComparison.Ordinal);
             Assert.True(await window.SaveTableAsync(editor));
             Assert.Empty(errors);
-            Assert.Equal("full_name,varchar(60);age,smallint(5) unsigned", await ScalarAsync(cs,
-                $"SELECT GROUP_CONCAT(CONCAT(COLUMN_NAME, ',', COLUMN_TYPE) ORDER BY ORDINAL_POSITION SEPARATOR ';') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{db}' AND TABLE_NAME = 'people' AND COLUMN_NAME <> 'id'"));
+            // MySQL 8.0.19+ no longer shows the integer display width (smallint(5) on MariaDB).
+            Assert.Equal("full_name,varchar(60);age,smallint unsigned", await ScalarAsync(cs,
+                $"SELECT GROUP_CONCAT(CONCAT(COLUMN_NAME, ',', REPLACE(COLUMN_TYPE, 'smallint(5)', 'smallint')) ORDER BY ORDINAL_POSITION SEPARATOR ';') FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{db}' AND TABLE_NAME = 'people' AND COLUMN_NAME <> 'id'"));
             var reopened = await WaitAsync(() => window.TableEditor is { Design.Columns.Count: 3 } e ? e : null);
             Assert.Equal(string.Empty, reopened.AlterCodeText);
 
