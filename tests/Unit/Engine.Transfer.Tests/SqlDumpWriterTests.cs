@@ -219,6 +219,28 @@ public sealed class SqlDumpWriterTests
             StringComparison.Ordinal);
     }
 
+    /// <summary>Hex below 1 MiB; from 1 MiB, base64 (4/3 of the value instead of twice), so the statement fits the packet.</summary>
+    [Fact]
+    public void LargeBinaryValuesAreWrittenInBase64()
+    {
+        var schema = new ResultSchema([new ColumnInfo("x", "LONGBLOB", TypeCategory.Binary, StorageKind.Binary, false, true)]);
+        var small = new byte[SqlLiteralWriter.Base64Threshold - 1];
+        var large = new byte[SqlLiteralWriter.Base64Threshold];
+        new Random(7).NextBytes(large);
+        var builder = new RowBlockBuilder(schema, 0, 0, 2);
+        builder.SetBytes(0, 0, small);
+        builder.SetBytes(1, 0, large);
+        var text = Dump(new SqlDumpOptions { Data = DumpDataMode.Insert, MaxInsertSizeKb = 1 }, w =>
+        {
+            w.BeginData("d", "t", 2, false, ["x"]);
+            w.WriteRows(builder.Build());
+            w.EndData();
+        });
+
+        Assert.Contains("(_binary 0x" + new string('0', small.Length * 2) + ")", text, StringComparison.Ordinal);
+        Assert.Contains("(FROM_BASE64('" + Convert.ToBase64String(large) + "'))", text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void TypeOfTheViewsTemporaryTable()
     {

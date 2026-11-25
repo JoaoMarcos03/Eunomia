@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Buffers.Text;
 using System.Globalization;
 using Eunomia.Engine.Results;
 
@@ -21,7 +22,8 @@ internal enum SqlLiteralKind
 
 /// <summary>
 /// MySQL/MariaDB SQL literals written straight as UTF-8, without a string per value (appendix B §2.3.4): NULL,
-/// numbers unquoted, BIT as <c>b'…'</c>, binary and geometry as <c>_binary 0x…</c> (empty as <c>''</c>), text
+/// numbers unquoted, BIT as <c>b'…'</c>, binary and geometry as <c>_binary 0x…</c> (empty as <c>''</c>; from 1 MiB as
+/// <c>FROM_BASE64('…')</c>), text
 /// single-quoted with <c>\\</c>, <c>\'</c>, <c>\r</c>, <c>\n</c>, <c>\0</c> and <c>\Z</c> (Ctrl+Z, which ends the
 /// file for the mysql client on Windows, as in mysqldump). FLOAT and DOUBLE with the shortest value that round-trips to
 /// the same number.
@@ -30,6 +32,9 @@ internal static class SqlLiteralWriter
 {
     private static readonly SearchValues<byte> Special = SearchValues.Create("\\'\r\n\0\x1A"u8);
     private static readonly byte[] HexDigits = "0123456789ABCDEF"u8.ToArray();
+
+    /// <summary>Binary values from this size are written as <c>FROM_BASE64('…')</c>; smaller ones stay in hex.</summary>
+    internal const int Base64Threshold = 1024 * 1024;
 
     public static SqlLiteralKind KindOf(ColumnInfo column)
     {
@@ -146,6 +151,17 @@ internal static class SqlLiteralWriter
         if (bytes.IsEmpty)
         {
             output.Append("''"u8);
+            return;
+        }
+        if (bytes.Length >= Base64Threshold)
+        {
+            // Hex doubles the value: a BLOB over half of max_allowed_packet made a statement the server refuses, and the
+            // import stopped there. Base64 takes 4/3 (MySQL 5.6.1+, MariaDB 10.0.5+).
+            output.Append("FROM_BASE64('"u8);
+            var encoded = output.GetSpan(Base64.GetMaxEncodedToUtf8Length(bytes.Length));
+            Base64.EncodeToUtf8(bytes, encoded, out _, out var written);
+            output.Advance(written);
+            output.Append("')"u8);
             return;
         }
         output.Append("_binary 0x"u8);
